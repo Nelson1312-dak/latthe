@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderReading();
     showScreen('reading');
     btnRestart.classList.remove('hidden');
+    showAISection();
   });
 
   // ---- Render reading ----
@@ -164,6 +165,66 @@ document.addEventListener('DOMContentLoaded', () => {
     readingDetail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
+  // ---- AI interpretation ----
+  const aiSection      = document.getElementById('ai-section');
+  const aiQuestionDisp = document.getElementById('ai-question-display');
+  const aiLoading      = document.getElementById('ai-loading');
+  const aiText         = document.getElementById('ai-text');
+  const aiError        = document.getElementById('ai-error');
+  const btnAskAI       = document.getElementById('btn-ask-ai');
+  const tarotQuestion  = document.getElementById('tarot-question');
+
+  function buildTarotContext() {
+    const spread = TAROT_SPREADS[selectedSpread];
+    return drawnCards.map(({ card, reversed }, i) => {
+      const pos = spread.positions[i];
+      const dir = reversed ? 'Ngược' : 'Xuôi';
+      return `• Vị trí "${pos}": ${card.vn} (${card.name}) — ${dir}\n  Ý nghĩa: ${reversed ? card.reversed : card.upright}`;
+    }).join('\n\n');
+  }
+
+  function showAISection() {
+    const q = tarotQuestion.value.trim();
+    if (!q) return; // no question, no AI section
+    aiSection.classList.remove('hidden');
+    aiQuestionDisp.textContent = `"${q}"`;
+    aiText.textContent = '';
+    aiError.classList.add('hidden');
+    aiLoading.style.display = 'none';
+    btnAskAI.disabled = false;
+  }
+
+  btnAskAI.addEventListener('click', () => {
+    const q = tarotQuestion.value.trim();
+    if (!q) return;
+
+    btnAskAI.disabled = true;
+    aiText.textContent = '';
+    aiError.classList.add('hidden');
+    aiLoading.style.display = 'flex';
+
+    askAI({
+      question: q,
+      context: buildTarotContext(),
+      type: 'tarot',
+      onToken: (token) => {
+        aiLoading.style.display = 'none';
+        aiText.textContent += token;
+      },
+      onDone: () => {
+        aiLoading.style.display = 'none';
+        btnAskAI.textContent = '🔄 Hỏi Lại';
+        btnAskAI.disabled = false;
+      },
+      onError: (msg) => {
+        aiLoading.style.display = 'none';
+        aiError.textContent = '⚠️ ' + msg;
+        aiError.classList.remove('hidden');
+        btnAskAI.disabled = false;
+      }
+    });
+  });
+
   // ---- New reading ----
   function goNewReading() {
     shuffleCount = 0;
@@ -171,6 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateShuffleUI();
     btnDraw.classList.add('hidden');
     btnRestart.classList.add('hidden');
+    aiSection.classList.add('hidden');
+    aiText.textContent = '';
+    btnAskAI.textContent = '✨ Hỏi AI Luận Giải';
     showScreen('spread');
   }
 

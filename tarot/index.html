@@ -26,7 +26,14 @@
         <div class="t-hero">
           <div class="t-orb">🔮</div>
           <h1 class="t-title">Bài Tarot</h1>
-          <p class="t-subtitle">Hãy tập trung vào câu hỏi trong tâm trí,<br>rồi chọn kiểu rải bài.</p>
+          <p class="t-subtitle">Nhập câu hỏi, chọn kiểu rải bài,<br>và để Tarot lên tiếng.</p>
+        </div>
+
+        <!-- Question input -->
+        <div class="question-box">
+          <label class="question-label">✨ Câu hỏi của bạn</label>
+          <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên thay đổi công việc không? / Mối quan hệ này sẽ đi về đâu?..." rows="3" maxlength="200"></textarea>
+          <p class="question-hint">AI sẽ luận giải dựa trên câu hỏi và lá bài của bạn</p>
         </div>
 
         <div class="spread-options">
@@ -94,13 +101,34 @@
           </div>
           <p id="detail-element" class="detail-element"></p>
         </div>
-        <button id="btn-new-reading" class="btn-tarot-primary" style="margin-top:24px">Rải Bài Mới 🔄</button>
+        <!-- AI Interpretation -->
+        <div id="ai-section" class="ai-section hidden">
+          <div class="ai-header">
+            <span class="ai-icon">🤖</span>
+            <div>
+              <p class="ai-label">Qwen AI · Luận giải cho bạn</p>
+              <p id="ai-question-display" class="ai-question-display"></p>
+            </div>
+          </div>
+          <div id="ai-response" class="ai-response">
+            <div id="ai-loading" class="ai-loading">
+              <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+              <span class="ai-loading-text">Đang suy ngẫm...</span>
+            </div>
+            <p id="ai-text" class="ai-text"></p>
+            <p id="ai-error" class="ai-error hidden"></p>
+          </div>
+          <button id="btn-ask-ai" class="btn-ask-ai">✨ Hỏi AI Luận Giải</button>
+        </div>
+
+        <button id="btn-new-reading" class="btn-tarot-primary" style="margin-top:16px">Rải Bài Mới 🔄</button>
       </div>
     </div>
 
   </div>
 
   <script src="js/cards.js"></script>
+  <script src="../js/ai.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
