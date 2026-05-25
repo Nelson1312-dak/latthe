@@ -1,14 +1,10 @@
 /**
- * js/ai.js — Shared AI streaming helper
- * Calls /api/interpret and streams SSE tokens into a DOM element.
+ * js/ai.js — AI interpretation helper
+ * Calls /api/interpret and returns the answer.
  */
 
 const AI_ENDPOINT = '/api/interpret';
 
-/**
- * askAI({ question, context, type, onToken, onDone, onError })
- * type: 'tarot' | 'gieoque'
- */
 async function askAI({ question, context, type, onToken, onDone, onError }) {
   try {
     const res = await fetch(AI_ENDPOINT, {
@@ -17,36 +13,26 @@ async function askAI({ question, context, type, onToken, onDone, onError }) {
       body: JSON.stringify({ question, context, type }),
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-      onError(err.error || 'Lỗi kết nối AI');
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      onError(data.error || `Lỗi ${res.status}`);
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const payload = line.slice(6).trim();
-        if (payload === '[DONE]') { onDone(); return; }
-        try {
-          const data = JSON.parse(payload);
-          if (data.error)  { onError(data.error); return; }
-          if (data.token)  { onToken(data.token); }
-        } catch { /* skip */ }
+    // Simulate streaming by revealing text word by word for nicer UX
+    const words = data.answer.split(' ');
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < words.length) {
+        onToken((i === 0 ? '' : ' ') + words[i]);
+        i++;
+      } else {
+        clearInterval(interval);
+        onDone();
       }
-    }
-    onDone();
+    }, 30);
+
   } catch (err) {
     onError('Không kết nối được AI: ' + err.message);
   }
