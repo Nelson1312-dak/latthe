@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Drinking Games - Trò chơi bài thẻ uống rượu cho nhóm bạn. Truth, Dare, Vote và nhiều thử thách vui nhộn!">
+  <meta name="theme-color" content="#0a0a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>🍻 Drinking Games — Lật Thẻ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .back-home-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 999;
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 5px 10px;
+      text-decoration: none;
+      backdrop-filter: blur(8px);
+      transition: color 0.2s, background 0.2s;
+    }
+    .back-home-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-home-btn">← latthe.vn</a>
+  <div id="app">
+
+    <!-- ========== SPLASH SCREEN ========== -->
+    <div id="screen-splash" class="screen active">
+      <div class="splash-content">
+        <div class="splash-hero">
+          <div class="splash-emoji" aria-hidden="true">🍻</div>
+          <h1 class="game-title">Drinking Games</h1>
+          <p class="game-subtitle">Lật bài • Thử thách • Vui vẻ</p>
+        </div>
+
+        <div class="splash-card-preview">
+          <div class="mini-card mc-truth">🤔 Sự Thật</div>
+          <div class="mini-card mc-dare">🔥 Thử Thách</div>
+          <div class="mini-card mc-never">🙈 Chưa Từng</div>
+        </div>
+
+        <div class="splash-action">
+          <p class="splash-action-title">Chọn Chế Độ Chơi 🎮</p>
+          <div class="splash-mode-buttons">
+            <button class="btn btn-secondary splash-mode-btn" data-mode="party">
+              👥 Chơi Hội Nhóm
+            </button>
+            <button class="btn btn-secondary splash-mode-btn" data-mode="duo">
+              👥 Đấu Đôi (2)
+            </button>
+            <button class="btn btn-secondary splash-mode-btn" data-mode="solo">
+              📱 1 Máy (Chung)
+            </button>
+            <button id="btn-go-setup" class="btn btn-secondary splash-setup-btn">
+              ⚙️ Tùy chỉnh chuyên sâu
+            </button>
+          </div>
+          <p class="splash-footer">Hỗ trợ 1 - 12 người chơi</p>
+        </div>
+      </div>
+      <div class="particles" id="particles-container"></div>
+    </div>
+
+    <!-- ========== PLAYER SETUP SCREEN ========== -->
+    <div id="screen-setup" class="screen">
+      <div class="setup-container">
+        <div class="setup-header">
+          <button id="btn-back-splash" class="btn-icon" aria-label="Quay lại">←</button>
+          <h2 class="setup-title">Thiết Lập</h2>
+          <span id="player-count" class="player-count-badge">0/12</span>
+        </div>
+
+        <div class="game-mode-selector">
+          <button class="mode-tab-btn active" data-mode="party">👥 Hội nhóm</button>
+          <button class="mode-tab-btn" data-mode="duo">👥 Đấu đôi (2)</button>
+          <button class="mode-tab-btn" data-mode="solo">📱 1 Máy (Chung)</button>
+        </div>
+
+        <div id="setup-player-section">
+          <div id="player-list" class="player-list"></div>
+          <div class="add-player-form">
+            <input id="player-name-input" type="text" placeholder="Nhập tên người chơi..." maxlength="15" autocomplete="off" enterkeyhint="done">
+            <button id="btn-add-player" class="btn btn-secondary btn-add-text">Thêm</button>
+          </div>
+          <button id="btn-quick-fill" class="btn btn-secondary btn-full btn-quick-fill">
+            🪄 Tạo nhanh 5 người chơi
+          </button>
+        </div>
+
+        <div class="intensity-selector">
+          <h3 class="intensity-title">✨ Vibe Tối Nay</h3>
+          <div class="intensity-options">
+            <button class="intensity-btn" data-intensity="mild">
+              <span class="intensity-emoji">🤝</span>
+              <span class="intensity-label">Bạn Bè</span>
+              <span class="intensity-desc">An toàn</span>
+            </button>
+            <button class="intensity-btn" data-intensity="medium">
+              <span class="intensity-emoji">💕</span>
+              <span class="intensity-label">Tình Nhân</span>
+              <span class="intensity-desc">Lãng mạn</span>
+            </button>
+            <button class="intensity-btn" data-intensity="spicy">
+              <span class="intensity-emoji">🔥</span>
+              <span class="intensity-label">Hoang Dại</span>
+              <span class="intensity-desc">Vô phanh</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="pack-selector pack-hidden">
+          <h3 class="selector-title">🃏 Chọn Bộ Bài</h3>
+          <div class="pack-options">
+            <label class="pack-checkbox-label">
+              <input type="checkbox" class="pack-checkbox" value="truth" checked>
+              <span class="pack-custom-checkbox truth">🤔 Sự Thật</span>
+            </label>
+            <label class="pack-checkbox-label">
+              <input type="checkbox" class="pack-checkbox" value="dare" checked>
+              <span class="pack-custom-checkbox dare">🔥 Thử Thách</span>
+            </label>
+            <label class="pack-checkbox-label">
+              <input type="checkbox" class="pack-checkbox" value="group" checked>
+              <span class="pack-custom-checkbox group">👥 Cả Nhóm</span>
+            </label>
+            <label class="pack-checkbox-label">
+              <input type="checkbox" class="pack-checkbox" value="never_have_i_ever" checked>
+              <span class="pack-custom-checkbox never">🙈 Chưa Từng</span>
+            </label>
+            <label class="pack-checkbox-label">
+              <input type="checkbox" class="pack-checkbox" value="vote" checked>
+              <span class="pack-custom-checkbox vote">🗳️ Bình Chọn</span>
+            </label>
+          </div>
+        </div>
+
+        <button id="btn-play" class="btn btn-primary btn-glow btn-large" disabled>Chơi Thôi! 🎲</button>
+        <div class="setup-bottom-space"></div>
+      </div>
+    </div>
+
+    <!-- ========== GAME SCREEN ========== -->
+    <div id="screen-game" class="screen">
+      <div class="game-header">
+        <div class="current-player-info">
+          <div id="current-avatar" class="player-avatar-sm"></div>
+          <span id="current-player-name" class="current-name">---</span>
+        </div>
+        <div class="deck-info">
+          <span class="deck-icon">🃏</span>
+          <span id="cards-remaining">0</span>
+        </div>
+        <button id="btn-scoreboard" class="btn-icon" aria-label="Bảng xếp hạng">🏆</button>
+      </div>
+
+      <div class="card-area">
+        <div id="card-container" class="card-container">
+          <div class="card" id="game-card">
+            <div class="card-face card-front">
+              <div class="card-front-inner">
+                <div class="card-pattern"></div>
+                <div class="card-turn-info">
+                  <span class="card-turn-label">Lượt Của</span>
+                  <div class="card-turn-avatar" id="card-turn-avatar"></div>
+                  <span class="card-turn-name" id="card-turn-name">---</span>
+                </div>
+                <span class="card-logo">🍻</span>
+                <span class="card-tap-hint">Nhấn để lật</span>
+              </div>
+            </div>
+            <div class="card-face card-back" id="card-back">
+              <div class="card-back-inner">
+                <div class="card-type-badge" id="card-type-badge">
+                  <span class="badge-emoji"></span>
+                  <span class="badge-text"></span>
+                </div>
+                <div class="card-content" id="card-content">Nội dung thẻ bài</div>
+                <div class="card-penalty" id="card-penalty">🥃 × 1</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="game-actions">
+        <button id="btn-flip" class="btn btn-primary btn-glow btn-large">👆 Lật Bài</button>
+        <div id="post-flip-actions" class="post-flip-actions hidden">
+          <button id="btn-done" class="btn btn-success">✅ Hoàn thành</button>
+          <button id="btn-drink" class="btn btn-danger">🍺 Uống phạt!</button>
+        </div>
+        <button id="btn-next" class="btn btn-primary btn-large hidden">Tiếp theo ➡️</button>
+      </div>
+
+      <div id="player-carousel" class="player-carousel"></div>
+    </div>
+
+    <!-- ========== SCOREBOARD MODAL ========== -->
+    <div id="modal-scoreboard" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content glass">
+        <h2 class="modal-title">🏆 Bảng Xếp Hạng</h2>
+        <div id="scoreboard-list" class="scoreboard-list"></div>
+        <button id="btn-close-scoreboard" class="btn btn-secondary btn-full">Đóng</button>
+      </div>
+    </div>
+
+    <!-- ========== NEVER HAVE I EVER MODAL ========== -->
+    <div id="modal-nhie" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content glass">
+        <h2 class="modal-title">🙈 Ai Đã Từng?</h2>
+        <p class="modal-subtitle" id="nhie-content"></p>
+        <p class="nhie-instruction">Ai đã từng làm điều này → Uống!</p>
+        <div id="nhie-player-grid" class="nhie-player-grid"></div>
+        <button id="btn-nhie-done" class="btn btn-primary btn-full">Xong! Tiếp tục ➡️</button>
+      </div>
+    </div>
+
+    <!-- ========== VOTE MODAL ========== -->
+    <div id="modal-vote" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content glass">
+        <h2 class="modal-title">🗳️ Bình Chọn</h2>
+        <p class="modal-subtitle" id="vote-content"></p>
+        <p class="vote-instruction">Chỉ vào người bạn chọn!</p>
+        <div id="vote-player-grid" class="vote-player-grid"></div>
+        <button id="btn-vote-done" class="btn btn-primary btn-full">Xong! Tiếp tục ➡️</button>
+      </div>
+    </div>
+
+    <!-- ========== GAME OVER SCREEN ========== -->
+    <div id="screen-gameover" class="screen">
+      <div class="gameover-content">
+        <div class="gameover-emoji">🎊</div>
+        <h1 class="gameover-title">Hết Bài Rồi!</h1>
+        <p class="gameover-subtitle">Xem ai uống nhiều nhất nào 😂</p>
+        <div id="final-scoreboard" class="final-scoreboard"></div>
+        <div class="gameover-actions">
+          <button id="btn-replay" class="btn btn-primary btn-glow btn-large">Chơi Lại 🔄</button>
+          <button id="btn-home" class="btn btn-secondary">Về Trang Chủ 🏠</button>
+        </div>
+      </div>
+      <div class="confetti-container" id="confetti-container"></div>
+    </div>
+
+    <!-- ========== EDIT PLAYER NAME POPUP ========== -->
+    <div id="popup-edit-player" class="popup-overlay hidden">
+      <div class="popup-box glass">
+        <p class="popup-title">✏️ Sửa Tên</p>
+        <input id="popup-name-input" type="text" class="popup-input" maxlength="15" autocomplete="off" enterkeyhint="done">
+        <div class="popup-actions">
+          <button id="popup-cancel" class="btn btn-secondary">Hủy</button>
+          <button id="popup-save" class="btn btn-primary">Lưu ✓</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/cards.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/touch.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

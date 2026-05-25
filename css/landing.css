@@ -1,0 +1,209 @@
+/* ============================================================
+   landing.css — latthe.vn shared variables + landing page
+   ============================================================ */
+
+/* ---- Shared Variables (imported by module stylesheets too) ---- */
+:root {
+  --font-heading: 'Outfit', sans-serif;
+  --font-body:    'Inter', sans-serif;
+
+  --bg-base:    #07070f;
+  --bg-surface: rgba(255,255,255,0.04);
+  --bg-glass:   rgba(255,255,255,0.07);
+
+  --text-primary: #f0f0f8;
+  --text-muted:   rgba(240,240,248,0.45);
+  --border:       rgba(255,255,255,0.1);
+
+  /* Accent per module */
+  --drink-color:  #ff6b35;
+  --drink-glow:   rgba(255,107,53,0.45);
+  --tarot-color:  #c084fc;
+  --tarot-glow:   rgba(192,132,252,0.45);
+  --gieoque-color:#4ade80;
+  --gieoque-glow: rgba(74,222,128,0.38);
+  --gold:         #d4a642;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+a { text-decoration: none; color: inherit; }
+
+/* ---- Particles ---- */
+.particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  bottom: -20px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: float-up linear infinite;
+}
+@keyframes float-up {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-110vh) scale(0.5); opacity: 0; }
+}
+
+/* ---- App shell ---- */
+#app {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px 40px;
+}
+
+/* ---- Hero ---- */
+.hero {
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+  padding: 56px 0 32px;
+}
+.brand { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.brand-icon {
+  font-size: 64px;
+  filter: drop-shadow(0 0 20px rgba(212,166,66,0.6));
+  animation: card-float 3s ease-in-out infinite;
+}
+@keyframes card-float {
+  0%,100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-10px) rotate(2deg); }
+}
+.brand-name {
+  font-family: var(--font-heading);
+  font-size: clamp(42px, 12vw, 72px);
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #fff 30%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 16px rgba(212,166,66,0.4));
+}
+.brand-tagline {
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ---- Module cards ---- */
+.modules {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.module-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.module-card:active { transform: scale(0.97); }
+
+/* Glow layer */
+.module-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.module-card:hover .module-glow { opacity: 1; }
+
+/* Drinking */
+.module-drinking { border-color: rgba(255,107,53,0.3); }
+.module-drinking .module-glow { background: radial-gradient(ellipse at 20% 50%, rgba(255,107,53,0.12) 0%, transparent 70%); }
+.module-drinking:hover { box-shadow: 0 0 30px rgba(255,107,53,0.25), 0 8px 32px rgba(0,0,0,0.4); border-color: rgba(255,107,53,0.6); }
+
+/* Tarot */
+.module-tarot { border-color: rgba(192,132,252,0.3); }
+.module-tarot .module-glow { background: radial-gradient(ellipse at 20% 50%, rgba(192,132,252,0.12) 0%, transparent 70%); }
+.module-tarot:hover { box-shadow: 0 0 30px rgba(192,132,252,0.25), 0 8px 32px rgba(0,0,0,0.4); border-color: rgba(192,132,252,0.6); }
+
+/* Gieo que */
+.module-gieoque { border-color: rgba(74,222,128,0.25); }
+.module-gieoque .module-glow { background: radial-gradient(ellipse at 20% 50%, rgba(74,222,128,0.1) 0%, transparent 70%); }
+.module-gieoque:hover { box-shadow: 0 0 30px rgba(74,222,128,0.2), 0 8px 32px rgba(0,0,0,0.4); border-color: rgba(74,222,128,0.55); }
+
+.module-icon {
+  font-size: 44px;
+  flex-shrink: 0;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+.module-body { flex: 1; min-width: 0; }
+.module-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.module-drinking .module-title { color: var(--drink-color); }
+.module-tarot   .module-title { color: var(--tarot-color); }
+.module-gieoque .module-title { color: var(--gieoque-color); }
+
+.module-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.module-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.module-arrow {
+  font-size: 20px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.module-card:hover .module-arrow { transform: translateX(4px); color: #fff; }
+
+/* ---- Footer ---- */
+.site-footer {
+  margin-top: 32px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}

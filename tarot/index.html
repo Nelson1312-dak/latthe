@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0d0a1f">
+  <title>🔮 Tarot — Lật Thẻ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tarot.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- HEADER -->
+    <header class="t-header">
+      <a href="../index.html" class="btn-back">← Trang Chủ</a>
+      <span class="t-header-title">🔮 Tarot</span>
+      <button id="btn-restart" class="btn-ghost hidden">Xáo Lại</button>
+    </header>
+
+    <!-- ===== SCREEN: CHOOSE SPREAD ===== -->
+    <div id="screen-spread" class="screen active">
+      <div class="screen-inner">
+        <div class="t-hero">
+          <div class="t-orb">🔮</div>
+          <h1 class="t-title">Bài Tarot</h1>
+          <p class="t-subtitle">Hãy tập trung vào câu hỏi trong tâm trí,<br>rồi chọn kiểu rải bài.</p>
+        </div>
+
+        <div class="spread-options">
+          <button class="spread-btn" data-spread="one">
+            <span class="spread-icon">🃏</span>
+            <span class="spread-name">1 Lá</span>
+            <span class="spread-desc">Thông điệp hôm nay</span>
+          </button>
+          <button class="spread-btn" data-spread="three">
+            <span class="spread-icon">🃏🃏🃏</span>
+            <span class="spread-name">3 Lá</span>
+            <span class="spread-desc">Quá khứ · Hiện tại · Tương lai</span>
+          </button>
+          <button class="spread-btn" data-spread="five">
+            <span class="spread-icon">🃏🃏🃏🃏🃏</span>
+            <span class="spread-name">5 Lá</span>
+            <span class="spread-desc">Tình huống phức tạp</span>
+          </button>
+        </div>
+
+        <p class="t-footer-note">22 lá Đại Bí Ẩn • Xuôi & Ngược</p>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN: SHUFFLE ===== -->
+    <div id="screen-shuffle" class="screen">
+      <div class="screen-inner center">
+        <p class="shuffle-prompt">Tập trung vào câu hỏi của bạn...</p>
+        <div id="deck-visual" class="deck-visual">
+          <div class="deck-card dc-3"></div>
+          <div class="deck-card dc-2"></div>
+          <div class="deck-card dc-1"></div>
+        </div>
+        <p class="shuffle-hint">Nhấn vào bộ bài để xáo</p>
+        <div id="shuffle-progress" class="shuffle-progress">
+          <div class="shuffle-dots">
+            <span class="sdot"></span><span class="sdot"></span><span class="sdot"></span>
+          </div>
+          <span id="shuffle-count-text">Xáo 0/3 lần</span>
+        </div>
+        <button id="btn-draw" class="btn-tarot-primary hidden">Rút Bài ✨</button>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN: READING ===== -->
+    <div id="screen-reading" class="screen">
+      <div class="screen-inner">
+        <p id="spread-label" class="spread-label"></p>
+        <div id="cards-layout" class="cards-layout"></div>
+        <div id="reading-detail" class="reading-detail hidden">
+          <div class="reading-card-header">
+            <span id="detail-symbol" class="detail-symbol"></span>
+            <div>
+              <p id="detail-position" class="detail-position"></p>
+              <h2 id="detail-name" class="detail-name"></h2>
+              <p id="detail-number" class="detail-number"></p>
+            </div>
+            <span id="detail-orientation" class="detail-orientation"></span>
+          </div>
+          <div id="detail-keywords" class="detail-keywords"></div>
+          <p id="detail-meaning" class="detail-meaning"></p>
+          <div class="detail-advice-box">
+            <span class="advice-label">💡 Lời Khuyên</span>
+            <p id="detail-advice" class="detail-advice"></p>
+          </div>
+          <p id="detail-element" class="detail-element"></p>
+        </div>
+        <button id="btn-new-reading" class="btn-tarot-primary" style="margin-top:24px">Rải Bài Mới 🔄</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/cards.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

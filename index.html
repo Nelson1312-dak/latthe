@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Lật Thẻ - Drinking Games, Tarot, Gieo Quẻ Kinh Dịch. Vui vẻ cùng bạn bè!">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>Lật Thẻ — Play. Reveal. Discover.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+  <div id="app">
+
+    <div class="particles" id="particles"></div>
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="brand">
+        <span class="brand-icon">🃏</span>
+        <h1 class="brand-name">lật thẻ</h1>
+        <p class="brand-tagline">Lật — Khám phá — Thách thức</p>
+      </div>
+    </header>
+
+    <!-- MODULE CARDS -->
+    <main class="modules">
+
+      <a class="module-card module-drinking" href="drinking/index.html">
+        <div class="module-glow"></div>
+        <div class="module-icon">🍻</div>
+        <div class="module-body">
+          <h2 class="module-title">Drinking Games</h2>
+          <p class="module-desc">Sự thật • Thử thách • Bình chọn • Chưa từng</p>
+          <div class="module-tags">
+            <span class="tag">1–12 người</span>
+            <span class="tag">Nhóm bạn</span>
+          </div>
+        </div>
+        <div class="module-arrow">→</div>
+      </a>
+
+      <a class="module-card module-tarot" href="tarot/index.html">
+        <div class="module-glow"></div>
+        <div class="module-icon">🔮</div>
+        <div class="module-body">
+          <h2 class="module-title">Tarot</h2>
+          <p class="module-desc">22 Đại Bí Ẩn • Luận giải vận mệnh • Rải bài 1–3 lá</p>
+          <div class="module-tags">
+            <span class="tag">Major Arcana</span>
+            <span class="tag">Tiếng Việt</span>
+          </div>
+        </div>
+        <div class="module-arrow">→</div>
+      </a>
+
+      <a class="module-card module-gieoque" href="gieoque/index.html">
+        <div class="module-glow"></div>
+        <div class="module-icon">☯️</div>
+        <div class="module-body">
+          <h2 class="module-title">Gieo Quẻ</h2>
+          <p class="module-desc">64 Quẻ Kinh Dịch • Gieo đồng xu • Luận quẻ chi tiết</p>
+          <div class="module-tags">
+            <span class="tag">I Ching</span>
+            <span class="tag">Cổ truyền</span>
+          </div>
+        </div>
+        <div class="module-arrow">→</div>
+      </a>
+
+    </main>
+
+    <footer class="site-footer">
+      <p>latthe.vn — Vui vẻ có trách nhiệm 🙏</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // Particles
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('span');
+      p.className = 'particle';
+      p.style.cssText = `left:${Math.random()*100}%;animation-duration:${12+Math.random()*18}s;animation-delay:${Math.random()*12}s;width:${3+Math.random()*6}px;height:${3+Math.random()*6}px;opacity:${0.08+Math.random()*0.18}`;
+      container.appendChild(p);
+    }
+  </script>
+</body>
+</html>

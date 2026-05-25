@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#050f08">
+  <title>☯️ Gieo Quẻ — Lật Thẻ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/gieoque.css">
+</head>
+<body>
+  <div id="app">
+
+    <header class="gq-header">
+      <a href="../index.html" class="btn-back">← Trang Chủ</a>
+      <span class="gq-header-title">☯️ Gieo Quẻ</span>
+      <button id="btn-restart" class="btn-ghost hidden">Làm Lại</button>
+    </header>
+
+    <!-- ===== SCREEN: INTRO ===== -->
+    <div id="screen-intro" class="screen active">
+      <div class="screen-inner center">
+        <div class="gq-hero">
+          <div class="yin-yang-anim">☯️</div>
+          <h1 class="gq-title">Kinh Dịch</h1>
+          <p class="gq-subtitle">64 Quẻ • Gieo đồng xu • Luận quẻ Kinh Dịch</p>
+        </div>
+
+        <div class="intro-card">
+          <h3 class="intro-card-title">📜 Cách Gieo Quẻ</h3>
+          <div class="intro-steps">
+            <div class="intro-step">
+              <span class="step-num">1</span>
+              <span>Tập trung vào câu hỏi trong tâm trí</span>
+            </div>
+            <div class="intro-step">
+              <span class="step-num">2</span>
+              <span>Gieo 3 đồng xu 6 lần (mỗi lần = 1 hào)</span>
+            </div>
+            <div class="intro-step">
+              <span class="step-num">3</span>
+              <span>Kết quả tạo thành quẻ 6 hào</span>
+            </div>
+            <div class="intro-step">
+              <span class="step-num">4</span>
+              <span>Hào động tạo quẻ biến — đọc cả hai</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="coin-legend">
+          <div class="legend-item"><span class="coin coin-yang">●</span><span>Sấp = Dương (3đ)</span></div>
+          <div class="legend-item"><span class="coin coin-yin">○</span><span>Ngửa = Âm (2đ)</span></div>
+          <div class="legend-item"><span class="coin coin-old-yang">◉</span><span>9đ = Lão Dương (hào động)</span></div>
+          <div class="legend-item"><span class="coin coin-old-yin">◎</span><span>6đ = Lão Âm (hào động)</span></div>
+        </div>
+
+        <button id="btn-start-throw" class="btn-gq-primary">Bắt Đầu Gieo ☯️</button>
+        <p class="intro-note">Máy sẽ tự gieo 3 đồng xu mỗi lần nhấn</p>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN: THROWING ===== -->
+    <div id="screen-throw" class="screen">
+      <div class="screen-inner center">
+        <p class="throw-label">Hào thứ <span id="throw-line-num">1</span> / 6</p>
+        <p class="throw-sublabel">(từ dưới lên trên)</p>
+
+        <div id="coins-display" class="coins-display">
+          <div class="coin-slot" id="coin-0"></div>
+          <div class="coin-slot" id="coin-1"></div>
+          <div class="coin-slot" id="coin-2"></div>
+        </div>
+
+        <div id="line-result" class="line-result hidden">
+          <span id="line-result-symbol" class="line-result-symbol"></span>
+          <span id="line-result-text" class="line-result-text"></span>
+        </div>
+
+        <div id="hexagram-preview" class="hexagram-preview">
+          <!-- Lines drawn bottom-up as we throw -->
+        </div>
+
+        <button id="btn-throw" class="btn-gq-primary">
+          🪙 Gieo Lần <span id="throw-btn-num">1</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN: RESULT ===== -->
+    <div id="screen-result" class="screen">
+      <div class="screen-inner">
+        <div id="hex-primary" class="hex-result-card">
+          <div class="hex-header">
+            <span class="hex-symbol" id="hex-primary-symbol"></span>
+            <div>
+              <p class="hex-label">Quẻ Chính</p>
+              <h2 class="hex-name" id="hex-primary-name"></h2>
+            </div>
+          </div>
+          <div id="hex-primary-lines" class="hex-lines-display"></div>
+          <p class="hex-meaning" id="hex-primary-meaning"></p>
+          <div class="hex-advice-box">
+            <span class="hex-advice-label">💡 Lời Khuyên</span>
+            <p class="hex-advice" id="hex-primary-advice"></p>
+          </div>
+        </div>
+
+        <div id="hex-changed-section" class="hidden">
+          <div class="moving-lines-note">
+            <span class="moving-dot"></span>
+            Có hào động — quẻ biến đổi thành:
+          </div>
+          <div id="hex-changed" class="hex-result-card hex-changed-card">
+            <div class="hex-header">
+              <span class="hex-symbol" id="hex-changed-symbol"></span>
+              <div>
+                <p class="hex-label">Quẻ Biến</p>
+                <h2 class="hex-name" id="hex-changed-name"></h2>
+              </div>
+            </div>
+            <div id="hex-changed-lines" class="hex-lines-display"></div>
+            <p class="hex-meaning" id="hex-changed-meaning"></p>
+            <div class="hex-advice-box">
+              <span class="hex-advice-label">🔮 Xu Hướng</span>
+              <p class="hex-advice" id="hex-changed-advice"></p>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-new-cast" class="btn-gq-primary" style="margin-top:24px">Gieo Quẻ Mới ☯️</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/hexagrams.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
