@@ -26,6 +26,12 @@
   <meta name="twitter:description" content="Gieo đồng xu lập quẻ Kinh Dịch trực tuyến. Nhận lời khuyên cải vận từ Cổ Dịch Đại Sư.">
   <meta name="twitter:image" content="https://latthe-hazel.vercel.app/images/og-gieoque.png">
 
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+  <link rel="apple-touch-icon" href="/images/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Gieo Quẻ">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
@@ -82,7 +88,10 @@
     <header class="gq-header">
       <a href="../index.html" class="btn-back">← Trang Chủ</a>
       <span class="gq-header-title">☯️ Gieo Quẻ</span>
-      <button id="btn-restart" class="btn-ghost hidden">Làm Lại</button>
+      <div class="gq-header-actions">
+        <button id="btn-history" class="btn-ghost" title="Lịch sử quẻ đã gieo">📜</button>
+        <button id="btn-restart" class="btn-ghost hidden">Làm Lại</button>
+      </div>
     </header>
 
     <!-- ===== SCREEN: INTRO ===== -->
@@ -285,6 +294,7 @@
 
   <script src="js/hexagrams.js"></script>
   <script src="../js/ai.js"></script>
+  <script src="../js/history.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

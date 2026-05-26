@@ -356,7 +356,47 @@ document.addEventListener('DOMContentLoaded', () => {
     aiQuestionDisp.textContent = `"${q}"`;
     aiChatMessages.innerHTML = '';
     aiError.classList.add('hidden');
+
+    if (window.History) {
+      window.History.save('gieoque', {
+        question: q,
+        mainSymbol: primary.symbol || '䷀',
+        mainName: primary.vn,
+        mainNameEn: primary.name,
+        meaning: primary.meaning,
+        hasMoving,
+        changedSymbol: hasMoving && changed ? changed.symbol : null,
+        changedName: hasMoving && changed ? changed.vn : null,
+      });
+    }
+
     sendMessage(q);
+  }
+
+  // ---- History modal ----
+  const btnHistory = document.getElementById('btn-history');
+  if (btnHistory && window.History) {
+    btnHistory.addEventListener('click', () => {
+      window.History.openModal({
+        type: 'gieoque',
+        title: '📜 Lịch sử gieo quẻ',
+        formatItem: (item) => {
+          const wrap = document.createElement('div');
+          const head = document.createElement('div');
+          head.className = 'history-item-head';
+          head.innerHTML = `<span class="history-symbol">${item.mainSymbol}</span><span class="history-name">${item.mainName}</span>`;
+          if (item.hasMoving && item.changedSymbol) {
+            head.innerHTML += `<span class="history-arrow">→</span><span class="history-symbol">${item.changedSymbol}</span><span class="history-name">${item.changedName}</span>`;
+          }
+          const q = document.createElement('p');
+          q.className = 'history-question';
+          q.textContent = `"${item.question}"`;
+          wrap.appendChild(head);
+          wrap.appendChild(q);
+          return wrap;
+        },
+      });
+    });
   }
 
   btnAskAI.addEventListener('click', () => sendMessage(aiChatInput.value));

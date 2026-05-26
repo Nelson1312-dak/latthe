@@ -26,6 +26,12 @@
   <meta name="twitter:description" content="Gieo quẻ Kinh Dịch, bói bài Tarot và quẩy cùng nhóm bạn. Miễn phí.">
   <meta name="twitter:image" content="https://latthe-hazel.vercel.app/images/og-main.png">
 
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+  <link rel="apple-touch-icon" href="/images/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Lật Thẻ">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -46,7 +52,7 @@
 
     <!-- HERO -->
     <header class="l-hero">
-      <span class="l-brand-mark">🃏</span>
+      <img class="l-brand-mark" src="/images/icon.svg" alt="Lật Thẻ logo" width="80" height="80">
       <h1 class="l-brand-name">lật thẻ</h1>
       <p class="l-brand-sub">Lật · Khám phá · Thách thức</p>
     </header>
@@ -93,5 +99,15 @@
     </footer>
 
   </div>
+  <script>
+    // Mouse-tracked glow on landing cards
+    document.querySelectorAll('.l-card').forEach(card => {
+      card.addEventListener('pointermove', e => {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+        card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+      });
+    });
+  </script>
 </body>
 </html>

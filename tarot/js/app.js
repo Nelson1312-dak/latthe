@@ -358,7 +358,43 @@ document.addEventListener('DOMContentLoaded', () => {
     aiQuestionDisp.textContent = `"${q}"`;
     aiChatMessages.innerHTML = '';
     aiError.classList.add('hidden');
+
+    if (window.History) {
+      window.History.save('tarot', {
+        question: q,
+        cards: drawnCards.map(({ card, reversed }) => ({
+          name: card.vn || card.name,
+          reversed: !!reversed,
+        })),
+      });
+    }
+
     sendMessage(q);
+  }
+
+  // ---- History modal ----
+  const btnHistory = document.getElementById('btn-history');
+  if (btnHistory && window.History) {
+    btnHistory.addEventListener('click', () => {
+      window.History.openModal({
+        type: 'tarot',
+        title: '📜 Lịch sử trải bài',
+        formatItem: (item) => {
+          const wrap = document.createElement('div');
+          const cards = document.createElement('div');
+          cards.className = 'history-item-head';
+          cards.innerHTML = (item.cards || [])
+            .map(c => `<span class="history-card">${c.reversed ? '↓ ' : ''}${c.name}</span>`)
+            .join('');
+          const q = document.createElement('p');
+          q.className = 'history-question';
+          q.textContent = `"${item.question}"`;
+          wrap.appendChild(cards);
+          wrap.appendChild(q);
+          return wrap;
+        },
+      });
+    });
   }
 
   btnAskAI.addEventListener('click', () => sendMessage(aiChatInput.value));
