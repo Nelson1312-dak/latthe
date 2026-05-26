@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
 
-Sitemap: http://localhost:5005/sitemap.xml
+Disallow: /api/
+
+Sitemap: https://gieoque.vn/sitemap.xml

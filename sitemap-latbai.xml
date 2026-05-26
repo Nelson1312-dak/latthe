@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Trang chủ Lật Bài Online -->
   <url>
-    <loc>http://localhost:5005/</loc>
+    <loc>https://latthe-hazel.vercel.app/</loc>
     <lastmod>2026-05-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
-
-  <!-- Trang Bói Bài Tarot -->
   <url>
-    <loc>http://localhost:5005/tarot/</loc>
+    <loc>https://latthe-hazel.vercel.app/gieoque/</loc>
     <lastmod>2026-05-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- Trang Drinking Games -->
   <url>
-    <loc>http://localhost:5005/drinking/</loc>
+    <loc>https://latthe-hazel.vercel.app/tarot/</loc>
+    <lastmod>2026-05-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://latthe-hazel.vercel.app/drinking/</loc>
     <lastmod>2026-05-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

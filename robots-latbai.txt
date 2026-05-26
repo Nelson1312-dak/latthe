@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: http://localhost:5005/sitemap.xml
+# Disallow API & admin paths (no value for search engines)
+Disallow: /api/
+
+Sitemap: https://latthe-hazel.vercel.app/sitemap.xml
