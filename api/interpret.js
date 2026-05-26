@@ -26,11 +26,13 @@ export default async function handler(req, res) {
   const { question, context, type } = req.body || {};
   if (!question?.trim()) return res.status(400).json({ error: 'Thiếu câu hỏi' });
 
-  const systemPrompt = type === 'tarot'
-    ? 'Bạn là chuyên gia Tarot với kiến thức sâu sắc về 22 lá Đại Bí Ẩn. Hãy trả lời bằng tiếng Việt, súc tích (4-6 câu), thực tế và đầy cảm hứng. Trả lời trực tiếp vào câu hỏi dựa trên lá bài, không giải thích lý thuyết dài dòng.'
-    : 'Bạn là học giả Kinh Dịch với am hiểu sâu về 64 quẻ. Hãy trả lời bằng tiếng Việt, súc tích (4-6 câu), kết hợp triết lý cổ xưa với thực tiễn hiện đại. Trả lời trực tiếp vào câu hỏi dựa trên quẻ bốc được, không giải thích lý thuyết.';
+  const langRule = 'CRITICAL RULE: You MUST respond ONLY in Vietnamese (Tiếng Việt). Absolutely do NOT use Chinese, English, or any other language. Every single word of your response must be Vietnamese.';
 
-  const userPrompt = `Câu hỏi: "${question}"\n\nThông tin ${type === 'tarot' ? 'bài Tarot' : 'quẻ Kinh Dịch'} vừa bốc được:\n${context}\n\nHãy luận giải và trả lời thẳng vào câu hỏi của tôi.`;
+  const systemPrompt = type === 'tarot'
+    ? `${langRule}\n\nBạn là chuyên gia Tarot với kiến thức sâu sắc về 22 lá Đại Bí Ẩn. Hãy trả lời súc tích (4-6 câu), thực tế và đầy cảm hứng. Trả lời trực tiếp vào câu hỏi dựa trên lá bài, không giải thích lý thuyết dài dòng.`
+    : `${langRule}\n\nBạn là học giả Kinh Dịch với am hiểu sâu về 64 quẻ. Hãy trả lời súc tích (4-6 câu), kết hợp triết lý cổ xưa với thực tiễn hiện đại. Trả lời trực tiếp vào câu hỏi dựa trên quẻ bốc được, không giải thích lý thuyết.`;
+
+  const userPrompt = `Câu hỏi: "${question}"\n\nThông tin ${type === 'tarot' ? 'bài Tarot' : 'quẻ Kinh Dịch'} vừa bốc được:\n${context}\n\nHãy luận giải và trả lời thẳng vào câu hỏi của tôi. (Nhớ: chỉ dùng tiếng Việt)`;
 
   try {
     const controller = new AbortController();
