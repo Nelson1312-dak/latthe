@@ -721,6 +721,21 @@ a { text-decoration: none; color: inherit; }
   border-color: rgba(251,113,133,0.3);
   color: #fb7185;
 }
+.btn-retry {
+  margin-top: 10px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(251,113,133,0.4);
+  background: rgba(251,113,133,0.08);
+  color: #fb7185;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-retry:hover { background: rgba(251,113,133,0.18); color: #fda4af; transform: translateY(-1px); }
+.btn-retry:active { transform: scale(0.97); }
 .ai-loading {
   display: flex;
   align-items: center;

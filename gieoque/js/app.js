@@ -320,10 +320,28 @@ document.addEventListener('DOMContentLoaded', () => {
         btnAskAI.disabled = false;
         aiChatInput.value = '';
       },
-      onError: (msg) => {
+      onError: (err) => {
         aiLoading.classList.add('hidden');
-        aiBubble.textContent = '⚠️ ' + msg;
+        aiBubble.innerHTML = '';
         aiBubble.classList.add('chat-error');
+
+        const text = document.createElement('div');
+        text.textContent = '⚠️ ' + err.message;
+        aiBubble.appendChild(text);
+
+        if (err.retryable) {
+          const retry = document.createElement('button');
+          retry.className = 'btn-retry';
+          retry.textContent = 'Thử lại';
+          retry.onclick = () => {
+            aiBubble.remove();
+            const userBubbles = aiChatMessages.querySelectorAll('.chat-bubble.chat-user');
+            if (userBubbles.length) userBubbles[userBubbles.length - 1].remove();
+            sendMessage(q);
+          };
+          aiBubble.appendChild(retry);
+        }
+
         aiChatInput.disabled = false;
         btnAskAI.disabled = false;
       },
