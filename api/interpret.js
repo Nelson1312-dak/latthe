@@ -36,7 +36,6 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 55000);
 
-    console.log('model:', JSON.stringify(model), 'url:', ollamaUrl);
     const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
