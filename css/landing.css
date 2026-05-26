@@ -90,13 +90,9 @@ a { text-decoration: none; color: inherit; }
 .brand-name {
   font-family: var(--font-heading);
   font-size: clamp(42px, 12vw, 72px);
-  font-weight: 900;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, #fff 30%, var(--gold) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 16px rgba(212,166,66,0.4));
+  font-weight: 800;
+  letter-spacing: 0px;
+  color: #ffffff;
 }
 .brand-tagline {
   font-size: 13px;
