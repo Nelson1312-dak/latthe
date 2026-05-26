@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS documents (
   context     text,                        -- card/hexagram raw context
   answer      text        NOT NULL,
   embedding   vector(768),                 -- nomic-embed-text output
+  is_followup boolean     DEFAULT false,   -- true = follow-up chat, excluded from cache
   created_at  timestamptz DEFAULT now()
 );
 
@@ -31,8 +32,9 @@ CREATE INDEX IF NOT EXISTS documents_embedding_idx
   ON documents USING ivfflat (embedding vector_cosine_ops)
   WITH (lists = 100);
 
--- Index on type for filtered queries
+-- Index on type and followup flag for filtered queries
 CREATE INDEX IF NOT EXISTS documents_type_idx ON documents (type);
+CREATE INDEX IF NOT EXISTS documents_followup_idx ON documents (is_followup);
 
 -- RLS: allow backend (anon key from serverless function) to read/write
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
@@ -68,6 +70,7 @@ AS $$
   FROM documents
   WHERE
     embedding IS NOT NULL
+    AND is_followup = false
     AND (filter_type IS NULL OR type = filter_type)
     AND 1 - (embedding <=> query_embedding) > match_threshold
   ORDER BY embedding <=> query_embedding

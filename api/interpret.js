@@ -414,8 +414,8 @@ Bạn là một bậc thầy Chiêm tinh học và Kinh Dịch có tên là "C�
     // Post-process to remove Chinese character leaks
     answer = cleanChineseLeaks(answer);
 
-    // ---- RAG: store new Q&A for first questions only (follow-ups are context-dependent) ----
-    if (!isFollowUp) storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding });
+    // ---- RAG: store all Q&As; follow-ups flagged and excluded from cache retrieval ----
+    storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp });
 
     return res.status(200).json({ answer });
 
