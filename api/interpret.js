@@ -16,8 +16,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const ollamaUrl = process.env.OLLAMA_BASE_URL;
-  const model     = process.env.OLLAMA_MODEL || 'qwen2.5:7b';
+  const ollamaUrl = (process.env.OLLAMA_BASE_URL || '').trim();
+  const model     = (process.env.OLLAMA_MODEL || '').trim() || 'qwen2.5:7b';
 
   if (!ollamaUrl) {
     return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL)' });
@@ -36,7 +36,8 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 55000);
 
-    const ollamaRes = await fetch(`${ollamaUrl.trim()}/api/chat`, {
+    console.log('model:', JSON.stringify(model), 'url:', ollamaUrl);
+    const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
