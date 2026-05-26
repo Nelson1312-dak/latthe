@@ -6,6 +6,47 @@
  *   Requires: OLLAMA_EMBED_MODEL pulled in Ollama (default: nomic-embed-text)
  */
 
+// ---- CORS + rate-limit config ----
+
+const ALLOWED_ORIGINS = new Set([
+  'https://latthe-hazel.vercel.app',
+  'https://gieoque.vn',
+  'https://www.gieoque.vn',
+  'http://localhost:5005',
+  'http://localhost:3000',
+]);
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 5;
+const rateLimitStore = new Map(); // ip -> { count, windowStart }
+
+function getClientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) return xff.split(',')[0].trim();
+  return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
+}
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  // Opportunistic cleanup to keep the in-memory map bounded
+  if (rateLimitStore.size > 500) {
+    for (const [k, v] of rateLimitStore) {
+      if (now - v.windowStart > RATE_LIMIT_WINDOW_MS) rateLimitStore.delete(k);
+    }
+  }
+  const record = rateLimitStore.get(ip);
+  if (!record || now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitStore.set(ip, { count: 1, windowStart: now });
+    return { allowed: true };
+  }
+  if (record.count >= RATE_LIMIT_MAX) {
+    const retryAfter = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - record.windowStart)) / 1000);
+    return { allowed: false, retryAfter };
+  }
+  record.count++;
+  return { allowed: true };
+}
+
 // ---- Language filter helper ----
 
 function cleanChineseLeaks(text) {
@@ -198,11 +239,28 @@ Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định
 // ---- Main handler ----
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // ---- CORS whitelist ----
+  const origin = req.headers.origin || '';
+  if (ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  } else if (origin) {
+    return res.status(403).json({ error: 'Truy cập bị từ chối: nguồn gọi không hợp lệ.' });
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // ---- Rate limit per IP ----
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(ip);
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfter));
+    return res.status(429).json({
+      error: `Bạn đang hỏi hơi nhanh 🙏 Vui lòng đợi ${rl.retryAfter} giây rồi thử lại.`,
+    });
+  }
 
   const ollamaUrl  = (process.env.OLLAMA_BASE_URL  || '').trim();
   const model      = (process.env.OLLAMA_MODEL      || '').trim() || 'qwen2.5:7b';
