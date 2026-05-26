@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let lines = [];
   let throwTimeouts = [];
   let currentContext = '';
+  let chatHistory = [];
 
   const screens = {
     intro:  document.getElementById('screen-intro'),
@@ -223,13 +224,17 @@ document.addEventListener('DOMContentLoaded', () => {
       question: q,
       context: currentContext,
       type: 'gieoque',
+      history: chatHistory,
       onToken: (token) => {
         aiLoading.classList.add('hidden');
         aiBubble.textContent += token;
         aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
       },
-      onDone: () => {
+      onDone: (fullAnswer) => {
         aiLoading.classList.add('hidden');
+        chatHistory.push({ role: 'user', content: q });
+        chatHistory.push({ role: 'assistant', content: fullAnswer });
+        if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
         aiChatInput.disabled = false;
         btnAskAI.disabled = false;
         aiChatInput.value = '';
@@ -266,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     throwTimeouts = [];
     lines = [];
     currentContext = '';
+    chatHistory = [];
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
     aiChatMessages.innerHTML = '';

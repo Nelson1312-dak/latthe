@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnNewReading   = document.getElementById('btn-new-reading');
   const btnRestart      = document.getElementById('btn-restart');
 
+  let chatHistory = []; // [{role:'user'|'assistant', content:'...'}]
+
   const aiSection      = document.getElementById('ai-section');
   const aiQuestionDisp = document.getElementById('ai-question-display');
   const aiChatMessages = document.getElementById('ai-chat-messages');
@@ -215,13 +217,17 @@ document.addEventListener('DOMContentLoaded', () => {
       question: q,
       context: buildTarotContext(),
       type: 'tarot',
+      history: chatHistory,
       onToken: (token) => {
         aiLoading.classList.add('hidden');
         aiBubble.textContent += token;
         aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
       },
-      onDone: () => {
+      onDone: (fullAnswer) => {
         aiLoading.classList.add('hidden');
+        chatHistory.push({ role: 'user', content: q });
+        chatHistory.push({ role: 'assistant', content: fullAnswer });
+        if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
         aiChatInput.disabled = false;
         btnAskAI.disabled = false;
         aiChatInput.value = '';
@@ -254,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---- Reset ----
   function goNewReading() {
     resetShuffle();
+    chatHistory = [];
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
     aiChatMessages.innerHTML = '';
