@@ -58,6 +58,7 @@
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
+button, input, textarea, select, a { touch-action: manipulation; }
 
 body {
   font-family: var(--font-body);

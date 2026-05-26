@@ -18,6 +18,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button, input, textarea, select, a { touch-action: manipulation; }
 html { font-size: 16px; }
 body {
   font-family: var(--font-body);
@@ -484,7 +485,7 @@ a { text-decoration: none; color: inherit; }
   border-radius: 12px;
   padding: 12px 14px;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text);
   resize: none;
   outline: none;
@@ -739,7 +740,7 @@ a { text-decoration: none; color: inherit; }
   border-radius: 10px;
   padding: 10px 12px;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text);
   outline: none;
   min-width: 0;
