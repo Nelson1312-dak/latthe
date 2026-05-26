@@ -5,114 +5,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Trải nghiệm các trò chơi lật thẻ trực tuyến miễn phí: Gieo quẻ Kinh Dịch luận giải vận mệnh, bói bài Tarot thấu hiểu tâm lý và các Drinking Games thử thách nhóm bạn cực kỳ vui nhộn. Chơi offline không quảng cáo!">
   <meta name="keywords" content="lật thẻ, gieo quẻ, kinh dịch, bói bài tarot, drinking game, trò chơi uống rượu, giải trí nhóm, tarot online">
-  <meta name="theme-color" content="#0a0a1a">
-  <link rel="canonical" href="http://localhost:5005">
+  <meta name="theme-color" content="#f7f3ec">
+  <link rel="canonical" href="https://latthe-hazel.vercel.app">
   <title>Lật Thẻ — Gieo Quẻ Kinh Dịch, Bói Tarot & Drinking Games</title>
-  
-  <!-- Open Graph / Facebook -->
+
+  <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="http://localhost:5005">
+  <meta property="og:url" content="https://latthe-hazel.vercel.app">
   <meta property="og:title" content="Lật Thẻ — Gieo Quẻ Kinh Dịch, Bói Tarot & Drinking Games">
-  <meta property="og:description" content="Trải nghiệm các trò chơi lật thẻ trực tuyến: Gieo quẻ lập lá số Kinh Dịch, bói bài Tarot định hướng tâm lý và quẩy hết mình cùng nhóm bạn với các Drinking Games.">
-  <meta property="og:image" content="http://localhost:5005/images/og-main.jpg">
+  <meta property="og:description" content="Gieo quẻ Kinh Dịch, bói bài Tarot và quẩy cùng nhóm bạn với Drinking Games. Miễn phí, không quảng cáo.">
+  <meta property="og:image" content="https://latthe-hazel.vercel.app/images/og-main.jpg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/landing.css">
 
-  <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Lật Thẻ",
-    "url": "http://localhost:5005",
-    "description": "Nền tảng trò chơi lật thẻ trực tuyến: Gieo quẻ Kinh Dịch, bói bài Tarot và Drinking Games giải trí nhóm bạn.",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "http://localhost:5005/?q={search_term_string}",
-      "query-input": "required name=search_term_string"
-    }
+    "url": "https://latthe-hazel.vercel.app",
+    "description": "Nền tảng trò chơi lật thẻ trực tuyến: Gieo quẻ Kinh Dịch, bói bài Tarot và Drinking Games."
   }
   </script>
 </head>
 <body>
-  <div id="app">
-
-    <div class="particles" id="particles"></div>
+  <div class="l-page">
 
     <!-- HERO -->
-    <header class="hero">
-      <div class="brand">
-        <span class="brand-icon">🃏</span>
-        <h1 class="brand-name">lật thẻ</h1>
-        <p class="brand-tagline">Lật — Khám phá — Thách thức</p>
-      </div>
+    <header class="l-hero">
+      <span class="l-brand-mark">🃏</span>
+      <h1 class="l-brand-name">lật thẻ</h1>
+      <p class="l-brand-sub">Lật · Khám phá · Thách thức</p>
     </header>
 
+    <div class="l-divider"></div>
+
     <!-- MODULE CARDS -->
-    <main class="modules">
+    <main class="l-modules">
 
-      <a class="module-card module-gieoque" href="gieoque/index.html">
-        <div class="module-glow"></div>
-        <div class="module-icon">☯️</div>
-        <div class="module-body">
-          <h2 class="module-title">Gieo Quẻ</h2>
-          <p class="module-desc">64 Quẻ Kinh Dịch • Gieo đồng xu • Luận quẻ chi tiết</p>
-          <div class="module-tags">
-            <span class="tag">I Ching</span>
-            <span class="tag">Cổ truyền</span>
-          </div>
+      <a class="l-card l-gieoque" href="gieoque/index.html">
+        <div class="l-card-icon">☯️</div>
+        <div class="l-card-body">
+          <p class="l-card-label">I Ching · Cổ truyền</p>
+          <h2 class="l-card-name">Gieo Quẻ</h2>
+          <p class="l-card-desc">64 Quẻ Kinh Dịch · Gieo đồng xu · Luận giải vận mệnh cùng AI</p>
         </div>
-        <div class="module-arrow">→</div>
+        <span class="l-card-arrow">→</span>
       </a>
 
-      <a class="module-card module-drinking" href="drinking/index.html">
-        <div class="module-glow"></div>
-        <div class="module-icon">🍻</div>
-        <div class="module-body">
-          <h2 class="module-title">Drinking Games</h2>
-          <p class="module-desc">Sự thật • Thử thách • Bình chọn • Chưa từng</p>
-          <div class="module-tags">
-            <span class="tag">1–12 người</span>
-            <span class="tag">Nhóm bạn</span>
-          </div>
+      <a class="l-card l-drink" href="drinking/index.html">
+        <div class="l-card-icon">🍻</div>
+        <div class="l-card-body">
+          <p class="l-card-label">1–12 người · Nhóm bạn</p>
+          <h2 class="l-card-name">Drinking Games</h2>
+          <p class="l-card-desc">Sự thật · Thử thách · Bình chọn · Chưa từng</p>
         </div>
-        <div class="module-arrow">→</div>
+        <span class="l-card-arrow">→</span>
       </a>
 
-      <a class="module-card module-tarot" href="tarot/index.html">
-        <div class="module-glow"></div>
-        <div class="module-icon">🔮</div>
-        <div class="module-body">
-          <h2 class="module-title">Tarot</h2>
-          <p class="module-desc">22 Đại Bí Ẩn • Luận giải vận mệnh • Rải bài 1–3 lá</p>
-          <div class="module-tags">
-            <span class="tag">Major Arcana</span>
-            <span class="tag">Tiếng Việt</span>
-          </div>
+      <a class="l-card l-tarot" href="tarot/index.html">
+        <div class="l-card-icon">🔮</div>
+        <div class="l-card-body">
+          <p class="l-card-label">Major Arcana · Tiếng Việt</p>
+          <h2 class="l-card-name">Tarot</h2>
+          <p class="l-card-desc">78 lá bài · Luận giải tâm lý · Rải bài 1–5 lá</p>
         </div>
-        <div class="module-arrow">→</div>
+        <span class="l-card-arrow">→</span>
       </a>
 
     </main>
 
-    <footer class="site-footer">
-      <p>latthe-hazel.vercel.app — Vui vẻ có trách nhiệm 🙏</p>
+    <footer class="l-footer">
+      <p>Vui vẻ có trách nhiệm 🙏</p>
     </footer>
 
   </div>
-
-  <script>
-    // Particles
-    const container = document.getElementById('particles');
-    for (let i = 0; i < 30; i++) {
-      const p = document.createElement('span');
-      p.className = 'particle';
-      p.style.cssText = `left:${Math.random()*100}%;animation-duration:${12+Math.random()*18}s;animation-delay:${Math.random()*12}s;width:${3+Math.random()*6}px;height:${3+Math.random()*6}px;opacity:${0.08+Math.random()*0.18}`;
-      container.appendChild(p);
-    }
-  </script>
 </body>
 </html>
