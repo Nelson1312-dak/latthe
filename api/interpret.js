@@ -43,7 +43,7 @@ async function getEmbedding(ollamaUrl, embedModel, text) {
   try {
     const res = await fetch(`${ollamaUrl}/api/embeddings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
       body: JSON.stringify({ model: embedModel, prompt: text }),
       signal: controller.signal,
     });
@@ -371,7 +371,7 @@ Bạn là một bậc thầy Chiêm tinh học và Kinh Dịch có tên là "C�
 
     const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
       body: JSON.stringify({
         model,
         messages: ollamaMessages,
