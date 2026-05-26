@@ -67,12 +67,9 @@
           <div class="deck-card dc-2"></div>
           <div class="deck-card dc-1"></div>
         </div>
-        <p class="shuffle-hint">Nhấn vào bộ bài để xáo</p>
-        <div id="shuffle-progress" class="shuffle-progress">
-          <div class="shuffle-dots">
-            <span class="sdot"></span><span class="sdot"></span><span class="sdot"></span>
-          </div>
-          <span id="shuffle-count-text">Xáo 0/3 lần</span>
+        <p id="shuffle-hint" class="shuffle-hint">Giữ bộ bài để xáo...</p>
+        <div class="hold-progress-track">
+          <div id="hold-progress-bar" class="hold-progress-bar"></div>
         </div>
         <button id="btn-draw" class="btn-tarot-primary hidden">Rút Bài ✨</button>
       </div>
@@ -110,15 +107,16 @@
               <p id="ai-question-display" class="ai-question-display"></p>
             </div>
           </div>
-          <div id="ai-response" class="ai-response">
-            <div id="ai-loading" class="ai-loading">
-              <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-              <span class="ai-loading-text">Đang suy ngẫm...</span>
-            </div>
-            <p id="ai-text" class="ai-text"></p>
-            <p id="ai-error" class="ai-error hidden"></p>
+          <div id="ai-chat-messages" class="ai-chat-messages"></div>
+          <div id="ai-loading" class="ai-loading hidden">
+            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+            <span class="ai-loading-text">Đang suy ngẫm...</span>
           </div>
-          <button id="btn-ask-ai" class="btn-ask-ai">✨ Hỏi AI Luận Giải</button>
+          <p id="ai-error" class="ai-error hidden"></p>
+          <div class="ai-chat-row">
+            <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về bài Tarot..." maxlength="300">
+            <button id="btn-ask-ai" class="btn-chat-send">➤</button>
+          </div>
         </div>
 
         <button id="btn-new-reading" class="btn-tarot-primary" style="margin-top:16px">Rải Bài Mới 🔄</button>

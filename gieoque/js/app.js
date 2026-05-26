@@ -3,8 +3,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  let lines = [];      // array of 6 values (6,7,8,9) bottom→top
-  let throwStep = 0;
+  let lines = [];
+  let throwTimeouts = [];
+  let currentContext = '';
 
   const screens = {
     intro:  document.getElementById('screen-intro'),
@@ -12,28 +13,27 @@ document.addEventListener('DOMContentLoaded', () => {
     result: document.getElementById('screen-result'),
   };
 
-  const btnStartThrow  = document.getElementById('btn-start-throw');
-  const btnThrow       = document.getElementById('btn-throw');
-  const btnNewCast     = document.getElementById('btn-new-cast');
-  const btnRestart     = document.getElementById('btn-restart');
-  const throwLineNum   = document.getElementById('throw-line-num');
-  const throwBtnNum    = document.getElementById('throw-btn-num');
-  const coinSlots      = [
+  const btnStartThrow   = document.getElementById('btn-start-throw');
+  const btnNewCast      = document.getElementById('btn-new-cast');
+  const btnRestart      = document.getElementById('btn-restart');
+  const throwLineNum    = document.getElementById('throw-line-num');
+  const throwStatusText = document.getElementById('throw-status-text');
+  const coinSlots       = [
     document.getElementById('coin-0'),
     document.getElementById('coin-1'),
     document.getElementById('coin-2'),
   ];
-  const lineResultEl   = document.getElementById('line-result');
-  const lineSymbolEl   = document.getElementById('line-result-symbol');
-  const lineTextEl     = document.getElementById('line-result-text');
-  const hexPreview     = document.getElementById('hexagram-preview');
+  const lineResultEl  = document.getElementById('line-result');
+  const lineSymbolEl  = document.getElementById('line-result-symbol');
+  const lineTextEl    = document.getElementById('line-result-text');
+  const hexPreview    = document.getElementById('hexagram-preview');
 
-  // AI elements
   const aiSection      = document.getElementById('ai-section');
   const aiQuestionDisp = document.getElementById('ai-question-display');
+  const aiChatMessages = document.getElementById('ai-chat-messages');
   const aiLoading      = document.getElementById('ai-loading');
-  const aiText         = document.getElementById('ai-text');
   const aiError        = document.getElementById('ai-error');
+  const aiChatInput    = document.getElementById('ai-chat-input');
   const btnAskAI       = document.getElementById('btn-ask-ai');
   const gqQuestion     = document.getElementById('gq-question');
 
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     screens[id].classList.add('active');
   }
 
-  // ---- Line type helpers ----
+  // ---- Line helpers ----
   const LINE_INFO = {
     6: { label: 'Lão Âm ⁻ ⁻ (hào động)', yang: false, moving: true,  cssClass: 'old-yin' },
     7: { label: 'Thiếu Dương ——',          yang: true,  moving: false, cssClass: 'yang' },
@@ -54,32 +54,34 @@ document.addEventListener('DOMContentLoaded', () => {
     coinSlots.forEach((slot, i) => {
       slot.className = 'coin-slot';
       slot.textContent = '';
-      setTimeout(() => {
+      const t = setTimeout(() => {
         const isYang = values[i] === 3;
         slot.classList.add(isYang ? 'yang' : 'yin');
         slot.textContent = isYang ? '●' : '○';
       }, 80 + i * 80);
+      throwTimeouts.push(t);
     });
   }
 
   function addPreviewLine(lineValue) {
     const info = LINE_INFO[lineValue];
-    const row = document.createElement('div');
+    const row  = document.createElement('div');
     row.className = 'preview-line';
     if (info.yang) {
       const seg = document.createElement('div');
-      seg.className = 'preview-line-seg yang-seg ' + info.cssClass;
+      seg.className = `preview-line-seg yang-seg ${info.cssClass}`;
       row.appendChild(seg);
     } else {
-      const seg1 = document.createElement('div');
-      seg1.className = 'preview-line-seg yin-seg ' + info.cssClass;
-      const gap = document.createElement('div');
-      gap.style.width = '12px';
-      const seg2 = document.createElement('div');
-      seg2.className = 'preview-line-seg yin-seg ' + info.cssClass;
-      row.appendChild(seg1);
-      row.appendChild(gap);
-      row.appendChild(seg2);
+      ['yin-seg', 'yin-seg'].forEach((cls, idx) => {
+        if (idx === 1) {
+          const gap = document.createElement('div');
+          gap.style.width = '12px';
+          row.appendChild(gap);
+        }
+        const seg = document.createElement('div');
+        seg.className = `preview-line-seg ${cls} ${info.cssClass}`;
+        row.appendChild(seg);
+      });
     }
     hexPreview.appendChild(row);
   }
@@ -87,19 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderHexLines(containerId, linesArr) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    linesArr.forEach((val) => {
+    linesArr.forEach(val => {
       const info = LINE_INFO[val] || LINE_INFO[7];
-      const row = document.createElement('div');
-      let rowClass = 'result-line';
-      if (val === 9) rowClass += ' moving';
-      if (val === 6) rowClass += ' moving moving-yin';
-      row.className = rowClass;
+      const row  = document.createElement('div');
+      let cls = 'result-line';
+      if (val === 9) cls += ' moving';
+      if (val === 6) cls += ' moving moving-yin';
+      row.className = cls;
       if (info.yang) {
         const seg = document.createElement('div');
         seg.className = 'result-line-seg r-yang';
         row.appendChild(seg);
       } else {
-        ['r-yin', 'r-yin'].forEach(() => {
+        [0, 1].forEach(() => {
           const seg = document.createElement('div');
           seg.className = 'result-line-seg r-yin';
           row.appendChild(seg);
@@ -109,48 +111,55 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---- Start throwing ----
-  btnStartThrow.addEventListener('click', () => {
+  // ---- Auto-throw all 6 lines ----
+  function autoThrow() {
     lines = [];
-    throwStep = 0;
     hexPreview.innerHTML = '';
     lineResultEl.classList.add('hidden');
     coinSlots.forEach(s => { s.className = 'coin-slot'; s.textContent = ''; });
-    throwLineNum.textContent = '1';
-    throwBtnNum.textContent = '1';
+
+    function throwOne(step) {
+      if (step >= 6) {
+        const t = setTimeout(showResult, 700);
+        throwTimeouts.push(t);
+        return;
+      }
+
+      throwLineNum.textContent = step + 1;
+      if (throwStatusText) throwStatusText.textContent = `Đang gieo hào ${step + 1}/6...`;
+
+      const coinValues = [
+        Math.random() < 0.5 ? 3 : 2,
+        Math.random() < 0.5 ? 3 : 2,
+        Math.random() < 0.5 ? 3 : 2,
+      ];
+      const sum  = coinValues.reduce((a, b) => a + b, 0);
+      const info = LINE_INFO[sum];
+
+      animateCoins(coinValues);
+
+      const t = setTimeout(() => {
+        lineSymbolEl.textContent = sum === 9 ? '🔴' : sum === 6 ? '🔵' : '⬜';
+        lineTextEl.textContent   = info.label + (info.moving ? ' ✦' : '');
+        lineResultEl.classList.remove('hidden');
+        lines.push(sum);
+        addPreviewLine(sum);
+
+        const t2 = setTimeout(() => throwOne(step + 1), 380);
+        throwTimeouts.push(t2);
+      }, 300);
+      throwTimeouts.push(t);
+    }
+
+    throwOne(0);
+  }
+
+  btnStartThrow.addEventListener('click', () => {
+    throwTimeouts.forEach(clearTimeout);
+    throwTimeouts = [];
     showScreen('throw');
     btnRestart.classList.remove('hidden');
-  });
-
-  btnThrow.addEventListener('click', () => {
-    if (throwStep >= 6) return;
-
-    const coinValues = [
-      Math.random() < 0.5 ? 3 : 2,
-      Math.random() < 0.5 ? 3 : 2,
-      Math.random() < 0.5 ? 3 : 2,
-    ];
-    const sum = coinValues.reduce((a, b) => a + b, 0);
-    const info = LINE_INFO[sum];
-
-    animateCoins(coinValues);
-
-    setTimeout(() => {
-      lineSymbolEl.textContent = sum === 9 ? '🔴' : sum === 6 ? '🔵' : '⬜';
-      lineTextEl.textContent = info.label + (info.moving ? ' ✦' : '');
-      lineResultEl.classList.remove('hidden');
-
-      lines.push(sum);
-      addPreviewLine(sum);
-      throwStep++;
-
-      if (throwStep < 6) {
-        throwLineNum.textContent = throwStep + 1;
-        throwBtnNum.textContent = throwStep + 1;
-      } else {
-        setTimeout(showResult, 700);
-      }
-    }, 350);
+    autoThrow();
   });
 
   // ---- Show result ----
@@ -159,8 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasMoving = hasMovingLines(lines);
     const changed   = hasMoving ? getChangedHexagram(lines) : null;
 
-    document.getElementById('hex-primary-symbol').textContent = primary.symbol || '䷀';
-    document.getElementById('hex-primary-name').textContent   = `${primary.vn} (${primary.name})`;
+    document.getElementById('hex-primary-symbol').textContent  = primary.symbol || '䷀';
+    document.getElementById('hex-primary-name').textContent    = `${primary.vn} (${primary.name})`;
     document.getElementById('hex-primary-meaning').textContent = primary.meaning;
     document.getElementById('hex-primary-advice').textContent  = primary.advice;
     renderHexLines('hex-primary-lines', lines);
@@ -181,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('result');
   }
 
-  // ---- AI interpretation ----
+  // ---- AI Chat ----
   function buildGQContext(primary, hasMoving, changed) {
     let ctx = `Quẻ chính: ${primary.vn} (${primary.name})\nÝ nghĩa: ${primary.meaning}\nLời khuyên: ${primary.advice}`;
     if (hasMoving && changed) {
@@ -190,54 +199,76 @@ document.addEventListener('DOMContentLoaded', () => {
     return ctx;
   }
 
+  function appendBubble(role, text) {
+    const div = document.createElement('div');
+    div.className = `chat-bubble chat-${role}`;
+    div.textContent = text;
+    aiChatMessages.appendChild(div);
+    aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+    return div;
+  }
+
+  function sendMessage(question) {
+    const q = question.trim();
+    if (!q) return;
+
+    appendBubble('user', q);
+    const aiBubble = appendBubble('ai', '');
+    aiLoading.classList.remove('hidden');
+    aiError.classList.add('hidden');
+    aiChatInput.disabled = true;
+    btnAskAI.disabled = true;
+
+    askAI({
+      question: q,
+      context: currentContext,
+      type: 'gieoque',
+      onToken: (token) => {
+        aiLoading.classList.add('hidden');
+        aiBubble.textContent += token;
+        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+      },
+      onDone: () => {
+        aiLoading.classList.add('hidden');
+        aiChatInput.disabled = false;
+        btnAskAI.disabled = false;
+        aiChatInput.value = '';
+      },
+      onError: (msg) => {
+        aiLoading.classList.add('hidden');
+        aiBubble.textContent = '⚠️ ' + msg;
+        aiBubble.classList.add('chat-error');
+        aiChatInput.disabled = false;
+        btnAskAI.disabled = false;
+      },
+    });
+  }
+
   function showAISection(primary, hasMoving, changed) {
     const q = gqQuestion.value.trim();
     if (!q) return;
-
+    currentContext = buildGQContext(primary, hasMoving, changed);
     aiSection.classList.remove('hidden');
     aiQuestionDisp.textContent = `"${q}"`;
-    aiText.textContent = '';
+    aiChatMessages.innerHTML = '';
     aiError.classList.add('hidden');
-    aiLoading.style.display = 'none';
-    btnAskAI.disabled = false;
-    btnAskAI.textContent = '✨ Hỏi AI Luận Quẻ';
-
-    btnAskAI.onclick = () => {
-      btnAskAI.disabled = true;
-      aiText.textContent = '';
-      aiError.classList.add('hidden');
-      aiLoading.style.display = 'flex';
-
-      askAI({
-        question: q,
-        context: buildGQContext(primary, hasMoving, changed),
-        type: 'gieoque',
-        onToken: (token) => {
-          aiLoading.style.display = 'none';
-          aiText.textContent += token;
-        },
-        onDone: () => {
-          aiLoading.style.display = 'none';
-          btnAskAI.textContent = '🔄 Hỏi Lại';
-          btnAskAI.disabled = false;
-        },
-        onError: (msg) => {
-          aiLoading.style.display = 'none';
-          aiError.textContent = '⚠️ ' + msg;
-          aiError.classList.remove('hidden');
-          btnAskAI.disabled = false;
-        }
-      });
-    };
+    sendMessage(q);
   }
+
+  btnAskAI.addEventListener('click', () => sendMessage(aiChatInput.value));
+  aiChatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); sendMessage(aiChatInput.value); }
+  });
 
   // ---- Reset ----
   function resetAll() {
+    throwTimeouts.forEach(clearTimeout);
+    throwTimeouts = [];
     lines = [];
-    throwStep = 0;
+    currentContext = '';
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
-    aiText.textContent = '';
+    aiChatMessages.innerHTML = '';
     showScreen('intro');
   }
 

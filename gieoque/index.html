@@ -44,7 +44,7 @@
             </div>
             <div class="intro-step">
               <span class="step-num">2</span>
-              <span>Gieo 3 đồng xu 6 lần (mỗi lần = 1 hào)</span>
+              <span>Nhấn gieo — máy tự tung 3 xu cho cả 6 hào</span>
             </div>
             <div class="intro-step">
               <span class="step-num">3</span>
@@ -90,9 +90,10 @@
           <!-- Lines drawn bottom-up as we throw -->
         </div>
 
-        <button id="btn-throw" class="btn-gq-primary">
-          🪙 Gieo Lần <span id="throw-btn-num">1</span>
-        </button>
+        <div class="throw-status">
+          <span class="throw-status-coin">🪙</span>
+          <p id="throw-status-text" class="throw-status-text">Đang gieo hào 1/6...</p>
+        </div>
       </div>
     </div>
 
@@ -146,15 +147,16 @@
               <p id="ai-question-display" class="ai-question-display"></p>
             </div>
           </div>
-          <div id="ai-response" class="ai-response">
-            <div id="ai-loading" class="ai-loading">
-              <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-              <span class="ai-loading-text">Đang luận quẻ...</span>
-            </div>
-            <p id="ai-text" class="ai-text"></p>
-            <p id="ai-error" class="ai-error hidden"></p>
+          <div id="ai-chat-messages" class="ai-chat-messages"></div>
+          <div id="ai-loading" class="ai-loading hidden">
+            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+            <span class="ai-loading-text">Đang luận quẻ...</span>
           </div>
-          <button id="btn-ask-ai" class="btn-ask-ai">✨ Hỏi AI Luận Quẻ</button>
+          <p id="ai-error" class="ai-error hidden"></p>
+          <div class="ai-chat-row">
+            <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về quẻ..." maxlength="300">
+            <button id="btn-ask-ai" class="btn-chat-send">➤</button>
+          </div>
         </div>
 
         <button id="btn-new-cast" class="btn-gq-primary" style="margin-top:16px">Gieo Quẻ Mới ☯️</button>

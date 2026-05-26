@@ -5,28 +5,34 @@
 document.addEventListener('DOMContentLoaded', () => {
   let selectedSpread = null;
   let drawnCards = [];
-  let shuffleCount = 0;
-  let activeDetailIndex = 0;
-  const REQUIRED_SHUFFLES = 3;
+  let holdTimer = null;
+  let holdDone = false;
 
-  // ---- Element refs ----
   const screens = {
-    spread:   document.getElementById('screen-spread'),
-    shuffle:  document.getElementById('screen-shuffle'),
-    reading:  document.getElementById('screen-reading'),
+    spread:  document.getElementById('screen-spread'),
+    shuffle: document.getElementById('screen-shuffle'),
+    reading: document.getElementById('screen-reading'),
   };
-  const spreadBtns    = document.querySelectorAll('.spread-btn');
-  const deckVisual    = document.getElementById('deck-visual');
-  const shuffleDots   = document.querySelectorAll('.sdot');
-  const shuffleText   = document.getElementById('shuffle-count-text');
-  const btnDraw       = document.getElementById('btn-draw');
-  const spreadLabel   = document.getElementById('spread-label');
-  const cardsLayout   = document.getElementById('cards-layout');
-  const readingDetail = document.getElementById('reading-detail');
-  const btnNewReading = document.getElementById('btn-new-reading');
-  const btnRestart    = document.getElementById('btn-restart');
+  const spreadBtns      = document.querySelectorAll('.spread-btn');
+  const deckVisual      = document.getElementById('deck-visual');
+  const holdProgressBar = document.getElementById('hold-progress-bar');
+  const shuffleHintEl   = document.getElementById('shuffle-hint');
+  const btnDraw         = document.getElementById('btn-draw');
+  const spreadLabel     = document.getElementById('spread-label');
+  const cardsLayout     = document.getElementById('cards-layout');
+  const readingDetail   = document.getElementById('reading-detail');
+  const btnNewReading   = document.getElementById('btn-new-reading');
+  const btnRestart      = document.getElementById('btn-restart');
 
-  // ---- Screen navigation ----
+  const aiSection      = document.getElementById('ai-section');
+  const aiQuestionDisp = document.getElementById('ai-question-display');
+  const aiChatMessages = document.getElementById('ai-chat-messages');
+  const aiLoading      = document.getElementById('ai-loading');
+  const aiError        = document.getElementById('ai-error');
+  const aiChatInput    = document.getElementById('ai-chat-input');
+  const btnAskAI       = document.getElementById('btn-ask-ai');
+  const tarotQuestion  = document.getElementById('tarot-question');
+
   function showScreen(id) {
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[id].classList.add('active');
@@ -36,59 +42,79 @@ document.addEventListener('DOMContentLoaded', () => {
   spreadBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       selectedSpread = btn.dataset.spread;
-      shuffleCount = 0;
-      drawnCards = [];
-      updateShuffleUI();
+      resetShuffle();
       showScreen('shuffle');
     });
   });
 
-  // ---- Shuffle ----
-  function updateShuffleUI() {
-    shuffleDots.forEach((dot, i) => {
-      dot.classList.toggle('done', i < shuffleCount);
-    });
-    shuffleText.textContent = `Xáo ${shuffleCount}/${REQUIRED_SHUFFLES} lần`;
-    if (shuffleCount >= REQUIRED_SHUFFLES) {
-      btnDraw.classList.remove('hidden');
-    }
+  // ---- Hold-to-shuffle ----
+  function resetShuffle() {
+    holdDone = false;
+    drawnCards = [];
+    clearTimeout(holdTimer);
+    holdProgressBar.style.transition = 'none';
+    holdProgressBar.style.width = '0%';
+    deckVisual.classList.remove('holding', 'shuffle-done');
+    shuffleHintEl.textContent = 'Giữ bộ bài để xáo...';
+    btnDraw.classList.add('hidden');
   }
 
-  deckVisual.addEventListener('click', () => {
-    if (shuffleCount >= REQUIRED_SHUFFLES) return;
-    shuffleCount++;
+  function settleDeckCards() {
+    deckVisual.querySelectorAll('.deck-card').forEach((c, i) => {
+      c.style.transition = 'transform 0.45s cubic-bezier(.34,1.56,.64,1)';
+      const angle = i === 0 ? -3 : i === 1 ? 0 : 3;
+      const ty    = i === 0 ?  0 : i === 1 ? -4 : -8;
+      c.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(${ty}px)`;
+    });
+  }
 
-    // Animate cards
-    const cards = deckVisual.querySelectorAll('.deck-card');
-    cards.forEach((c, i) => {
-      c.style.transition = 'transform 0.25s ease';
-      const angle = (Math.random() - 0.5) * 40;
-      const tx = (Math.random() - 0.5) * 60;
+  function startHold() {
+    if (holdDone) return;
+    deckVisual.classList.add('holding');
+
+    deckVisual.querySelectorAll('.deck-card').forEach(c => {
+      c.style.transition = 'transform 0.3s ease';
+      const angle = (Math.random() - 0.5) * 50;
+      const tx    = (Math.random() - 0.5) * 70;
       c.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateX(${tx}px)`;
     });
-    setTimeout(() => {
-      cards.forEach((c, i) => {
-        c.style.transition = 'transform 0.4s cubic-bezier(.34,1.56,.64,1)';
-        const base = i === 0 ? -3 : i === 1 ? 0 : 3;
-        const ty = i === 0 ? 0 : i === 1 ? -4 : -8;
-        c.style.transform = `translate(-50%, -50%) rotate(${base}deg) translateY(${ty}px)`;
-      });
-      updateShuffleUI();
-    }, 300);
-  });
+
+    holdProgressBar.style.transition = 'width 2000ms linear';
+    holdProgressBar.style.width = '100%';
+
+    holdTimer = setTimeout(() => {
+      holdDone = true;
+      deckVisual.classList.remove('holding');
+      deckVisual.classList.add('shuffle-done');
+      settleDeckCards();
+      shuffleHintEl.textContent = 'Bài đã được xáo ✨';
+      btnDraw.classList.remove('hidden');
+    }, 2000);
+  }
+
+  function cancelHold() {
+    if (holdDone) return;
+    clearTimeout(holdTimer);
+    deckVisual.classList.remove('holding');
+    holdProgressBar.style.transition = 'width 0.3s ease';
+    holdProgressBar.style.width = '0%';
+    settleDeckCards();
+  }
+
+  deckVisual.addEventListener('mousedown', startHold);
+  deckVisual.addEventListener('touchstart', startHold, { passive: true });
+  document.addEventListener('mouseup', cancelHold);
+  document.addEventListener('touchend', cancelHold);
+  document.addEventListener('touchcancel', cancelHold);
 
   // ---- Draw cards ----
   btnDraw.addEventListener('click', () => {
     const spread = TAROT_SPREADS[selectedSpread];
-    const count = spread.positions.length;
-
-    // Pick unique random cards with random orientation
-    const pool = [...TAROT_CARDS].sort(() => Math.random() - 0.5);
-    drawnCards = pool.slice(0, count).map(card => ({
+    const pool   = [...TAROT_CARDS].sort(() => Math.random() - 0.5);
+    drawnCards   = pool.slice(0, spread.positions.length).map(card => ({
       card,
-      reversed: Math.random() < 0.35
+      reversed: Math.random() < 0.35,
     }));
-
     renderReading();
     showScreen('reading');
     btnRestart.classList.remove('hidden');
@@ -105,16 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
     drawnCards.forEach(({ card, reversed }, index) => {
       const wrapper = document.createElement('div');
       wrapper.className = 'drawn-card';
-      wrapper.dataset.index = index;
 
       const face = document.createElement('div');
-      face.className = 'dc-face' + (reversed ? ' reversed' : '');
+      face.className = 'dc-face revealed' + (reversed ? ' reversed' : '');
       face.innerHTML = `
         <span class="dc-symbol">${card.symbol}</span>
         <span class="dc-vn-name">${card.vn}</span>
         <span class="dc-reveal-hint">Nhấn xem</span>
       `;
-      face.classList.add('revealed');
 
       const label = document.createElement('span');
       label.className = 'dc-position-label';
@@ -126,115 +150,113 @@ document.addEventListener('DOMContentLoaded', () => {
       cardsLayout.appendChild(wrapper);
     });
 
-    // Auto-show first card detail
     setTimeout(() => showDetail(0), 400);
   }
 
   function showDetail(index) {
     const { card, reversed } = drawnCards[index];
-    activeDetailIndex = index;
-
-    // Highlight active card
     document.querySelectorAll('.drawn-card').forEach((el, i) => {
       el.classList.toggle('active-card', i === index);
     });
 
-    const spread = TAROT_SPREADS[selectedSpread];
-    const meaning = reversed ? card.reversed : card.upright;
+    const spread      = TAROT_SPREADS[selectedSpread];
+    const meaning     = reversed ? card.reversed : card.upright;
     const orientation = reversed ? 'Ngược' : 'Xuôi';
 
-    document.getElementById('detail-symbol').textContent = card.symbol;
+    document.getElementById('detail-symbol').textContent   = card.symbol;
     document.getElementById('detail-position').textContent = spread.positions[index];
-    document.getElementById('detail-name').textContent = `${card.vn} (${card.name})`;
-    document.getElementById('detail-number').textContent = `Lá ${card.number} • ${card.element}`;
+    document.getElementById('detail-name').textContent     = `${card.vn} (${card.name})`;
+    document.getElementById('detail-number').textContent   = `Lá ${card.number} • ${card.element}`;
 
     const orientEl = document.getElementById('detail-orientation');
     orientEl.textContent = orientation;
-    orientEl.className = 'detail-orientation ' + (reversed ? 'reversed' : 'upright');
+    orientEl.className   = 'detail-orientation ' + (reversed ? 'reversed' : 'upright');
 
-    const kwContainer = document.getElementById('detail-keywords');
-    kwContainer.innerHTML = card.keywords
-      .map(k => `<span class="keyword-tag">${k}</span>`)
-      .join('');
-
+    document.getElementById('detail-keywords').innerHTML = card.keywords
+      .map(k => `<span class="keyword-tag">${k}</span>`).join('');
     document.getElementById('detail-meaning').textContent = meaning;
-    document.getElementById('detail-advice').textContent = card.advice;
+    document.getElementById('detail-advice').textContent  = card.advice;
     document.getElementById('detail-element').textContent = card.element;
 
     readingDetail.classList.remove('hidden');
     readingDetail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // ---- AI interpretation ----
-  const aiSection      = document.getElementById('ai-section');
-  const aiQuestionDisp = document.getElementById('ai-question-display');
-  const aiLoading      = document.getElementById('ai-loading');
-  const aiText         = document.getElementById('ai-text');
-  const aiError        = document.getElementById('ai-error');
-  const btnAskAI       = document.getElementById('btn-ask-ai');
-  const tarotQuestion  = document.getElementById('tarot-question');
-
+  // ---- AI Chat ----
   function buildTarotContext() {
     const spread = TAROT_SPREADS[selectedSpread];
     return drawnCards.map(({ card, reversed }, i) => {
-      const pos = spread.positions[i];
       const dir = reversed ? 'Ngược' : 'Xuôi';
-      return `• Vị trí "${pos}": ${card.vn} (${card.name}) — ${dir}\n  Ý nghĩa: ${reversed ? card.reversed : card.upright}`;
+      return `• Vị trí "${spread.positions[i]}": ${card.vn} (${card.name}) — ${dir}\n  Ý nghĩa: ${reversed ? card.reversed : card.upright}`;
     }).join('\n\n');
   }
 
-  function showAISection() {
-    const q = tarotQuestion.value.trim();
-    if (!q) return; // no question, no AI section
-    aiSection.classList.remove('hidden');
-    aiQuestionDisp.textContent = `"${q}"`;
-    aiText.textContent = '';
-    aiError.classList.add('hidden');
-    aiLoading.style.display = 'none';
-    btnAskAI.disabled = false;
+  function appendBubble(role, text) {
+    const div = document.createElement('div');
+    div.className = `chat-bubble chat-${role}`;
+    div.textContent = text;
+    aiChatMessages.appendChild(div);
+    aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+    return div;
   }
 
-  btnAskAI.addEventListener('click', () => {
-    const q = tarotQuestion.value.trim();
+  function sendMessage(question) {
+    const q = question.trim();
     if (!q) return;
 
-    btnAskAI.disabled = true;
-    aiText.textContent = '';
+    appendBubble('user', q);
+    const aiBubble = appendBubble('ai', '');
+    aiLoading.classList.remove('hidden');
     aiError.classList.add('hidden');
-    aiLoading.style.display = 'flex';
+    aiChatInput.disabled = true;
+    btnAskAI.disabled = true;
 
     askAI({
       question: q,
       context: buildTarotContext(),
       type: 'tarot',
       onToken: (token) => {
-        aiLoading.style.display = 'none';
-        aiText.textContent += token;
+        aiLoading.classList.add('hidden');
+        aiBubble.textContent += token;
+        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
       },
       onDone: () => {
-        aiLoading.style.display = 'none';
-        btnAskAI.textContent = '🔄 Hỏi Lại';
+        aiLoading.classList.add('hidden');
+        aiChatInput.disabled = false;
         btnAskAI.disabled = false;
+        aiChatInput.value = '';
       },
       onError: (msg) => {
-        aiLoading.style.display = 'none';
-        aiError.textContent = '⚠️ ' + msg;
-        aiError.classList.remove('hidden');
+        aiLoading.classList.add('hidden');
+        aiBubble.textContent = '⚠️ ' + msg;
+        aiBubble.classList.add('chat-error');
+        aiChatInput.disabled = false;
         btnAskAI.disabled = false;
-      }
+      },
     });
+  }
+
+  function showAISection() {
+    const q = tarotQuestion.value.trim();
+    if (!q) return;
+    aiSection.classList.remove('hidden');
+    aiQuestionDisp.textContent = `"${q}"`;
+    aiChatMessages.innerHTML = '';
+    aiError.classList.add('hidden');
+    sendMessage(q);
+  }
+
+  btnAskAI.addEventListener('click', () => sendMessage(aiChatInput.value));
+  aiChatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); sendMessage(aiChatInput.value); }
   });
 
-  // ---- New reading ----
+  // ---- Reset ----
   function goNewReading() {
-    shuffleCount = 0;
-    drawnCards = [];
-    updateShuffleUI();
-    btnDraw.classList.add('hidden');
+    resetShuffle();
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
-    aiText.textContent = '';
-    btnAskAI.textContent = '✨ Hỏi AI Luận Giải';
+    aiChatMessages.innerHTML = '';
     showScreen('spread');
   }
 
