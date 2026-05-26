@@ -47,6 +47,41 @@ function checkRateLimit(ip) {
   return { allowed: true };
 }
 
+// ---- Groq fallback (called when local Ollama is down or slow) ----
+
+async function callGroq({ apiKey, model, messages, temperature, maxTokens }) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 25000);
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) {
+      const errText = await res.text();
+      return { ok: false, error: `Groq ${res.status}: ${errText.slice(0, 200)}` };
+    }
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    return { ok: true, content };
+  } catch (err) {
+    clearTimeout(t);
+    return { ok: false, error: err.name === 'AbortError' ? 'Groq timeout (>25s)' : err.message };
+  }
+}
+
 // ---- Language filter helper ----
 
 function cleanChineseLeaks(text) {
@@ -79,8 +114,9 @@ function cleanChineseLeaks(text) {
 // ---- RAG helpers ----
 
 async function getEmbedding(ollamaUrl, embedModel, text) {
+  if (!ollamaUrl) return null;
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 30000);
+  const t = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(`${ollamaUrl}/api/embeddings`, {
       method: 'POST',
@@ -267,9 +303,11 @@ export default async function handler(req, res) {
   const embedModel = (process.env.OLLAMA_EMBED_MODEL|| '').trim() || 'nomic-embed-text';
   const sbUrl      = (process.env.SUPABASE_URL      || '').trim();
   const sbKey      = (process.env.SUPABASE_ANON_KEY || '').trim();
+  const groqKey    = (process.env.GROQ_API_KEY      || '').trim();
+  const groqModel  = (process.env.GROQ_MODEL        || '').trim() || 'llama-3.3-70b-versatile';
 
-  if (!ollamaUrl) {
-    return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL)' });
+  if (!ollamaUrl && !groqKey) {
+    return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL hoặc GROQ_API_KEY)' });
   }
 
   const { question, context, type, history = [] } = req.body || {};
@@ -441,44 +479,60 @@ Bạn là một bậc thầy Chiêm tinh học và Kinh Dịch có tên là "C�
     ollamaMessages.push({ role: 'user', content: finalInstruction });
   }
 
-  // ---- Call Ollama ----
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 55000);
+  // ---- Call Ollama first, fall back to Groq on any failure ----
+  const temperature = isFollowUp ? 0.4 : 0.2;
+  const maxTokens   = isFollowUp ? 500 : 650;
+  let answer = '';
+  let source = 'ollama';
+  let ollamaErr = null;
 
-    const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
-      body: JSON.stringify({
-        model,
-        messages: ollamaMessages,
-        stream: false,
-        think: false,
-        options: { temperature: isFollowUp ? 0.4 : 0.2, num_predict: isFollowUp ? 500 : 650 },
-      }),
-      signal: controller.signal,
-    });
+  if (ollamaUrl) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
-    clearTimeout(timeout);
+      const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+        body: JSON.stringify({
+          model,
+          messages: ollamaMessages,
+          stream: false,
+          think: false,
+          options: { temperature, num_predict: maxTokens },
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
 
-    if (!ollamaRes.ok) {
-      const errText = await ollamaRes.text();
-      return res.status(502).json({ error: `Ollama lỗi ${ollamaRes.status}: ${errText.slice(0, 200)}` });
+      if (!ollamaRes.ok) {
+        ollamaErr = `Ollama ${ollamaRes.status}`;
+      } else {
+        const data = await ollamaRes.json();
+        answer = data.message?.content || data.response || '';
+      }
+    } catch (err) {
+      ollamaErr = err.name === 'AbortError' ? 'Ollama timeout (>30s)' : err.message;
     }
-
-    const data   = await ollamaRes.json();
-    let answer   = data.message?.content || data.response || '';
-    
-    // Post-process to remove Chinese character leaks
-    answer = cleanChineseLeaks(answer);
-
-    // ---- RAG: store all Q&As; follow-ups flagged and excluded from cache retrieval ----
-    storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp });
-
-    return res.status(200).json({ answer });
-
-  } catch (err) {
-    const msg = err.name === 'AbortError' ? 'Ollama timeout (>55s)' : err.message;
-    return res.status(502).json({ error: `Không kết nối được Ollama: ${msg}` });
   }
+
+  if (!answer && groqKey) {
+    source = 'groq';
+    const groqRes = await callGroq({ apiKey: groqKey, model: groqModel, messages: ollamaMessages, temperature, maxTokens });
+    if (!groqRes.ok) {
+      return res.status(502).json({ error: `AI không phản hồi (Ollama: ${ollamaErr || 'n/a'}; Groq: ${groqRes.error})` });
+    }
+    answer = groqRes.content;
+  }
+
+  if (!answer) {
+    return res.status(502).json({ error: `AI không phản hồi: ${ollamaErr || 'không có nội dung trả về'}` });
+  }
+
+  answer = cleanChineseLeaks(answer);
+
+  // ---- RAG: store all Q&As; follow-ups flagged and excluded from cache retrieval ----
+  storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp });
+
+  return res.status(200).json({ answer, source });
 }
