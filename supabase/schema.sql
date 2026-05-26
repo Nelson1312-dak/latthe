@@ -6,6 +6,15 @@
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
+-- Create anon role if it does not exist (for local PostgreSQL compatibility)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
+END
+$$;
+
 -- Q&A documents table
 CREATE TABLE IF NOT EXISTS documents (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -44,6 +53,7 @@ CREATE OR REPLACE FUNCTION match_documents(
 RETURNS TABLE (
   id         uuid,
   question   text,
+  context    text,
   answer     text,
   similarity float
 )
@@ -52,6 +62,7 @@ AS $$
   SELECT
     id,
     question,
+    context,
     answer,
     1 - (embedding <=> query_embedding) AS similarity
   FROM documents

@@ -53,13 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function animateCoins(values) {
     coinSlots.forEach((slot, i) => {
-      slot.className = 'coin-slot';
+      slot.className = 'coin-slot rolling';
       slot.textContent = '';
       const t = setTimeout(() => {
+        slot.classList.remove('rolling');
         const isYang = values[i] === 3;
         slot.classList.add(isYang ? 'yang' : 'yin');
-        slot.textContent = isYang ? '●' : '○';
-      }, 80 + i * 80);
+        slot.textContent = isYang ? '乾' : '坤';
+      }, 400 + i * 150); // Staggered stops: 400ms, 550ms, 700ms
       throwTimeouts.push(t);
     });
   }
@@ -146,9 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lines.push(sum);
         addPreviewLine(sum);
 
-        const t2 = setTimeout(() => throwOne(step + 1), 380);
+        const t2 = setTimeout(() => throwOne(step + 1), 900); // 900ms to read before next throw
         throwTimeouts.push(t2);
-      }, 300);
+      }, 850); // 850ms to allow all staggered coin spins to resolve
       throwTimeouts.push(t);
     }
 
@@ -156,6 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   btnStartThrow.addEventListener('click', () => {
+    const questionVal = gqQuestion.value.trim();
+    if (!questionVal) {
+      alert('Vui lòng nhập câu hỏi của bạn trước khi gieo quẻ! ☯️');
+      gqQuestion.focus();
+      return;
+    }
     throwTimeouts.forEach(clearTimeout);
     throwTimeouts = [];
     showScreen('throw');
@@ -193,17 +200,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- AI Chat ----
   function buildGQContext(primary, hasMoving, changed) {
-    let ctx = `Quẻ chính: ${primary.vn} (${primary.name})\nÝ nghĩa: ${primary.meaning}\nLời khuyên: ${primary.advice}`;
+    let mutatedLinesStr = 'Không có';
+    let mutatedTextStr = 'Không có';
+    
     if (hasMoving && changed) {
-      ctx += `\n\nQuẻ biến thành: ${changed.vn} (${changed.name})\nÝ nghĩa: ${changed.meaning}`;
+      const movingIndices = [];
+      lines.forEach((val, idx) => {
+        if (val === 6 || val === 9) {
+          movingIndices.push(idx + 1);
+        }
+      });
+      if (movingIndices.length > 0) {
+        mutatedLinesStr = movingIndices.map(num => `Hào ${num}`).join(', ');
+        mutatedTextStr = `Biến đổi thành quẻ ${changed.vn} (${changed.meaning}). Lời khuyên: ${changed.advice}`;
+      }
     }
-    return ctx;
+
+    return JSON.stringify({
+      mainName: primary.vn,
+      mainText: `${primary.meaning}. Lời khuyên: ${primary.advice}`,
+      mutatedHao: mutatedLinesStr,
+      mutatedHaoText: mutatedTextStr
+    });
+  }
+
+  function parseMarkdown(text) {
+    if (!text) return '';
+    let lines = text.split('\n');
+    let result = [];
+    let inList = false;
+
+    for (let line of lines) {
+      let trimmed = line.trim();
+      
+      // Convert bold: **text** -> <strong>text</strong>
+      trimmed = trimmed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      
+      if (trimmed.startsWith('###')) {
+        if (inList) { result.push('</ul>'); inList = false; }
+        const content = trimmed.substring(3).trim();
+        result.push(`<h3 class="chat-heading">${content}</h3>`);
+      } else if (trimmed.startsWith('##')) {
+        if (inList) { result.push('</ul>'); inList = false; }
+        const content = trimmed.substring(2).trim();
+        result.push(`<h2 class="chat-heading">${content}</h2>`);
+      } else if (trimmed.startsWith('#')) {
+        if (inList) { result.push('</ul>'); inList = false; }
+        const content = trimmed.substring(1).trim();
+        result.push(`<h1 class="chat-heading">${content}</h1>`);
+      } else if (trimmed === '---') {
+        if (inList) { result.push('</ul>'); inList = false; }
+        result.push('<hr class="chat-hr">');
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+        if (!inList) {
+          result.push('<ul class="chat-list">');
+          inList = true;
+        }
+        const content = trimmed.substring(2).trim();
+        result.push(`<li>${content}</li>`);
+      } else if (trimmed === '') {
+        if (inList) { result.push('</ul>'); inList = false; }
+        result.push('<div class="chat-break"></div>');
+      } else {
+        if (inList) { result.push('</ul>'); inList = false; }
+        result.push(`<p class="chat-p">${trimmed}</p>`);
+      }
+    }
+    if (inList) {
+      result.push('</ul>');
+    }
+
+    return result.join('\n');
   }
 
   function appendBubble(role, text) {
     const div = document.createElement('div');
     div.className = `chat-bubble chat-${role}`;
-    div.textContent = text;
+    if (role === 'ai') {
+      div.innerHTML = parseMarkdown(text);
+    } else {
+      div.textContent = text;
+    }
     aiChatMessages.appendChild(div);
     aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
     return div;
@@ -220,6 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
     aiChatInput.disabled = true;
     btnAskAI.disabled = true;
 
+    let aiResponseText = '';
+
     askAI({
       question: q,
       context: currentContext,
@@ -227,11 +306,13 @@ document.addEventListener('DOMContentLoaded', () => {
       history: chatHistory,
       onToken: (token) => {
         aiLoading.classList.add('hidden');
-        aiBubble.textContent += token;
+        aiResponseText += token;
+        aiBubble.innerHTML = parseMarkdown(aiResponseText);
         aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
       },
       onDone: (fullAnswer) => {
         aiLoading.classList.add('hidden');
+        aiBubble.innerHTML = parseMarkdown(fullAnswer);
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: fullAnswer });
         if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
@@ -277,6 +358,15 @@ document.addEventListener('DOMContentLoaded', () => {
     aiChatMessages.innerHTML = '';
     showScreen('intro');
   }
+
+  // ---- Suggested question tags click handler ----
+  document.querySelectorAll('.sq-tag').forEach(tag => {
+    tag.addEventListener('click', (e) => {
+      e.preventDefault();
+      gqQuestion.value = tag.dataset.q;
+      gqQuestion.focus();
+    });
+  });
 
   btnNewCast.addEventListener('click', resetAll);
   btnRestart.addEventListener('click', resetAll);

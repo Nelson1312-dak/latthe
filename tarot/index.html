@@ -2,13 +2,41 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Trải bài Tarot online miễn phí giúp định hướng tương lai. Rút bài Tarot 1 lá hoặc 3 lá (Quá khứ - Hiện tại - Tương lai) nhận thông điệp thấu hiểu và trị liệu tinh thần từ chuyên gia.">
+  <meta name="keywords" content="bói bài tarot, trải bài tarot, tarot online, bói tình duyên tarot, tarot 3 lá, tarot ngày mới">
   <meta name="theme-color" content="#0d0a1f">
-  <title>🔮 Tarot — Lật Thẻ</title>
+  <link rel="canonical" href="http://localhost:5005/tarot/">
+  <title>🔮 Bói Bài Tarot Online — Trải Bài & Luận Giải Trị Liệu</title>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://localhost:5005/tarot/">
+  <meta property="og:title" content="Bói Bài Tarot Online — Trải Bài & Luận Giải Trị Liệu">
+  <meta property="og:description" content="Trải nghiệm bói bài Tarot trực tuyến. Rút bài giải mã tình duyên, sự nghiệp và nhận lời khuyên thấu hiểu từ chuyên gia Tarot trị liệu.">
+  <meta property="og:image" content="http://localhost:5005/images/og-tarot.jpg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/tarot.css">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Bói Bài Tarot Online",
+    "operatingSystem": "All",
+    "applicationCategory": "GameApplication",
+    "description": "Trải nghiệm rút bài và bói bài Tarot trực tuyến với đầy đủ 78 lá bài Major & Minor Arcana.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "VND"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="app">
@@ -32,7 +60,15 @@
         <!-- Question input -->
         <div class="question-box">
           <label class="question-label">✨ Câu hỏi của bạn</label>
-          <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên thay đổi công việc không? / Mối quan hệ này sẽ đi về đâu?..." rows="3" maxlength="200"></textarea>
+          <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên thay đổi công việc vào lúc này không? (Gợi ý: Hãy ghi rõ câu hỏi cụ thể và mô tả ngắn gọn bối cảnh hiện tại của bạn để nhận được lời luận giải thấu hiểu và gợi mở nhất từ Tarot)" rows="3" maxlength="200"></textarea>
+          <div class="suggested-questions">
+            <span class="sq-label">Gợi ý câu hỏi:</span>
+            <div class="sq-tags">
+              <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?">📅 Ngày hôm nay thế nào?</button>
+              <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?">💼 Có nên nghỉ việc không?</button>
+              <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?">💔 Có nên chia tay không?</button>
+            </div>
+          </div>
           <p class="question-hint">AI sẽ luận giải dựa trên câu hỏi và lá bài của bạn</p>
         </div>
 
@@ -67,7 +103,7 @@
           <div class="deck-card dc-2"></div>
           <div class="deck-card dc-1"></div>
         </div>
-        <p id="shuffle-hint" class="shuffle-hint">Giữ bộ bài để xáo...</p>
+        <p id="shuffle-hint" class="shuffle-hint">Chạm vào bộ bài để truyền năng lượng & xáo bài... ✨</p>
         <div class="hold-progress-track">
           <div id="hold-progress-bar" class="hold-progress-bar"></div>
         </div>

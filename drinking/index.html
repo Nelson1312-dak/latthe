@@ -3,11 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="Drinking Games - Trò chơi bài thẻ uống rượu cho nhóm bạn. Truth, Dare, Vote và nhiều thử thách vui nhộn!">
+  <meta name="description" content="Trò chơi bài Drinking Game online cực vui cho nhóm bạn khi nhậu. Hàng trăm thẻ bài Sự thật hay Thử thách (Truth or Dare), Bình chọn, Tôi chưa bao giờ độc đáo và hài hước.">
+  <meta name="keywords" content="drinking game, trò chơi uống rượu, truth or dare việt hóa, sự thật hay thử thách, chưa từng làm, bình chọn nhóm">
   <meta name="theme-color" content="#0a0a1a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>🍻 Drinking Games — Lật Thẻ</title>
+  <link rel="canonical" href="http://localhost:5005/drinking/">
+  <title>🍻 Drinking Games Online — Trò Chơi Tiệc Tùng Nhóm Bạn</title>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://localhost:5005/drinking/">
+  <meta property="og:title" content="Drinking Games Online — Trò Chơi Tiệc Tùng Nhóm Bạn">
+  <meta property="og:description" content="Trải nghiệm các trò chơi Drinking Game cực nhiệt cùng hội bạn bè. Các thử thách độc độc, vui vẻ có trách nhiệm.">
+  <meta property="og:image" content="http://localhost:5005/images/og-drinking.jpg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,9 +40,26 @@
     }
     .back-home-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
   </style>
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Drinking Games Online",
+    "operatingSystem": "All",
+    "applicationCategory": "GameApplication",
+    "description": "Trò chơi lật bài uống rượu nhóm bạn với nhiều chế độ Sự thật hoặc Thử thách, Tôi chưa bao giờ.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "VND"
+    }
+  }
+  </script>
 </head>
 <body>
-  <a href="../index.html" class="back-home-btn">← latthe.vn</a>
+  <a href="../index.html" class="back-home-btn">← Trang Chủ</a>
   <div id="app">
 
     <!-- ========== SPLASH SCREEN ========== -->

@@ -1,0 +1,98 @@
+{
+  "redirects": [],
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/sitemap-gieoque.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/robots-gieoque.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap-latbai.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots-latbai.txt"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/index.html"
+    },
+    {
+      "source": "/css/gieoque.css",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/css/gieoque.css"
+    },
+    {
+      "source": "/js/app.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/js/app.js"
+    },
+    {
+      "source": "/js/hexagrams.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/js/hexagrams.js"
+    },
+    {
+      "source": "/js/ai.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/js/ai.js"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "all"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ]
+}

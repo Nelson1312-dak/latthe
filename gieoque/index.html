@@ -2,13 +2,69 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#050f08">
-  <title>☯️ Gieo Quẻ — Lật Thẻ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Trải nghiệm gieo quẻ Kinh Dịch trực tuyến miễn phí. Luận giải chi tiết 64 quẻ dịch cổ truyền và các hào động giúp định hướng sự nghiệp, tài lộc, gia đạo và học hành từ Cổ Dịch Đại Sư.">
+  <meta name="keywords" content="gieo quẻ kinh dịch, luận quẻ kinh dịch, 64 quẻ dịch, hào động, hào biến, cổ dịch đại sư, bói dịch online">
+  <meta name="theme-color" content="#fbf9f6">
+  <link rel="canonical" href="http://localhost:5005/gieoque/">
+  <title>☯️ Gieo Quẻ Kinh Dịch Online — Luận Giải Quẻ & Hào Biến</title>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://localhost:5005/gieoque/">
+  <meta property="og:title" content="Gieo Quẻ Kinh Dịch Online — Luận Giải Quẻ & Hào Biến">
+  <meta property="og:description" content="Gieo đồng xu lập quẻ Kinh Dịch trực tuyến. Nhận lời khuyên cải vận từ Cổ Dịch Đại Sư về công việc, tình duyên, gia đạo chính xác.">
+  <meta property="og:image" content="http://localhost:5005/images/og-gieoque.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/gieoque.css">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Gieo Quẻ Kinh Dịch Online",
+    "operatingSystem": "All",
+    "applicationCategory": "GameApplication",
+    "description": "Ứng dụng gieo đồng xu lập quẻ Kinh Dịch 64 quẻ dịch cổ truyền, luận giải hào biến chi tiết.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "VND"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [{
+      "@type": "Question",
+      "name": "Gieo quẻ Kinh Dịch online có chính xác không?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Theo triết lý Kinh Dịch, quẻ dịch ứng nghiệm nhờ sự thành tâm và tập trung năng lượng vào câu hỏi tại thời điểm gieo quẻ (Tâm động quẻ sinh). Việc gieo trực tuyến bằng thuật toán ngẫu nhiên hoàn toàn hợp lệ nếu bạn thực sự định tâm. AI sẽ kết hợp 64 quẻ dịch để đưa ra lời luận quẻ khách quan nhất."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Nên gieo quẻ Kinh Dịch vào thời điểm nào?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Nên gieo quẻ khi đứng trước những lựa chọn quan trọng trong sự nghiệp, gia đạo, học hành hoặc khi tâm trí băn khoăn cần lời khuyên triết học. Không nên gieo quẻ khi đang đùa cợt hoặc gieo liên tiếp nhiều lần cho cùng một câu hỏi."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Làm thế nào để đặt câu hỏi gieo quẻ Kinh Dịch đúng cách?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Đặt câu hỏi cụ thể, rõ ràng và tập trung vào một vấn đề duy nhất. Hãy ghi rõ bối cảnh câu hỏi để nhận được lời luận giải chi tiết và chuẩn xác nhất từ hệ thống."
+      }
+    }]
+  }
+  </script>
 </head>
 <body>
   <div id="app">
@@ -31,7 +87,15 @@
         <!-- Question input -->
         <div class="question-box">
           <label class="question-label">✨ Câu hỏi của bạn</label>
-          <textarea id="gq-question" class="question-input" placeholder="Ví dụ: Tôi có nên khởi nghiệp không? / Vận mệnh tình duyên của tôi năm nay thế nào?..." rows="3" maxlength="200"></textarea>
+          <textarea id="gq-question" class="question-input" placeholder="Ví dụ: Tôi có nên nghỉ việc vào lúc này không? (Gợi ý: Hãy ghi rõ câu hỏi cụ thể và mô tả ngắn gọn bối cảnh hiện tại của bạn để Cổ Dịch Đại Sư luận giải quẻ và hào biến được chuẩn xác nhất)" rows="3" maxlength="200"></textarea>
+          <div class="suggested-questions">
+            <span class="sq-label">Gợi ý câu hỏi:</span>
+            <div class="sq-tags">
+              <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?">📅 Ngày hôm nay thế nào?</button>
+              <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?">💼 Có nên nghỉ việc không?</button>
+              <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?">💔 Có nên chia tay không?</button>
+            </div>
+          </div>
           <p class="question-hint">AI sẽ luận giải quẻ dựa trên câu hỏi của bạn</p>
         </div>
 
@@ -66,6 +130,50 @@
 
         <button id="btn-start-throw" class="btn-gq-primary">Bắt Đầu Gieo ☯️</button>
         <p class="intro-note">Máy sẽ tự gieo 3 đồng xu mỗi lần nhấn</p>
+
+        <!-- SEO Content Section -->
+        <article class="seo-content">
+          <h2 class="seo-section-title">Kinh Dịch & Gieo Quẻ Kinh Dịch Online</h2>
+          <p><strong>Kinh Dịch</strong> (I Ching) là bộ sách triết học và bói toán cổ xưa nhất của Đông Á, được hình thành từ hàng ngàn năm trước. Cốt lõi của Kinh Dịch dựa trên quy luật biến đổi không ngừng của vũ trụ thông qua hai lực tương tác cơ bản là <strong>Âm (Yin)</strong> và <strong>Dương (Yang)</strong>. Hệ thống Kinh Dịch gồm <strong>64 quẻ</strong>, mỗi quẻ được cấu thành từ 6 hào xếp chồng lên nhau từ dưới lên trên.</p>
+          
+          <h3>Cấu trúc quẻ dịch: Quẻ Chính và Quẻ Biến</h3>
+          <p>Khi gieo quẻ Kinh Dịch, chúng ta thu được quẻ ban đầu gọi là <strong>Quẻ Chính</strong>. Quẻ Chính phản ánh tình trạng, bối cảnh và những yếu tố hiện tại xung quanh câu hỏi của bạn. Trong quá trình gieo, nếu xuất hiện các hào biến động (Lão Âm biến thành Thiếu Dương, hoặc Lão Dương biến thành Thiếu Âm), ta sẽ thu được <strong>Quẻ Biến</strong>. Quẻ Biến chỉ ra xu hướng phát triển tương lai và mang lại lời khuyên hành động cụ thể.</p>
+
+          <h3>Hướng dẫn gieo quẻ 3 đồng xu lập quẻ Kinh Dịch</h3>
+          <p>Phương pháp gieo quẻ bằng 3 đồng xu là một trong những cách lập quẻ phổ biến và linh hoạt nhất:</p>
+          <ul>
+            <li><strong>Định tâm:</strong> Nhắm mắt, hít thở sâu và tập trung tâm trí vào câu hỏi cụ thể của bạn.</li>
+            <li><strong>Tung đồng xu:</strong> Gieo đồng thời 3 đồng xu cổ. Thực hiện liên tiếp 6 lần để lập từ Hào 1 (dưới cùng) đến Hào 6 (trên cùng).</li>
+            <li><strong>Tính điểm lập hào:</strong> Mỗi mặt Sấp ứng với 3 điểm (Dương), mặt Ngửa ứng với 2 điểm (Âm). Tổng số điểm của 3 đồng xu sẽ quyết định tính chất của hào:
+              <ul>
+                <li><strong>6 điểm (3 Ngửa):</strong> Hào Âm động (Lão Âm ◎) - Sẽ biến thành hào Dương.</li>
+                <li><strong>7 điểm (2 Ngửa, 1 Sấp):</strong> Hào Dương tĩnh (Thiếu Dương ──).</li>
+                <li><strong>8 điểm (1 Ngửa, 2 Sấp):</strong> Hào Âm tĩnh (Thiếu Âm ─ ─).</li>
+                <li><strong>9 điểm (3 Sấp):</strong> Hào Dương động (Lão Dương ◉) - Sẽ biến thành hào Âm.</li>
+              </ul>
+            </li>
+          </ul>
+
+          <!-- FAQ Accordion -->
+          <div class="faq-section">
+            <h3 class="faq-title">Câu hỏi thường gặp (FAQ)</h3>
+            
+            <details class="faq-item">
+              <summary>Gieo quẻ Kinh Dịch online có chính xác không?</summary>
+              <p>Theo triết lý Kinh Dịch cổ truyền, "Tâm động quẻ sinh". Quẻ dịch ứng nghiệm nhờ sự thành tâm và tập trung năng lượng vào câu hỏi tại thời điểm gieo quẻ, không phụ thuộc vào việc bạn gieo đồng xu vật lý hay gieo trực tuyến bằng thuật toán ngẫu nhiên. Hệ thống kết hợp trí tuệ nhân tạo Qwen AI đóng vai trò như một người luận giải khách quan, dựa trên 64 quẻ gốc để đưa ra lời khuyên phù hợp nhất cho tâm nguyện của bạn.</p>
+            </details>
+
+            <details class="faq-item">
+              <summary>Nên gieo quẻ Kinh Dịch vào thời điểm nào?</summary>
+              <p>Bạn nên gieo quẻ khi đứng trước những ngã rẽ cuộc sống, những quyết định quan trọng trong công việc, học tập, tài lộc, gia đạo, hoặc khi tâm trạng hoang mang cần một điểm tựa triết học khách quan. Tránh gieo quẻ khi đang đùa cợt, nghi ngờ hoặc gieo đi gieo lại một câu hỏi nhiều lần liên tiếp, vì điều đó làm phân tán năng lượng và sự tập trung của tâm trí.</p>
+            </details>
+
+            <details class="faq-item">
+              <summary>Làm thế nào để đặt câu hỏi hiệu quả nhất?</summary>
+              <p>Hãy đặt câu hỏi rõ ràng, chi tiết và đi thẳng vào sự việc cần giải quyết (ví dụ: "Tôi có nên chuyển việc trong tháng này không?" thay vì "Tương lai tôi thế nào?"). Việc mô tả ngắn gọn hoàn cảnh hiện tại sẽ giúp mô hình ngôn ngữ lớn luận quẻ chuẩn xác và đưa ra lời khuyên sát thực tế nhất cho bạn.</p>
+            </details>
+          </div>
+        </article>
       </div>
     </div>
 
@@ -159,7 +267,7 @@
           </div>
         </div>
 
-        <button id="btn-new-cast" class="btn-gq-primary" style="margin-top:16px">Gieo Quẻ Mới ☯️</button>
+        <button id="btn-new-cast" class="btn-gq-secondary">Gieo Quẻ Mới ☯️</button>
       </div>
     </div>
 

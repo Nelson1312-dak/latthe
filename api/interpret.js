@@ -6,11 +6,40 @@
  *   Requires: OLLAMA_EMBED_MODEL pulled in Ollama (default: nomic-embed-text)
  */
 
+// ---- Language filter helper ----
+
+function cleanChineseLeaks(text) {
+  if (!text) return '';
+  
+  // If no Chinese characters are present, return as is
+  if (!/[\u4e00-\u9fa5]/.test(text)) {
+    return text;
+  }
+
+  // Split into lines
+  const lines = text.split('\n');
+  
+  // Filter out any lines that contain Chinese characters
+  const cleanLines = lines.filter(line => !/[\u4e00-\u9fa5]/.test(line));
+  const cleanedText = cleanLines.join('\n').trim();
+
+  // If the resulting text is long enough, return it
+  if (cleanedText.length > 30) {
+    return cleanedText;
+  }
+
+  // Otherwise, fallback to stripping Chinese characters individually
+  return text
+    .replace(/[\u4e00-\u9fa5]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // ---- RAG helpers ----
 
 async function getEmbedding(ollamaUrl, embedModel, text) {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 10000);
+  const t = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch(`${ollamaUrl}/api/embeddings`, {
       method: 'POST',
@@ -28,17 +57,24 @@ async function getEmbedding(ollamaUrl, embedModel, text) {
 }
 
 async function retrieveSimilar(sbUrl, sbKey, embedding, type) {
-  if (!embedding || !sbUrl || !sbKey) return [];
+  if (!embedding || !sbUrl) return [];
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(`${sbUrl}/rest/v1/rpc/match_documents`, {
+    const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
+    const path = isLocal ? '/rpc/match_documents' : '/rest/v1/rpc/match_documents';
+    
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (sbKey) {
+      headers['apikey'] = sbKey;
+      headers['Authorization'] = `Bearer ${sbKey}`;
+    }
+
+    const res = await fetch(`${sbUrl}${path}`, {
       method: 'POST',
-      headers: {
-        'apikey': sbKey,
-        'Authorization': `Bearer ${sbKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         query_embedding: embedding,
         match_threshold: 0.78,
@@ -55,18 +91,108 @@ async function retrieveSimilar(sbUrl, sbKey, embedding, type) {
   }
 }
 
-function storeDoc(sbUrl, sbKey, payload) {
-  if (!sbUrl || !sbKey || !payload.embedding) return;
-  fetch(`${sbUrl}/rest/v1/documents`, {
-    method: 'POST',
-    headers: {
-      'apikey': sbKey,
-      'Authorization': `Bearer ${sbKey}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify(payload),
-  }).catch(() => {});
+async function storeDoc(sbUrl, sbKey, payload) {
+  if (!sbUrl || !payload.embedding) return;
+  const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
+  const path = isLocal ? '/documents' : '/rest/v1/documents';
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal',
+  };
+  if (sbKey) {
+    headers['apikey'] = sbKey;
+    headers['Authorization'] = `Bearer ${sbKey}`;
+  }
+
+  try {
+    await fetch(`${sbUrl}${path}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("Failed to store document in cache database:", err);
+  }
+}
+
+async function checkExactMatchCache(sbUrl, sbKey, type, question, context) {
+  if (!sbUrl) return null;
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 4000);
+  try {
+    const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
+    const basePath = isLocal ? '/documents' : '/rest/v1/documents';
+    
+    const url = new URL(`${sbUrl}${basePath}`);
+    url.searchParams.set('type', `eq.${type}`);
+    url.searchParams.set('question', `eq.${question.trim()}`);
+    url.searchParams.set('context', `eq.${context || ''}`);
+    url.searchParams.set('select', 'answer');
+    url.searchParams.set('limit', '1');
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (sbKey) {
+      headers['apikey'] = sbKey;
+      headers['Authorization'] = `Bearer ${sbKey}`;
+    }
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0].answer || null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function buildFirstUserContent(q, ctx, t, fullContext, isFollowUp = false) {
+  if (t === 'gieoque') {
+    let mainName = '';
+    let mainText = '';
+    let mutatedHao = 'Không có';
+    let mutatedHaoText = 'Không có';
+    try {
+      const parsed = JSON.parse(ctx);
+      mainName = parsed.mainName || '';
+      mainText = parsed.mainText || '';
+      mutatedHao = parsed.mutatedHao || 'Không có';
+      mutatedHaoText = parsed.mutatedHaoText || 'Không có';
+    } catch {
+      mainName = ctx || '';
+    }
+
+    if (isFollowUp) {
+      return `# INPUT CONTEXT (Dữ liệu hệ thống cung cấp):
+- Câu hỏi ban đầu của user: ${q}
+- Tên Quẻ Gốc (Chính quẻ): ${mainName}
+- Thoán từ/Tượng quẻ gốc: ${mainText}
+- Hào biến (nếu có): ${mutatedHao}
+- Ý nghĩa Hào biến: ${mutatedHaoText}`;
+    }
+
+    return `# INPUT CONTEXT (Dữ liệu hệ thống cung cấp):
+- Câu hỏi của user: ${q}
+- Tên Quẻ Gốc (Chính quẻ): ${mainName}
+- Thoán từ/Tượng quẻ gốc: ${mainText}
+- Hào biến (nếu có): ${mutatedHao}
+- Ý nghĩa Hào biến: ${mutatedHaoText}
+
+Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định dạng đầu ra bắt buộc của "Cổ Dịch Đại Sư". (Chỉ dùng tiếng Việt, không dùng bất kỳ chữ Hán nào)`;
+  } else {
+    const prefix = `Thông tin bài Tarot:\n${fullContext}\n\n`;
+    return `${prefix}Câu hỏi của user: "${q}"
+
+Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định dạng đầu ra bắt buộc của chuyên gia Tarot. (Chỉ dùng tiếng Việt, tuyệt đối không dùng bất kỳ chữ Hán hay tiếng Anh nào)`;
+  }
 }
 
 // ---- Main handler ----
@@ -91,20 +217,125 @@ export default async function handler(req, res) {
   const { question, context, type, history = [] } = req.body || {};
   if (!question?.trim()) return res.status(400).json({ error: 'Thiếu câu hỏi' });
 
+  // ---- 1. Tier 1 Cache: Exact Match Cache (fast GET bypass) ----
+  const exactCached = await checkExactMatchCache(sbUrl, sbKey, type, question, context);
+  if (exactCached) {
+    return res.status(200).json({ answer: exactCached, cached: true });
+  }
+
   // ---- System prompt ----
-  const langRule = 'CRITICAL RULE: You MUST respond ONLY in Vietnamese (Tiếng Việt). Absolutely do NOT use Chinese, English, or any other language. Every single word of your response must be Vietnamese.';
+  const langRule = 'QUY TẮC BẮT BUỘC: Bạn là người Việt Nam và chỉ được phép trả lời hoàn toàn bằng tiếng Việt thuần túy. Tuyệt đối KHÔNG viết bất kỳ chữ Hán (chữ Trung Quốc giản thể/phồn thể) hay chữ tiếng Anh nào. Bắt buộc phải dịch mọi tên lá bài hoặc tên quẻ sang tiếng Việt và trả lời trôi chảy, không kèm theo bản dịch hay ghi chú bằng tiếng Trung/tiếng Anh dưới mọi hình thức.';
 
-  const systemPrompt = type === 'tarot'
-    ? `${langRule}\n\nBạn là chuyên gia Tarot với kiến thức sâu sắc về 22 lá Đại Bí Ẩn. Hãy trả lời súc tích (4-6 câu), thực tế và đầy cảm hứng. Trả lời trực tiếp vào câu hỏi dựa trên lá bài, không giải thích lý thuyết dài dòng.`
-    : `${langRule}\n\nBạn là học giả Kinh Dịch với am hiểu sâu về 64 quẻ. Hãy trả lời súc tích (4-6 câu), kết hợp triết lý cổ xưa với thực tiễn hiện đại. Trả lời trực tiếp vào câu hỏi dựa trên quẻ bốc được, không giải thích lý thuyết.`;
+  const isFollowUp = history.length > 0;
 
-  // ---- RAG: embed + retrieve (parallel where possible) ----
+  const tarotFollowUpSystemPrompt = `${langRule}
+
+# ROLE:
+Bạn là một chuyên gia Tarot lỗi lạc và nhà tham vấn tâm lý trị liệu sâu sắc. Người hỏi đang muốn bạn giải thích sâu hơn hoặc hỏi thêm về câu chuyện sự nghiệp/tình duyên của họ dựa trên các lá bài đã bốc.
+
+# INSTRUCTIONS:
+1. Hãy trả lời trực diện câu hỏi mới của người dùng một cách thấu hiểu, gợi mở và mang tính trị liệu sâu sắc.
+2. Liên kết câu hỏi phụ này với ý nghĩa của các lá bài đã rút được trong quá khứ/hiện tại/tương lai và lịch sử trò chuyện.
+3. Trả lời ngắn gọn, súc tích (3-5 câu), đi thẳng vào trọng tâm vấn đề của họ.
+4. Trả lời trực tiếp dạng hội thoại, không lặp lại lý thuyết suông hay định dạng báo cáo. Không thêm lời chào hỏi xã giao hay lời thoại thừa của AI.`;
+
+  const gieoqueFollowUpSystemPrompt = `${langRule}
+
+# ROLE:
+Bạn là "Cổ Dịch Đại Sư", bậc thầy Chiêm tinh học và Kinh Dịch. Người hỏi đang muốn bạn giải thích sâu hơn hoặc trả lời câu hỏi phụ liên quan đến quẻ dịch đã gieo và câu hỏi ban đầu của họ.
+
+# INSTRUCTIONS:
+1. Hãy luận giải sâu sắc và trả lời trực diện câu hỏi mới của người dùng.
+2. Dùng ngôn từ cổ kính, trang nghiêm, thấu đạt nhưng phải ngắn gọn, đi thẳng vào vấn đề.
+3. Liên kết chi tiết câu hỏi phụ này với thế trận quẻ gốc, quẻ biến và ý nghĩa các hào đã gieo để chỉ ra điểm hanh thông hay bế tắc.
+4. Trả lời dưới dạng phân tích trực tiếp, không sử dụng lại định dạng mẫu ban đầu (như "Tâm nguyện người hỏi", "Thế trận Quẻ dịch", "1. Phân Tích Cát Hùng", v.v.) để tránh lặp lại nhàm chán.
+5. Không thêm các câu chào hỏi xã giao hay lời thoại thừa của AI ở đầu hoặc cuối.`;
+
+  const systemPrompt = isFollowUp
+    ? (type === 'tarot' ? tarotFollowUpSystemPrompt : gieoqueFollowUpSystemPrompt)
+    : (type === 'tarot'
+        ? `${langRule}
+
+# ROLE:
+Bạn là một chuyên gia Tarot lỗi lạc và nhà tham vấn tâm lý trị liệu sâu sắc. Nhiệm vụ của bạn là nhận thông tin các lá bài Tarot đã bốc từ hệ thống, kết hợp với câu hỏi/tâm nguyện của người hỏi để đưa ra lời luận giải súc tích, uyên thâm, thấu hiểu và gợi mở cho cuộc sống của họ.
+
+# CHARACTERISTICS (ĐẶC ĐIỂM HÀNH VĂN):
+- Ngôn từ: Thấu hiểu, gợi mở, mang tính trị liệu tâm lý sâu sắc nhưng phải ngắn gọn, đi thẳng vào trọng tâm (tránh lan man, dài dòng).
+- Cấu trúc: Luôn trả về kết quả theo đúng định dạng được yêu cầu, không thêm lời thoại thừa của AI ở đầu hoặc cuối.
+
+# EXTENDED INSTRUCTIONS (Chỉ thị tối ưu cho Qwen 3.5 2B):
+1. Không tự bịa ra các lá bài khác. Chỉ sử dụng thông tin các lá bài được rút ra trong phần "INPUT CONTEXT".
+2. Tập trung giải quyết trực diện câu hỏi của user (Sự nghiệp, Tình duyên, hay Tài lộc) thông qua ý nghĩa của các lá bài ở từng vị trí (Quá khứ, Hiện tại, Tương lai hoặc các vị trí tương ứng).
+3. Mọi câu trả lời phải bằng tiếng Việt thuần túy, tuyệt đối dịch hết tên các lá bài và không dùng chữ Hán hay tiếng Anh.
+
+# OUTPUT FORMAT (Định dạng đầu ra bắt buộc):
+### 🔮 LỜI LUẬN GIẢI TỪ BẬC THẦY TAROT
+
+- **Tâm nguyện người hỏi:** {USER_QUESTION}
+- **Thế trận Bài Tarot:** [Liệt kê các lá bài đã bốc kèm vị trí và chiều xuôi/ngược, ví dụ: Vị trí Quá khứ: The Fool (Xuôi), Vị trí Hiện tại: Death (Ngược), Vị trí Tương lai: The Lovers (Xuôi)]
+
+---
+
+### 🌟 1. Giải Mã Trực Giác (Tổng Quan)
+[Viết từ 2-3 câu phân tích tổng quan dòng chảy năng lượng từ các lá bài đối với câu hỏi của user]
+
+### 🎯 2. Ứng Nghiệm Vào Thực Tế
+[Viết từ 3-4 câu luận giải chi tiết sự ảnh hưởng của các lá bài đến thực tế cuộc sống, công việc, hoặc tình cảm của user]
+
+### 📜 3. Thông Điệp & Lời Khuyên Hành Động
+- **Điều nên làm:** [Viết 1 hành động cụ thể khuyên user thực hiện]
+- **Điều cần tránh:** [Viết 1 thái độ hoặc hành động user nên kiềm chế hoặc tránh xa]
+
+"Năng lượng Tarot là lời dẫn lối, quyền lựa chọn nằm ở bản thân bạn. Vạn sự an nhiên."`
+        : `${langRule}
+
+# ROLE:
+Bạn là một bậc thầy Chiêm tinh học và Kinh Dịch có tên là "Cổ Dịch Đại Sư". Nhiệm vụ của bạn là nhận thông tin quẻ dịch đã được tra cứu từ hệ thống, kết hợp với tâm nguyện/câu hỏi của người gieo quẻ để đưa ra lời luận giải súc tích, uyên thâm, định hướng hành động theo triết lý Âm Dương Ngũ Hành.
+
+# CHARACTERISTICS (ĐẶC ĐIỂM HÀNH VĂN):
+- Ngôn từ: Cổ kính, trang nghiêm, thấu đạt nhưng phải ngắn gọn, tường minh (tránh viết dài dòng, lan man vì giới hạn mô hình nhỏ).
+- Cấu trúc: Luôn trả về kết quả theo đúng định dạng được yêu cầu, không thêm lời thoại thừa của AI ở đầu hoặc cuối.
+
+# EXTENDED INSTRUCTIONS (Chỉ thị tối ưu cho Qwen 3.5 2B):
+1. Không tự bịa ra nội dung quẻ. Chỉ sử dụng dữ liệu được cung cấp ở mục "INPUT CONTEXT" làm gốc.
+2. Tập trung giải quyết trực diện câu hỏi của user (Sự nghiệp, Tình duyên, hay Tài lộc) dựa trên điềm Cát/Hung của quẻ và hào biến.
+3. Phần "Lời khuyên hành động" (Actionable Advice) phải thực tế, không chung chung.
+4. Mọi câu trả lời phải bằng tiếng Việt thuần túy, tuyệt đối không dùng chữ Hán (chữ Trung Quốc) dưới bất kỳ hình thức nào.
+
+# OUTPUT FORMAT (Định dạng đầu ra bắt buộc):
+### 🔮 LỜI LUẬN GIẢI TỪ CỔ DỊCH ĐẠI SƯ
+
+- **Tâm nguyện người hỏi:** {USER_QUESTION}
+- **Thế trận Quẻ dịch:** Quẻ {MAIN_QUAN_NAME} ({MAIN_QUAN_TEXT}). {Nếu có hào biến thì ghi: Biến ở {MUTATED_HAO} - {MUTATED_HAO_TEXT}}.
+
+---
+
+### 🌟 1. Phân Tích Cát Hùng (Tổng Quan)
+[Viết từ 2-3 câu phân tích thế trận âm dương, thời thế của quẻ này đối với câu hỏi của user]
+
+### 🎯 2. Ứng Nghiệm Vào Thực Tế
+[Viết từ 3-4 câu luận giải chi tiết xem việc user hỏi là thuận lợi hay khó khăn, điểm mấu chốt nằm ở đâu]
+
+### 📜 3. Lời Khuyên (Cải Vận / Hành Động)
+- **Điều nên làm:** [Viết 1 hành động cụ thể]
+- **Điều cần tránh:** [Viết 1 điều cần kiêng kị]
+
+"Thời thế đổi thay, đức năng thắng số. Tùy cơ ứng biến, vạn sự bình an."`);
+
+  // ---- 2. RAG & Tier 2 Cache: Semantic Cache ----
   const embedding = await getEmbedding(ollamaUrl, embedModel, question);
   const similar   = await retrieveSimilar(sbUrl, sbKey, embedding, type);
 
+  if (similar && similar.length > 0) {
+    const bestMatch = similar[0];
+    if (bestMatch.similarity >= 0.90 && bestMatch.context === context) {
+      return res.status(200).json({ answer: bestMatch.answer, cached: true, semanticCached: true });
+    }
+  }
+
   // Augment context with retrieved Q&As
   let fullContext = context || '';
-  if (similar.length > 0) {
+  if (similar && similar.length > 0) {
     const ragBlock = similar
       .map(d => `Câu hỏi tương tự: "${d.question}"\nCâu trả lời: ${d.answer}`)
       .join('\n---\n');
@@ -112,27 +343,25 @@ export default async function handler(req, res) {
   }
 
   // ---- Build Ollama messages with conversation history ----
-  const typeLabel = type === 'tarot' ? 'bài Tarot' : 'quẻ Kinh Dịch';
-  const contextPrefix = `Thông tin ${typeLabel}:\n${fullContext}\n\n`;
-
   const ollamaMessages = [{ role: 'system', content: systemPrompt }];
 
   if (history.length === 0) {
-    // First turn: include full context
     ollamaMessages.push({
       role: 'user',
-      content: `${contextPrefix}Câu hỏi: "${question}"\n\nHãy luận giải và trả lời thẳng vào câu hỏi. (Chỉ dùng tiếng Việt)`,
+      content: buildFirstUserContent(question, context, type, fullContext, false),
     });
   } else {
-    // Follow-up: reconstruct first message with context, keep history, add new question
     ollamaMessages.push({
       role: 'user',
-      content: `${contextPrefix}Câu hỏi: "${history[0].content}"\n\nHãy luận giải và trả lời thẳng vào câu hỏi. (Chỉ dùng tiếng Việt)`,
+      content: buildFirstUserContent(history[0].content, context, type, fullContext, true),
     });
     for (let i = 1; i < history.length; i++) {
       ollamaMessages.push(history[i]);
     }
-    ollamaMessages.push({ role: 'user', content: `${question} (Chỉ dùng tiếng Việt)` });
+    const finalInstruction = type === 'tarot'
+      ? `Câu hỏi phụ mới nhất của tôi: "${question}"\n\n(Yêu cầu: Hãy trả lời trực diện khía cạnh này bằng một đoạn văn ngắn 3-4 câu, phân tích tự nhiên, súc tích dựa trên các lá bài đã bốc. Tuyệt đối không dùng lại định dạng báo cáo hay liệt kê tiêu đề.)`
+      : `Câu hỏi phụ mới nhất của tôi: "${question}"\n\n(Yêu cầu: Hãy trả lời trực diện khía cạnh này bằng một đoạn văn phân tích tự nhiên, ngắn gọn 3-4 câu từ góc nhìn của Cổ Dịch Đại Sư dựa trên quẻ dịch và hào đã gieo. Tuyệt đối không viết lại định dạng mẫu ban đầu hay lặp lại các tiêu đề 1. Phân Tích Cát Hùng, 2. Ứng Nghiệm, v.v. Trả lời trôi chảy.)`;
+    ollamaMessages.push({ role: 'user', content: finalInstruction });
   }
 
   // ---- Call Ollama ----
@@ -147,7 +376,8 @@ export default async function handler(req, res) {
         model,
         messages: ollamaMessages,
         stream: false,
-        options: { temperature: 0.75, num_predict: 350 },
+        think: false,
+        options: { temperature: 0.2, num_predict: 600 },
       }),
       signal: controller.signal,
     });
@@ -160,10 +390,13 @@ export default async function handler(req, res) {
     }
 
     const data   = await ollamaRes.json();
-    const answer = data.message?.content || data.response || '';
+    let answer   = data.message?.content || data.response || '';
+    
+    // Post-process to remove Chinese character leaks
+    answer = cleanChineseLeaks(answer);
 
     // ---- RAG: store new Q&A (fire & forget) ----
-    storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding });
+    await storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding });
 
     return res.status(200).json({ answer });
 

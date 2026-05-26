@@ -3,8 +3,8 @@
    ============================================================ */
 
 :root {
-  --font-heading: 'Outfit', sans-serif;
-  --font-body:    'Inter', sans-serif;
+  --font-heading: 'Be Vietnam Pro', sans-serif;
+  --font-body:    'Be Vietnam Pro', sans-serif;
   --bg:           #0d0a1f;
   --bg-surface:   rgba(255,255,255,0.05);
   --bg-glass:     rgba(255,255,255,0.08);
@@ -78,9 +78,11 @@ a { text-decoration: none; color: inherit; }
 }
 .screen.active { display: block; }
 .screen-inner {
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
   padding: 24px 16px 40px;
+  transition: max-width 0.3s ease;
 }
 .screen-inner.center {
   display: flex;
@@ -238,56 +240,114 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 20px;
 }
 
-/* Individual drawn card */
+/* Individual drawn card (3D Flip container) */
 .drawn-card {
   position: relative;
+  width: 110px;
+  height: 176px;
+  perspective: 1000px;
   cursor: pointer;
+  margin-bottom: 24px;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.2s ease;
 }
 .drawn-card:hover { transform: translateY(-4px); }
-.drawn-card.active-card .dc-face { border-color: var(--purple); box-shadow: 0 0 20px rgba(192,132,252,0.5); }
 
-.dc-face {
-  width: 90px;
-  height: 145px;
+.dc-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.drawn-card.revealed .dc-card-inner {
+  transform: rotateY(180deg);
+}
+
+.dc-card-back, .dc-card-front {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
   border-radius: 10px;
-  background: linear-gradient(145deg, #2d1b5e, #1a0f3d);
   border: 1.5px solid rgba(192,132,252,0.3);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 6px;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
 }
-.dc-face.revealed {
-  background: linear-gradient(145deg, #1e1040, #0f0828);
+
+/* Card Back Design */
+.dc-card-back {
+  background: linear-gradient(145deg, #2d1b5e, #1a0f3d);
+  color: var(--purple);
+}
+.dc-back-pattern {
+  font-size: 28px;
+  filter: drop-shadow(0 0 8px rgba(192,132,252,0.5));
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 0.6; filter: drop-shadow(0 0 4px rgba(192,132,252,0.4)); }
+  50% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 12px rgba(192,132,252,0.8)); }
+}
+
+/* Card Front Design */
+.dc-card-front {
+  background: #0d0a1f;
+  transform: rotateY(180deg);
   border-color: var(--gold);
-  box-shadow: 0 0 16px rgba(212,166,66,0.3), 0 6px 20px rgba(0,0,0,0.5);
 }
-.dc-face.reversed { transform: rotate(180deg); }
-.dc-face.reversed.selected { transform: rotate(180deg) translateY(4px); }
+.dc-card-front.reversed img {
+  transform: rotate(180deg);
+}
+.dc-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.drawn-card.active-card .dc-card-front {
+  border-color: #fff;
+  box-shadow: 0 0 20px rgba(192,132,252,0.6), 0 6px 20px rgba(0,0,0,0.6);
+}
 
 .dc-symbol { font-size: 28px; }
-.dc-vn-name { font-size: 9px; font-weight: 700; color: var(--gold); text-align: center; line-height: 1.2; }
+.dc-vn-name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(13, 10, 31, 0.85);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 4px;
+  backdrop-filter: blur(4px);
+  border-top: 1px solid rgba(212,166,66,0.25);
+  line-height: 1.2;
+}
 .dc-position-label {
   position: absolute;
-  bottom: -20px;
+  bottom: -24px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  pointer-events: none;
 }
 .dc-reveal-hint {
   font-size: 8px;
   color: rgba(192,132,252,0.5);
-  text-align: center;
+  margin-top: 4px;
 }
 
 /* ---- Reading detail ---- */
@@ -408,6 +468,45 @@ a { text-decoration: none; color: inherit; }
   border-color: var(--purple);
   box-shadow: 0 0 0 3px rgba(192,132,252,0.12);
 }
+.suggested-questions {
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+.sq-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 6px;
+}
+.sq-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sq-tag {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+.sq-tag:hover {
+  background: rgba(192, 132, 252, 0.15);
+  border-color: var(--purple);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.sq-tag:active {
+  transform: translateY(0);
+}
 .question-hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
 
 /* ---- AI Section ---- */
@@ -526,8 +625,6 @@ a { text-decoration: none; color: inherit; }
   flex-direction: column;
   gap: 10px;
   margin-bottom: 10px;
-  max-height: 320px;
-  overflow-y: auto;
   padding-right: 2px;
 }
 .chat-bubble {
@@ -535,10 +632,45 @@ a { text-decoration: none; color: inherit; }
   border-radius: 16px;
   font-size: 14px;
   line-height: 1.75;
-  white-space: pre-wrap;
   word-break: break-word;
   max-width: 88%;
   animation: bubble-in 0.25s ease;
+}
+/* Markdown styling inside chat bubbles */
+.chat-bubble h1, .chat-bubble h2, .chat-bubble h3, .chat-bubble .chat-heading {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--purple);
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+.chat-bubble h1:first-child, .chat-bubble h2:first-child, .chat-bubble h3:first-child, .chat-bubble .chat-heading:first-child {
+  margin-top: 0;
+}
+.chat-bubble p, .chat-bubble .chat-p {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+.chat-bubble p:last-child, .chat-bubble .chat-p:last-child {
+  margin-bottom: 0;
+}
+.chat-bubble ul, .chat-bubble .chat-list {
+  margin-left: 18px;
+  margin-bottom: 8px;
+  list-style-type: disc;
+}
+.chat-bubble li {
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+.chat-bubble hr, .chat-bubble .chat-hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+.chat-bubble .chat-break {
+  height: 8px;
 }
 @keyframes bubble-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -614,3 +746,168 @@ a { text-decoration: none; color: inherit; }
 
 /* ---- Utilities ---- */
 .hidden { display: none !important; }
+
+/* ============================================================
+   Responsive Redesign for Tablet and Desktop
+   ============================================================ */
+
+@media (min-width: 768px) {
+  .screen-inner {
+    max-width: 720px;
+    padding: 32px 24px 60px;
+  }
+  
+  /* Spread choices row */
+  .spread-options {
+    flex-direction: row;
+    gap: 16px;
+  }
+  .spread-btn {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px 16px;
+    gap: 10px;
+  }
+  .spread-icon {
+    font-size: 36px;
+  }
+  .spread-name {
+    font-size: 20px;
+  }
+  .spread-desc {
+    font-size: 13px;
+  }
+
+  /* Deck scale up */
+  .deck-visual {
+    width: 170px;
+    height: 270px;
+    margin-bottom: 24px;
+  }
+  .deck-card {
+    width: 150px;
+    height: 240px;
+  }
+  .deck-card::after {
+    font-size: 48px;
+  }
+  .hold-progress-track {
+    width: 200px;
+    height: 6px;
+  }
+
+  /* Cards scale up */
+  .drawn-card {
+    width: 150px;
+    height: 240px;
+    margin-bottom: 32px;
+  }
+  .dc-card-back, .dc-card-front {
+    border-radius: 14px;
+    border-width: 2px;
+  }
+  .dc-back-pattern {
+    font-size: 40px;
+  }
+  .dc-vn-name {
+    font-size: 13px;
+    padding: 7px 4px;
+    border-top-width: 1.5px;
+  }
+  .dc-position-label {
+    bottom: -28px;
+    font-size: 12px;
+  }
+  .cards-layout {
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .screen-inner {
+    max-width: 1000px;
+  }
+  
+  /* Desktop layout for reading screen (vertical stack with cards horizontal) */
+  #screen-reading .screen-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 1100px;
+    gap: 24px;
+  }
+  
+  #screen-reading .spread-label {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 0;
+  }
+  
+  #screen-reading #cards-layout {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap; /* Force cards to stay in one row on desktop */
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 12px;
+  }
+  
+  #screen-reading #reading-detail {
+    width: 100%;
+    max-width: 760px; /* Comfortable reading width for the details */
+    margin: 0 auto;
+  }
+  
+  #screen-reading #ai-section {
+    width: 100%;
+    margin-top: 12px;
+  }
+  
+  #screen-reading #btn-new-reading {
+    margin-top: 24px !important;
+  }
+
+  /* Make Tarot cards larger on desktop */
+  .drawn-card {
+    width: 190px;
+    height: 304px;
+  }
+  
+  .dc-back-pattern {
+    font-size: 48px;
+  }
+  
+  .dc-vn-name {
+    font-size: 14px;
+    padding: 9px 4px;
+  }
+  
+  /* Header styling adjust */
+  .t-header {
+    padding: 16px 32px;
+  }
+  .t-header-title {
+    font-size: 20px;
+  }
+  .btn-back, .btn-ghost {
+    font-size: 14px;
+    padding: 8px 14px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .screen-inner {
+    max-width: 1160px;
+  }
+  #screen-reading .screen-inner {
+    max-width: 1200px;
+  }
+  .drawn-card {
+    width: 210px;
+    height: 336px;
+  }
+}

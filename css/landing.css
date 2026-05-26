@@ -4,8 +4,8 @@
 
 /* ---- Shared Variables (imported by module stylesheets too) ---- */
 :root {
-  --font-heading: 'Outfit', sans-serif;
-  --font-body:    'Inter', sans-serif;
+  --font-heading: 'Be Vietnam Pro', sans-serif;
+  --font-body:    'Be Vietnam Pro', sans-serif;
 
   --bg-base:    #07070f;
   --bg-surface: rgba(255,255,255,0.04);
@@ -202,8 +202,66 @@ a { text-decoration: none; color: inherit; }
 
 /* ---- Footer ---- */
 .site-footer {
-  margin-top: 32px;
+  margin-top: 48px;
   font-size: 12px;
   color: var(--text-muted);
   text-align: center;
+}
+
+/* ---- Responsive Styles ---- */
+@media (min-width: 768px) {
+  #app {
+    padding: 0 24px 60px;
+  }
+  .hero {
+    max-width: 768px;
+    padding: 80px 0 48px;
+  }
+  .modules {
+    max-width: 768px;
+    flex-direction: row;
+    gap: 16px;
+  }
+  .module-card {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 32px 20px;
+  }
+  .module-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+  }
+  .module-arrow {
+    display: none;
+  }
+  .module-tags {
+    justify-content: center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    max-width: 1000px;
+    padding: 100px 0 64px;
+  }
+  .modules {
+    max-width: 1000px;
+    gap: 24px;
+  }
+  .module-card {
+    padding: 44px 28px;
+  }
+  .module-icon {
+    font-size: 64px;
+  }
+  .module-title {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+  .module-desc {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
 }
