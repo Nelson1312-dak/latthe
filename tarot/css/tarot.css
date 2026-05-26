@@ -223,6 +223,33 @@ a { text-decoration: none; color: inherit; }
 .btn-tarot-primary:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(192,132,252,0.55), 0 8px 24px rgba(0,0,0,0.4); }
 .btn-tarot-primary:active { transform: scale(0.97); }
 
+/* ---- Secondary button (subtle, for reset/new reading) ---- */
+.btn-tarot-secondary {
+  display: block;
+  width: auto;
+  min-width: 200px;
+  margin: 32px auto 0;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: rgba(255,255,255,0.45);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-tarot-secondary:hover {
+  border-color: rgba(192,132,252,0.5);
+  color: #c084fc;
+  background: rgba(192,132,252,0.07);
+  transform: translateY(-1px);
+}
+.btn-tarot-secondary:active { transform: scale(0.98); }
+
 /* ---- Reading screen ---- */
 .spread-label {
   text-align: center;
