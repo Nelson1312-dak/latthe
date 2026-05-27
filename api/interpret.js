@@ -9,7 +9,8 @@
 // ---- CORS + rate-limit config ----
 
 const ALLOWED_ORIGINS = new Set([
-  'https://latthe-hazel.vercel.app',
+  'https://latbai.vn',
+  'https://www.latbai.vn',
   'https://gieoque.vn',
   'https://www.gieoque.vn',
   'http://localhost:5005',

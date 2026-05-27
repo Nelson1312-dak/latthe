@@ -4,4 +4,4 @@ Allow: /
 # Disallow API & admin paths (no value for search engines)
 Disallow: /api/
 
-Sitemap: https://latthe-hazel.vercel.app/sitemap.xml
+Sitemap: https://latbai.vn/sitemap.xml
