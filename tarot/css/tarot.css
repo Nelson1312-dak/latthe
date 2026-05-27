@@ -265,7 +265,8 @@ a { text-decoration: none; color: inherit; }
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 32px;
+  isolation: isolate; /* contain 3D card stacking contexts */
 }
 
 /* Individual drawn card (3D Flip container) */
@@ -422,6 +423,7 @@ a { text-decoration: none; color: inherit; }
   padding: 20px;
   backdrop-filter: blur(12px);
   animation: slide-up 0.35s ease;
+  scroll-margin-top: 72px; /* account for sticky header on scrollIntoView */
 }
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(20px); }

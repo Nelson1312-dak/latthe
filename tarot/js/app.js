@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('detail-element').textContent = card.element;
 
     readingDetail.classList.remove('hidden');
-    readingDetail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    readingDetail.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ---- AI Chat ----
