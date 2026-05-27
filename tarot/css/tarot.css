@@ -527,7 +527,7 @@ a { text-decoration: none; color: inherit; }
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.question-input::placeholder { color: var(--muted); }
+.question-input::placeholder { color: rgba(255, 255, 255, 0.35) !important; opacity: 1; }
 .question-input:focus {
   border-color: var(--purple);
   box-shadow: 0 0 0 3px rgba(192,132,252,0.12);
@@ -789,7 +789,7 @@ a { text-decoration: none; color: inherit; }
   min-width: 0;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.ai-chat-input::placeholder { color: var(--muted); }
+.ai-chat-input::placeholder { color: rgba(255, 255, 255, 0.35) !important; opacity: 1; }
 .ai-chat-input:focus {
   border-color: var(--purple);
   box-shadow: 0 0 0 3px rgba(192,132,252,0.1);

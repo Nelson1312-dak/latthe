@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnStartThrow.addEventListener('click', () => {
     const questionVal = gqQuestion.value.trim();
     if (!questionVal) {
-      alert('Vui lòng nhập câu hỏi của bạn trước khi gieo quẻ! ☯️');
+      alert('Vui lòng nhập câu hỏi của bạn trước khi gieo quẻ! ☯');
       gqQuestion.focus();
       return;
     }
