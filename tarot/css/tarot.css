@@ -722,20 +722,12 @@ a { text-decoration: none; color: inherit; }
   color: #fb7185;
 }
 .btn-retry {
-  margin-top: 10px;
-  padding: 6px 14px;
-  border-radius: 8px;
   border: 1.5px solid rgba(251,113,133,0.4);
   background: rgba(251,113,133,0.08);
   color: #fb7185;
   font-family: var(--font-heading);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 .btn-retry:hover { background: rgba(251,113,133,0.18); color: #fda4af; transform: translateY(-1px); }
-.btn-retry:active { transform: scale(0.97); }
 .ai-loading {
   display: flex;
   align-items: center;
@@ -955,66 +947,29 @@ a { text-decoration: none; color: inherit; }
   }
 }
 
-/* ---- Header actions ---- */
-.t-header-actions { display: flex; gap: 8px; align-items: center; }
-
-/* ---- History modal ---- */
-.history-backdrop {
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(5, 2, 18, 0.7);
-  backdrop-filter: blur(8px);
-  display: flex; align-items: flex-end; justify-content: center;
-  opacity: 0; transition: opacity 0.18s ease;
-}
-.history-backdrop.open { opacity: 1; }
-.history-backdrop.closing { opacity: 0; }
+/* ---- History modal — tarot theme overrides (structure in common.css) ---- */
+.history-backdrop { background: rgba(5, 2, 18, 0.7); backdrop-filter: blur(8px); }
 .history-modal {
-  width: 100%; max-width: 480px;
-  max-height: 80vh; overflow-y: auto;
   background: #1a1331;
-  border-radius: 20px 20px 0 0;
-  padding: 20px;
   border: 1px solid var(--border);
   border-bottom: none;
   box-shadow: 0 -8px 32px rgba(120, 60, 200, 0.25);
-  transform: translateY(20px);
-  transition: transform 0.22s ease;
 }
-.history-backdrop.open .history-modal { transform: translateY(0); }
 @media (min-width: 640px) {
-  .history-backdrop { align-items: center; }
-  .history-modal { border-radius: 20px; max-height: 70vh; border-bottom: 1px solid var(--border); }
+  .history-modal { border-bottom: 1px solid var(--border); }
 }
-.history-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 16px; padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
+.history-header { border-bottom: 1px solid var(--border); }
 .history-title {
   font-family: var(--font-heading);
-  font-size: 17px; font-weight: 700; color: var(--purple);
+  color: var(--purple);
   text-shadow: 0 0 12px var(--purple-dim);
 }
-.history-close {
-  width: 32px; height: 32px; border-radius: 50%;
-  border: none; background: transparent;
-  font-size: 22px; line-height: 1; cursor: pointer;
-  color: var(--muted); transition: all 0.18s;
-}
+.history-close { color: var(--muted); }
 .history-close:hover { background: rgba(192,132,252,0.12); color: var(--text); }
-.history-list { display: flex; flex-direction: column; gap: 10px; }
-.history-empty {
-  text-align: center; color: var(--muted);
-  padding: 32px 0; font-size: 14px;
-}
+.history-empty { color: var(--muted); }
 .history-item {
-  padding: 14px; border-radius: 12px;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
-}
-.history-item-head {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-bottom: 8px;
 }
 .history-card {
   display: inline-block;
@@ -1024,21 +979,11 @@ a { text-decoration: none; color: inherit; }
   color: var(--purple);
   font-size: 12px; font-weight: 600;
 }
-.history-question {
-  font-size: 13.5px; color: var(--text);
-  font-style: italic; line-height: 1.5;
-  opacity: 0.85;
-}
-.history-time {
-  margin-top: 8px; font-size: 11.5px; color: var(--muted);
-}
+.history-question { color: var(--text); opacity: 0.85; }
+.history-time { color: var(--muted); }
 .history-clear {
-  display: block; margin: 16px auto 0;
-  padding: 8px 16px; border-radius: 10px;
   border: 1px solid rgba(251,113,133,0.3);
   background: rgba(251,113,133,0.08);
   color: #fb7185;
-  font-size: 12.5px; font-weight: 600; cursor: pointer;
-  transition: all 0.18s;
 }
 .history-clear:hover { background: rgba(251,113,133,0.18); }
