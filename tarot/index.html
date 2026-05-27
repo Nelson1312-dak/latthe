@@ -35,8 +35,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap&subset=vietnamese" rel="stylesheet">
-  <link rel="stylesheet" href="../css/common.css?v=12">
-  <link rel="stylesheet" href="css/tarot.css?v=12">
+  <link rel="stylesheet" href="../css/common.css?v=16">
+  <link rel="stylesheet" href="css/tarot.css?v=16">
 
   <!-- Vercel Web Analytics & Speed Insights -->
   <script>
@@ -194,13 +194,34 @@
 
   </div>
 
-  <script src="js/cards.js?v=12"></script>
-  <script src="../js/ai.js?v=12"></script>
-  <script src="../js/history.js?v=12"></script>
-  <script src="js/app.js?v=12"></script>
+  <script src="js/cards.js?v=16"></script>
+  <script src="../js/ai.js?v=16"></script>
+  <script src="../js/history.js?v=16"></script>
+  <script src="js/app.js?v=16"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {}));
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then((reg) => {
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  window.location.reload();
+                }
+              });
+            });
+          })
+          .catch(() => {});
+      });
+
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
     }
   </script>
 </body>

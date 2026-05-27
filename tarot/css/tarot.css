@@ -42,6 +42,7 @@ a { text-decoration: none; color: inherit; }
   align-items: center;
   padding: 12px 16px;
   background: rgba(13,10,31,0.85);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
@@ -85,6 +86,10 @@ a { text-decoration: none; color: inherit; }
   margin: 0 auto;
   padding: 24px 16px 40px;
   transition: max-width 0.3s ease;
+}
+#screen-reading .screen-inner {
+  display: flex;
+  flex-direction: column;
 }
 .screen-inner.center {
   display: flex;
@@ -263,16 +268,17 @@ a { text-decoration: none; color: inherit; }
 }
 .cards-layout {
   display: flex;
+  align-items: flex-start;
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
   margin-bottom: 32px;
-  isolation: isolate; /* contain 3D card stacking contexts */
 }
 
 /* Individual drawn card (3D Flip container) */
 .drawn-card {
   position: relative;
+  display: block;
   width: 110px;
   height: 176px;
   perspective: 1000px;
@@ -280,8 +286,10 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 24px;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.2s ease;
+  will-change: transform;
+  transform: translateZ(0);
 }
-.drawn-card:hover { transform: translateY(-4px); }
+.drawn-card:hover { transform: translateY(-4px) translateZ(0); }
 
 .dc-card-inner {
   position: relative;
@@ -290,15 +298,18 @@ a { text-decoration: none; color: inherit; }
   text-align: center;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
+  will-change: transform;
+  transform: translateZ(0);
 }
 .drawn-card.revealed .dc-card-inner {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(0);
 }
 
 .dc-card-back, .dc-card-front {
   position: absolute;
   width: 100%;
   height: 100%;
+  -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   border-radius: 10px;
   border: 1.5px solid rgba(192,132,252,0.3);
@@ -317,7 +328,7 @@ a { text-decoration: none; color: inherit; }
     radial-gradient(ellipse at 50% 100%, rgba(192,132,252,0.18) 0%, transparent 60%),
     linear-gradient(145deg, #2d1b5e, #1a0f3d);
   color: var(--purple);
-  position: relative;
+  position: absolute;
 }
 .dc-card-back::before {
   content: '';
@@ -364,11 +375,11 @@ a { text-decoration: none; color: inherit; }
 /* Card Front Design */
 .dc-card-front {
   background: #0d0a1f;
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(0);
   border-color: var(--gold);
 }
 .dc-card-front.reversed img {
-  transform: rotate(180deg);
+  transform: none; /* Keep card image upright for readability; state is indicated in description panel */
 }
 .dc-card-img {
   width: 100%;
@@ -422,6 +433,7 @@ a { text-decoration: none; color: inherit; }
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 20px;
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   animation: slide-up 0.35s ease;
 }
@@ -908,8 +920,10 @@ a { text-decoration: none; color: inherit; }
     max-width: 1000px;
   }
   
-  /* Desktop reading screen: normal block flow (avoids backdrop-filter stacking context issues) */
+  /* Desktop reading screen: flex column layout to prevent card overlap */
   #screen-reading .screen-inner {
+    display: flex;
+    flex-direction: column;
     max-width: 1100px;
   }
 
@@ -923,6 +937,7 @@ a { text-decoration: none; color: inherit; }
     flex-direction: row;
     flex-wrap: nowrap;
     justify-content: center;
+    align-items: flex-start;
     gap: 24px;
     margin-bottom: 40px;
   }
