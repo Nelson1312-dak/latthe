@@ -56,6 +56,11 @@
   </script>
 </head>
 <body>
+  <!-- Google Gemini-style Ambient Fluid Glows -->
+  <div class="gemini-glow-1"></div>
+  <div class="gemini-glow-2"></div>
+  <div class="gemini-glow-3"></div>
+
   <div id="app">
 
     <!-- HEADER -->
@@ -155,7 +160,7 @@
           <p id="detail-element" class="detail-element"></p>
         </div>
         <!-- AI Interpretation -->
-        <div id="ai-section" class="ai-section hidden">
+        <div id="ai-section" class="ai-section gemini-glow-border hidden">
           <div class="ai-header">
             <span class="ai-icon">🤖</span>
             <div>
@@ -165,8 +170,8 @@
           </div>
           <div id="ai-chat-messages" class="ai-chat-messages"></div>
           <div id="ai-loading" class="ai-loading hidden">
-            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-            <span class="ai-loading-text">Đang suy ngẫm...</span>
+            <div class="gemini-loader"></div>
+            <span class="ai-loading-text">Đang kết nối tâm thức Tarot...</span>
           </div>
           <p id="ai-error" class="ai-error hidden"></p>
           <div class="ai-chat-row">
