@@ -66,6 +66,7 @@ a { text-decoration: none; color: inherit; }
   background: var(--bg-glass);
   border: 1px solid var(--border);
   transition: all 0.22s ease;
+  justify-self: start;
 }
 .btn-back:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); border-color: rgba(255,255,255,0.15); }
 

@@ -51,6 +51,7 @@ a { text-decoration: none; color: inherit; }
   padding: 6px 10px;
   border-radius: 8px;
   transition: color 0.2s, background 0.2s;
+  justify-self: start;
 }
 .btn-back:hover { color: var(--text); background: var(--bg-surface); }
 .t-header-title {
@@ -907,44 +908,38 @@ a { text-decoration: none; color: inherit; }
     max-width: 1000px;
   }
   
-  /* Desktop layout for reading screen (vertical stack with cards horizontal) */
+  /* Desktop reading screen: normal block flow (avoids backdrop-filter stacking context issues) */
   #screen-reading .screen-inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     max-width: 1100px;
-    gap: 24px;
   }
-  
+
   #screen-reading .spread-label {
-    width: 100%;
     text-align: center;
-    margin-bottom: 0;
+    margin-bottom: 24px;
   }
-  
+
   #screen-reading #cards-layout {
-    width: 100%;
     display: flex;
     flex-direction: row;
-    flex-wrap: nowrap; /* Force cards to stay in one row on desktop */
+    flex-wrap: nowrap;
     justify-content: center;
     gap: 24px;
-    margin-bottom: 12px;
+    margin-bottom: 40px;
   }
-  
+
   #screen-reading #reading-detail {
-    width: 100%;
-    max-width: 760px; /* Comfortable reading width for the details */
+    max-width: 760px;
+    margin: 0 auto 24px;
+  }
+
+  #screen-reading #ai-section {
+    max-width: 760px;
     margin: 0 auto;
   }
-  
-  #screen-reading #ai-section {
-    width: 100%;
-    margin-top: 12px;
-  }
-  
+
   #screen-reading #btn-new-reading {
-    margin-top: 24px !important;
+    display: block;
+    margin: 24px auto 0;
   }
 
   /* Make Tarot cards larger on desktop */
