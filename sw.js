@@ -1,5 +1,5 @@
 /**
- * sw.js — Service Worker for Lật Thẻ
+ * sw.js — Service Worker for Lật Bài
  * Strategy:
  *   - Cache-first for static shell (HTML, CSS, JS, icons, fonts)
  *   - Network-first for /api/* (always try server, fall back to error)
@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v3-2026-05-27';
+const CACHE_VERSION = 'v4-2026-05-27';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 

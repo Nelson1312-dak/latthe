@@ -1,6 +1,6 @@
 {
-  "name": "Lật Thẻ — Gieo Quẻ, Tarot & Drinking Games",
-  "short_name": "Lật Thẻ",
+  "name": "Lật Bài — Gieo Quẻ, Tarot & Drinking Games",
+  "short_name": "Lật Bài",
   "description": "Gieo quẻ Kinh Dịch, bói bài Tarot và quẩy cùng nhóm bạn với Drinking Games.",
   "lang": "vi",
   "dir": "ltr",
@@ -8,8 +8,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f7f3ec",
-  "theme_color": "#b45309",
+  "background_color": "#06060c",
+  "theme_color": "#06060c",
   "categories": ["entertainment", "lifestyle", "games"],
   "icons": [
     {
