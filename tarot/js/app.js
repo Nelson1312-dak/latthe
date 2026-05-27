@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     renderReading();
     showScreen('reading');
+    window.scrollTo({ top: 0 });
     btnRestart.classList.remove('hidden');
   });
 
@@ -240,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('detail-element').textContent = card.element;
 
     readingDetail.classList.remove('hidden');
-    readingDetail.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ---- AI Chat ----
