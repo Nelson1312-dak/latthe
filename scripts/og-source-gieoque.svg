@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#fffefb"/>
+      <stop offset="100%" stop-color="#ede2cf"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#047857" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#047857" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <ellipse cx="900" cy="315" rx="380" ry="320" fill="url(#glow)"/>
+
+  <text x="80" y="160" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="20" font-weight="700" fill="#047857" letter-spacing="4">KINH DỊCH · CỔ TRUYỀN</text>
+
+  <text x="80" y="270" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="88" font-weight="900" fill="#2d1e15" letter-spacing="-2">Gieo Quẻ</text>
+  <text x="80" y="340" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="40" font-weight="700" fill="#047857">Luận giải vận mệnh cùng AI</text>
+
+  <line x1="80" y1="380" x2="180" y2="380" stroke="#047857" stroke-width="3"/>
+
+  <text x="80" y="430" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="24" font-weight="500" fill="#4a3525">64 Quẻ Kinh Dịch · Gieo đồng xu cổ truyền</text>
+  <text x="80" y="465" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="24" font-weight="500" fill="#4a3525">Hào động · Hào biến · Cải vận hành động</text>
+
+  <text x="80" y="560" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="20" font-weight="500" fill="#1c1209" opacity="0.5">latthe-hazel.vercel.app/gieoque · miễn phí</text>
+
+  <!-- Right: large taiji + 3 trigram bars -->
+  <g transform="translate(920 315)">
+    <circle cx="0" cy="0" r="170" fill="none" stroke="#b45309" stroke-width="6"/>
+    <path d="M -170 0 A 85 85 0 0 1 0 0 A 85 85 0 0 0 170 0 A 170 170 0 0 1 -170 0 Z" fill="#b45309"/>
+    <circle cx="-85" cy="0" r="22" fill="#fffefb"/>
+    <circle cx="85" cy="0" r="22" fill="#2d1e15"/>
+    <circle cx="-85" cy="0" r="9" fill="#2d1e15"/>
+    <circle cx="85" cy="0" r="9" fill="#fffefb"/>
+  </g>
+
+  <!-- 6 hexagram lines on left of taiji -->
+  <g transform="translate(720 230)" stroke="#047857" stroke-width="6" stroke-linecap="round">
+    <line x1="0" y1="0" x2="80" y2="0"/>
+    <line x1="0" y1="34" x2="35" y2="34"/><line x1="45" y1="34" x2="80" y2="34"/>
+    <line x1="0" y1="68" x2="80" y2="68"/>
+    <line x1="0" y1="102" x2="35" y2="102"/><line x1="45" y1="102" x2="80" y2="102"/>
+    <line x1="0" y1="136" x2="80" y2="136"/>
+    <line x1="0" y1="170" x2="35" y2="170"/><line x1="45" y1="170" x2="80" y2="170"/>
+  </g>
+</svg>
