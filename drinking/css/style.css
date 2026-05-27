@@ -1821,3 +1821,167 @@ body {
     padding: 5px 3px;
   }
 }
+
+/* ============================================================
+   Settings: gear button + popover panel + theme variants
+   ============================================================ */
+.drk-settings-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 999;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.7);
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease, background 0.2s ease, color 0.2s ease;
+}
+.drk-settings-btn:hover  { background: rgba(255,255,255,0.16); color: #fff; }
+.drk-settings-btn.active { transform: rotate(90deg); background: rgba(255,255,255,0.18); color: #fff; }
+
+.drk-settings-panel {
+  position: fixed;
+  top: 58px;
+  right: 12px;
+  z-index: 999;
+  width: 260px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(20, 14, 42, 0.94);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.drk-settings-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.drk-settings-row { display: flex; flex-direction: column; gap: 8px; }
+.drk-settings-row + .drk-settings-row { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+.drk-settings-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+}
+
+.drk-theme-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.drk-theme-swatch {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.drk-theme-swatch > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 7px;
+  background: var(--swatch);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--swatch) 35%, transparent), inset 0 1px 2px rgba(255,255,255,0.25);
+}
+.drk-theme-swatch:hover { transform: translateY(-1px); }
+.drk-theme-swatch.active {
+  border-color: rgba(255,255,255,0.85);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+}
+
+.drk-sound-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  color: rgba(255,255,255,0.8);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+}
+.drk-toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  border-radius: 11px;
+  background: rgba(255,255,255,0.15);
+  transition: background 0.2s;
+}
+.drk-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.drk-sound-toggle.on .drk-toggle-track { background: var(--truth-color, #00d4ff); }
+.drk-sound-toggle.on .drk-toggle-thumb { transform: translateX(16px); }
+
+/* ============================================================
+   Theme variants — override key accent color groups.
+   Default body has no [data-theme] (uses original purple/multi palette).
+   ============================================================ */
+body[data-theme="sunset"] {
+  --truth-color: #fb923c;
+  --truth-grad:  linear-gradient(135deg, #fb923c, #f97316);
+  --dare-color:  #ef4444;
+  --never-color: #f97316;
+  --vote-color:  #fbbf24;
+}
+body[data-theme="sunset"] {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(251,146,60,0.25) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(239,68,68,0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #1a0c0a 0%, #200a05 100%) !important;
+}
+
+body[data-theme="ocean"] {
+  --truth-color: #38bdf8;
+  --truth-grad:  linear-gradient(135deg, #38bdf8, #0ea5e9);
+  --dare-color:  #6366f1;
+  --never-color: #22d3ee;
+  --vote-color:  #67e8f9;
+}
+body[data-theme="ocean"] {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(56,189,248,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(99,102,241,0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #050b1f 0%, #08152e 100%) !important;
+}
+
+body[data-theme="forest"] {
+  --truth-color: #34d399;
+  --truth-grad:  linear-gradient(135deg, #34d399, #10b981);
+  --dare-color:  #f59e0b;
+  --never-color: #a3e635;
+  --vote-color:  #fde047;
+}
+body[data-theme="forest"] {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(52,211,153,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(245,158,11,0.16) 0%, transparent 60%),
+    linear-gradient(180deg, #04140d 0%, #07251a 100%) !important;
+}
