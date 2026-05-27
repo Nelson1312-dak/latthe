@@ -2163,3 +2163,234 @@ body[data-theme="forest"] {
     radial-gradient(ellipse at 50% 100%, rgba(245,158,11,0.16) 0%, transparent 60%),
     linear-gradient(180deg, #04140d 0%, #07251a 100%) !important;
 }
+
+/* ===========================================================
+   CLEAN MODERN REVAMP — overrides the neon/glow aesthetic
+   with a refined dark UI (Linear / Notion dark mode feel)
+   =========================================================== */
+
+/* — Toned-down color tokens — */
+:root {
+  --bg-primary: #07070e;
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-rich: rgba(255, 255, 255, 0.10);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.32);
+
+  /* Cleaner, more muted card type hues */
+  --truth-color:  #38bdf8;
+  --dare-color:   #fb7185;
+  --group-color:  #4ade80;
+  --never-color:  #c084fc;
+  --vote-color:   #fbbf24;
+
+  /* Replace 3-layer neon halos with a single thin ring */
+  --glow-blue:  0 0 0 1.5px rgba(56, 189, 248, 0.30);
+  --glow-red:   0 0 0 1.5px rgba(251, 113, 133, 0.30);
+  --glow-green: 0 0 0 1.5px rgba(74,  222, 128, 0.30);
+  --glow-pink:  0 0 0 1.5px rgba(192, 132, 252, 0.30);
+  --glow-gold:  0 0 0 1.5px rgba(251, 191, 36,  0.30);
+
+  --radius: 12px;
+  --radius-lg: 16px;
+}
+
+/* ---- App shell ---- */
+#app {
+  background: #08080e;
+  border-color: rgba(255,255,255,0.05);
+}
+#app::before, #app::after { opacity: 0; }
+
+/* ---- SPLASH ---- */
+.game-title {
+  font-size: 38px;
+  letter-spacing: -2px;
+  background: linear-gradient(150deg, #eee8ff 0%, #b8a9f5 45%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: none;
+  margin-bottom: 6px;
+}
+
+.game-subtitle {
+  text-transform: none;
+  letter-spacing: 0.5px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.splash-emoji { font-size: 52px; }
+.splash-card-preview { height: 110px; margin: 0; }
+
+.mc-truth { text-shadow: none; box-shadow: 0 0 0 1.5px rgba(56,189,248,0.28), 0 8px 20px rgba(0,0,0,0.5); }
+.mc-dare  { text-shadow: none; box-shadow: 0 0 0 1.5px rgba(251,113,133,0.28), 0 8px 20px rgba(0,0,0,0.5); }
+.mc-never { text-shadow: none; box-shadow: 0 0 0 1.5px rgba(192,132,252,0.28), 0 8px 20px rgba(0,0,0,0.5); }
+
+.splash-action-title {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* Mode buttons — full width, clean */
+.splash-mode-buttons { max-width: 100%; gap: 8px; }
+
+.splash-mode-btn {
+  padding: 15px 16px !important;
+  background: rgba(255,255,255,0.025) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: none !important;
+  gap: 14px;
+  transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+.splash-mode-btn:hover {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  transform: none;
+}
+
+.splash-mode-featured {
+  background: rgba(99,102,241,0.06) !important;
+  border-color: rgba(99,102,241,0.22) !important;
+  box-shadow: none !important;
+}
+.splash-mode-featured:hover {
+  background: rgba(99,102,241,0.10) !important;
+  border-color: rgba(99,102,241,0.35) !important;
+}
+.splash-mode-featured .mode-icon { filter: none; }
+
+.splash-mode-btn .mode-icon { font-size: 22px; filter: none; }
+.splash-mode-btn:hover .mode-icon { transform: none; }
+.splash-mode-btn .mode-title { font-size: 14px; font-weight: 700; }
+.splash-mode-btn .mode-desc  { font-size: 11px; color: var(--text-muted); }
+.splash-mode-btn::before { display: none; }
+
+/* Arrow inside mode button */
+.mode-arrow {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+  margin-left: auto;
+}
+.splash-mode-btn:hover .mode-arrow {
+  transform: translateX(3px);
+  color: rgba(255,255,255,0.4);
+}
+
+.splash-setup-btn {
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+  padding: 9px 16px !important;
+  border-color: rgba(255,255,255,0.05) !important;
+  box-shadow: none !important;
+}
+.splash-footer { font-size: 11px; margin-top: 8px; color: var(--text-muted); letter-spacing: 0; }
+.particle { background: rgba(99,102,241,0.18); }
+
+/* ---- BUTTONS ---- */
+.btn-primary {
+  background: #4f46e5;
+  box-shadow: 0 2px 12px rgba(79,70,229,0.25);
+}
+.btn-glow { animation: none; }
+
+#btn-play:not(:disabled) {
+  background: #4f46e5;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: 0 4px 16px rgba(79,70,229,0.22);
+}
+
+.btn-quick-fill {
+  background: rgba(99,102,241,0.04) !important;
+  border: 1px dashed rgba(99,102,241,0.22) !important;
+  color: #818cf8 !important;
+}
+.btn-quick-fill:hover {
+  background: rgba(99,102,241,0.08) !important;
+  border-color: rgba(99,102,241,0.38) !important;
+  color: #a5b4fc !important;
+  box-shadow: none;
+}
+
+/* ---- SETUP SCREEN ---- */
+.game-mode-selector {
+  background: rgba(255,255,255,0.02);
+  border-color: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 3px;
+}
+.mode-tab-btn { font-size: 12px; padding: 8px 4px; border-radius: 8px; }
+.mode-tab-btn.active {
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  box-shadow: none;
+}
+
+#player-name-input:focus {
+  border-color: rgba(99,102,241,0.45);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.07);
+  background: rgba(255,255,255,0.06);
+}
+
+.intensity-btn.active[data-intensity="Nhap_Tiec"] {
+  background: rgba(34,197,94,0.07) !important;
+  border-color: rgba(34,197,94,0.28) !important;
+  box-shadow: none !important;
+  transform: scale(1.02) translateY(-1px);
+}
+.intensity-btn.active[data-intensity="Noi_That"] {
+  background: rgba(249,115,22,0.07) !important;
+  border-color: rgba(249,115,22,0.28) !important;
+  box-shadow: none !important;
+  transform: scale(1.02) translateY(-1px);
+}
+.intensity-btn.active[data-intensity="Chay_Pho"] {
+  background: rgba(239,68,68,0.07) !important;
+  border-color: rgba(239,68,68,0.28) !important;
+  box-shadow: none !important;
+  transform: scale(1.02) translateY(-1px);
+}
+
+/* Pack checkboxes — clean colored borders, no neon glow */
+.pack-checkbox:checked + .pack-custom-checkbox.truth  { background: rgba(56,189,248,0.06); border-color: rgba(56,189,248,0.38); box-shadow: none; text-shadow: none; color: #38bdf8; }
+.pack-checkbox:checked + .pack-custom-checkbox.dare   { background: rgba(251,113,133,0.06); border-color: rgba(251,113,133,0.38); box-shadow: none; text-shadow: none; color: #fb7185; }
+.pack-checkbox:checked + .pack-custom-checkbox.group  { background: rgba(74,222,128,0.06); border-color: rgba(74,222,128,0.38); box-shadow: none; text-shadow: none; color: #4ade80; }
+.pack-checkbox:checked + .pack-custom-checkbox.never  { background: rgba(192,132,252,0.06); border-color: rgba(192,132,252,0.38); box-shadow: none; text-shadow: none; color: #c084fc; }
+.pack-checkbox:checked + .pack-custom-checkbox.vote   { background: rgba(251,191,36,0.06); border-color: rgba(251,191,36,0.38); box-shadow: none; text-shadow: none; color: #fbbf24; }
+
+/* ---- GAME CARD ---- */
+.card-front { background: #0b0b19; }
+.card-front::before { animation: none; opacity: 0; }
+.card-logo { animation: none !important; filter: none !important; }
+.card-turn-name { font-size: 20px; text-shadow: none; }
+.card-turn-avatar { box-shadow: 0 0 0 2px rgba(255,255,255,0.08); }
+.card-tap-hint { text-transform: none; letter-spacing: 0.5px; font-size: 11px; }
+
+.card-back { background: #0a0a17; }
+.card-back.truth         { border-color: rgba(56,189,248,0.40);  box-shadow: 0 0 0 1px rgba(56,189,248,0.08),  0 20px 40px rgba(0,0,0,0.6); }
+.card-back.dare          { border-color: rgba(251,113,133,0.40); box-shadow: 0 0 0 1px rgba(251,113,133,0.08), 0 20px 40px rgba(0,0,0,0.6); }
+.card-back.group         { border-color: rgba(74,222,128,0.40);  box-shadow: 0 0 0 1px rgba(74,222,128,0.08),  0 20px 40px rgba(0,0,0,0.6); }
+.card-back.never_have_i_ever { border-color: rgba(192,132,252,0.40); box-shadow: 0 0 0 1px rgba(192,132,252,0.08), 0 20px 40px rgba(0,0,0,0.6); }
+.card-back.vote          { border-color: rgba(251,191,36,0.40);  box-shadow: 0 0 0 1px rgba(251,191,36,0.08),  0 20px 40px rgba(0,0,0,0.6); }
+
+.card-content { font-size: 19px; line-height: 1.55; }
+.card-type-badge { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+.card-penalty { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06); font-size: 14px; color: rgba(255,255,255,0.55); }
+
+.player-indicator.active { box-shadow: 0 0 0 2px rgba(255,255,255,0.10); }
+
+/* ---- MISC ---- */
+.toast { background: rgba(10,10,20,0.96); border-radius: 10px; }
+.gameover-title { font-size: 28px; }
