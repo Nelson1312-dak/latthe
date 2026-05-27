@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
       hapticFeedback('success');
       // Swipe Right = Completed challenge
       const cardEl = UI.elements.gameCard;
-      cardEl.style.transform = 'rotateY(180deg) translateX(300px) rotate(20deg)';
+      cardEl.style.transform = 'perspective(1000px) rotateY(180deg) translateX(300px) rotate(20deg)';
       cardEl.style.opacity = '0';
       cardEl.style.transition = 'all 0.5s ease-in';
       
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
       UI.shakeCard();
       // Swipe Left = Skip / Drink
       const cardEl = UI.elements.gameCard;
-      cardEl.style.transform = 'rotateY(180deg) translateX(-300px) rotate(-20deg)';
+      cardEl.style.transform = 'perspective(1000px) rotateY(180deg) translateX(-300px) rotate(-20deg)';
       cardEl.style.opacity = '0';
       cardEl.style.transition = 'all 0.5s ease-in';
       
