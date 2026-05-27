@@ -108,6 +108,13 @@
         card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
       });
     });
+
+    // Register service worker (PWA offline shell)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>

@@ -90,7 +90,7 @@
       <a href="../index.html" class="btn-back">← Trang Chủ</a>
       <span class="gq-header-title">☯️ Gieo Quẻ</span>
       <div class="gq-header-actions">
-        <button id="btn-history" class="btn-ghost" title="Lịch sử quẻ đã gieo">📜</button>
+        <button id="btn-history" class="btn-ghost" title="Lịch sử quẻ đã gieo" aria-label="Mở lịch sử quẻ đã gieo">📜</button>
         <button id="btn-restart" class="btn-ghost hidden">Làm Lại</button>
       </div>
     </header>
@@ -297,5 +297,10 @@
   <script src="../js/ai.js"></script>
   <script src="../js/history.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {}));
+    }
+  </script>
 </body>
 </html>
