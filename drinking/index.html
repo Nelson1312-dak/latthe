@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap&subset=vietnamese" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=19">
+  <link rel="stylesheet" href="css/style.css?v=20">
 
   <!-- Vercel Web Analytics & Speed Insights -->
   <script>
@@ -144,12 +144,12 @@
         </div>
 
         <div class="game-mode-selector">
-          <button class="mode-tab-btn active" data-mode="party">👥 Hội nhóm</button>
+          <button class="mode-tab-btn active" data-mode="solo">📱 1 Máy (Chung)</button>
+          <button class="mode-tab-btn" data-mode="party">👥 Hội nhóm</button>
           <button class="mode-tab-btn" data-mode="duo">👥 Đấu đôi (2)</button>
-          <button class="mode-tab-btn" data-mode="solo">📱 1 Máy (Chung)</button>
         </div>
 
-        <div id="setup-player-section">
+        <div id="setup-player-section" style="display:none">
           <div id="player-list" class="player-list"></div>
           <div class="add-player-form">
             <input id="player-name-input" type="text" placeholder="Nhập tên người chơi..." maxlength="15" autocomplete="off" enterkeyhint="done">
@@ -181,7 +181,7 @@
           </div>
         </div>
 
-        <div class="pack-selector pack-hidden">
+        <div class="pack-selector">
           <h3 class="selector-title">🃏 Chọn Bộ Bài</h3>
           <div class="pack-options">
             <label class="pack-checkbox-label">
@@ -330,12 +330,12 @@
 
   </div>
 
-  <script src="js/cards.js?v=19"></script>
-  <script src="js/game.js?v=19"></script>
-  <script src="js/touch.js?v=19"></script>
-  <script src="js/ui.js?v=19"></script>
-  <script src="js/app.js?v=19"></script>
-  <script src="js/settings.js?v=19"></script>
+  <script src="js/cards.js?v=20"></script>
+  <script src="js/game.js?v=20"></script>
+  <script src="js/touch.js?v=20"></script>
+  <script src="js/ui.js?v=20"></script>
+  <script src="js/app.js?v=20"></script>
+  <script src="js/settings.js?v=20"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

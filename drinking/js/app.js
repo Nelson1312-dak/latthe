@@ -10,9 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Touch Handler on the card container
   const touchHandler = new TouchHandler(UI.elements.cardContainer);
 
+  // Initialize solo mode as default (no player setup needed)
+  game.players = [new Player('Cả Nhóm', 0)];
+  UI.renderPlayerList(game.players);
+
   // Setup screen state
   let selectedIntensity = 'Nhap_Tiec';
-  let currentSetupMode = 'party';
+  let currentSetupMode = 'solo';
 
   // Animal name pool for quick fill
   const ANIMAL_NAME_POOL = [
@@ -70,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Sync the mode tab inside the setup screen
       modeTabBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
 
-      resetPackSelector();
       UI.showScreen('screen-setup');
       if (mode !== 'solo') {
         UI.elements.playerNameInput.focus();
