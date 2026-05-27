@@ -83,3 +83,6 @@
   transition: all 0.2s;
 }
 .btn-retry:active { transform: scale(0.97); }
+
+/* Global utility classes */
+.hidden { display: none !important; }
