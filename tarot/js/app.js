@@ -147,7 +147,32 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.innerHTML = `
         <div class="dc-card-inner">
           <div class="dc-card-back">
-            <span class="dc-back-pattern">🔮</span>
+            <svg class="dc-back-pattern" viewBox="0 0 100 140" aria-hidden="true">
+              <defs>
+                <radialGradient id="dcGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#c084fc" stop-opacity="0.55"/>
+                  <stop offset="100%" stop-color="#c084fc" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect x="6" y="6" width="88" height="128" rx="8"
+                    fill="none" stroke="#c084fc" stroke-width="0.5" stroke-opacity="0.45"/>
+              <rect x="10" y="10" width="80" height="120" rx="6"
+                    fill="none" stroke="#d4a642" stroke-width="0.4" stroke-opacity="0.55"/>
+              <circle cx="50" cy="70" r="32" fill="url(#dcGlow)"/>
+              <g stroke="#d4a642" stroke-width="0.7" stroke-opacity="0.85" fill="none">
+                <circle cx="50" cy="70" r="18"/>
+                <path d="M 50 52 L 53 67 L 68 70 L 53 73 L 50 88 L 47 73 L 32 70 L 47 67 Z" fill="#d4a642" fill-opacity="0.4"/>
+                <circle cx="50" cy="70" r="3" fill="#d4a642" fill-opacity="0.9"/>
+              </g>
+              <g fill="#c084fc" fill-opacity="0.7">
+                <circle cx="50" cy="30" r="1.3"/>
+                <circle cx="30" cy="50" r="1.1"/>
+                <circle cx="70" cy="50" r="1.1"/>
+                <circle cx="30" cy="90" r="1.1"/>
+                <circle cx="70" cy="90" r="1.1"/>
+                <circle cx="50" cy="110" r="1.3"/>
+              </g>
+            </svg>
             <span class="dc-reveal-hint">Lật thẻ</span>
           </div>
           <div class="dc-card-front${reversed ? ' reversed' : ''}">
