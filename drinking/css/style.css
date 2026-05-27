@@ -2223,7 +2223,7 @@ body[data-theme="forest"] {
 }
 
 .splash-emoji { font-size: 52px; }
-.splash-card-preview { height: 110px; margin: 0; }
+.splash-card-preview { height: 155px; margin: 4px 0; }
 
 .mc-truth { text-shadow: none; box-shadow: 0 0 0 1.5px rgba(56,189,248,0.28), 0 8px 20px rgba(0,0,0,0.5); }
 .mc-dare  { text-shadow: none; box-shadow: 0 0 0 1.5px rgba(251,113,133,0.28), 0 8px 20px rgba(0,0,0,0.5); }
@@ -2394,3 +2394,8 @@ body[data-theme="forest"] {
 /* ---- MISC ---- */
 .toast { background: rgba(10,10,20,0.96); border-radius: 10px; }
 .gameover-title { font-size: 28px; }
+
+/* ---- LAYOUT: prevent fixed back-home-btn from overlapping screen content ---- */
+/* The button is position:fixed at top:12px (~42px tall), screens pad only 20px */
+#screen-setup { padding-top: 58px !important; }
+#screen-game  { padding-top: 58px !important; }
