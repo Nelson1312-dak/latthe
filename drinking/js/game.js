@@ -54,7 +54,7 @@ class GameEngine {
     this.currentPlayerIndex = 0;
     this.deck = null;
     this.currentCard = null;
-    this.intensity = 'mild';
+    this.intensity = 'Nhap_Tiec';
     this.roundNumber = 0;
     this.listeners = {};
   }
@@ -158,7 +158,7 @@ class GameEngine {
   }
 
   // ======== Game Flow ========
-  startGame(intensity = 'mild', allowedTypes = []) {
+  startGame(intensity = 'Nhap_Tiec', allowedTypes = []) {
     if (!this.canStart) return false;
 
     this.intensity = intensity;

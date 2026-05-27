@@ -231,16 +231,18 @@ class CardDeck {
     this.shuffle();
   }
 
-  /**
-   * Filter cards by both intensity and card types.
-   */
   _filter(cards, intensity, allowedTypes) {
+    let mapped = intensity;
+    if (intensity === 'Nhap_Tiec') mapped = 'mild';
+    else if (intensity === 'Noi_That') mapped = 'medium';
+    else if (intensity === 'Chay_Pho') mapped = 'spicy';
+
     let filtered = cards.filter(c => allowedTypes.includes(c.type));
     
-    if (intensity === 'mild') {
+    if (mapped === 'mild') {
       return filtered.filter(c => c.intensity === 'mild');
     }
-    if (intensity === 'medium') {
+    if (mapped === 'medium') {
       return filtered.filter(c => c.intensity === 'mild' || c.intensity === 'medium');
     }
     return filtered; // spicy = all matching allowedTypes

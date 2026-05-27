@@ -145,7 +145,7 @@ const UI = {
 
   getSelectedIntensity() {
     const active = document.querySelector('.intensity-btn.active');
-    return active ? active.dataset.intensity : 'mild';
+    return active ? active.dataset.intensity : 'Nhap_Tiec';
   },
 
   // ======== Game Screen ========

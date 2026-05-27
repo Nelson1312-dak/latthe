@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const touchHandler = new TouchHandler(UI.elements.cardContainer);
 
   // Setup screen state
-  let selectedIntensity = 'mild';
+  let selectedIntensity = 'Nhap_Tiec';
   let currentSetupMode = 'party';
 
   // Animal name pool for quick fill
