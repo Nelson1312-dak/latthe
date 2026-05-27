@@ -189,6 +189,31 @@ const ALL_CARDS = [
   { id: 109, type: 'vote', content: 'Ai ẩn chứa nhiều bí mật tình cảm nhất trong nhóm?',                           penalty: 3, intensity: 'spicy', emoji: '🗳️', targetCount: 1 },
   { id: 110, type: 'vote', content: 'Ai sẽ làm điều điên rồ nhất tối nay nếu say đủ?',                             penalty: 3, intensity: 'spicy', emoji: '🗳️', targetCount: 1 },
   { id: 111, type: 'vote', content: 'Ai trong nhóm mà bạn muốn được hôn nhất nếu tất cả đều FA?',                  penalty: 3, intensity: 'spicy', emoji: '🗳️', targetCount: 1 },
+
+  // =============================================
+  //  BỔ SUNG 15 LÁ BÀI MỚI (112 - 126)
+  // =============================================
+
+  // — Khởi Động (Mild) —
+  { id: 112, type: 'group', content: '👉 Check ốp lưng điện thoại\n\nAi đang sử dụng ốp lưng điện thoại màu vàng hoặc không dùng ốp lưng thì tự giác chạm ly uống 1 ly.', penalty: 1, intensity: 'mild', emoji: '👥', targetCount: 0 },
+  { id: 113, type: 'group', content: '👉 Ai lùn nhất bàn?\n\nĐếm đến 3, cả bàn cùng chỉ tay vào người thấp nhất. Ai phản xạ chậm nhất hoặc chỉ sai thì uống 1 ly.', penalty: 1, intensity: 'mild', emoji: '👥', targetCount: 0 },
+  { id: 114, type: 'group', content: '👉 Chênh lệch chiều cao\n\nThành viên cao nhất và thành viên thấp nhất trong bàn phải chạm ly uống giao bôi cùng nhau.', penalty: 1, intensity: 'mild', emoji: '👥', targetCount: 0 },
+  { id: 115, type: 'group', content: '👉 Về nhà an toàn\n\nAi đã mở app Grab hoặc Xanh SM chuẩn bị sẵn phương tiện về nhà an toàn thì được miễn uống. Những người còn lại tự giác uống 1 ly.', penalty: 1, intensity: 'mild', emoji: '👥', targetCount: 0 },
+  { id: 116, type: 'group', content: '👉 Hội bóng đêm\n\nTất cả những ai đang mặc áo màu đen cùng cụm ly uống 1 ly để tôn vinh sự ngầu lòi này.', penalty: 1, intensity: 'mild', emoji: '👥', targetCount: 0 },
+
+  // — Nói Thật (Medium) —
+  { id: 117, type: 'truth', content: '👉 Tin nhắn gần nhất\n\nĐọc to tin nhắn gần nhất của người yêu cũ gửi cho bạn. Nếu không dám đọc, hãy uống ngay 2 ly.', penalty: 2, intensity: 'medium', emoji: '🤔', targetCount: 1 },
+  { id: 118, type: 'truth', content: '👉 Lời nói dối vô hại\n\nKể lại một lần bạn đã nói dối một người trong bàn nhậu này mà chưa từng bị phát hiện. Giữ bí mật uống 2 ly.', penalty: 2, intensity: 'medium', emoji: '🤔', targetCount: 1 },
+  { id: 119, type: 'truth', content: '👉 Bật mí crush\n\nTiết lộ người bạn đang có cảm tình/thầm thích trong phòng này hoặc kể tên người cuối cùng bạn nhắn tin bày tỏ sự quan tâm. Giữ kín kẽ uống 3 ly.', penalty: 3, intensity: 'medium', emoji: '🤔', targetCount: 1 },
+  { id: 120, type: 'truth', content: '👉 Lần say xấu hổ nhất\n\nKể lại một hành động ngốc nghếch hoặc xấu hổ nhất bạn từng làm khi say xỉn trước mặt người khác. Từ chối kể uống 2 ly.', penalty: 2, intensity: 'medium', emoji: '🤔', targetCount: 1 },
+  { id: 121, type: 'group', content: '👉 Khoe số dư ví điện tử\n\nKhoe số dư ví MoMo hoặc tài khoản ngân hàng của bạn. Ai có số dư thấp nhất được miễn, những người còn lại uống 2 ly.', penalty: 2, intensity: 'medium', emoji: '👥', targetCount: 0 },
+
+  // — Cháy Phố (Spicy) —
+  { id: 122, type: 'dare',  content: '👉 Báo tin kết hôn khẩn\n\nGọi điện cho bố hoặc mẹ bảo: \'Con chuẩn bị cưới vợ/chồng rồi\' sau đó cúp máy ngay lập tức. Từ chối uống 3 ly.', penalty: 3, intensity: 'spicy', emoji: '🔥', targetCount: 1 },
+  { id: 123, type: 'dare',  content: '👉 Mượn tiền nóng\n\nNhắn tin cho một người bạn ngẫu nhiên trong danh bạ: \'Cho tớ mượn 5 triệu gấp\'. Giữ tin nhắn này trong 5 phút. Từ chối uống 3 ly.', penalty: 3, intensity: 'spicy', emoji: '🔥', targetCount: 1 },
+  { id: 124, type: 'group', content: '👉 Đổi vị trí nhạy cảm\n\nUống cạn ly hiện tại của bạn và đổi chỗ ngồi trực tiếp với người khác giới ngồi đối diện bạn. Từ chối uống 3 ly.', penalty: 3, intensity: 'spicy', emoji: '👥', targetCount: 0 },
+  { id: 125, type: 'dare',  content: '👉 Story dìm hàng 10 phút\n\nĐể người bên phải dùng điện thoại của bạn chụp một bức ảnh dìm của bạn và đăng lên Story Facebook/Instagram trong 10 phút. Từ chối uống 3 ly.', penalty: 3, intensity: 'spicy', emoji: '🔥', targetCount: 1 },
+  { id: 126, type: 'group', content: '👉 Chiêu đãi đồ nhắm\n\nNgười ngồi bên trái bạn được quyền gọi thêm 1 món ăn nhắm bất kỳ trên menu và bạn là người trả tiền. Từ chối uống 3 ly.', penalty: 3, intensity: 'spicy', emoji: '👥', targetCount: 0 },
 ];
 
 
