@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let throwTimeouts = [];
   let currentContext = '';
   let chatHistory = [];
+  let questionsAsked = 0;
 
   const screens = {
     intro:  document.getElementById('screen-intro'),
@@ -290,6 +291,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const q = question.trim();
     if (!q) return;
 
+    const isFollowUp = chatHistory.length > 0;
+    if (isFollowUp) {
+      if (questionsAsked >= 5) {
+        alert("Bạn đã đặt tối đa 5 câu hỏi phụ cho quẻ này. Vui lòng bấm 'Gieo Quẻ Mới' để thực hiện lần gieo mới.");
+        return;
+      }
+      questionsAsked++;
+    }
+
     appendBubble('user', q);
     const aiBubble = appendBubble('ai', '');
     aiLoading.classList.remove('hidden');
@@ -315,10 +325,18 @@ document.addEventListener('DOMContentLoaded', () => {
         aiBubble.innerHTML = parseMarkdown(fullAnswer);
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: fullAnswer });
-        if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
-        aiChatInput.disabled = false;
-        btnAskAI.disabled = false;
-        aiChatInput.value = '';
+        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+        
+        if (questionsAsked >= 5) {
+          aiChatInput.placeholder = "Đã đạt giới hạn 5 câu hỏi bổ sung...";
+          aiChatInput.disabled = true;
+          btnAskAI.disabled = true;
+          appendBubble('ai', '💡 *Thông báo:* Bạn đã gửi đủ 5 câu hỏi bổ sung cho quẻ này. Để tiếp tục hỏi thêm các câu hỏi khác, bạn vui lòng bấm nút **Gieo Quẻ Mới** ở bên dưới nhé!');
+        } else {
+          aiChatInput.disabled = false;
+          btnAskAI.disabled = false;
+          aiChatInput.value = '';
+        }
       },
       onError: (err) => {
         aiLoading.classList.add('hidden');
@@ -356,6 +374,11 @@ document.addEventListener('DOMContentLoaded', () => {
     aiQuestionDisp.textContent = `"${q}"`;
     aiChatMessages.innerHTML = '';
     aiError.classList.add('hidden');
+    questionsAsked = 0;
+    aiChatInput.disabled = false;
+    btnAskAI.disabled = false;
+    aiChatInput.value = '';
+    aiChatInput.placeholder = "Hỏi thêm về quẻ...";
 
     if (window.History) {
       window.History.save('gieoque', {
@@ -411,6 +434,11 @@ document.addEventListener('DOMContentLoaded', () => {
     lines = [];
     currentContext = '';
     chatHistory = [];
+    questionsAsked = 0;
+    aiChatInput.disabled = false;
+    btnAskAI.disabled = false;
+    aiChatInput.value = '';
+    aiChatInput.placeholder = "Hỏi thêm về quẻ...";
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
     aiChatMessages.innerHTML = '';
