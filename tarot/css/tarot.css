@@ -317,17 +317,36 @@ a { text-decoration: none; color: inherit; }
   color: var(--purple);
   position: relative;
 }
-.dc-card-back::before,
+.dc-card-back::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 8px;
+  pointer-events: none;
+  border: 0.5px solid rgba(212, 166, 66, 0.25);
+  z-index: 1;
+}
 .dc-card-back::after {
   content: '';
   position: absolute;
-  inset: 6px;
+  inset: 0;
   border-radius: 8px;
   pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.06) 55%,
+    transparent 60%
+  );
+  background-size: 250% 250%;
+  background-position: 200% 0;
+  transition: background-position 0.6s ease;
+  z-index: 2;
 }
-.dc-card-back::before {
-  border: 0.5px solid rgba(212, 166, 66, 0.25);
-  inset: 4px;
+.drawn-card:hover .dc-card-back::after {
+  background-position: -50% 0;
 }
 .dc-back-pattern {
   width: 78%;
