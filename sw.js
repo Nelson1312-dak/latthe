@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v10-2026-05-27';
+const CACHE_VERSION = 'v11-2026-05-27';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -21,6 +21,28 @@ const SHELL = [
   '/css/common.css',
   '/js/ai.js',
   '/js/history.js',
+  // Gieo Que module
+  '/gieoque/',
+  '/gieoque/index.html',
+  '/gieoque/css/gieoque.css',
+  '/gieoque/js/hexagrams.js',
+  '/gieoque/js/app.js',
+  // Tarot module
+  '/tarot/',
+  '/tarot/index.html',
+  '/tarot/css/tarot.css',
+  '/tarot/js/cards.js',
+  '/tarot/js/app.js',
+  // Drinking module
+  '/drinking/',
+  '/drinking/index.html',
+  '/drinking/css/style.css',
+  '/drinking/js/settings.js',
+  '/drinking/js/cards.js',
+  '/drinking/js/ui.js',
+  '/drinking/js/game.js',
+  '/drinking/js/touch.js',
+  '/drinking/js/app.js',
 ];
 
 self.addEventListener('install', (event) => {
