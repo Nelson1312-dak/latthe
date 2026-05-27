@@ -6,7 +6,7 @@
 
 /* ---- Header actions container ---- */
 .gq-header-actions,
-.t-header-actions { display: flex; gap: 8px; align-items: center; }
+.t-header-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
 
 /* ---- History modal (theme provides colors) ---- */
 .history-backdrop {
