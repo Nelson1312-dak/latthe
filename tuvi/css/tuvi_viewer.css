@@ -117,11 +117,18 @@ body {
 .field-input::placeholder { color: #bbb; }
 
 /* Date row */
-.date-row { display: flex; gap: 7px; }
-.date-row .day-sel   { flex: 0.8; }
-.date-row .month-sel { flex: 1; }
+.date-row { display: flex; gap: 6px; }
+.date-row .day-sel   { flex: 0.85; }
+.date-row .month-sel { flex: 1.05; }
 .date-row .year-sel  { flex: 1.2; }
-.date-row .cal-sel   { flex: 1.5; }
+.date-row .cal-sel   { flex: 1.6; }
+
+.date-row .field-select {
+  padding-left: 8px;
+  padding-right: 22px;
+  background-position: right 6px center;
+  font-size: 13px;
+}
 
 /* Two-column row */
 .two-col-row { display: flex; gap: 10px; }

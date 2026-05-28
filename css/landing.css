@@ -110,10 +110,41 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 32px;
 }
 
-/* ---- Module cards ---- */
-.l-modules {
+/* ---- Main Content Wrapper ---- */
+.l-main-content {
   width: 100%;
   max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  z-index: 10;
+}
+
+/* ---- Module Groups ---- */
+.l-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.l-group-title {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--muted);
+  border-left: 3px solid var(--c-tuvi);
+  padding-left: 10px;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.l-group:nth-child(2) .l-group-title {
+  border-left-color: var(--c-drink);
+}
+
+.l-modules {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -141,10 +172,10 @@ a { text-decoration: none; color: inherit; }
   animation: card-enter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.l-card:nth-child(1) { animation-delay: 0.1s; --hover-glow: rgba(5, 150, 105, 0.12); }
-.l-card:nth-child(2) { animation-delay: 0.2s; --hover-glow: rgba(234, 88, 12, 0.12); }
-.l-card:nth-child(3) { animation-delay: 0.3s; --hover-glow: rgba(139, 92, 246, 0.12); }
-.l-card:nth-child(4) { animation-delay: 0.4s; --hover-glow: rgba(251, 191, 36, 0.12); }
+.l-tuvi    { animation-delay: 0.15s; --hover-glow: rgba(251, 191, 36, 0.12); }
+.l-gieoque { animation-delay: 0.25s; --hover-glow: rgba(5, 150, 105, 0.12); }
+.l-tarot   { animation-delay: 0.35s; --hover-glow: rgba(139, 92, 246, 0.12); }
+.l-drink   { animation-delay: 0.45s; --hover-glow: rgba(234, 88, 12, 0.12); }
 
 @keyframes card-enter {
   from { opacity: 0; transform: translateY(20px); }
@@ -266,11 +297,23 @@ a { text-decoration: none; color: inherit; }
   z-index: 10;
 }
 
-/* ---- Desktop: 3-column grid ---- */
+/* ---- Desktop Layouts ---- */
 @media (min-width: 768px) {
   .l-hero    { max-width: 800px; padding: 100px 0 52px; }
   .l-divider { max-width: 800px; }
-  .l-modules { max-width: 800px; flex-direction: row; gap: 20px; }
+  
+  .l-main-content { max-width: 800px; gap: 40px; }
+  
+  .l-modules {
+    flex-direction: row;
+    gap: 20px;
+  }
+
+  .l-modules.drinking-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
 
   .l-card {
     flex: 1;
@@ -279,6 +322,7 @@ a { text-decoration: none; color: inherit; }
     padding: 0 0 28px;
     gap: 0;
     border-radius: 24px;
+    min-height: 280px;
   }
 
   /* Top accent stripe instead of left */
@@ -310,7 +354,14 @@ a { text-decoration: none; color: inherit; }
 @media (min-width: 1024px) {
   .l-hero    { max-width: 980px; padding: 120px 0 64px; }
   .l-divider { max-width: 980px; }
-  .l-modules { max-width: 980px; gap: 28px; }
+  
+  .l-main-content { max-width: 980px; }
+  
+  .l-modules { gap: 28px; }
+  
+  .l-modules.drinking-group {
+    gap: 28px;
+  }
 
   .l-card-icon  { font-size: 56px; padding: 0 28px; }
   .l-card-body  { padding: 0 28px; }

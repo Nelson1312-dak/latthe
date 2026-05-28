@@ -188,21 +188,113 @@ function convertSolar2Lunar(dd, mm, yy, timeZone = 7.0) {
   return [lunarDay, lunarMonth, lunarYear, lunarLeap];
 }
 
+/**
+ * Converts Lunar date to Gregorian Solar Date
+ */
+export function convertLunar2Solar(lunarDay, lunarMonth, lunarYear, lunarLeap = 0, timeZone = 7.0) {
+  let a11 = getLunarMonth11(lunarYear - 1, timeZone);
+  let k = INT((a11 - 2415021.076998695) / 29.530588853 + 0.5);
+  
+  let offset = 0;
+  if (lunarMonth >= 11) {
+    offset = lunarMonth - 11;
+  } else {
+    offset = lunarMonth + 1;
+  }
+  
+  let b11 = getLunarMonth11(lunarYear, timeZone);
+  let hasLeap = (b11 - a11 > 365);
+  let leapMonth = 0;
+  if (hasLeap) {
+    leapMonth = getLeapMonthOffset(a11, timeZone);
+  }
+  
+  let targetK = k + offset;
+  if (hasLeap) {
+    if (lunarLeap === 1) {
+      targetK = k + leapMonth;
+    } else if (offset >= leapMonth) {
+      targetK = k + offset + 1;
+    }
+  }
+  
+  let monthStartJd = getNewMoonDay(targetK, timeZone);
+  let dayJd = monthStartJd + lunarDay - 1;
+  
+  return jdToDate(dayJd);
+}
+
 // ==========================================
 // 2. CONSTANTS AND LUNI-SOLAR TERMINOLOGY
 // ==========================================
 
-const CANS = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
-const CHIS = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
+export const CANS = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
+export const CHIS = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
 
 // Mapping of 12 branch houses for output JSON
-const CUNG_KEYS = ["Ty", "Suu", "Dan", "Mao", "Thin", "Ty2", "Ngo", "Mui", "Than", "Dau", "Tuat", "Hoi"];
+export const CUNG_KEYS = ["Ty", "Suu", "Dan", "Mao", "Thin", "Ty2", "Ngo", "Mui", "Than", "Dau", "Tuat", "Hoi"];
 
 // 12 Palaces in order (counter-clockwise from Mệnh)
-const PALACE_NAMES = [
+export const PALACE_NAMES = [
   "Mệnh", "Phụ Mẫu", "Phúc Đức", "Điền Trạch", "Quan Lộc", "Nô Bộc",
   "Thiên Di", "Tật Ách", "Tài Bạch", "Tử Tức", "Phu Thê", "Huynh Đệ"
 ];
+
+// Elements color mapping
+export const STAR_ELEMENTS = {
+  // 14 Chính tinh
+  "Tử Vi": "tho",
+  "Liêm Trinh": "hoa",
+  "Thiên Đồng": "thuy",
+  "Vũ Khúc": "kim",
+  "Thái Dương": "hoa",
+  "Thiên Cơ": "moc",
+  "Thiên Phủ": "tho",
+  "Thái Âm": "thuy",
+  "Tham Lang": "moc",
+  "Cự Môn": "thuy",
+  "Thiên Tướng": "thuy",
+  "Thiên Lương": "moc",
+  "Thất Sát": "kim",
+  "Phá Quân": "thuy",
+  // Phụ tinh
+  "Hóa Lộc": "moc",
+  "Hóa Quyền": "moc",
+  "Hóa Khoa": "moc",
+  "Hóa Kỵ": "thuy",
+  "Lộc Tồn": "tho",
+  "Kình Dương": "kim",
+  "Đà La": "kim",
+  "Thiên Khôi": "hoa",
+  "Thiên Việt": "hoa",
+  "Tả Phù": "tho",
+  "Hữu Bật": "thuy",
+  "Văn Xương": "kim",
+  "Văn Khúc": "thuy",
+  "Địa Không": "hoa",
+  "Địa Kiếp": "hoa",
+  "Thiên Khốc": "kim",
+  "Thiên Hư": "kim",
+  "Thiên Mã": "hoa"
+};
+
+// Ratings lookup table (0: Tý, 1: Sửu, 2: Dần... 11: Hợi)
+export const STAR_RATINGS = {
+  "Tử Vi":      ["B", "M", "M", "V", "M", "V", "M", "M", "M", "V", "M", "V"],
+  "Liêm Trinh": ["V", "Đ", "M", "H", "M", "H", "M", "Đ", "M", "H", "M", "H"],
+  "Thiên Đồng": ["V", "H", "M", "M", "H", "M", "H", "H", "Đ", "H", "H", "M"],
+  "Vũ Khúc":    ["V", "M", "M", "H", "M", "H", "M", "M", "M", "V", "M", "H"],
+  "Thái Dương": ["H", "H", "V", "M", "V", "V", "M", "Đ", "H", "H", "H", "H"],
+  "Thiên Cơ":   ["M", "H", "M", "M", "V", "Đ", "M", "H", "M", "M", "V", "Đ"],
+  "Thiên Phủ":  ["M", "M", "M", "Đ", "M", "Đ", "M", "M", "M", "V", "M", "V"],
+  "Thái Âm":    ["M", "M", "H", "H", "H", "H", "H", "H", "H", "M", "M", "M"],
+  "Tham Lang":  ["V", "M", "H", "H", "M", "H", "V", "M", "H", "H", "M", "H"],
+  "Cự Môn":     ["V", "H", "V", "M", "H", "H", "V", "H", "M", "M", "H", "H"],
+  "Thiên Tướng":["V", "M", "M", "H", "M", "Đ", "M", "M", "M", "V", "M", "H"],
+  "Thiên Lương":["M", "V", "M", "M", "M", "H", "M", "V", "M", "H", "M", "H"],
+  "Thất Sát":   ["V", "M", "M", "H", "M", "H", "M", "M", "M", "H", "M", "H"],
+  "Phá Quân":   ["M", "V", "H", "H", "M", "H", "M", "V", "H", "H", "M", "H"]
+};
 
 // ==========================================
 // 3. UTILITY METHODS FOR CAN-CHI & METAPHYSICS
@@ -280,19 +372,47 @@ function getCuc(menhCanIndex, menhChiIndex) {
   return CUC_MAP[sum];
 }
 
+/**
+ * Computes Minor Limit (Tiểu Hạn) Palace Index (0-indexed: Tý=0... Hợi=11)
+ */
+function getMinorLimitPalace(birthChiIdx, gioiTinh, birthYear, readingYear) {
+  const age = readingYear - birthYear + 1;
+  let startIdx = 10; // Default: Thân/Tý/Thìn starts at Tuất (10)
+  
+  if ([8, 0, 4].includes(birthChiIdx)) startIdx = 10; // Tuất
+  else if ([2, 6, 10].includes(birthChiIdx)) startIdx = 4; // Thìn
+  else if ([5, 9, 1].includes(birthChiIdx)) startIdx = 1; // Sửu
+  else if ([11, 3, 7].includes(birthChiIdx)) startIdx = 7; // Mùi
+  
+  const dir = (gioiTinh === 1) ? 1 : -1; // Nam: Clockwise, Nữ: Counter-clockwise
+  return (startIdx + dir * (age - 1) + 120) % 12;
+}
+
 // ==========================================
 // 4. MAIN TỬ VI CALCULATION API
 // ==========================================
 
 /**
  * Main chart calculation function
- * @param {Object} input - { namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
+ * @param {Object} input - { namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, namXem, inputCalendar, lunarLeapInput }
  * @returns {Object} JSON result matching target structure
  */
-export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }) {
+export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, namXem = 2026, inputCalendar = "solar", lunarLeapInput = 0 }) {
+  let solarDay = ngaySinh;
+  let solarMonth = thangSinh;
+  let solarYear = namSinh;
+  
+  // Convert Lunar to Solar if specified
+  if (inputCalendar === "lunar") {
+    const solarDate = convertLunar2Solar(ngaySinh, thangSinh, namSinh, lunarLeapInput, 7.0);
+    solarDay = solarDate[0];
+    solarMonth = solarDate[1];
+    solarYear = solarDate[2];
+  }
+
   // 1. Julian Day & Hour calculation
   // In Lunar calendar, 23:00 - 00:59 counts as Tý hour of the next day.
-  let jdn = jdFromDate(ngaySinh, thangSinh, namSinh);
+  let jdn = jdFromDate(solarDay, solarMonth, solarYear);
   const hourIndex = (gioSinh >= 23) ? 1 : Math.floor((gioSinh + 1) / 2) + 1; // 1-indexed, Tý=1, Sửu=2 ... Hợi=12
   
   if (gioSinh >= 23) {
@@ -304,9 +424,6 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
   const [lunarDay, lunarMonth, lunarYear, lunarLeap] = convertSolar2Lunar(adjDay, adjMonth, adjYear, 7.0);
   
   // 2. Leap Month rule handling
-  // If born in a leap month:
-  // - Before noon (11:00) on day 15: treat as the main month.
-  // - Noon (11:00) day 15 onwards: treat as the next month.
   let thangTuVi = lunarMonth;
   if (lunarLeap === 1) {
     if (lunarDay > 15 || (lunarDay === 15 && gioSinh >= 11)) {
@@ -322,20 +439,15 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
   const hourCanChiStr = getCanChiHour(hourIndex, dayCanChi.canIdx);
   
   // Gender & Polarity classification
-  // Even years (Giáp, Bính, Mậu, Canh, Nhâm) are Dương. Odd are Âm.
   const isDuong = (yearCanChi.canIdx % 2 === 0);
   const phanLoai = (isDuong ? "Dương " : "Âm ") + (gioiTinh === 1 ? "Nam" : "Nữ");
   
-  // 4. Mệnh & Thân Palace Placement (1-indexed: Tý=1, Sửu=2... Hợi=12)
-  // Mệnh: Start at Dần (3), move forward month steps, backward hour steps.
+  // 4. Mệnh & Thân Palace Placement (1-indexed: Tý=1... Hợi=12)
   const menhPos = xetSo(3 + thangTuVi - hourIndex);
-  // Thân: Start at Dần (3), move forward month steps, forward hour steps.
   const thanPos = xetSo(3 + thangTuVi + hourIndex - 2);
-  
   const menhChiIndex = menhPos - 1; // 0-indexed
   
   // Can index of Mệnh cung (Ngũ hổ độn rule)
-  // Distance from Dần (index 2) to menhChiIndex
   const distFromDan = (menhChiIndex - 2 + 12) % 12;
   const startCanOfDan = (yearCanChi.canIdx % 5) * 2 + 2;
   const menhCanIndex = (startCanOfDan + distFromDan) % 10;
@@ -349,11 +461,13 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
     ten_cung: PALACE_NAMES[(menhPos - 1 - i + 12) % 12],
     chinh_tinh: [],
     phu_tinh: [],
-    dai_han: 0
+    dai_han: 0,
+    trang_sinh: "",
+    nguyet_han: 0,
+    is_than: false
   }));
   
   // Đại Hạn (10-year major cycle age) calculation
-  // Direction: Dương Nam / Âm Nữ is clockwise (+1), else counter-clockwise (-1).
   const isDuongNamAmNu = (isDuong && gioiTinh === 1) || (!isDuong && gioiTinh === 0);
   const direction = isDuongNamAmNu ? 1 : -1;
   const startAge = cuc.value;
@@ -363,8 +477,7 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
     laSoPalaces[palaceIdx].dai_han = startAge + 10 * k;
   }
   
-  // Vòng Tử Vi & Thiên Phủ Star Tables (1-indexed positions)
-  // Columns correspond to Lunar Days 1 to 30
+  // Vòng Tử Vi & Thiên Phủ Star Tables
   const cucTables = {
     2: [2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 1, 1, 2, 2, 3, 3, 4, 4, 5],
     3: [5, 2, 3, 6, 3, 4, 7, 4, 5, 8, 5, 6, 9, 6, 7, 10, 7, 8, 11, 8, 9, 12, 9, 10, 1, 10, 11, 2, 11, 12],
@@ -373,15 +486,10 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
     6: [10, 7, 12, 5, 2, 3, 11, 8, 1, 6, 3, 4, 12, 9, 2, 7, 4, 5, 1, 10, 3, 8, 5, 6, 2, 11, 4, 9, 6, 7]
   };
   
-  // Position of Tử Vi star
   const tv = cucTables[cuc.value][lunarDay - 1];
-  
-  // Position of Thiên Phủ star (symmetric to Tử Vi across horizontal Dần-Thân axis)
   const tp = xetSo(6 - tv);
   
-  // Helper list to map positions of all major stars
   const starPositions = {
-    // Vòng Tử Vi (6 Chính tinh)
     "Tử Vi": tv,
     "Liêm Trinh": xetSo(tv + 4),
     "Thiên Đồng": xetSo(tv + 7),
@@ -389,7 +497,6 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
     "Thái Dương": xetSo(tv + 9),
     "Thiên Cơ": xetSo(tv + 11),
     
-    // Vòng Thiên Phủ (8 Chính tinh)
     "Thiên Phủ": tp,
     "Thái Âm": xetSo(tp + 1),
     "Tham Lang": xetSo(tp + 2),
@@ -399,80 +506,71 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
     "Thất Sát": xetSo(tp + 6),
     "Phá Quân": xetSo(tp + 10),
     
-    // Month/Hour Stars needed for Tứ Hóa mapping
     "Văn Xương": xetSo(11 - hourIndex + 1),
     "Văn Khúc": xetSo(5 + hourIndex - 1),
     "Tả Phù": xetSo(5 + thangTuVi - 1),
     "Hữu Bật": xetSo(11 - thangTuVi + 1)
   };
   
-  // Place 14 Chính tinh into palaces
   Object.entries(starPositions).forEach(([name, pos]) => {
     if (name !== "Văn Xương" && name !== "Văn Khúc" && name !== "Tả Phù" && name !== "Hữu Bật") {
       laSoPalaces[pos - 1].chinh_tinh.push(name);
     }
   });
   
-  // Auxiliary stars (Phụ tinh) calculations
-  const tc1 = yearCanChi.canIdx + 1; // 1-indexed Can (Giáp = 1)
-  const dc1 = yearCanChi.chiIdx + 1; // 1-indexed Chi (Tý = 1)
+  const tc1 = yearCanChi.canIdx + 1;
+  const dc1 = yearCanChi.chiIdx + 1;
   
-  // Lộc Tồn, Kình Dương, Đà La placement
   const ltTable = [3, 4, 6, 7, 6, 7, 9, 10, 12, 1];
   const locTonPos = ltTable[tc1 - 1];
   const kinhDuongPos = xetSo(locTonPos + 1);
   const daLaPos = xetSo(locTonPos - 1);
   
-  // Thiên Khôi & Thiên Việt placement
   let khôiPos = 0, việtPos = 0;
   switch (tc1) {
-    case 1: // Giáp
-    case 5: // Mậu
-      khôiPos = 2; // Sửu
-      việtPos = 8; // Mùi
+    case 1:
+    case 5:
+      khôiPos = 2;
+      việtPos = 8;
       break;
-    case 2: // Ất
-    case 6: // Kỷ
-      khôiPos = 1; // Tý
-      việtPos = 9; // Thân
+    case 2:
+    case 6:
+      khôiPos = 1;
+      việtPos = 9;
       break;
-    case 7: // Canh
-    case 8: // Tân
-      khôiPos = 7; // Ngọ
-      việtPos = 3; // Dần
+    case 7:
+    case 8:
+      khôiPos = 7;
+      việtPos = 3;
       break;
-    case 3: // Bính
-    case 4: // Đinh
-      khôiPos = 12; // Hợi
-      việtPos = 10; // Dậu
+    case 3:
+    case 4:
+      khôiPos = 12;
+      việtPos = 10;
       break;
-    case 9: // Nhâm
-    case 10: // Quý
-      khôiPos = 4; // Mão
-      việtPos = 6; // Tỵ
+    case 9:
+    case 10:
+      khôiPos = 4;
+      việtPos = 6;
       break;
   }
   
-  // Khốc Hư placement
   const thienKhocPos = xetSo(7 - dc1 + 1);
   const thienHuPos = xetSo(7 + dc1 - 1);
   
-  // Địa Không, Địa Kiếp placement
   const diaKhongPos = xetSo(12 - hourIndex + 1);
   const diaKiepPos = xetSo(12 + hourIndex - 1);
   
-  // Tứ Hóa Star Mapping Lists
   const locStars = ["Liêm Trinh", "Thiên Cơ", "Thiên Đồng", "Thái Âm", "Tham Lang", "Vũ Khúc", "Thái Dương", "Cự Môn", "Thiên Lương", "Phá Quân"];
   const quyenStars = ["Phá Quân", "Thiên Lương", "Thiên Cơ", "Thiên Đồng", "Thái Âm", "Tham Lang", "Vũ Khúc", "Thái Dương", "Tử Vi", "Cự Môn"];
   const khoaStars = ["Vũ Khúc", "Tử Vi", "Văn Xương", "Thiên Cơ", "Hữu Bật", "Thiên Lương", "Thái Âm", "Văn Khúc", "Tả Phù", "Thái Âm"];
   const kyStars = ["Thái Dương", "Thái Âm", "Liêm Trinh", "Cự Môn", "Thiên Cơ", "Văn Khúc", "Thiên Đồng", "Văn Xương", "Vũ Khúc", "Tham Lang"];
   
-  const hoaLocPos = starPositions[locStars[tc1 - 1]] || locTonPos; // Fallback to Lộc Tồn if not in chính tinh list
+  const hoaLocPos = starPositions[locStars[tc1 - 1]] || locTonPos;
   const hoaQuyenPos = starPositions[quyenStars[tc1 - 1]];
   const hoaKhoaPos = starPositions[khoaStars[tc1 - 1]];
   const hoaKyPos = starPositions[kyStars[tc1 - 1]];
   
-  // Add Phụ tinh to palaces (including Month and Hour stars)
   const phuTinhList = [
     { name: "Lộc Tồn", pos: locTonPos },
     { name: "Kình Dương", pos: kinhDuongPos },
@@ -497,7 +595,33 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
     laSoPalaces[pos - 1].phu_tinh.push(name);
   });
   
-  // 6. Build the final output JSON structure
+  // 6. Calculate Tràng Sinh cycle stars
+  const TRANG_SINH_STARS = [
+    "Tràng Sinh", "Mộc Dục", "Quan Đới", "Lâm Quan", "Đế Vượng", "Suy",
+    "Bệnh", "Tử", "Mộ", "Tuyệt", "Thai", "Dưỡng"
+  ];
+  let startBranchIdx = 2; // Default Hỏa Cục starts at Dần (2)
+  if (cuc.name.includes("Kim")) startBranchIdx = 5;      // Tỵ
+  else if (cuc.name.includes("Thủy") || cuc.name.includes("Thổ")) startBranchIdx = 8; // Thân
+  else if (cuc.name.includes("Mộc")) startBranchIdx = 11;     // Hợi
+  
+  for (let k = 0; k < 12; k++) {
+    const palaceIdx = (startBranchIdx + direction * k + 12) % 12;
+    laSoPalaces[palaceIdx].trang_sinh = TRANG_SINH_STARS[k];
+  }
+  
+  // 7. Mark Thân palace and compute Monthly Limit (Nguyệt Hạn)
+  laSoPalaces[thanPos - 1].is_than = true;
+  
+  const minorLimitIdx = getMinorLimitPalace(yearCanChi.chiIdx, gioiTinh, lunarYear, namXem);
+  let month1Idx = (minorLimitIdx - (thangTuVi - 1) + (hourIndex - 1) + 12) % 12;
+  
+  for (let idx = 0; idx < 12; idx++) {
+    const monthNum = (idx - month1Idx + 12) % 12 + 1;
+    laSoPalaces[idx].nguyet_han = monthNum;
+  }
+  
+  // 8. Build the final output JSON structure
   const laSoOutput = {};
   CUNG_KEYS.forEach((key, idx) => {
     laSoOutput[key] = laSoPalaces[idx];
@@ -512,7 +636,8 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
         gio: hourCanChiStr
       },
       phan_loai: phanLoai,
-      cuc: cuc.name
+      cuc: cuc.name,
+      than_pos: thanPos
     },
     la_so: laSoOutput
   };
