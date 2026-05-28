@@ -279,13 +279,6 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* Highlight Mệnh cung */
-.palace-card.is-menh .pc-cung {
-  color: var(--white);
-  background: #cc0000;
-  padding: 0 4px;
-  border-radius: 2px;
-}
 
 .pc-than-badge {
   display: inline-block;

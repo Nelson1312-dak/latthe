@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#e8930a">
   <title>Lá Số Tử Vi Đẩu Số — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=13">
+  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=14">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -257,6 +257,8 @@
       "Thiên Tướng": "thuy", "Thiên Lương": "moc", "Thất Sát": "kim", "Phá Quân": "thuy"
     };
 
+    const RATING_FULL = { 'M': 'Miếu', 'V': 'Vượng', 'Đ': 'Đắc', 'B': 'Bình hòa', 'H': 'Hãm' };
+
     const STAR_RATINGS = {
       "Tử Vi":      ["B", "M", "M", "V", "M", "V", "M", "M", "M", "V", "M", "V"],
       "Liêm Trinh": ["V", "Đ", "M", "H", "M", "H", "M", "Đ", "M", "H", "M", "H"],
@@ -337,9 +339,10 @@
       const el = ALL_STARS_ELEMENTS[s] || "neutral";
       let rating = "";
       if (AUX_RATINGS[s]) {
-        rating = AUX_RATINGS[s][idx] ? ` (${AUX_RATINGS[s][idx]})` : " (H)";
+        const abbr = AUX_RATINGS[s][idx] || 'H';
+        rating = ` (${RATING_FULL[abbr] || abbr})`;
       } else if (AUX_HAM[s] && AUX_HAM[s].includes(idx)) {
-        rating = " (H)";
+        rating = " (Hãm)";
       }
       return `<span class="star-item color-${el}">${s}${rating}</span>`;
     }
@@ -487,8 +490,9 @@
 
         const chinhHTML = p.chinh_tinh.map(s => {
           const ratingAbbr = STAR_RATINGS[s] ? STAR_RATINGS[s][idx] : "";
+          const ratingFull = RATING_FULL[ratingAbbr] || ratingAbbr;
           const el = STAR_ELEMENTS[s] || "neutral";
-          return `<span class="star-main color-${el}">${s} (${ratingAbbr})</span>`;
+          return `<span class="star-main color-${el}">${s} (${ratingFull})</span>`;
         }).join('');
 
         const goodStars = p.phu_tinh.filter(s => GOOD_STARS.has(s));
@@ -659,11 +663,20 @@
 
     function buildSummary(chart) {
       const al = chart.thong_tin_goc.am_lich;
-      let s = `Giới tính: ${chart.thong_tin_goc.phan_loai}, Cục: ${chart.thong_tin_goc.cuc}\n`;
-      s += `Âm lịch: ${al.ngay}/${al.thang}/${al.nam}, Giờ: ${al.gio}\n`;
+      const ti = chart.thong_tin_goc;
+      let menhInfo = '', thanInfo = '';
+      const palaces = [];
       Object.entries(chart.la_so).forEach(([, p]) => {
-        s += `Cung ${p.ten_cung}: Chính [${p.chinh_tinh.join(', ') || 'Vô'}], Phụ [${p.phu_tinh.join(', ')}], Đại hạn ${p.dai_han}\n`;
+        const chinh = p.chinh_tinh.join(', ') || 'Vô tinh';
+        const phu = p.phu_tinh.slice(0, 4).join(', ');
+        palaces.push(`${p.ten_cung}(ĐH${p.dai_han}): [${chinh}]${phu ? ' | ' + phu : ''}`);
+        if (p.ten_cung === 'Mệnh') menhInfo = chinh;
+        if (p.is_than) thanInfo = `${p.ten_cung}: [${chinh}]`;
       });
+      let s = `Giới tính: ${ti.phan_loai} | Cục: ${ti.cuc} | Mệnh nạp âm: ${ti.menh_nap_am}\n`;
+      s += `Âm lịch: ${al.ngay}/${al.thang}/${al.nam} | Giờ: ${al.gio}\n`;
+      s += `Mệnh cung: [${menhInfo}] | Thân cung: ${thanInfo}\n\n`;
+      s += palaces.join('\n');
       return s;
     }
 

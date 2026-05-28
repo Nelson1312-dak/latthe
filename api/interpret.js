@@ -463,7 +463,7 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
 ### 🔮 LUẬN GIẢI LÁ SỐ TỬ VI AI
 
 - **Tâm nguyện người hỏi:** {USER_QUESTION}
-- **Vận mệnh lá số:** [Nêu tóm tắt Mệnh/Cục và các sao chủ chốt liên quan đến câu hỏi]
+- **Vận mệnh lá số:** [1-2 câu ngắn: Mệnh/Cục và 2-3 sao nổi bật nhất liên quan câu hỏi. Không liệt kê toàn bộ đại hạn.]
 
 ---
 
