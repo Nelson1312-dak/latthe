@@ -171,9 +171,9 @@ body {
 
 /* ==================== CHART SECTION ==================== */
 .chart-wrapper {
-  max-width: 640px;
+  max-width: 920px;
   margin: 0 auto 32px;
-  padding: 0 12px;
+  padding: 0 16px;
 }
 
 .chart-title-row {
@@ -223,7 +223,9 @@ body {
 .chart-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.chart-scroll::-webkit-scrollbar { height: 0; }
 
 .chart-outer {
   border: 2px solid var(--brown);
@@ -232,21 +234,32 @@ body {
   position: relative;
 }
 
+/* Chiếu overlay — smooth base transition */
+.palace-card { transition: opacity 0.2s ease; }
+
 /* Chiếu highlight states */
 .palace-card.is-chieu-self {
   outline: 2px solid var(--amber);
   outline-offset: -2px;
+  background: rgba(232, 147, 10, 0.09);
   z-index: 2;
 }
 .palace-card.is-chieu {
-  outline: 2px dashed rgba(200, 100, 20, 0.75);
+  outline: 1.5px dashed rgba(200, 115, 15, 0.65);
   outline-offset: -2px;
-  background-color: rgba(200, 100, 20, 0.07);
+  background-color: rgba(200, 115, 15, 0.05);
   z-index: 2;
 }
 .palace-card.is-chieu-dim {
-  opacity: 0.38;
-  transition: opacity 0.12s;
+  opacity: 0.25;
+}
+
+/* Animated dash lines */
+@keyframes chieuDash {
+  to { stroke-dashoffset: -18; }
+}
+#chieu-svg line {
+  animation: chieuDash 0.65s linear infinite;
 }
 
 .chart-container {

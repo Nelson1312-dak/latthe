@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#e8930a">
   <title>Lá Số Tử Vi — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=19">
+  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=20">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -838,20 +838,33 @@
             else c.classList.add('is-chieu-dim');
           });
 
-          // Draw lines connecting the 4 related palaces
+          // Draw lines + dots connecting the 4 related palaces
           const allIdxs = [idx, ...relatedIdxs];
           const centers = allIdxs.map(i => cardCenter(CUNG_KEYS[i]));
+
           for (let a = 0; a < centers.length; a++) {
             for (let b = a + 1; b < centers.length; b++) {
               const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
               line.setAttribute('x1', centers[a].x); line.setAttribute('y1', centers[a].y);
               line.setAttribute('x2', centers[b].x); line.setAttribute('y2', centers[b].y);
-              line.setAttribute('stroke', 'rgba(190,95,15,0.55)');
+              line.setAttribute('stroke', 'rgba(190, 100, 12, 0.5)');
               line.setAttribute('stroke-width', '1.5');
               line.setAttribute('stroke-dasharray', '6 3');
               svg.appendChild(line);
             }
           }
+
+          // Dots at each palace center (hovered = larger)
+          centers.forEach((c, i) => {
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', c.x);
+            dot.setAttribute('cy', c.y);
+            dot.setAttribute('r',  i === 0 ? '5' : '3.5');
+            dot.setAttribute('fill', i === 0 ? 'rgba(220, 105, 10, 0.9)' : 'rgba(190, 100, 12, 0.65)');
+            dot.setAttribute('stroke', 'rgba(255,255,255,0.6)');
+            dot.setAttribute('stroke-width', '1.5');
+            svg.appendChild(dot);
+          });
         });
 
         card.addEventListener('mouseleave', () => {
