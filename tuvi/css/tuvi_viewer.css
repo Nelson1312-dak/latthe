@@ -234,9 +234,6 @@ body {
   position: relative;
 }
 
-/* Chiếu overlay — smooth base transition */
-.palace-card { transition: opacity 0.2s ease; }
-
 /* Chiếu highlight states */
 .palace-card.is-chieu-self {
   outline: 2px solid var(--amber);
@@ -250,8 +247,13 @@ body {
   background-color: rgba(200, 115, 15, 0.05);
   z-index: 2;
 }
-.palace-card.is-chieu-dim {
-  opacity: 0.25;
+.palace-card.is-chieu-dim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(210, 208, 204, 0.76);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Animated dash lines */
