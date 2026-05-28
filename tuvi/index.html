@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#e8930a">
   <title>Lá Số Tử Vi — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=17">
+  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=19">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -229,7 +229,7 @@
     const CHI_ELEMENTS = ["thuy", "tho", "moc", "moc", "tho", "hoa", "hoa", "tho", "kim", "kim", "tho", "thuy"];
 
     const GOOD_STARS = new Set(["Lộc Tồn", "Thiên Khôi", "Thiên Việt", "Tả Phù", "Hữu Bật", "Văn Xương", "Văn Khúc", "Thiên Mã", "Đào Hoa", "Hồng Loan", "Thiên Hỷ", "Ân Quang", "Thiên Quý", "Tam Thai", "Bát Tọa", "Thiên Quan", "Thiên Phúc", "Quốc Ấn", "Đường Phù", "Bác Sĩ", "Thanh Long", "Tướng Quân", "Tấu Thư", "Hỷ Thần", "Hoa Cái", "Long Trì", "Phượng Các", "Giải Thần", "Thiếu Dương", "Thiếu Âm", "Long Đức", "Phúc Đức", "Thiên Đức", "Nguyệt Đức", "Hóa Lộc", "Hóa Quyền", "Hóa Khoa"]);
-    const BAD_STARS = new Set(["Kình Dương", "Đà La", "Địa Không", "Địa Kiếp", "Thiên Khốc", "Thiên Hư", "Hóa Kỵ", "Cô Thần", "Quả Tú", "Đại Hao", "Tiểu Hao", "Tang Môn", "Tuế Phá", "Bạch Hổ", "Điếu Khách", "Trực Phù", "Bệnh Phù", "Phi Liêm", "Phục Binh", "Quan Phù", "Thiên Không", "Kiếp Sát", "Lưu Hà", "Thiên Riêu", "Thiên Hình", "Thiên Y", "Thiên Sứ", "Thiên Sử", "Phá Toái", "Thái Tuế", "Tử Phù"]);
+    const BAD_STARS = new Set(["Kình Dương", "Đà La", "Địa Không", "Địa Kiếp", "Thiên Khốc", "Thiên Hư", "Hóa Kỵ", "Cô Thần", "Quả Tú", "Đại Hao", "Tiểu Hao", "Tang Môn", "Tuế Phá", "Bạch Hổ", "Điếu Khách", "Trực Phù", "Bệnh Phù", "Phi Liêm", "Phục Binh", "Quan Phù", "Thiên Không", "Kiếp Sát", "Lưu Hà", "Thiên Riêu", "Thiên Hình", "Thiên Y", "Thiên Sứ", "Thiên Sử", "Phá Toái", "Thái Tuế", "Tử Phù", "Thiên La", "Địa Võng"]);
 
     const ALL_STARS_ELEMENTS = {
       "Tử Vi": "tho", "Liêm Trinh": "hoa", "Thiên Đồng": "thuy", "Vũ Khúc": "kim", "Thái Dương": "hoa",
@@ -248,7 +248,8 @@
       "Tuế Phá": "hoa", "Bạch Hổ": "kim", "Điếu Khách": "hoa", "Trực Phù": "hoa", "Bệnh Phù": "tho",
       "Phi Liêm": "hoa", "Phục Binh": "hoa", "Quan Phù": "hoa", "Thiên Không": "hoa", "Kiếp Sát": "hoa",
       "Lưu Hà": "thuy", "Thiên Riêu": "thuy", "Thiên Hình": "hoa", "Thiên Y": "thuy", "Thiên Sứ": "thuy",
-      "Thiên Sử": "thuy", "Phá Toái": "hoa", "Thái Tuế": "hoa", "Tử Phù": "hoa"
+      "Thiên Sử": "thuy", "Phá Toái": "hoa", "Thái Tuế": "hoa", "Tử Phù": "hoa",
+      "Thiên La": "tho", "Địa Võng": "tho"
     };
 
     const STAR_ELEMENTS = {
@@ -498,9 +499,13 @@
           return `<span class="star-main color-${el}">${s} (${ratingFull})</span>`;
         }).join('');
 
-        const goodStars = p.phu_tinh.filter(s => GOOD_STARS.has(s));
-        const badStars = p.phu_tinh.filter(s => BAD_STARS.has(s));
-        const otherStars = p.phu_tinh.filter(s => !GOOD_STARS.has(s) && !BAD_STARS.has(s));
+        const phuTinh = [...p.phu_tinh];
+        if (idx === 4)  phuTinh.push('Thiên La');
+        if (idx === 10) phuTinh.push('Địa Võng');
+
+        const goodStars = phuTinh.filter(s => GOOD_STARS.has(s));
+        const badStars = phuTinh.filter(s => BAD_STARS.has(s));
+        const otherStars = phuTinh.filter(s => !GOOD_STARS.has(s) && !BAD_STARS.has(s));
 
         const goodStarsHTML = goodStars.map(s => getAuxStarHTML(s, idx)).join('');
         const badStarsHTML = badStars.map(s => getAuxStarHTML(s, idx)).join('');
@@ -783,6 +788,83 @@
       document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = on);
       askBtn.textContent = on ? 'ĐANG LUẬN...' : 'THAM VẤN AI';
     }
+
+    // ==================== CHIẾU OVERLAY ====================
+    (function initChieuOverlay() {
+      const outer = document.querySelector('.chart-outer');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.id = 'chieu-svg';
+      svg.setAttribute('aria-hidden', 'true');
+      svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible;';
+      outer.appendChild(svg);
+
+      // Tam phương tứ chính: cung hiện tại + tam hợp 2 cung (±4) + cung đối diện (±6)
+      function getRelated(idx) {
+        return [(idx + 4) % 12, (idx + 6) % 12, (idx + 8) % 12];
+      }
+
+      function cardCenter(key) {
+        const card = document.getElementById(`cung-${key}`);
+        const or = outer.getBoundingClientRect();
+        const cr = card.getBoundingClientRect();
+        return { x: cr.left - or.left + cr.width / 2, y: cr.top - or.top + cr.height / 2 };
+      }
+
+      function clearOverlay() {
+        svg.innerHTML = '';
+        CUNG_KEYS.forEach(k => {
+          const c = document.getElementById(`cung-${k}`);
+          c.classList.remove('is-chieu-self', 'is-chieu', 'is-chieu-dim');
+        });
+      }
+
+      let clearTimer = null;
+
+      CUNG_KEYS.forEach((key, idx) => {
+        const card = document.getElementById(`cung-${key}`);
+
+        card.addEventListener('mouseenter', () => {
+          if (!currentChart) return;
+          clearTimeout(clearTimer);
+          clearOverlay();
+
+          const relatedIdxs = getRelated(idx);
+          const allHighlighted = new Set([idx, ...relatedIdxs]);
+
+          CUNG_KEYS.forEach((k, i) => {
+            const c = document.getElementById(`cung-${k}`);
+            if (i === idx) c.classList.add('is-chieu-self');
+            else if (allHighlighted.has(i)) c.classList.add('is-chieu');
+            else c.classList.add('is-chieu-dim');
+          });
+
+          // Draw lines connecting the 4 related palaces
+          const allIdxs = [idx, ...relatedIdxs];
+          const centers = allIdxs.map(i => cardCenter(CUNG_KEYS[i]));
+          for (let a = 0; a < centers.length; a++) {
+            for (let b = a + 1; b < centers.length; b++) {
+              const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+              line.setAttribute('x1', centers[a].x); line.setAttribute('y1', centers[a].y);
+              line.setAttribute('x2', centers[b].x); line.setAttribute('y2', centers[b].y);
+              line.setAttribute('stroke', 'rgba(190,95,15,0.55)');
+              line.setAttribute('stroke-width', '1.5');
+              line.setAttribute('stroke-dasharray', '6 3');
+              svg.appendChild(line);
+            }
+          }
+        });
+
+        card.addEventListener('mouseleave', () => {
+          clearTimer = setTimeout(clearOverlay, 80);
+        });
+      });
+
+      // Also clear when mouse leaves the whole grid
+      document.getElementById('chart-grid').addEventListener('mouseleave', () => {
+        clearTimeout(clearTimer);
+        clearOverlay();
+      });
+    })();
   </script>
 
 </body>

@@ -499,10 +499,14 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
       if (bestMatch.similarity >= 0.90 && bestMatch.context === context) {
         return res.status(200).json({ answer: bestMatch.answer, cached: true, semanticCached: true });
       }
-      const ragBlock = similar
-        .map(d => `Câu hỏi tương tự: "${d.question}"\nCâu trả lời: ${d.answer}`)
-        .join('\n---\n');
-      fullContext += `\n\n[Tham khảo từ cơ sở dữ liệu]\n${ragBlock}`;
+      // Tuvi: each chart is unique per person — injecting another person's cached answer
+      // as RAG reference causes the model to echo their đại hạn numbers and star details.
+      if (type !== 'tuvi') {
+        const ragBlock = similar
+          .map(d => `Câu hỏi tương tự: "${d.question}"\nCâu trả lời: ${d.answer}`)
+          .join('\n---\n');
+        fullContext += `\n\n[Tham khảo từ cơ sở dữ liệu]\n${ragBlock}`;
+      }
     }
   }
 
@@ -543,7 +547,7 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
 
   // ---- Call Ollama first, fall back to Groq on any failure ----
   const temperature = isFollowUp ? 0.4 : 0.2;
-  const maxTokens   = isFollowUp ? 500 : 1000;
+  const maxTokens   = isFollowUp ? 500 : (type === 'tuvi' ? 1400 : 1000);
   let answer = '';
   let source = 'ollama';
   let ollamaErr = null;
