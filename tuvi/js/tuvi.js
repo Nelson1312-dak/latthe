@@ -438,8 +438,27 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
   const dayCanChi = getCanChiDay(jdn);
   const hourCanChiStr = getCanChiHour(hourIndex, dayCanChi.canIdx);
   
+  // Lục Thập Hoa Giáp Nạp Âm
+  const cycleIdx = (lunarYear - 4) % 60;
+  const cycleIdxCorrected = cycleIdx < 0 ? cycleIdx + 60 : cycleIdx;
+  const NAP_AM = [
+    "Hải Trung Kim", "Lư Trung Hỏa", "Đại Lâm Mộc", "Lộ Bàng Thổ", "Kiếm Phong Kim",
+    "Sơn Đầu Hỏa", "Giản Hạ Thủy", "Thành Đầu Thổ", "Bạch Lạp Kim", "Dương Liễu Mộc",
+    "Tuyền Trung Thủy", "Ốc Thượng Thổ", "Tích Lịch Hỏa", "Tòng Bá Mộc", "Trường Lưu Thủy",
+    "Sa Trung Kim", "Sơn Hạ Hỏa", "Bình Địa Mộc", "Bích Thượng Thổ", "Kim Bạch Kim",
+    "Phú Đăng Hỏa", "Thiên Hà Thủy", "Đại Trạch Thổ", "Thoa Xuyến Kim", "Tang Đố Mộc",
+    "Đại Khê Thủy", "Sa Trung Thổ", "Thiên Thượng Hỏa", "Thạch Lựu Mộc", "Đại Hải Thủy"
+  ];
+  const menhNapAm = NAP_AM[Math.floor(cycleIdxCorrected / 2)];
+  const menhElement = menhNapAm.split(' ').pop(); // returns "Kim", "Hỏa", "Mộc", "Thổ", "Thủy"
+
+  // Âm Dương thuận nghịch lý
+  const isDuongYear = (yearCanChi.canIdx % 2 === 0);
+  const isNam = (gioiTinh === 1);
+  const amDuongText = isDuongYear === isNam ? "Âm dương thuận lý" : "Âm dương nghịch lý";
+
   // Gender & Polarity classification
-  const isDuong = (yearCanChi.canIdx % 2 === 0);
+  const isDuong = isDuongYear;
   const phanLoai = (isDuong ? "Dương " : "Âm ") + (gioiTinh === 1 ? "Nam" : "Nữ");
   
   // 4. Mệnh & Thân Palace Placement (1-indexed: Tý=1... Hợi=12)
@@ -454,6 +473,41 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
   
   // Cục determination
   const cuc = getCuc(menhCanIndex, menhChiIndex);
+
+  // Mệnh vs Cục relation
+  function getCucMenhRelation(menh, cucName) {
+    let c = "";
+    if (cucName.includes("Kim")) c = "Kim";
+    else if (cucName.includes("Mộc")) c = "Mộc";
+    else if (cucName.includes("Thủy")) c = "Thủy";
+    else if (cucName.includes("Hỏa")) c = "Hỏa";
+    else if (cucName.includes("Thổ")) c = "Thổ";
+    
+    if (menh === c) return "Bản Mệnh Cục hòa hợp";
+    
+    const sinh = {
+      "Kim": "Thủy",
+      "Thủy": "Mộc",
+      "Mộc": "Hỏa",
+      "Hỏa": "Thổ",
+      "Thổ": "Kim"
+    };
+    if (sinh[menh] === c) return "Bản Mệnh sinh Cục";
+    if (sinh[c] === menh) return "Cục sinh Bản Mệnh";
+    
+    const khac = {
+      "Kim": "Mộc",
+      "Mộc": "Thổ",
+      "Thổ": "Thủy",
+      "Thủy": "Hỏa",
+      "Hỏa": "Kim"
+    };
+    if (khac[menh] === c) return "Bản Mệnh khắc Cục";
+    if (khac[c] === menh) return "Cục khắc Bản Mệnh";
+    
+    return "";
+  }
+  const menhCucRelation = getCucMenhRelation(menhElement, cuc.name);
   
   // 5. Star Placement Calculations
   // Prepare palaces database (0-indexed, Tý=0... Hợi=11)
@@ -628,7 +682,7 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
     coThanPos = 12; quaTuPos = 8; // Hợi, Mùi
   }
 
-  // Song Hao (Đại Hao & Tiểu Hao)
+  // Song Hao (Đại Hao & Tiểu Hao) - from year Chi
   const daiHaoPos = xetSo(yChi + 3);
   const tieuHaoPos = xetSo(daiHaoPos + 6);
 
@@ -659,9 +713,101 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
     { name: "Đại Hao", pos: daiHaoPos },
     { name: "Tiểu Hao", pos: tieuHaoPos }
   ];
+
+  // 1. Vòng Bác Sĩ
+  const bacSiStars = ["Bác Sĩ", "Lực Sĩ", "Thanh Long", "Tiểu Hao", "Tướng Quân", "Tấu Thư", "Phi Liêm", "Hỷ Thần", "Bệnh Phù", "Đại Hao", "Phục Binh", "Quan Phù"];
+  const bacSiDir = (isDuong && gioiTinh === 1) || (!isDuong && gioiTinh === 0) ? 1 : -1;
+  for (let i = 0; i < 12; i++) {
+    const starName = bacSiStars[i];
+    const starPos = xetSo(locTonPos + bacSiDir * i);
+    phuTinhList.push({ name: starName, pos: starPos });
+  }
+
+  // 2. Vòng Thái Tuế
+  const thaiTueStars = ["Thái Tuế", "Thiếu Dương", "Tang Môn", "Thiếu Âm", "Quan Phù", "Tử Phù", "Tuế Phá", "Long Đức", "Bạch Hổ", "Phúc Đức", "Điếu Khách", "Trực Phù"];
+  const startChiPos = yChi + 1; // 1-indexed
+  for (let i = 0; i < 12; i++) {
+    const starName = thaiTueStars[i];
+    const starPos = xetSo(startChiPos + i);
+    phuTinhList.push({ name: starName, pos: starPos });
+  }
+
+  // 3. Long Trì, Phượng Các, Giải Thần
+  const longTriPos = xetSo(5 + yChi); // Starts at Thìn (5)
+  const phuongCacPos = xetSo(11 - yChi + 12); // Starts at Tuất (11)
+  phuTinhList.push({ name: "Long Trì", pos: longTriPos });
+  phuTinhList.push({ name: "Phượng Các", pos: phuongCacPos });
+  phuTinhList.push({ name: "Giải Thần", pos: phuongCacPos }); // Co-located with Phượng Các
+
+  // 4. Ân Quang, Thiên Quý
+  const anQuangPos = xetSo(starPositions["Văn Xương"] + lunarDay - 2);
+  const thienQuyPos = xetSo(starPositions["Văn Khúc"] - lunarDay + 2);
+  phuTinhList.push({ name: "Ân Quang", pos: anQuangPos });
+  phuTinhList.push({ name: "Thiên Quý", pos: thienQuyPos });
+
+  // 5. Tam Thai, Bát Tọa
+  const tamThaiPos = xetSo(starPositions["Tả Phù"] + lunarDay - 1);
+  const batToaPos = xetSo(starPositions["Hữu Bật"] - lunarDay + 1);
+  phuTinhList.push({ name: "Tam Thai", pos: tamThaiPos });
+  phuTinhList.push({ name: "Bát Tọa", pos: batToaPos });
+
+  // 6. Thiên Tài, Thiên Thọ
+  const thienTaiPos = xetSo(menhPos + yChi);
+  const thienThoPos = xetSo(thanPos + yChi);
+  phuTinhList.push({ name: "Thiên Tài", pos: thienTaiPos });
+  phuTinhList.push({ name: "Thiên Thọ", pos: thienThoPos });
+
+  // 7. Thiên Hình, Thiên Riêu, Thiên Y
+  const thienHinhPos = xetSo(10 + thangTuVi - 1); // starts at Dậu (10)
+  const thienRieuPos = xetSo(2 + thangTuVi - 1); // starts at Sửu (2)
+  phuTinhList.push({ name: "Thiên Hình", pos: thienHinhPos });
+  phuTinhList.push({ name: "Thiên Riêu", pos: thienRieuPos });
+  phuTinhList.push({ name: "Thiên Y", pos: thienRieuPos }); // same as Thiên Riêu
+
+  // 8. Thiên Quan, Thiên Phúc
+  const quanList = [8, 5, 6, 3, 4, 10, 12, 10, 11, 7];
+  const phucList = [10, 9, 1, 12, 4, 3, 7, 6, 7, 8];
+  const thienQuanPos = quanList[tc1 - 1];
+  const thienPhucPos = phucList[tc1 - 1];
+  phuTinhList.push({ name: "Thiên Quan", pos: thienQuanPos });
+  phuTinhList.push({ name: "Thiên Phúc", pos: thienPhucPos });
+
+  // 9. Kiếp Sát, Lưu Hà
+  let kiepSatPos = 9;
+  if ([2, 6, 10].includes(yChi)) kiepSatPos = 12;
+  else if ([8, 0, 4].includes(yChi)) kiepSatPos = 6;
+  else if ([5, 9, 1].includes(yChi)) kiepSatPos = 3;
+  else if ([11, 3, 7].includes(yChi)) kiepSatPos = 9;
+  phuTinhList.push({ name: "Kiếp Sát", pos: kiepSatPos });
+
+  const luuHaList = [10, 11, 8, 9, 6, 7, 5, 4, 12, 3];
+  const luuHaPos = luuHaList[tc1 - 1];
+  phuTinhList.push({ name: "Lưu Hà", pos: luuHaPos });
+
+  // 10. Hoa Cái, Phá Toái
+  let hoaCaiPos = 8;
+  if ([2, 6, 10].includes(yChi)) hoaCaiPos = 11;
+  else if ([8, 0, 4].includes(yChi)) hoaCaiPos = 5;
+  else if ([5, 9, 1].includes(yChi)) hoaCaiPos = 2;
+  else if ([11, 3, 7].includes(yChi)) hoaCaiPos = 8;
+  phuTinhList.push({ name: "Hoa Cái", pos: hoaCaiPos });
+
+  let phaToaiPos = 10;
+  if ([0, 6, 3, 9].includes(yChi)) phaToaiPos = 6;
+  else if ([4, 10, 1, 7].includes(yChi)) phaToaiPos = 2;
+  phuTinhList.push({ name: "Phá Toái", pos: phaToaiPos });
+
+  // 11. Thiên Sứ, Thiên Sử
+  const thienSuPos = xetSo(menhPos - 5); // always at Tật Ách (6th counter-clockwise, which is Mệnh - 5)
+  const thienSu2Pos = xetSo(menhPos + 5); // always at Nô Bộc (6th clockwise, which is Mệnh + 5)
+  phuTinhList.push({ name: "Thiên Sứ", pos: thienSuPos });
+  phuTinhList.push({ name: "Thiên Sử", pos: thienSu2Pos });
   
   phuTinhList.forEach(({ name, pos }) => {
-    laSoPalaces[pos - 1].phu_tinh.push(name);
+    const palace = laSoPalaces[pos - 1];
+    if (!palace.phu_tinh.includes(name)) {
+      palace.phu_tinh.push(name);
+    }
   });
   
   // 6. Calculate Tràng Sinh cycle stars
@@ -683,6 +829,45 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
   laSoPalaces[thanPos - 1].is_than = true;
   
   const minorLimitIdx = getMinorLimitPalace(yearCanChi.chiIdx, gioiTinh, lunarYear, namXem);
+  let month1Idx = (minorLimitIdx - (thangTuVi - 1) + (hourIndex - 1) + 12) % 12;
+  
+  for (let idx = 0; idx < 12; idx++) {
+    const monthNum = (idx - month1Idx + 12) % 12 + 1;
+    laSoPalaces[idx].nguyet_han = monthNum;
+  }
+  
+  // 8. Build the final output JSON structure
+  const laSoOutput = {};
+  CUNG_KEYS.forEach((key, idx) => {
+    laSoOutput[key] = laSoPalaces[idx];
+  });
+  
+  return {
+    thong_tin_goc: {
+      am_lich: {
+        nam: yearCanChi.text,
+        thang: monthCanChiStr,
+        ngay: dayCanChi.text,
+        gio: hourCanChiStr,
+        ngay_so: lunarDay,
+        thang_so: lunarMonth,
+        nam_so: lunarYear,
+        leap: lunarLeap
+      },
+      phan_loai: phanLoai,
+      cuc: cuc.name,
+      than_pos: thanPos,
+      am_duong_text: amDuongText,
+      menh_nap_am: menhNapAm,
+      menh_cuc_relation: menhCucRelation
+    },
+    la_so: laSoOutput,
+    star_properties: {
+      elements: STAR_ELEMENTS,
+      ratings: STAR_RATINGS
+    }
+  };
+}LimitPalace(yearCanChi.chiIdx, gioiTinh, lunarYear, namXem);
   let month1Idx = (minorLimitIdx - (thangTuVi - 1) + (hourIndex - 1) + 12) % 12;
   
   for (let idx = 0; idx < 12; idx++) {

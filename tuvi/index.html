@@ -106,6 +106,24 @@
 
           <!-- Center 2×2 info panel -->
           <div class="center-panel" id="cung-center">
+            <!-- Watermark -->
+            <svg class="drum-watermark" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="1 1"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="0.8"/>
+              <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" stroke-width="0.5"/>
+              <polygon points="50,15 53,23 61,20 56,28 64,28 58,34 65,37 57,41 62,48 54,48 55,56 48,52 45,60 41,53 35,58 36,50 28,52 32,45 25,43 31,38 26,32 33,31 30,23 37,25 38,17 44,22 47,15" fill="none" stroke="currentColor" stroke-width="0.4"/>
+              <circle cx="50" cy="50" r="8" fill="none" stroke="currentColor" stroke-width="0.5"/>
+              <path d="M 50,42 L 50,58 M 42,50 L 58,50 M 44.3,44.3 L 55.7,55.7 M 44.3,55.7 L 55.7,44.3" stroke="currentColor" stroke-width="0.4"/>
+            </svg>
+            
+            <!-- Calligraphy & Seal -->
+            <div class="cp-side-decor">
+              <span class="cp-calligraphy">东方学理</span>
+              <div class="cp-seal">
+                <div class="cp-seal-inner">Tử Vi<br>Đẩu Số</div>
+              </div>
+            </div>
+
             <div class="cp-name" id="disp-name">—</div>
             <div class="cp-badge" id="disp-class">—</div>
             <table class="cp-table">
@@ -119,6 +137,7 @@
             <hr class="cp-divider">
             <table class="cp-table">
               <tr><td class="cp-label">Âm Dương</td>  <td class="cp-value blue" id="disp-phanloai">—</td></tr>
+              <tr><td class="cp-label">Mệnh</td>      <td class="cp-value green" id="disp-menh-napam">—</td></tr>
               <tr><td class="cp-label">Cục</td>        <td class="cp-value red"  id="disp-cuc">—</td></tr>
               <tr><td class="cp-label">Mệnh chủ</td>  <td class="cp-value"      id="disp-menhchu">—</td></tr>
               <tr><td class="cp-label">Thân chủ</td>  <td class="cp-value"      id="disp-thanchu">—</td></tr>
@@ -137,16 +156,25 @@
           <div class="palace-card" id="cung-Ty"   style="grid-area:4/3"></div>
           <div class="palace-card" id="cung-Hoi"  style="grid-area:4/4"></div>
         </div>
+        
+        <!-- Legends -->
+        <div class="chart-legends-wrapper">
+          <div class="rating-legend">
+            <span class="legend-label">M:</span> Miếu | 
+            <span class="legend-label">V:</span> Vượng | 
+            <span class="legend-label">Đ:</span> Đắc | 
+            <span class="legend-label">B:</span> Bình hòa | 
+            <span class="legend-label">H:</span> Hãm
+          </div>
+          <div class="element-legend">
+            <span class="legend-dot color-kim">●</span> Kim
+            <span class="legend-dot color-moc">●</span> Mộc
+            <span class="legend-dot color-thuy">●</span> Thủy
+            <span class="legend-dot color-hoa">●</span> Hỏa
+            <span class="legend-dot color-tho">●</span> Thổ
+          </div>
+        </div>
       </div>
-    </div>
-
-    <!-- Legend -->
-    <div class="chart-legend">
-      <span><span class="legend-dot" style="color:#cc0000">●</span> Chính tinh</span>
-      <span><span class="legend-dot" style="color:#0044bb">●</span> Sao tốt</span>
-      <span><span class="legend-dot" style="color:#cc3300">●</span> Sao xấu</span>
-      <span><span class="legend-dot" style="color:#cc5500">●</span> Hóa tốt</span>
-      <span><span class="legend-dot" style="color:#880000">●</span> Hóa Kỵ</span>
     </div>
   </div>
 
@@ -198,12 +226,72 @@
     // ==================== CONSTANTS ====================
     const CUNG_KEYS = ["Ty","Suu","Dan","Mao","Thin","Ty2","Ngo","Mui","Than","Dau","Tuat","Hoi"];
     const CUNG_CHI  = ["Tý","Sửu","Dần","Mão","Thìn","Tỵ","Ngọ","Mùi","Thân","Dậu","Tuất","Hợi"];
+    const CHI_ELEMENTS = ["thuy", "tho", "moc", "moc", "tho", "hoa", "hoa", "tho", "kim", "kim", "tho", "thuy"];
 
-    const HOA_TOT   = new Set(["Hóa Lộc","Hóa Quyền","Hóa Khoa"]);
-    const HOA_XAU   = new Set(["Hóa Kỵ"]);
-    const GOOD_STARS= new Set(["Lộc Tồn","Thiên Khôi","Thiên Việt","Tả Phù","Hữu Bật","Văn Xương","Văn Khúc","Thiên Mã","Đào Hoa","Hồng Loan","Thiên Hỷ"]);
-    const BAD_STARS = new Set(["Kình Dương","Đà La","Địa Không","Địa Kiếp","Cô Thần","Quả Tú","Đại Hao","Tiểu Hao"]);
-    const GRAY_STARS= new Set(["Thiên Khốc","Thiên Hư"]);
+    const GOOD_STARS = new Set(["Lộc Tồn", "Thiên Khôi", "Thiên Việt", "Tả Phù", "Hữu Bật", "Văn Xương", "Văn Khúc", "Thiên Mã", "Đào Hoa", "Hồng Loan", "Thiên Hỷ", "Ân Quang", "Thiên Quý", "Tam Thai", "Bát Tọa", "Thiên Quan", "Thiên Phúc", "Quốc Ấn", "Đường Phù", "Bác Sĩ", "Thanh Long", "Tướng Quân", "Tấu Thư", "Hỷ Thần", "Hoa Cái", "Long Trì", "Phượng Các", "Giải Thần", "Thiếu Dương", "Thiếu Âm", "Long Đức", "Phúc Đức", "Thiên Đức", "Nguyệt Đức", "Hóa Lộc", "Hóa Quyền", "Hóa Khoa"]);
+    const BAD_STARS = new Set(["Kình Dương", "Đà La", "Địa Không", "Địa Kiếp", "Thiên Khốc", "Thiên Hư", "Hóa Kỵ", "Cô Thần", "Quả Tú", "Đại Hao", "Tiểu Hao", "Tang Môn", "Tuế Phá", "Bạch Hổ", "Điếu Khách", "Trực Phù", "Bệnh Phù", "Phi Liêm", "Phục Binh", "Quan Phù", "Thiên Không", "Kiếp Sát", "Lưu Hà", "Thiên Riêu", "Thiên Hình", "Thiên Y", "Thiên Sứ", "Thiên Sử", "Phá Toái", "Thái Tuế", "Tử Phù"]);
+
+    const ALL_STARS_ELEMENTS = {
+      "Tử Vi": "tho", "Liêm Trinh": "hoa", "Thiên Đồng": "thuy", "Vũ Khúc": "kim", "Thái Dương": "hoa",
+      "Thiên Cơ": "moc", "Thiên Phủ": "tho", "Thái Âm": "thuy", "Tham Lang": "moc", "Cự Môn": "thuy",
+      "Thiên Tướng": "thuy", "Thiên Lương": "moc", "Thất Sát": "kim", "Phá Quân": "thuy",
+      "Hóa Lộc": "moc", "Hóa Quyền": "moc", "Hóa Khoa": "moc", "Hóa Kỵ": "thuy",
+      "Lộc Tồn": "tho", "Kình Dương": "kim", "Đà La": "kim", "Thiên Khôi": "hoa", "Thiên Việt": "hoa",
+      "Tả Phù": "tho", "Hữu Bật": "thuy", "Văn Xương": "kim", "Văn Khúc": "thuy", "Thiên Mã": "hoa",
+      "Đào Hoa": "moc", "Hồng Loan": "thuy", "Thiên Hỷ": "thuy", "Ân Quang": "moc", "Thiên Quý": "tho",
+      "Tam Thai": "thuy", "Bát Tọa": "moc", "Thiên Quan": "hoa", "Thiên Phúc": "tho", "Quốc Ấn": "tho",
+      "Đường Phù": "moc", "Bác Sĩ": "thuy", "Thanh Long": "thuy", "Tướng Quân": "moc", "Tấu Thư": "kim",
+      "Hỷ Thần": "hoa", "Hoa Cái": "kim", "Long Trì": "thuy", "Phượng Các": "tho", "Giải Thần": "moc",
+      "Thiếu Dương": "hoa", "Thiếu Âm": "thuy", "Long Đức": "thuy", "Phúc Đức": "tho", "Thiên Đức": "hoa",
+      "Nguyệt Đức": "hoa", "Thiên Khốc": "kim", "Thiên Hư": "kim", "Địa Không": "hoa", "Địa Kiếp": "hoa",
+      "Cô Thần": "tho", "Quả Tú": "tho", "Đại Hao": "hoa", "Tiểu Hao": "hoa", "Tang Môn": "moc",
+      "Tuế Phá": "hoa", "Bạch Hổ": "kim", "Điếu Khách": "hoa", "Trực Phù": "hoa", "Bệnh Phù": "tho",
+      "Phi Liêm": "hoa", "Phục Binh": "hoa", "Quan Phù": "hoa", "Thiên Không": "hoa", "Kiếp Sát": "hoa",
+      "Lưu Hà": "thuy", "Thiên Riêu": "thuy", "Thiên Hình": "hoa", "Thiên Y": "thuy", "Thiên Sứ": "thuy",
+      "Thiên Sử": "thuy", "Phá Toái": "hoa", "Thái Tuế": "hoa", "Tử Phù": "hoa"
+    };
+
+    const STAR_ELEMENTS = {
+      "Tử Vi": "tho", "Liêm Trinh": "hoa", "Thiên Đồng": "thuy", "Vũ Khúc": "kim", "Thái Dương": "hoa",
+      "Thiên Cơ": "moc", "Thiên Phủ": "tho", "Thái Âm": "thuy", "Tham Lang": "moc", "Cự Môn": "thuy",
+      "Thiên Tướng": "thuy", "Thiên Lương": "moc", "Thất Sát": "kim", "Phá Quân": "thuy"
+    };
+
+    const STAR_RATINGS = {
+      "Tử Vi":      ["B", "M", "M", "V", "M", "V", "M", "M", "M", "V", "M", "V"],
+      "Liêm Trinh": ["V", "Đ", "M", "H", "M", "H", "M", "Đ", "M", "H", "M", "H"],
+      "Thiên Đồng": ["V", "H", "M", "M", "H", "M", "H", "H", "Đ", "H", "H", "M"],
+      "Vũ Khúc":    ["V", "M", "M", "H", "M", "H", "M", "M", "M", "V", "M", "H"],
+      "Thái Dương": ["H", "H", "V", "M", "V", "V", "M", "Đ", "H", "H", "H", "H"],
+      "Thiên Cơ":   ["M", "H", "M", "M", "V", "Đ", "M", "H", "M", "M", "V", "Đ"],
+      "Thiên Phủ":  ["M", "M", "M", "Đ", "M", "Đ", "M", "M", "M", "V", "M", "V"],
+      "Thái Âm":    ["M", "M", "H", "H", "H", "H", "H", "H", "H", "M", "M", "M"],
+      "Tham Lang":  ["V", "M", "H", "H", "M", "H", "V", "M", "H", "H", "M", "H"],
+      "Cự Môn":     ["V", "H", "V", "M", "H", "H", "V", "H", "M", "M", "H", "H"],
+      "Thiên Tướng":["V", "M", "M", "H", "M", "Đ", "M", "M", "M", "V", "M", "H"],
+      "Thiên Lương":["M", "V", "M", "M", "M", "H", "M", "V", "M", "H", "M", "H"],
+      "Thất Sát":   ["V", "M", "M", "H", "M", "H", "M", "M", "M", "H", "M", "H"],
+      "Phá Quân":   ["M", "V", "H", "H", "M", "H", "M", "V", "H", "H", "M", "H"]
+    };
+
+    const AUX_RATINGS = {
+      "Kình Dương": { 1: "Đ", 4: "Đ", 7: "Đ", 10: "Đ" },
+      "Đà La": { 1: "Đ", 4: "Đ", 7: "Đ", 10: "Đ" },
+      "Địa Không": { 0: "Đ", 6: "Đ", 5: "Đ", 11: "Đ" },
+      "Địa Kiếp": { 0: "Đ", 6: "Đ", 5: "Đ", 11: "Đ" },
+      "Thiên Khốc": { 2: "Đ", 8: "Đ", 9: "Đ", 3: "Đ" },
+      "Thiên Hư": { 2: "Đ", 8: "Đ", 9: "Đ", 3: "Đ" },
+      "Thiên Hình": { 2: "Đ", 8: "Đ", 9: "Đ", 10: "Đ" },
+      "Thiên Riêu": { 2: "Đ", 8: "Đ", 9: "Đ", 4: "Đ" },
+      "Đại Hao": { 2: "Đ", 8: "Đ", 3: "Đ", 9: "Đ" },
+      "Tiểu Hao": { 2: "Đ", 8: "Đ", 3: "Đ", 9: "Đ" },
+      "Tang Môn": { 2: "Đ", 8: "Đ", 3: "Đ", 9: "Đ" },
+      "Bạch Hổ": { 2: "Đ", 8: "Đ", 3: "Đ", 9: "Đ" }
+    };
+
+    const AUX_HAM = {
+      "Hóa Kỵ": [0, 3, 6, 9]
+    };
 
     // Can heavenly stems
     const CAN_NAMES = ['Giáp','Ất','Bính','Đinh','Mậu','Kỷ','Canh','Tân','Nhâm','Quý'];
@@ -233,6 +321,27 @@
       const danCan = ((yearCanIdx % 5) * 2 + 2) % 10;
       const palaceCan = (danCan + ((chiIdx - 2 + 12) % 12)) % 10;
       return CAN_ABBR[palaceCan];
+    }
+
+    function getCanChiYear(lunarYear) {
+      const cans = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
+      const chis = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
+      let canIdx = (lunarYear - 4) % 10;
+      if (canIdx < 0) canIdx += 10;
+      let chiIdx = (lunarYear - 4) % 12;
+      if (chiIdx < 0) chiIdx += 12;
+      return { canIdx, chiIdx, text: `${cans[canIdx]} ${chis[chiIdx]}` };
+    }
+
+    function getAuxStarHTML(s, idx) {
+      const el = ALL_STARS_ELEMENTS[s] || "neutral";
+      let rating = "";
+      if (AUX_RATINGS[s]) {
+        rating = AUX_RATINGS[s][idx] ? ` (${AUX_RATINGS[s][idx]})` : " (H)";
+      } else if (AUX_HAM[s] && AUX_HAM[s].includes(idx)) {
+        rating = " (H)";
+      }
+      return `<span class="star-item color-${el}">${s}${rating}</span>`;
     }
 
     // ==================== POPULATE DROPDOWNS ====================
@@ -323,12 +432,17 @@
       document.getElementById('disp-class').textContent    = chart.thong_tin_goc.phan_loai;
       document.getElementById('disp-solar').textContent    = `${day}/${month}/${year}`;
       document.getElementById('disp-ly-year').textContent  = al.nam;
-      document.getElementById('disp-ly-month').textContent = al.thang;
-      document.getElementById('disp-ly-day').textContent   = al.ngay;
-      document.getElementById('disp-ly-hour').textContent  = al.gio;
-      document.getElementById('disp-namxem').textContent   = namXem;
-      document.getElementById('disp-phanloai').textContent = chart.thong_tin_goc.phan_loai;
-      document.getElementById('disp-cuc').textContent      = chart.thong_tin_goc.cuc;
+      document.getElementById('disp-ly-month').textContent = `(${al.thang_so}) ${al.thang}`;
+      document.getElementById('disp-ly-day').textContent   = `(${al.ngay_so}) ${al.ngay}`;
+      
+      const hrSelect = document.getElementById('f-hour');
+      const hrText = hrSelect.options[hrSelect.selectedIndex].text.split(' · ')[0];
+      document.getElementById('disp-ly-hour').textContent  = `${hrText} (${al.gio})`;
+      
+      document.getElementById('disp-namxem').textContent   = `${namXem} (${getCanChiYear(namXem).text})`;
+      document.getElementById('disp-phanloai').textContent = `${chart.thong_tin_goc.phan_loai} (${chart.thong_tin_goc.am_duong_text})`;
+      document.getElementById('disp-menh-napam').textContent = chart.thong_tin_goc.menh_nap_am;
+      document.getElementById('disp-cuc').textContent      = `${chart.thong_tin_goc.cuc} (${chart.thong_tin_goc.menh_cuc_relation})`;
 
       // Mệnh chủ / Thân chủ
       const gioChiIdx  = hourToChiIdx(hour);
@@ -350,21 +464,22 @@
         card.className = `palace-card${isMenh ? ' is-menh' : ''}`;
 
         const canAbbr  = yearCanIdx >= 0 ? getPalaceCanAbbr(idx, yearCanIdx) : '';
-        const chiLabel = canAbbr ? `${canAbbr}.${CUNG_CHI[idx]}` : CUNG_CHI[idx];
+        const branchColorClass = `color-${CHI_ELEMENTS[idx]}`;
+        const chiLabel = canAbbr ? `<span class="${branchColorClass}">${canAbbr}.${CUNG_CHI[idx]}</span>` : CUNG_CHI[idx];
 
-        const chinhHTML = p.chinh_tinh.map(s =>
-          `<span class="star-main">${s}</span>`
-        ).join('');
-
-        const phuHTML = p.phu_tinh.map(s => {
-          let cls = 'star-neutral';
-          if      (HOA_TOT.has(s))    cls = 'star-hoa-tot';
-          else if (HOA_XAU.has(s))    cls = 'star-hoa-ky';
-          else if (GOOD_STARS.has(s)) cls = 'star-good';
-          else if (BAD_STARS.has(s))  cls = 'star-bad';
-          else if (GRAY_STARS.has(s)) cls = 'star-gray';
-          return `<span class="${cls}">${s}</span>`;
+        const chinhHTML = p.chinh_tinh.map(s => {
+          const ratingAbbr = STAR_RATINGS[s] ? STAR_RATINGS[s][idx] : "";
+          const el = STAR_ELEMENTS[s] || "neutral";
+          return `<span class="star-main color-${el}">${s} (${ratingAbbr})</span>`;
         }).join('');
+
+        const goodStars = p.phu_tinh.filter(s => GOOD_STARS.has(s));
+        const badStars = p.phu_tinh.filter(s => BAD_STARS.has(s));
+        const otherStars = p.phu_tinh.filter(s => !GOOD_STARS.has(s) && !BAD_STARS.has(s));
+
+        const goodStarsHTML = goodStars.map(s => getAuxStarHTML(s, idx)).join('');
+        const badStarsHTML = badStars.map(s => getAuxStarHTML(s, idx)).join('');
+        const otherStarsHTML = otherStars.map(s => getAuxStarHTML(s, idx)).join('');
 
         const thanBadge = isThan ? `<span class="pc-than-badge">Thân</span>` : '';
         let ttLabel = '';
@@ -376,16 +491,19 @@
           <div class="pc-header">
             <span class="pc-chi">${chiLabel} ${ttLabel}</span>
             <div class="pc-cung-wrap">
-              <span class="pc-cung">${p.ten_cung}</span>${thanBadge}
+              <span class="pc-cung">${isMenh ? '<span class="badge-menh">MỆNH</span>' : p.ten_cung}</span>${thanBadge}
             </div>
             <span class="pc-daihan">${p.dai_han}</span>
           </div>
           <div class="pc-stars">
             <div class="pc-chinh">${chinhHTML}</div>
-            <div class="pc-phu">${phuHTML}</div>
+            <div class="pc-phu">
+              <div class="phu-col-left">${goodStarsHTML}</div>
+              <div class="phu-col-right">${badStarsHTML}${otherStarsHTML}</div>
+            </div>
           </div>
           <div class="pc-footer">
-            <span class="pc-trangs">${p.trang_sinh || ''}</span>
+            <span class="pc-trangs" style="color: #006622; font-style: italic; font-weight:700;">${p.trang_sinh || ''}</span>
             <span class="pc-nguyet">${p.nguyet_han ? 'T.' + p.nguyet_han : ''}</span>
           </div>`;
       });
