@@ -663,14 +663,15 @@
     function buildSummary(chart) {
       const al = chart.thong_tin_goc.am_lich;
       const ti = chart.thong_tin_goc;
-      let menhInfo = '', thanInfo = '';
+      let menhInfo = '', thanInfo = '', currentDaiHan = '';
       const palaces = [];
       Object.entries(chart.la_so).forEach(([, p]) => {
         const chinh = p.chinh_tinh.join(', ') || 'Vô tinh';
-        const phu = p.phu_tinh.slice(0, 4).join(', ');
-        palaces.push(`${p.ten_cung}(ĐH${p.dai_han}): [${chinh}]${phu ? ' | ' + phu : ''}`);
+        const phu = p.phu_tinh.slice(0, 3).join(', ');
+        // No ĐH number in label — prevents AI from echoing all đại hạn into summary
+        palaces.push(`${p.ten_cung}: [${chinh}]${phu ? ' + ' + phu : ''}`);
         if (p.ten_cung === 'Mệnh') menhInfo = chinh;
-        if (p.is_than) thanInfo = `${p.ten_cung}: [${chinh}]`;
+        if (p.is_than) thanInfo = `${p.ten_cung} [${chinh}]`;
       });
       let s = `Giới tính: ${ti.phan_loai} | Cục: ${ti.cuc} | Mệnh nạp âm: ${ti.menh_nap_am}\n`;
       s += `Âm lịch: ${al.ngay}/${al.thang}/${al.nam} | Giờ: ${al.gio}\n`;
