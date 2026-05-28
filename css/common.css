@@ -4,6 +4,12 @@
    colors via CSS variables or direct rules.
    ============================================================ */
 
+/* ---- Tabler Icons (consistent icon set across all pages) ---- */
+@import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css');
+
+/* ---- Tabler icon base tweak ---- */
+.ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
+
 /* ---- Header actions container ---- */
 .gq-header-actions,
 .t-header-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }

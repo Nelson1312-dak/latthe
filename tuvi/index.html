@@ -14,7 +14,7 @@
 
   <!-- Nav -->
   <nav class="top-nav">
-    <a href="../index.html" class="back-btn">← Trang Chủ</a>
+    <a href="../index.html" class="back-btn"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
   </nav>
 
   <!-- ===== FORM SECTION ===== -->
@@ -89,7 +89,7 @@
   <div class="chart-wrapper" id="chart-wrapper" style="display:none;">
     <div class="chart-title-row">
       <div class="chart-title" id="chart-title">Lá số Tử Vi</div>
-      <button type="button" id="btn-export-img" class="btn-export">Xuất ảnh lá số 📸</button>
+      <button type="button" id="btn-export-img" class="btn-export"><i class="ti ti-camera"></i> Xuất ảnh lá số</button>
     </div>
     <div class="chart-scroll">
       <div class="chart-outer">
@@ -182,7 +182,7 @@
   <section class="ai-section" id="ai-panel" style="display:none;">
     <div class="ai-container">
       <div class="ai-header">
-        <span class="ai-icon">🔮</span>
+        <span class="ai-icon"><i class="ti ti-wand"></i></span>
         <h3>Tham vấn Lá Số cùng Chuyên gia AI</h3>
       </div>
 
@@ -196,19 +196,19 @@
         <div class="ai-prompts">
           <button type="button" class="prompt-chip"
             data-q="Hãy luận giải chi tiết tổng quan lá số Tử Vi này về điểm mạnh, điểm yếu và cách cục lớn?">
-            Tổng quan lá số 🌐
+            <i class="ti ti-layout-dashboard"></i> Tổng quan lá số
           </button>
           <button type="button" class="prompt-chip"
             data-q="Vận trình công danh, sự nghiệp, tiền tài và cơ hội thăng tiến trong tương lai thế nào?">
-            Công danh &amp; Tài lộc 💼
+            <i class="ti ti-briefcase"></i> Công danh &amp; Tài lộc
           </button>
           <button type="button" class="prompt-chip"
             data-q="Đường tình duyên, hôn nhân và các mối quan hệ gia đạo có thuận lợi không?">
-            Tình duyên &amp; Hôn nhân ❤️
+            <i class="ti ti-heart"></i> Tình duyên &amp; Hôn nhân
           </button>
           <button type="button" class="prompt-chip"
             data-q="Có những vận hạn xấu, tai ương hay sức khỏe nào cần lưu ý và hóa giải không?">
-            Hạn xấu &amp; Sức khỏe ⚠️
+            <i class="ti ti-alert-triangle"></i> Hạn xấu &amp; Sức khỏe
           </button>
         </div>
         <div class="ai-input-row">
@@ -567,12 +567,12 @@
           link.click();
           
           exportBtn.disabled = false;
-          exportBtn.textContent = 'Xuất ảnh lá số 📸';
+          exportBtn.innerHTML = '<i class="ti ti-camera"></i> Xuất ảnh lá số';
         }).catch(err => {
           console.error('Export error:', err);
           alert('Có lỗi xảy ra khi xuất ảnh lá số.');
           exportBtn.disabled = false;
-          exportBtn.textContent = 'Xuất ảnh lá số 📸';
+          exportBtn.innerHTML = '<i class="ti ti-camera"></i> Xuất ảnh lá số';
         });
       }, 100);
     });

@@ -37,6 +37,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap&subset=vietnamese" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=27">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
 
   <!-- Vercel Web Analytics & Speed Insights -->
   <script>
@@ -62,6 +63,7 @@
       transition: color 0.2s, background 0.2s;
     }
     .back-home-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
+    .ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
   </style>
 
   <!-- JSON-LD Structured Data -->
@@ -82,7 +84,7 @@
   </script>
 </head>
 <body>
-  <a href="/" class="back-home-btn">← Trang Chủ</a>
+  <a href="/" class="back-home-btn"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
   <div id="app">
 
     <!-- ========== SPLASH SCREEN ========== -->
@@ -109,7 +111,7 @@
                 <span class="mode-title">Chơi Chung 1 Máy</span>
                 <span class="mode-desc">Chơi ngay lập tức, không cần nhập tên phức tạp</span>
               </span>
-              <span class="mode-arrow">→</span>
+              <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </button>
             <button class="btn btn-secondary splash-mode-btn" data-mode="party">
               <span class="mode-icon">👥</span>
@@ -117,7 +119,7 @@
                 <span class="mode-title">Chơi Hội Nhóm</span>
                 <span class="mode-desc">Nhập tên từng người chơi và luân phiên lật bài</span>
               </span>
-              <span class="mode-arrow">→</span>
+              <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </button>
             <button class="btn btn-secondary splash-mode-btn" data-mode="duo">
               <span class="mode-icon">⚔️</span>
@@ -125,7 +127,7 @@
                 <span class="mode-title">Đấu Đôi (2 Người)</span>
                 <span class="mode-desc">Chế độ thách đấu đối kháng xoay vòng cho 2 người</span>
               </span>
-              <span class="mode-arrow">→</span>
+              <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </button>
             <a href="/tuvi/" class="btn btn-secondary splash-mode-btn" style="text-decoration: none; color: inherit;">
               <span class="mode-icon">🔮</span>
@@ -133,7 +135,7 @@
                 <span class="mode-title">Lá Số Tử Vi AI</span>
                 <span class="mode-desc">Dựng lá số Tử Vi Đông Phương & tham vấn AI</span>
               </span>
-              <span class="mode-arrow">→</span>
+              <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </a>
             <button id="btn-go-setup" class="btn btn-secondary splash-setup-btn">
               ⚙️ Tùy chỉnh chuyên sâu
@@ -149,7 +151,7 @@
     <div id="screen-setup" class="screen">
       <div class="setup-container">
         <div class="setup-header">
-          <button id="btn-back-splash" class="btn-icon" aria-label="Quay lại">←</button>
+          <button id="btn-back-splash" class="btn-icon" aria-label="Quay lại"><i class="ti ti-arrow-left"></i></button>
           <h2 class="setup-title">Thiết Lập</h2>
           <span id="player-count" class="player-count-badge">0/12</span>
         </div>
@@ -234,7 +236,7 @@
           <span class="deck-icon">🃏</span>
           <span id="cards-remaining">0</span>
         </div>
-        <button id="btn-scoreboard" class="btn-icon" aria-label="Bảng xếp hạng">🏆</button>
+        <button id="btn-scoreboard" class="btn-icon" aria-label="Bảng xếp hạng"><i class="ti ti-trophy"></i></button>
       </div>
 
       <div class="card-area">

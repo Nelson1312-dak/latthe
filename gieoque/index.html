@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap&subset=vietnamese" rel="stylesheet">
-  <link rel="stylesheet" href="../css/common.css?v=12">
+  <link rel="stylesheet" href="../css/common.css?v=13">
   <link rel="stylesheet" href="css/gieoque.css?v=12">
 
   <!-- Vercel Web Analytics & Speed Insights -->
@@ -100,10 +100,10 @@
   <div id="app">
 
     <header class="gq-header">
-      <a href="/" class="btn-back">← Trang Chủ</a>
-      <span class="gq-header-title"><svg class="yin-yang-icon" viewBox="0 0 100 100" fill="currentColor" style="width: 1em; height: 1em; vertical-align: -0.125em; display: inline-block; margin-right: 6px;"><mask id="yy-mask-header"><rect width="100" height="100" fill="white" /><circle cx="50" cy="73" r="7" fill="black" /></mask><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="8" /><path d="M 50 4 A 46 46 0 0 0 50 96 A 23 23 0 0 1 50 50 A 23 23 0 0 0 50 4 Z" mask="url(#yy-mask-header)" /><circle cx="50" cy="27" r="7" /></svg>Gieo Quẻ</span>
+      <a href="/" class="btn-back"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
+      <span class="gq-header-title"><i class="ti ti-yin-yang" style="margin-right:6px;"></i>Gieo Quẻ</span>
       <div class="gq-header-actions">
-        <button id="btn-history" class="btn-ghost" title="Lịch sử quẻ đã gieo" aria-label="Mở lịch sử quẻ đã gieo">📜</button>
+        <button id="btn-history" class="btn-ghost" title="Lịch sử quẻ đã gieo" aria-label="Mở lịch sử quẻ đã gieo"><i class="ti ti-history"></i></button>
         <button id="btn-restart" class="btn-ghost hidden">Làm Lại</button>
       </div>
     </header>
@@ -112,28 +112,28 @@
     <div id="screen-intro" class="screen active">
       <div class="screen-inner center">
         <div class="gq-hero">
-          <div class="yin-yang-anim"><svg class="yin-yang-icon" viewBox="0 0 100 100" fill="currentColor" style="width: 1em; height: 1em; vertical-align: middle; display: inline-block;"><mask id="yy-mask-hero"><rect width="100" height="100" fill="white" /><circle cx="50" cy="73" r="7" fill="black" /></mask><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="8" /><path d="M 50 4 A 46 46 0 0 0 50 96 A 23 23 0 0 1 50 50 A 23 23 0 0 0 50 4 Z" mask="url(#yy-mask-hero)" /><circle cx="50" cy="27" r="7" /></svg></div>
+          <div class="yin-yang-anim"><i class="ti ti-yin-yang"></i></div>
           <h1 class="gq-title">Kinh Dịch</h1>
           <p class="gq-subtitle">64 Quẻ • Gieo đồng xu • Luận quẻ Kinh Dịch</p>
         </div>
 
         <!-- Question input -->
         <div class="question-box">
-          <label class="question-label">✨ Câu hỏi của bạn</label>
+          <label class="question-label"><i class="ti ti-sparkles"></i> Câu hỏi của bạn</label>
           <textarea id="gq-question" class="question-input" placeholder="Ví dụ: Tôi có nên chuyển việc vào lúc này không?" rows="3" maxlength="200"></textarea>
           <div class="suggested-questions">
             <span class="sq-label">Gợi ý câu hỏi:</span>
             <div class="sq-tags">
-              <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?">📅 Ngày hôm nay thế nào?</button>
-              <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?">💼 Có nên nghỉ việc không?</button>
-              <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?">💔 Có nên chia tay không?</button>
+              <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?"><i class="ti ti-calendar"></i> Ngày hôm nay thế nào?</button>
+              <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?"><i class="ti ti-briefcase"></i> Có nên nghỉ việc không?</button>
+              <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?"><i class="ti ti-heart-broken"></i> Có nên chia tay không?</button>
             </div>
           </div>
           <p class="question-hint">AI sẽ luận giải quẻ dựa trên câu hỏi của bạn</p>
         </div>
 
         <div class="intro-card">
-          <h3 class="intro-card-title">📜 Cách Gieo Quẻ</h3>
+          <h3 class="intro-card-title"><i class="ti ti-book"></i> Cách Gieo Quẻ</h3>
           <div class="intro-steps">
             <div class="intro-step">
               <span class="step-num">1</span>
@@ -161,7 +161,7 @@
           <div class="legend-item"><span class="coin coin-old-yin">◎</span><span>6đ = Lão Âm (hào động)</span></div>
         </div>
 
-        <button id="btn-start-throw" class="btn-gq-primary">Bắt Đầu Gieo <svg class="yin-yang-icon" viewBox="0 0 100 100" fill="currentColor" style="width: 1.1em; height: 1.1em; vertical-align: -0.18em; display: inline-block; margin-left: 6px;"><mask id="yy-mask-start"><rect width="100" height="100" fill="white" /><circle cx="50" cy="73" r="7" fill="black" /></mask><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="8" /><path d="M 50 4 A 46 46 0 0 0 50 96 A 23 23 0 0 1 50 50 A 23 23 0 0 0 50 4 Z" mask="url(#yy-mask-start)" /><circle cx="50" cy="27" r="7" /></svg></button>
+        <button id="btn-start-throw" class="btn-gq-primary">Bắt Đầu Gieo <i class="ti ti-yin-yang" style="margin-left:6px;"></i></button>
         <p class="intro-note">Máy sẽ tự gieo 3 đồng xu mỗi lần nhấn</p>
 
         <!-- SEO Content Section -->
@@ -232,7 +232,7 @@
         </div>
 
         <div class="throw-status">
-          <span class="throw-status-coin">🪙</span>
+          <span class="throw-status-coin"><i class="ti ti-coin"></i></span>
           <p id="throw-status-text" class="throw-status-text">Đang gieo hào 1/6...</p>
         </div>
       </div>
@@ -252,7 +252,7 @@
           <div id="hex-primary-lines" class="hex-lines-display"></div>
           <p class="hex-meaning" id="hex-primary-meaning"></p>
           <div class="hex-advice-box">
-            <span class="hex-advice-label">💡 Lời Khuyên</span>
+            <span class="hex-advice-label"><i class="ti ti-bulb"></i> Lời Khuyên</span>
             <p class="hex-advice" id="hex-primary-advice"></p>
           </div>
         </div>
@@ -273,7 +273,7 @@
             <div id="hex-changed-lines" class="hex-lines-display"></div>
             <p class="hex-meaning" id="hex-changed-meaning"></p>
             <div class="hex-advice-box">
-              <span class="hex-advice-label">🔮 Xu Hướng</span>
+              <span class="hex-advice-label"><i class="ti ti-wand"></i> Xu Hướng</span>
               <p class="hex-advice" id="hex-changed-advice"></p>
             </div>
           </div>
@@ -282,7 +282,7 @@
         <!-- AI Interpretation -->
         <div id="ai-section" class="ai-section gemini-glow-border hidden">
           <div class="ai-header">
-            <span class="ai-icon">🤖</span>
+            <span class="ai-icon"><i class="ti ti-wand"></i></span>
             <div>
               <p class="ai-label">Qwen AI · Luận quẻ cho bạn</p>
               <p id="ai-question-display" class="ai-question-display"></p>
@@ -296,11 +296,11 @@
           <p id="ai-error" class="ai-error hidden"></p>
           <div class="ai-chat-row">
             <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về quẻ..." maxlength="300">
-            <button id="btn-ask-ai" class="btn-chat-send">➤</button>
+            <button id="btn-ask-ai" class="btn-chat-send"><i class="ti ti-send"></i></button>
           </div>
         </div>
 
-        <button id="btn-new-cast" class="btn-gq-secondary">Gieo Quẻ Mới <svg class="yin-yang-icon" viewBox="0 0 100 100" fill="currentColor" style="width: 1.1em; height: 1.1em; vertical-align: -0.18em; display: inline-block; margin-left: 6px;"><mask id="yy-mask-new"><rect width="100" height="100" fill="white" /><circle cx="50" cy="73" r="7" fill="black" /></mask><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="8" /><path d="M 50 4 A 46 46 0 0 0 50 96 A 23 23 0 0 1 50 50 A 23 23 0 0 0 50 4 Z" mask="url(#yy-mask-new)" /><circle cx="50" cy="27" r="7" /></svg></button>
+        <button id="btn-new-cast" class="btn-gq-secondary">Gieo Quẻ Mới <i class="ti ti-refresh"></i></button>
       </div>
     </div>
 

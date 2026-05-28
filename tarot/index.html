@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap&subset=vietnamese" rel="stylesheet">
-  <link rel="stylesheet" href="../css/common.css?v=16">
+  <link rel="stylesheet" href="../css/common.css?v=17">
   <link rel="stylesheet" href="css/tarot.css?v=16">
 
   <!-- Vercel Web Analytics & Speed Insights -->
@@ -73,10 +73,10 @@
 
     <!-- HEADER -->
     <header class="t-header">
-      <a href="/" class="btn-back">← Trang Chủ</a>
-      <span class="t-header-title">🔮 Tarot</span>
+      <a href="/" class="btn-back"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
+      <span class="t-header-title"><i class="ti ti-wand"></i> Tarot</span>
       <div class="t-header-actions">
-        <button id="btn-history" class="btn-ghost" title="Lịch sử trải bài" aria-label="Mở lịch sử trải bài">📜</button>
+        <button id="btn-history" class="btn-ghost" title="Lịch sử trải bài" aria-label="Mở lịch sử trải bài"><i class="ti ti-history"></i></button>
         <button id="btn-restart" class="btn-ghost hidden">Xáo Lại</button>
       </div>
     </header>
@@ -85,21 +85,21 @@
     <div id="screen-spread" class="screen active">
       <div class="screen-inner">
         <div class="t-hero">
-          <div class="t-orb">🔮</div>
+          <div class="t-orb"><i class="ti ti-wand"></i></div>
           <h1 class="t-title">Bài Tarot</h1>
           <p class="t-subtitle">Nhập câu hỏi, chọn kiểu rải bài,<br>và để Tarot lên tiếng.</p>
         </div>
 
         <!-- Question input -->
         <div class="question-box">
-          <label class="question-label">✨ Câu hỏi của bạn</label>
+          <label class="question-label"><i class="ti ti-sparkles"></i> Câu hỏi của bạn</label>
           <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên chuyển việc vào lúc này không?" rows="3" maxlength="200"></textarea>
           <div class="suggested-questions">
             <span class="sq-label">Gợi ý câu hỏi:</span>
             <div class="sq-tags">
-              <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?">📅 Ngày hôm nay thế nào?</button>
-              <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?">💼 Có nên nghỉ việc không?</button>
-              <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?">💔 Có nên chia tay không?</button>
+              <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?"><i class="ti ti-calendar"></i> Ngày hôm nay thế nào?</button>
+              <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?"><i class="ti ti-briefcase"></i> Có nên nghỉ việc không?</button>
+              <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?"><i class="ti ti-heart-broken"></i> Có nên chia tay không?</button>
             </div>
           </div>
           <p class="question-hint">AI sẽ luận giải dựa trên câu hỏi và lá bài của bạn</p>
@@ -136,11 +136,11 @@
           <div class="deck-card dc-2"></div>
           <div class="deck-card dc-1"></div>
         </div>
-        <p id="shuffle-hint" class="shuffle-hint">Chạm vào bộ bài để truyền năng lượng & xáo bài... ✨</p>
+        <p id="shuffle-hint" class="shuffle-hint">Chạm vào bộ bài để truyền năng lượng & xáo bài... <i class="ti ti-sparkles"></i></p>
         <div class="hold-progress-track">
           <div id="hold-progress-bar" class="hold-progress-bar"></div>
         </div>
-        <button id="btn-draw" class="btn-tarot-primary hidden">Rút Bài ✨</button>
+        <button id="btn-draw" class="btn-tarot-primary hidden">Rút Bài <i class="ti ti-sparkles"></i></button>
       </div>
     </div>
 
@@ -162,7 +162,7 @@
           <div id="detail-keywords" class="detail-keywords"></div>
           <p id="detail-meaning" class="detail-meaning"></p>
           <div class="detail-advice-box">
-            <span class="advice-label">💡 Lời Khuyên</span>
+            <span class="advice-label"><i class="ti ti-bulb"></i> Lời Khuyên</span>
             <p id="detail-advice" class="detail-advice"></p>
           </div>
           <p id="detail-element" class="detail-element"></p>
@@ -170,7 +170,7 @@
         <!-- AI Interpretation -->
         <div id="ai-section" class="ai-section gemini-glow-border hidden">
           <div class="ai-header">
-            <span class="ai-icon">🤖</span>
+            <span class="ai-icon"><i class="ti ti-wand"></i></span>
             <div>
               <p class="ai-label">Qwen AI · Luận giải cho bạn</p>
               <p id="ai-question-display" class="ai-question-display"></p>
@@ -184,11 +184,11 @@
           <p id="ai-error" class="ai-error hidden"></p>
           <div class="ai-chat-row">
             <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về bài Tarot..." maxlength="300">
-            <button id="btn-ask-ai" class="btn-chat-send">➤</button>
+            <button id="btn-ask-ai" class="btn-chat-send"><i class="ti ti-send"></i></button>
           </div>
         </div>
 
-        <button id="btn-new-reading" class="btn-tarot-secondary">Rải Bài Mới 🔄</button>
+        <button id="btn-new-reading" class="btn-tarot-secondary">Rải Bài Mới <i class="ti ti-refresh"></i></button>
       </div>
     </div>
 
