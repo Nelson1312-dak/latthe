@@ -2419,7 +2419,3 @@ body[data-theme="forest"] {
 .toast { background: rgba(10,10,20,0.96); border-radius: 10px; }
 .gameover-title { font-size: 28px; }
 
-/* ---- LAYOUT: prevent fixed back-home-btn from overlapping screen content ---- */
-/* The button is position:fixed at top:12px (~42px tall), screens pad only 20px */
-#screen-setup { padding-top: 58px !important; }
-#screen-game  { padding-top: 58px !important; }

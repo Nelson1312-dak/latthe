@@ -47,11 +47,9 @@
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>
   <style>
-    .back-home-btn {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 999;
+    .ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
+    .splash-back-link {
+      align-self: flex-start;
       font-size: 12px;
       color: rgba(255,255,255,0.45);
       background: rgba(255,255,255,0.08);
@@ -62,8 +60,7 @@
       backdrop-filter: blur(8px);
       transition: color 0.2s, background 0.2s;
     }
-    .back-home-btn:hover { color: #fff; background: rgba(255,255,255,0.14); }
-    .ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
+    .splash-back-link:hover { color: #fff; background: rgba(255,255,255,0.14); }
   </style>
 
   <!-- JSON-LD Structured Data -->
@@ -84,12 +81,12 @@
   </script>
 </head>
 <body>
-  <a href="/" class="back-home-btn"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
   <div id="app">
 
     <!-- ========== SPLASH SCREEN ========== -->
     <div id="screen-splash" class="screen active">
       <div class="splash-content">
+        <a href="/" class="splash-back-link"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
         <div class="splash-hero">
           <div class="splash-emoji" aria-hidden="true">🍻</div>
           <h1 class="game-title">Drinking Games</h1>
@@ -97,16 +94,16 @@
         </div>
 
         <div class="splash-card-preview">
-          <div class="mini-card mc-truth">🤔 Sự Thật</div>
-          <div class="mini-card mc-dare">🔥 Thử Thách</div>
-          <div class="mini-card mc-never">🙈 Chưa Từng</div>
+          <div class="mini-card mc-truth"><i class="ti ti-message-question"></i> Sự Thật</div>
+          <div class="mini-card mc-dare"><i class="ti ti-flame"></i> Thử Thách</div>
+          <div class="mini-card mc-never"><i class="ti ti-eye-off"></i> Chưa Từng</div>
         </div>
 
         <div class="splash-action">
-          <p class="splash-action-title">Chọn Chế Độ Chơi 🎮</p>
+          <p class="splash-action-title">Chọn Chế Độ Chơi <i class="ti ti-device-gamepad-2"></i></p>
           <div class="splash-mode-buttons">
             <button class="btn btn-secondary splash-mode-btn splash-mode-featured" data-mode="solo">
-              <span class="mode-icon">📱</span>
+              <span class="mode-icon"><i class="ti ti-device-mobile"></i></span>
               <span class="mode-info">
                 <span class="mode-title">Chơi Chung 1 Máy</span>
                 <span class="mode-desc">Chơi ngay lập tức, không cần nhập tên phức tạp</span>
@@ -114,7 +111,7 @@
               <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </button>
             <button class="btn btn-secondary splash-mode-btn" data-mode="party">
-              <span class="mode-icon">👥</span>
+              <span class="mode-icon"><i class="ti ti-users"></i></span>
               <span class="mode-info">
                 <span class="mode-title">Chơi Hội Nhóm</span>
                 <span class="mode-desc">Nhập tên từng người chơi và luân phiên lật bài</span>
@@ -122,7 +119,7 @@
               <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </button>
             <button class="btn btn-secondary splash-mode-btn" data-mode="duo">
-              <span class="mode-icon">⚔️</span>
+              <span class="mode-icon"><i class="ti ti-swords"></i></span>
               <span class="mode-info">
                 <span class="mode-title">Đấu Đôi (2 Người)</span>
                 <span class="mode-desc">Chế độ thách đấu đối kháng xoay vòng cho 2 người</span>
@@ -130,7 +127,7 @@
               <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </button>
             <a href="/tuvi/" class="btn btn-secondary splash-mode-btn" style="text-decoration: none; color: inherit;">
-              <span class="mode-icon">🔮</span>
+              <span class="mode-icon"><i class="ti ti-stars"></i></span>
               <span class="mode-info">
                 <span class="mode-title">Lá Số Tử Vi AI</span>
                 <span class="mode-desc">Dựng lá số Tử Vi Đông Phương & tham vấn AI</span>
@@ -138,7 +135,7 @@
               <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
             </a>
             <button id="btn-go-setup" class="btn btn-secondary splash-setup-btn">
-              ⚙️ Tùy chỉnh chuyên sâu
+              <i class="ti ti-settings"></i> Tùy chỉnh chuyên sâu
             </button>
           </div>
           <p class="splash-footer">Hỗ trợ 1 - 12 người chơi</p>
@@ -157,9 +154,9 @@
         </div>
 
         <div class="game-mode-selector">
-          <button class="mode-tab-btn" data-mode="solo">📱 1 Máy (Chung)</button>
-          <button class="mode-tab-btn active" data-mode="party">👥 Hội nhóm</button>
-          <button class="mode-tab-btn" data-mode="duo">👥 Đấu đôi (2)</button>
+          <button class="mode-tab-btn" data-mode="solo"><i class="ti ti-device-mobile"></i> 1 Máy</button>
+          <button class="mode-tab-btn active" data-mode="party"><i class="ti ti-users"></i> Hội nhóm</button>
+          <button class="mode-tab-btn" data-mode="duo"><i class="ti ti-swords"></i> Đấu đôi</button>
         </div>
 
         <div id="setup-player-section" style="display:none">
@@ -169,25 +166,25 @@
             <button id="btn-add-player" class="btn btn-secondary btn-add-text">Thêm</button>
           </div>
           <button id="btn-quick-fill" class="btn btn-secondary btn-full btn-quick-fill">
-            🪄 Tạo nhanh 5 người chơi
+            <i class="ti ti-wand"></i> Tạo nhanh 5 người chơi
           </button>
         </div>
 
         <div class="intensity-selector">
-          <h3 class="intensity-title">✨ Vibe Tối Nay</h3>
+          <h3 class="intensity-title"><i class="ti ti-sparkles"></i> Vibe Tối Nay</h3>
           <div class="intensity-options">
             <button class="intensity-btn active" data-intensity="Nhap_Tiec">
-              <span class="intensity-emoji">🍻</span>
+              <span class="intensity-emoji"><i class="ti ti-beer"></i></span>
               <span class="intensity-label">Nhập Tiệc</span>
               <span class="intensity-desc">Ice-breaking</span>
             </button>
             <button class="intensity-btn" data-intensity="Noi_That">
-              <span class="intensity-emoji">🤔</span>
+              <span class="intensity-emoji"><i class="ti ti-message-question"></i></span>
               <span class="intensity-label">Nói Thật</span>
               <span class="intensity-desc">Bóc phốt</span>
             </button>
             <button class="intensity-btn" data-intensity="Chay_Pho">
-              <span class="intensity-emoji">🏎️</span>
+              <span class="intensity-emoji"><i class="ti ti-bolt"></i></span>
               <span class="intensity-label">Cháy Phố</span>
               <span class="intensity-desc">Tới bến</span>
             </button>
@@ -195,32 +192,32 @@
         </div>
 
         <div class="pack-selector">
-          <h3 class="selector-title">🃏 Chọn Bộ Bài</h3>
+          <h3 class="selector-title"><i class="ti ti-cards"></i> Chọn Bộ Bài</h3>
           <div class="pack-options">
             <label class="pack-checkbox-label">
               <input type="checkbox" class="pack-checkbox" value="truth" checked>
-              <span class="pack-custom-checkbox truth">🤔 Sự Thật</span>
+              <span class="pack-custom-checkbox truth"><i class="ti ti-message-question"></i> Sự Thật</span>
             </label>
             <label class="pack-checkbox-label">
               <input type="checkbox" class="pack-checkbox" value="dare" checked>
-              <span class="pack-custom-checkbox dare">🔥 Thử Thách</span>
+              <span class="pack-custom-checkbox dare"><i class="ti ti-flame"></i> Thử Thách</span>
             </label>
             <label class="pack-checkbox-label">
               <input type="checkbox" class="pack-checkbox" value="group" checked>
-              <span class="pack-custom-checkbox group">👥 Cả Nhóm</span>
+              <span class="pack-custom-checkbox group"><i class="ti ti-users"></i> Cả Nhóm</span>
             </label>
             <label class="pack-checkbox-label">
               <input type="checkbox" class="pack-checkbox" value="never_have_i_ever" checked>
-              <span class="pack-custom-checkbox never">🙈 Chưa Từng</span>
+              <span class="pack-custom-checkbox never"><i class="ti ti-eye-off"></i> Chưa Từng</span>
             </label>
             <label class="pack-checkbox-label">
               <input type="checkbox" class="pack-checkbox" value="vote" checked>
-              <span class="pack-custom-checkbox vote">🗳️ Bình Chọn</span>
+              <span class="pack-custom-checkbox vote"><i class="ti ti-checkbox"></i> Bình Chọn</span>
             </label>
           </div>
         </div>
 
-        <button id="btn-play" class="btn btn-primary btn-glow btn-large" disabled>Chơi Thôi! 🎲</button>
+        <button id="btn-play" class="btn btn-primary btn-glow btn-large" disabled>Chơi Thôi! <i class="ti ti-dice-3"></i></button>
         <div class="setup-bottom-space"></div>
       </div>
     </div>
@@ -233,7 +230,7 @@
           <span id="current-player-name" class="current-name">---</span>
         </div>
         <div class="deck-info">
-          <span class="deck-icon">🃏</span>
+          <span class="deck-icon"><i class="ti ti-cards"></i></span>
           <span id="cards-remaining">0</span>
         </div>
         <button id="btn-scoreboard" class="btn-icon" aria-label="Bảng xếp hạng"><i class="ti ti-trophy"></i></button>
