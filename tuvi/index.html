@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#e8930a">
   <title>Lá Số Tử Vi Đẩu Số — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=3">
+  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=4">
 </head>
 <body>
 
@@ -28,7 +28,7 @@
           <input type="text" id="f-name" class="field-input" placeholder="Họ và tên" required>
         </div>
 
-        <!-- Ngày / Tháng / Năm / Loại lịch -->
+        <!-- Ngày / Tháng / Năm -->
         <div class="field-row date-row">
           <select id="f-day" class="field-select day-sel" required>
             <option value="">Ngày</option>
@@ -38,10 +38,6 @@
           </select>
           <select id="f-year" class="field-select year-sel" required>
             <option value="">Năm</option>
-          </select>
-          <select id="f-cal" class="field-select cal-sel">
-            <option value="solar">Dương lịch</option>
-            <option value="lunar">Âm lịch</option>
           </select>
         </div>
 
@@ -64,13 +60,17 @@
           </select>
         </div>
 
-        <!-- Giới tính + Năm xem -->
-        <div class="field-row two-col-row">
-          <select id="f-gender" class="field-select">
+        <!-- Loại lịch + Giới tính + Năm xem -->
+        <div class="field-row three-col-row">
+          <select id="f-cal" class="field-select cal-sel">
+            <option value="solar">Dương lịch</option>
+            <option value="lunar">Âm lịch</option>
+          </select>
+          <select id="f-gender" class="field-select gender-sel">
             <option value="1">Nam giới</option>
             <option value="0">Nữ giới</option>
           </select>
-          <select id="f-namxem" class="field-select">
+          <select id="f-namxem" class="field-select namxem-sel">
             <!-- Filled by JS -->
           </select>
         </div>
