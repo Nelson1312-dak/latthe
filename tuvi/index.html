@@ -401,9 +401,11 @@
     });
 
     // ==================== STATE ====================
-    let currentChart  = null;
-    let chatHistory   = [];
-    let questionsAsked= 0;
+    let currentChart     = null;
+    let currentBirthYear = null;
+    let currentNamXem    = null;
+    let chatHistory      = [];
+    let questionsAsked   = 0;
 
     const form        = document.getElementById('tuvi-form');
     const chartWrapper= document.getElementById('chart-wrapper');
@@ -435,7 +437,9 @@
         gioSinh: hour, gioiTinh: gender,
         namXem, inputCalendar: cal
       });
-      currentChart = chart;
+      currentChart     = chart;
+      currentBirthYear = year;
+      currentNamXem    = namXem;
 
       // Reset chat state
       chatHistory = []; questionsAsked = 0;
@@ -627,7 +631,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             question: questionText,
-            context: buildSummary(currentChart),
+            context: buildSummary(currentChart, currentBirthYear, currentNamXem),
             type: 'tuvi',
             history: chatHistory
           })
@@ -660,23 +664,46 @@
       }
     }
 
-    function buildSummary(chart) {
+    function buildSummary(chart, birthYear, namXem) {
       const al = chart.thong_tin_goc.am_lich;
       const ti = chart.thong_tin_goc;
-      let menhInfo = '', thanInfo = '', currentDaiHan = '';
+      const currentAge = namXem - birthYear;
+      let menhInfo = '', thanInfo = '';
+      let currentDH = null, nextDH = null;
       const palaces = [];
+
       Object.entries(chart.la_so).forEach(([, p]) => {
         const chinh = p.chinh_tinh.join(', ') || 'Vô tinh';
         const phu = p.phu_tinh.slice(0, 3).join(', ');
-        // No ĐH number in label — prevents AI from echoing all đại hạn into summary
         palaces.push(`${p.ten_cung}: [${chinh}]${phu ? ' + ' + phu : ''}`);
         if (p.ten_cung === 'Mệnh') menhInfo = chinh;
         if (p.is_than) thanInfo = `${p.ten_cung} [${chinh}]`;
+        // Find the active đại hạn: largest dai_han that doesn't exceed currentAge
+        if (p.dai_han <= currentAge && (!currentDH || p.dai_han > currentDH.dai_han)) {
+          currentDH = p;
+        }
       });
+
+      // Find the next đại hạn
+      if (currentDH) {
+        const nextAge = currentDH.dai_han + 10;
+        Object.entries(chart.la_so).forEach(([, p]) => {
+          if (p.dai_han === nextAge) nextDH = p;
+        });
+      }
+
       let s = `Giới tính: ${ti.phan_loai} | Cục: ${ti.cuc} | Mệnh nạp âm: ${ti.menh_nap_am}\n`;
-      s += `Âm lịch: ${al.ngay}/${al.thang}/${al.nam} | Giờ: ${al.gio}\n`;
-      s += `Mệnh cung: [${menhInfo}] | Thân cung: ${thanInfo}\n\n`;
-      s += palaces.join('\n');
+      s += `Âm lịch: ${al.ngay}/${al.thang}/${al.nam} | Giờ: ${al.gio} | Tuổi hiện tại: ~${currentAge}\n`;
+      s += `Mệnh cung: [${menhInfo}] | Thân cung: ${thanInfo}\n`;
+      if (currentDH) {
+        const c = currentDH.chinh_tinh.join(', ') || 'Vô tinh';
+        s += `Đại hạn đang chạy (tuổi ${currentDH.dai_han}–${currentDH.dai_han + 9}): cung ${currentDH.ten_cung} [${c}]\n`;
+      }
+      if (nextDH) {
+        const n = nextDH.chinh_tinh.join(', ') || 'Vô tinh';
+        s += `Đại hạn kế tiếp (tuổi ${nextDH.dai_han}–${nextDH.dai_han + 9}): cung ${nextDH.ten_cung} [${n}]\n`;
+      }
+      s += '\nTóm tắt 12 cung:\n' + palaces.join('\n');
       return s;
     }
 
