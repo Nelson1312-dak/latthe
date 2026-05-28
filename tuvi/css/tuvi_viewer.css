@@ -393,8 +393,7 @@ h1 {
 }
 
 .ai-chat-log {
-  max-height: 400px;
-  overflow-y: auto;
+  max-height: none;
   display: flex;
   flex-direction: column;
   gap: 12px;

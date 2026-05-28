@@ -154,6 +154,7 @@
     let chatHistory = [];
     let isSavingProfile = false;
     let savedProfileId = null;
+    let questionsAsked = 0;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -177,8 +178,13 @@
       });
       currentChart = chart;
 
-      // Reset chat history
+      // Reset chat history and count
       chatHistory = [];
+      questionsAsked = 0;
+      questionInput.disabled = false;
+      askBtn.disabled = false;
+      questionInput.placeholder = "Nhập câu hỏi của bạn (ví dụ: cung Mệnh của tôi có tốt không?)...";
+      
       chatLog.innerHTML = `
         <div class="ai-message assistant">
           <p>Lá số Tử Vi Đẩu Số của bạn đã được lập thành công trên bàn số. Hãy chọn một chủ đề bên dưới hoặc nhập câu hỏi chi tiết của riêng bạn để bắt đầu luận giải cùng tôi.</p>
@@ -292,6 +298,10 @@
     // Quick prompt chip click listener
     document.querySelectorAll('.prompt-chip').forEach(chip => {
       chip.addEventListener('click', () => {
+        if (chatHistory.length > 0 && questionsAsked >= 5) {
+          alert("Bạn đã đặt tối đa 5 câu hỏi phụ cho lá số này. Vui lòng nhập thông tin để 'Dựng Lá Số Mới' để tiếp tục.");
+          return;
+        }
         const q = chip.getAttribute('data-question');
         handleAskAI(q);
       });
@@ -299,6 +309,15 @@
 
     async function handleAskAI(questionText) {
       if (!currentChart) return;
+
+      const isFollowUp = chatHistory.length > 0;
+      if (isFollowUp) {
+        if (questionsAsked >= 5) {
+          alert("Bạn đã đặt tối đa 5 câu hỏi phụ cho lá số này. Vui lòng nhập thông tin để 'Dựng Lá Số Mới' để tiếp tục.");
+          return;
+        }
+        questionsAsked++;
+      }
       
       // Clear input
       questionInput.value = '';
@@ -335,6 +354,9 @@
         if (!response.ok) {
           const errText = await response.text();
           appendMessage('assistant', `⚠️ Lỗi từ hệ thống AI: ${errText || 'Không phản hồi'}`);
+          if (isFollowUp) {
+            questionsAsked--; // Revert count on error so they can retry
+          }
         } else {
           const data = await response.json();
           const answer = data.answer || '';
@@ -350,10 +372,21 @@
           if (chatHistory.length > 8) {
             chatHistory = chatHistory.slice(-8);
           }
+
+          // Check if limit is reached
+          if (questionsAsked >= 5) {
+            questionInput.placeholder = "Đã đạt giới hạn 5 câu hỏi bổ sung...";
+            questionInput.disabled = true;
+            askBtn.disabled = true;
+            appendMessage('assistant', '💡 **Thông báo:** Bạn đã gửi đủ 5 câu hỏi bổ sung cho lá số này. Để tiếp tục hỏi thêm các câu hỏi khác, bạn vui lòng nhập lại thông tin để **Dựng Lá Số Mới** ở trên nhé!');
+          }
         }
       } catch (err) {
         removeTypingIndicator(loaderId);
         appendMessage('assistant', `⚠️ Không thể kết nối với máy chủ AI: ${err.message}`);
+        if (isFollowUp) {
+          questionsAsked--; // Revert count on error so they can retry
+        }
       } finally {
         setLoading(false);
       }
