@@ -3,27 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Khám phá Lật Bài - Trang web gieo quẻ online Kinh Dịch cổ truyền, bốc bài xem Tarot luận giải cuộc sống và chơi các bộ bài uống rượu drinking game cực kỳ vui nhộn cùng nhóm bạn. Hoàn toàn miễn phí, không quảng cáo!">
-  <meta name="keywords" content="gieo quẻ, gieo quẻ online, bốc bài, tarot, xem tarot, drinking game, bộ bài uống rượu, lật bài, bói bài tarot, trò chơi uống rượu, bói dịch online">
+  <meta name="description" content="Lật Bài — nền tảng luận mệnh & giải trí trực tuyến miễn phí: Lá Số Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot và Drinking Game. AI luận giải tiếng Việt chuyên sâu, không quảng cáo, không cần đăng ký.">
+  <meta name="keywords" content="gieo quẻ online, lá số tử vi, xem tarot online, bói bài tarot, tử vi đẩu số, kinh dịch online, drinking game, bộ bài uống rượu, lật bài, bói dịch online, tử vi ai, gieo quẻ kinh dịch">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Lật Bài">
   <meta name="theme-color" content="#06060c">
   <link rel="canonical" href="https://latbai.vn">
-  <title>Lật Bài — Gieo Quẻ Online, Bốc Bài Xem Tarot & Drinking Game</title>
+  <title>Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot & Drinking Game</title>
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://latbai.vn">
   <meta property="og:site_name" content="Lật Bài">
   <meta property="og:locale" content="vi_VN">
-  <meta property="og:title" content="Lật Bài — Gieo Quẻ Online, Bốc Bài Xem Tarot & Drinking Game">
-  <meta property="og:description" content="Gieo quẻ online Kinh Dịch, bốc bài xem Tarot luận giải chi tiết và chơi các bộ bài uống rượu drinking game cực vui cùng bạn bè. Miễn phí, không quảng cáo.">
+  <meta property="og:title" content="Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot & Drinking Game">
+  <meta property="og:description" content="Nền tảng luận mệnh & giải trí trực tuyến miễn phí: Lá Số Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot và Drinking Game. AI luận giải tiếng Việt, không quảng cáo.">
   <meta property="og:image" content="https://latbai.vn/images/og-main.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Lật Bài — Gieo Quẻ Online, Bốc Bài Xem Tarot & Drinking Game">
-  <meta name="twitter:description" content="Gieo quẻ online Kinh Dịch, bốc bài xem Tarot và quẩy cùng nhóm bạn với các bộ bài uống rượu drinking game. Miễn phí.">
+  <meta name="twitter:title" content="Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot & Drinking Game">
+  <meta name="twitter:description" content="Nền tảng luận mệnh & giải trí miễn phí: Tử Vi, Gieo Quẻ, Tarot, Drinking Game. AI luận giải tiếng Việt chuyên sâu.">
   <meta name="twitter:image" content="https://latbai.vn/images/og-main.png">
 
   <link rel="manifest" href="/manifest.webmanifest">
@@ -36,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap&subset=vietnamese" rel="stylesheet">
   <link rel="stylesheet" href="css/common.css?v=14">
-  <link rel="stylesheet" href="css/landing.css?v=14">
+  <link rel="stylesheet" href="css/landing.css?v=15">
 
   <!-- Vercel Web Analytics & Speed Insights -->
   <script>
@@ -46,95 +48,316 @@
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>
 
+  <!-- Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Lật Bài",
-    "url": "https://latbai.vn",
-    "description": "Nền tảng gieo quẻ online Kinh Dịch, bốc bài xem Tarot luận giải chi tiết và chơi các bộ bài uống rượu drinking game vui nhộn."
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://latbai.vn/#website",
+        "name": "Lật Bài",
+        "url": "https://latbai.vn",
+        "description": "Nền tảng luận mệnh và giải trí trực tuyến miễn phí: Lá Số Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot và Drinking Game.",
+        "inLanguage": "vi",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": { "@type": "EntryPoint", "urlTemplate": "https://latbai.vn/?q={search_term_string}" },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://latbai.vn/#organization",
+        "name": "Lật Bài",
+        "url": "https://latbai.vn",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://latbai.vn/images/icon.svg"
+        },
+        "description": "Nền tảng luận mệnh & giải trí trực tuyến thuần Việt. Miễn phí, không quảng cáo.",
+        "areaServed": "VN",
+        "availableLanguage": "vi"
+      },
+      {
+        "@type": "ItemList",
+        "name": "Các module của Lật Bài",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Lá Số Tử Vi AI", "url": "https://latbai.vn/tuvi/" },
+          { "@type": "ListItem", "position": 2, "name": "Gieo Quẻ Kinh Dịch Online", "url": "https://latbai.vn/gieoque/" },
+          { "@type": "ListItem", "position": 3, "name": "Xem Tarot Online", "url": "https://latbai.vn/tarot/" },
+          { "@type": "ListItem", "position": 4, "name": "Drinking Game", "url": "https://latbai.vn/drinking/" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Lật Bài là trang web gì?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Lật Bài là nền tảng luận mệnh và giải trí trực tuyến miễn phí thuần Việt, gồm 4 module: Lá Số Tử Vi AI (dựng và luận giải lá số Tử Vi Đẩu Số), Gieo Quẻ Kinh Dịch Online, Xem Tarot Online và Drinking Game. Mỗi module đều tích hợp AI luận giải tiếng Việt chuyên sâu."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Gieo quẻ Kinh Dịch online trên Lật Bài có chính xác không?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Gieo quẻ Kinh Dịch trên Lật Bài được tính toán theo đúng phương pháp cổ truyền — gieo 3 đồng xu 6 lần để tạo Quẻ Dịch theo phương pháp Ngọc Kinh, xác định quẻ chính và hào biến theo đúng 64 quẻ Kinh Dịch truyền thống. AI sau đó phân tích và luận giải theo câu hỏi cụ thể của bạn bằng tiếng Việt."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Lá số Tử Vi AI được tính toán như thế nào?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Lá số Tử Vi được dựng theo phương pháp Tử Vi Đẩu Số Bắc Phái cổ truyền — tính toán 12 cung, an sao chính tinh và phụ tinh dựa trên ngày tháng năm sinh âm lịch và giờ sinh. Hệ thống hiển thị đầy đủ chất lượng sao (Miếu/Vượng/Đắc/Hãm) và đại hạn. AI luận giải vận mệnh theo từng câu hỏi cụ thể bằng tiếng Việt thuần túy."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Xem Tarot online trên Lật Bài hoạt động như thế nào?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Trang Xem Tarot sử dụng bộ bài 78 lá Rider-Waite-Smith chuẩn. Bạn chọn chủ đề (sự nghiệp, tình duyên, tài lộc) và bốc 3 lá đại diện cho Quá Khứ – Hiện Tại – Tương Lai. AI phân tích ý nghĩa từng lá và luận giải tổng thể theo câu hỏi của bạn. Không cần kinh nghiệm xem bài, AI sẽ giải thích toàn bộ."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Lật Bài có hoàn toàn miễn phí không?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Có. Lật Bài hoàn toàn miễn phí — không phí đăng ký, không gói cao cấp, không quảng cáo. Tất cả tính năng từ Tử Vi AI, Gieo Quẻ, Xem Tarot đến Drinking Game đều mở toàn bộ và miễn phí mãi mãi."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Dữ liệu cá nhân và lịch sử xem bài có được lưu không?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Lịch sử xem bài được lưu ngay trên trình duyệt của bạn (localStorage) — không gửi lên máy chủ, không chia sẻ với bên thứ ba. Bạn không cần tạo tài khoản hay cung cấp bất kỳ thông tin cá nhân nào. Dữ liệu chỉ tồn tại trên thiết bị của bạn."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Drinking Game trên Lật Bài là gì?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Đây là bộ bài uống rượu (drinking game) thiết kế cho các buổi tụ tập nhóm bạn. Mỗi lượt lật bài sẽ xuất hiện thử thách, sự thật hay câu hỏi bình chọn hài hước — phù hợp cho tiệc, tất niên, hay những đêm vui cùng bạn bè. Chỉ dành cho người trên 18 tuổi."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Lật Bài có ứng dụng điện thoại không?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Lật Bài là Progressive Web App (PWA) — bạn có thể cài thẳng lên màn hình chính điện thoại từ trình duyệt mà không cần App Store hay Google Play. Trang web hoạt động mượt mà trên cả điện thoại Android, iPhone và máy tính."
+        }
+      }
+    ]
   }
   </script>
 </head>
 <body>
-  <!-- Google Gemini-style Ambient Fluid Glows -->
   <div class="gemini-glow-1"></div>
   <div class="gemini-glow-2"></div>
   <div class="gemini-glow-3"></div>
 
   <div class="l-page">
 
-    <!-- HERO -->
+    <!-- ===== HERO ===== -->
     <header class="l-hero">
       <img class="l-brand-mark" src="/images/icon.svg" alt="Lật Bài logo" width="80" height="80">
       <h1 class="l-brand-name">lật bài</h1>
       <p class="l-brand-sub">Tử Vi • Gieo Quẻ • Xem Tarot • Drinking Game</p>
+      <p class="l-hero-tagline">Nền tảng luận mệnh & giải trí trực tuyến — hoàn toàn miễn phí</p>
     </header>
 
     <div class="l-divider"></div>
 
-    <!-- MODULE CARDS -->
-    <main class="l-main-content">
+    <!-- ===== MODULE CARDS ===== -->
+    <main class="l-main-content" aria-label="Các tính năng chính">
 
-      <!-- Nhóm 1: Cổ Học & Huyền Học -->
-      <section class="l-group">
-        <h2 class="l-group-title">Cổ Học Phương Đông & Huyền Học</h2>
+      <section class="l-group" aria-labelledby="group1-title">
+        <h2 id="group1-title" class="l-group-title">Cổ Học Phương Đông & Huyền Học</h2>
         <div class="l-modules">
+
           <a class="l-card l-tuvi" href="/tuvi/">
             <div class="l-card-icon">☯️</div>
             <div class="l-card-body">
-              <p class="l-card-label">Lá Số Đông Phương</p>
-              <h2 class="l-card-name">Lá Số Tử Vi AI</h2>
-              <p class="l-card-desc">Dựng lá số Tử Vi chuẩn Đông Phương và luận giải thấu đáo vận hạn cuộc đời cùng AI.</p>
+              <p class="l-card-label">Lá Số Đông Phương <span class="l-badge">AI</span></p>
+              <h3 class="l-card-name">Lá Số Tử Vi AI</h3>
+              <p class="l-card-desc">Dựng lá số Tử Vi Đẩu Số chuẩn Bắc Phái. AI luận giải vận hạn, sự nghiệp, tình duyên chuyên sâu.</p>
             </div>
-            <span class="l-card-arrow">→</span>
+            <span class="l-card-arrow" aria-hidden="true">→</span>
           </a>
 
           <a class="l-card l-gieoque" href="/gieoque/">
-            <div class="l-card-icon"><svg class="yin-yang-icon" viewBox="0 0 100 100" fill="currentColor" style="width: 1em; height: 1em; vertical-align: middle; display: inline-block;"><mask id="yy-mask-landing"><rect width="100" height="100" fill="white" /><circle cx="50" cy="73" r="7" fill="black" /></mask><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="8" /><path d="M 50 4 A 46 46 0 0 0 50 96 A 23 23 0 0 1 50 50 A 23 23 0 0 0 50 4 Z" mask="url(#yy-mask-landing)" /><circle cx="50" cy="27" r="7" /></svg></div>
-            <div class="l-card-body">
-              <p class="l-card-label">Kinh Dịch Cổ Truyền</p>
-              <h2 class="l-card-name">Gieo Quẻ Online</h2>
-              <p class="l-card-desc">Gieo quẻ Kinh Dịch, gieo quẻ online bốc đồng xu và luận giải vận mệnh cùng AI chi tiết.</p>
+            <div class="l-card-icon">
+              <svg class="yin-yang-icon" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;display:inline-block;">
+                <mask id="yy-mask-landing"><rect width="100" height="100" fill="white"/><circle cx="50" cy="73" r="7" fill="black"/></mask>
+                <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="8"/>
+                <path d="M 50 4 A 46 46 0 0 0 50 96 A 23 23 0 0 1 50 50 A 23 23 0 0 0 50 4 Z" mask="url(#yy-mask-landing)"/>
+                <circle cx="50" cy="27" r="7"/>
+              </svg>
             </div>
-            <span class="l-card-arrow">→</span>
+            <div class="l-card-body">
+              <p class="l-card-label">Kinh Dịch Cổ Truyền <span class="l-badge l-badge-green">AI</span></p>
+              <h3 class="l-card-name">Gieo Quẻ Online</h3>
+              <p class="l-card-desc">Gieo quẻ Kinh Dịch theo phương pháp đồng xu cổ truyền. AI luận giải 64 quẻ và hào biến tức thì.</p>
+            </div>
+            <span class="l-card-arrow" aria-hidden="true">→</span>
           </a>
 
           <a class="l-card l-tarot" href="/tarot/">
             <div class="l-card-icon">🔮</div>
             <div class="l-card-body">
-              <p class="l-card-label">Bốc Bài Tây & Tarot</p>
-              <h2 class="l-card-name">Xem Tarot Online</h2>
-              <p class="l-card-desc">Bốc bài xem Tarot hàng ngày luận giải tình duyên, sự nghiệp, tài lộc cùng 78 lá bài.</p>
+              <p class="l-card-label">Bốc Bài Tây & Tarot <span class="l-badge l-badge-purple">AI</span></p>
+              <h3 class="l-card-name">Xem Tarot Online</h3>
+              <p class="l-card-desc">Bốc 3 lá Tarot Quá Khứ – Hiện Tại – Tương Lai. AI luận giải tình duyên, sự nghiệp, tài lộc.</p>
             </div>
-            <span class="l-card-arrow">→</span>
+            <span class="l-card-arrow" aria-hidden="true">→</span>
           </a>
+
         </div>
       </section>
 
-      <!-- Nhóm 2: Giải Trí & Nhóm Bạn -->
-      <section class="l-group">
-        <h2 class="l-group-title">Drinking Game & Giải Trí</h2>
+      <section class="l-group" aria-labelledby="group2-title">
+        <h2 id="group2-title" class="l-group-title">Drinking Game & Giải Trí</h2>
         <div class="l-modules drinking-group">
           <a class="l-card l-drink" href="/drinking/">
             <div class="l-card-icon">🍻</div>
             <div class="l-card-body">
               <p class="l-card-label">Giải Trí Nhóm Bạn</p>
-              <h2 class="l-card-name">Drinking Game</h2>
-              <p class="l-card-desc">Trải nghiệm bộ bài uống rượu drinking game đầy hài hước với Sự thật, Thử thách và Bình chọn.</p>
+              <h3 class="l-card-name">Drinking Game</h3>
+              <p class="l-card-desc">Bộ bài uống rượu drinking game đầy hài hước — Sự thật, Thử thách và Bình chọn cho các buổi tụ tập.</p>
             </div>
-            <span class="l-card-arrow">→</span>
+            <span class="l-card-arrow" aria-hidden="true">→</span>
           </a>
         </div>
       </section>
 
     </main>
 
+    <div class="l-divider l-divider--gap"></div>
+
+    <!-- ===== ABOUT ===== -->
+    <section class="l-about" aria-labelledby="about-heading">
+      <h2 id="about-heading" class="l-section-title">Về Lật Bài</h2>
+      <p class="l-about-lead">
+        Lật Bài là nền tảng luận mệnh và giải trí trực tuyến thuần Việt — kết hợp tri thức cổ học phương Đông với trí tuệ nhân tạo hiện đại. Dù bạn muốn khám phá vận mệnh qua <strong>Tử Vi Đẩu Số</strong>, <strong>Kinh Dịch</strong>, <strong>Tarot</strong>, hay đơn giản là quẩy cùng bạn bè với <strong>Drinking Game</strong> — Lật Bài đều có tất cả, hoàn toàn miễn phí và không quảng cáo.
+      </p>
+      <div class="l-features" role="list">
+        <div class="l-feature" role="listitem">
+          <span class="l-feature-icon" aria-hidden="true">✦</span>
+          <div>
+            <strong>Miễn phí vĩnh viễn</strong>
+            <p>Không phí ẩn, không gói premium, không quảng cáo — mãi mãi.</p>
+          </div>
+        </div>
+        <div class="l-feature" role="listitem">
+          <span class="l-feature-icon" aria-hidden="true">🤖</span>
+          <div>
+            <strong>AI luận giải tiếng Việt</strong>
+            <p>Phân tích chuyên sâu bằng AI, không dịch máy, không câu trả lời cố định.</p>
+          </div>
+        </div>
+        <div class="l-feature" role="listitem">
+          <span class="l-feature-icon" aria-hidden="true">🔒</span>
+          <div>
+            <strong>Riêng tư tuyệt đối</strong>
+            <p>Không yêu cầu đăng ký. Dữ liệu chỉ lưu trên thiết bị của bạn.</p>
+          </div>
+        </div>
+        <div class="l-feature" role="listitem">
+          <span class="l-feature-icon" aria-hidden="true">📱</span>
+          <div>
+            <strong>Mọi thiết bị</strong>
+            <p>Hoạt động mượt trên điện thoại và máy tính. Cài được như app.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="l-divider l-divider--gap"></div>
+
+    <!-- ===== FAQ ===== -->
+    <section class="l-faq" aria-labelledby="faq-heading">
+      <h2 id="faq-heading" class="l-section-title">Câu Hỏi Thường Gặp</h2>
+      <div class="l-faq-list">
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Lật Bài là trang web gì?</summary>
+          <p class="l-faq-a">Lật Bài là nền tảng luận mệnh và giải trí trực tuyến miễn phí thuần Việt, gồm 4 module: <strong>Lá Số Tử Vi AI</strong> (dựng và luận giải lá số Tử Vi Đẩu Số), <strong>Gieo Quẻ Kinh Dịch Online</strong>, <strong>Xem Tarot Online</strong> và <strong>Drinking Game</strong>. Mỗi module đều tích hợp AI luận giải tiếng Việt chuyên sâu, không quảng cáo, không cần đăng ký.</p>
+        </details>
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Gieo quẻ Kinh Dịch online trên Lật Bài có chính xác không?</summary>
+          <p class="l-faq-a">Gieo quẻ trên Lật Bài được tính toán theo đúng phương pháp cổ truyền — gieo 3 đồng xu 6 lần để tạo Quẻ Dịch theo phương pháp Ngọc Kinh, xác định quẻ chính và hào biến từ 64 quẻ Kinh Dịch. AI sau đó phân tích và luận giải theo câu hỏi cụ thể của bạn, không có câu trả lời cố định hay sao chép từ từ điển.</p>
+        </details>
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Lá số Tử Vi AI được tính toán như thế nào?</summary>
+          <p class="l-faq-a">Lá số Tử Vi được dựng theo phương pháp <strong>Tử Vi Đẩu Số Bắc Phái</strong> cổ truyền — tính toán 12 cung, an sao chính tinh (14 sao chính) và phụ tinh dựa trên ngày tháng năm sinh âm lịch và giờ sinh. Hệ thống hiển thị đầy đủ chất lượng sao (Miếu/Vượng/Đắc/Bình hòa/Hãm), đại hạn và tam phương tứ chính. AI luận giải vận mệnh tiếng Việt thuần túy theo từng câu hỏi cụ thể.</p>
+        </details>
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Xem Tarot online trên Lật Bài hoạt động như thế nào?</summary>
+          <p class="l-faq-a">Trang Xem Tarot sử dụng bộ bài 78 lá Rider-Waite-Smith chuẩn quốc tế. Bạn chọn chủ đề (sự nghiệp, tình duyên, tài lộc) và bốc 3 lá đại diện cho Quá Khứ – Hiện Tại – Tương Lai. AI phân tích ý nghĩa từng lá và luận giải tổng thể theo câu hỏi. Không cần kinh nghiệm xem bài trước — AI sẽ giải thích toàn bộ bằng tiếng Việt.</p>
+        </details>
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Lật Bài có hoàn toàn miễn phí không?</summary>
+          <p class="l-faq-a">Có. Lật Bài hoàn toàn miễn phí — không phí đăng ký, không gói cao cấp (premium), không quảng cáo. Toàn bộ tính năng từ Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot đến Drinking Game đều mở hoàn toàn và miễn phí mãi mãi.</p>
+        </details>
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Dữ liệu cá nhân và lịch sử xem bài có được lưu không?</summary>
+          <p class="l-faq-a">Lịch sử xem bài được lưu ngay trên trình duyệt của bạn (localStorage) — không gửi lên máy chủ bên ngoài, không chia sẻ với bên thứ ba. Bạn không cần tạo tài khoản hay cung cấp bất kỳ thông tin cá nhân nào để sử dụng Lật Bài.</p>
+        </details>
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Drinking Game trên Lật Bài là gì?</summary>
+          <p class="l-faq-a">Đây là bộ bài uống rượu (drinking game) được thiết kế riêng cho các buổi tụ tập nhóm bạn. Mỗi lượt lật bài sẽ xuất hiện thử thách, câu hỏi sự thật hay bình chọn hài hước — phù hợp cho tiệc tất niên, sinh nhật, hay những đêm vui cùng bạn bè. <em>Chỉ dành cho người từ 18 tuổi trở lên. Uống có trách nhiệm.</em></p>
+        </details>
+
+        <details class="l-faq-item">
+          <summary class="l-faq-q">Lật Bài có ứng dụng điện thoại không?</summary>
+          <p class="l-faq-a">Lật Bài là Progressive Web App (PWA) — bạn có thể cài thẳng lên màn hình chính điện thoại từ trình duyệt Chrome hoặc Safari mà không cần qua App Store hay Google Play. Trang web hoạt động mượt mà trên cả Android, iPhone và máy tính, kể cả khi mất mạng (offline shell).</p>
+        </details>
+
+      </div>
+    </section>
+
+    <div class="l-divider l-divider--gap"></div>
+
+    <!-- ===== FOOTER ===== -->
     <footer class="l-footer">
-      <p>Vui vẻ có trách nhiệm 🙏</p>
+      <div class="l-footer-inner">
+        <p class="l-footer-brand">Lật Bài</p>
+        <nav class="l-footer-nav" aria-label="Các module">
+          <a href="/tuvi/">Tử Vi AI</a>
+          <span aria-hidden="true">·</span>
+          <a href="/gieoque/">Gieo Quẻ</a>
+          <span aria-hidden="true">·</span>
+          <a href="/tarot/">Tarot</a>
+          <span aria-hidden="true">·</span>
+          <a href="/drinking/">Drinking Game</a>
+        </nav>
+        <p class="l-footer-note">Vui vẻ có trách nhiệm · Không dành cho người dưới 18 tuổi</p>
+        <p class="l-footer-copy">© 2025 latbai.vn · Miễn phí · Không quảng cáo · Bảo mật dữ liệu</p>
+      </div>
     </footer>
 
   </div>
+
   <script>
     // Mouse-tracked glow on landing cards
     document.querySelectorAll('.l-card').forEach(card => {
@@ -149,11 +372,11 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
-          .then((reg) => {
+          .then(reg => {
             reg.addEventListener('updatefound', () => {
-              const newWorker = reg.installing;
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              const nw = reg.installing;
+              nw.addEventListener('statechange', () => {
+                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
                   window.location.reload();
                 }
               });
@@ -161,13 +384,9 @@
           })
           .catch(() => {});
       });
-
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
+        if (!refreshing) { refreshing = true; window.location.reload(); }
       });
     }
   </script>
