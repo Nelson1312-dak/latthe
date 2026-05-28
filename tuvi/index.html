@@ -297,7 +297,6 @@
 
     // Can heavenly stems
     const CAN_NAMES = ['Giáp','Ất','Bính','Đinh','Mậu','Kỷ','Canh','Tân','Nhâm','Quý'];
-    const CAN_ABBR  = ['G',   'Á', 'B',   'Đ',   'M',  'K', 'C',   'T',  'N',   'Q'];
 
     // Mệnh chủ lookup by giờ sinh chi index (0=Tý…11=Hợi)
     const MENH_CHU = [
@@ -322,7 +321,7 @@
       // Ngũ Hổ Độn: Can of Dần palace
       const danCan = ((yearCanIdx % 5) * 2 + 2) % 10;
       const palaceCan = (danCan + ((chiIdx - 2 + 12) % 12)) % 10;
-      return CAN_ABBR[palaceCan];
+      return CAN_NAMES[palaceCan];
     }
 
     function getCanChiYear(lunarYear) {
