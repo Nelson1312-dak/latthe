@@ -145,6 +145,10 @@ body {
   scrollbar-width: none; /* Firefox */
 }
 
+#screen-splash, #screen-game, #screen-gameover {
+  overflow: hidden !important;
+}
+
 .screen::-webkit-scrollbar {
   display: none; /* Safari/Chrome */
 }
@@ -1019,6 +1023,7 @@ body {
   justify-content: space-between;
   margin-bottom: 20px;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .current-player-info {
@@ -1066,6 +1071,7 @@ body {
   justify-content: center;
   align-items: center;
   margin: 10px 0;
+  min-height: 380px; /* Prevent Safari flex collapse */
 }
 
 .card-container {
@@ -1082,13 +1088,14 @@ body {
   -webkit-transform-style: preserve-3d;
   transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
-  transform: perspective(1000px) rotateY(0deg);
-  -webkit-transform: perspective(1000px) rotateY(0deg);
+  transform: perspective(1000px) rotateY(0deg) translateZ(0);
+  -webkit-transform: perspective(1000px) rotateY(0deg) translateZ(0);
+  will-change: transform;
 }
 
 .card.flipped {
-  transform: perspective(1000px) rotateY(180deg);
-  -webkit-transform: perspective(1000px) rotateY(180deg);
+  transform: perspective(1000px) rotateY(180deg) translateZ(0);
+  -webkit-transform: perspective(1000px) rotateY(180deg) translateZ(0);
 }
 
 .card-face {
@@ -1101,6 +1108,9 @@ body {
   overflow: hidden;
   border: 2px solid var(--glass-border-rich);
   box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 /* Card Front (Back of card face) */
@@ -1231,6 +1241,7 @@ body {
 .card-back {
   background: rgba(22, 17, 39, 0.95);
   transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1296,6 +1307,7 @@ body {
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .post-flip-actions {
@@ -1315,6 +1327,7 @@ body {
   gap: 8px;
   overflow-x: auto;
   padding: 8px 0;
+  flex-shrink: 0;
 }
 
 .player-indicator {
@@ -1876,7 +1889,10 @@ body {
     height: 30px;
   }
 
-  /* Game Area Scaling */
+  .card-area {
+    min-height: 320px !important;
+  }
+
   .card-container {
     width: 230px;
     height: 320px;
@@ -1991,6 +2007,9 @@ body {
 
 /* Landscape orientation / extremely small screens */
 @media (max-width: 350px) {
+  .card-area {
+    min-height: 290px !important;
+  }
   .card-container {
     width: 210px;
     height: 290px;

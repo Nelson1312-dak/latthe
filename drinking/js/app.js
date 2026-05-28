@@ -32,17 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const packSelector = document.querySelector('.pack-selector');
 
-  function showPackSelector() {
-    if (packSelector.classList.contains('pack-hidden')) {
-      packSelector.classList.remove('pack-hidden');
-      packSelector.classList.add('pack-visible');
-    }
-  }
-
-  function resetPackSelector() {
-    packSelector.classList.remove('pack-visible');
-    packSelector.classList.add('pack-hidden');
-  }
+  function showPackSelector() {}
+  function resetPackSelector() {}
 
   // Common setup elements
   const modeTabBtns = document.querySelectorAll('.mode-tab-btn');
