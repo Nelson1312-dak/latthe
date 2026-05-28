@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 1. EVENT BINDING: SPLASH SCREEN
   // ==========================================
-  const splashModeBtns = document.querySelectorAll('.splash-mode-btn');
+  const splashModeBtns = document.querySelectorAll('.splash-mode-btn[data-mode]');
   splashModeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;
