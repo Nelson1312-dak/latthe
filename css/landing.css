@@ -17,6 +17,7 @@
   --c-gieoque: #059669; /* Emerald/Jade */
   --c-drink:   #ea580c; /* Neon Orange */
   --c-tarot:   #8b5cf6; /* Cyber Purple */
+  --c-tuvi:    #fbbf24; /* Amber Gold */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -143,6 +144,7 @@ a { text-decoration: none; color: inherit; }
 .l-card:nth-child(1) { animation-delay: 0.1s; --hover-glow: rgba(5, 150, 105, 0.12); }
 .l-card:nth-child(2) { animation-delay: 0.2s; --hover-glow: rgba(234, 88, 12, 0.12); }
 .l-card:nth-child(3) { animation-delay: 0.3s; --hover-glow: rgba(139, 92, 246, 0.12); }
+.l-card:nth-child(4) { animation-delay: 0.4s; --hover-glow: rgba(251, 191, 36, 0.12); }
 
 @keyframes card-enter {
   from { opacity: 0; transform: translateY(20px); }
@@ -185,6 +187,7 @@ a { text-decoration: none; color: inherit; }
 .l-gieoque::before { background: var(--c-gieoque); }
 .l-drink::before   { background: var(--c-drink); }
 .l-tarot::before   { background: var(--c-tarot); }
+.l-tuvi::before    { background: var(--c-tuvi); }
 
 .l-gieoque:hover { border-color: rgba(5, 150, 105, 0.35); }
 .l-gieoque:hover::before { box-shadow: 0 0 15px var(--c-gieoque); }
@@ -194,6 +197,9 @@ a { text-decoration: none; color: inherit; }
 
 .l-tarot:hover   { border-color: rgba(139, 92, 246, 0.35); }
 .l-tarot:hover::before { box-shadow: 0 0 15px var(--c-tarot); }
+
+.l-tuvi:hover    { border-color: rgba(251, 191, 36, 0.35); }
+.l-tuvi:hover::before { box-shadow: 0 0 15px var(--c-tuvi); }
 
 .l-card-icon {
   font-size: 44px;
@@ -222,6 +228,7 @@ a { text-decoration: none; color: inherit; }
 .l-gieoque .l-card-label { color: #34d399; }
 .l-drink   .l-card-label { color: #fb923c; }
 .l-tarot   .l-card-label { color: #a78bfa; }
+.l-tuvi    .l-card-label { color: #fbbf24; }
 
 .l-card-name {
   font-size: 20px;

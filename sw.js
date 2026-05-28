@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v26-2026-05-28';
+const CACHE_VERSION = 'v27-2026-05-28';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -43,6 +43,11 @@ const SHELL = [
   '/drinking/js/game.js',
   '/drinking/js/touch.js',
   '/drinking/js/app.js',
+  // Tu Vi module
+  '/tuvi/',
+  '/tuvi/index.html',
+  '/tuvi/css/tuvi_viewer.css',
+  '/tuvi/js/tuvi.js',
 ];
 
 self.addEventListener('install', (event) => {

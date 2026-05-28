@@ -1,0 +1,519 @@
+/**
+ * Tử Vi Đẩu Số Calculation Module (ES6+)
+ * 
+ * This module converts Gregorian date/time to Vietnamese Lunar date/time,
+ * determines the Mệnh, Thân, Cục, and places the major/minor stars
+ * on the 12 earthly branch palaces (Tý to Hợi) according to traditional rules.
+ * 
+ * Author: Antigravity AI
+ * Copyright (c) 2026. All rights reserved.
+ */
+
+// ==========================================
+// 1. ASTRONOMICAL LUNAR CALENDAR ALGORITHMS
+// (Based on Dr. Ho Ngoc Duc's algorithms)
+// ==========================================
+
+const PI = Math.PI;
+
+function INT(d) {
+  return Math.floor(d);
+}
+
+/**
+ * Calculates Julian Day Number from Gregorian Date
+ */
+function jdFromDate(dd, mm, yy) {
+  let a, y, m, jd;
+  a = INT((14 - mm) / 12);
+  y = yy + 4800 - a;
+  m = mm + 12 * a - 3;
+  jd = dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - INT(y / 100) + INT(y / 400) - 32045;
+  if (jd < 2299161) {
+    jd = dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - 32083;
+  }
+  return jd;
+}
+
+/**
+ * Converts Julian Day Number to Gregorian Date
+ */
+function jdToDate(jd) {
+  let a, b, c, d, e, m, day, month, year;
+  if (jd > 2299160) {
+    a = jd + 32044;
+    b = INT((4 * a + 3) / 146097);
+    c = a - INT((b * 146097) / 4);
+  } else {
+    b = 0;
+    c = jd + 32082;
+  }
+  d = INT((4 * c + 3) / 1461);
+  e = c - INT((1461 * d) / 4);
+  m = INT((5 * e + 2) / 153);
+  day = e - INT((153 * m + 2) / 5) + 1;
+  month = m + 3 - 12 * INT(m / 10);
+  year = b * 100 + d - 4800 + INT(m / 10);
+  return [day, month, year];
+}
+
+/**
+ * Calculates the time of the k-th new moon since 1/1/1900 13:52 UTC
+ */
+function NewMoon(k) {
+  let T, T2, T3, dr, Jd1, M, Mpr, F, C1, deltat, JdNew;
+  T = k / 1236.85;
+  T2 = T * T;
+  T3 = T2 * T;
+  dr = PI / 180;
+  Jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * T2 - 0.000000155 * T3;
+  Jd1 = Jd1 + 0.00033 * Math.sin((166.56 + 132.87 * T - 0.009173 * T2) * dr);
+  M = 359.2242 + 29.10535608 * k - 0.0000333 * T2 - 0.00000347 * T3;
+  Mpr = 306.0253 + 385.81691806 * k + 0.0107306 * T2 + 0.00001236 * T3;
+  F = 21.2964 + 390.67050646 * k - 0.0016528 * T2 - 0.00000239 * T3;
+  C1 = (0.1734 - 0.000393 * T) * Math.sin(M * dr) + 0.0021 * Math.sin(2 * dr * M);
+  C1 = C1 - 0.4068 * Math.sin(Mpr * dr) + 0.0161 * Math.sin(dr * 2 * Mpr);
+  C1 = C1 - 0.0004 * Math.sin(dr * 3 * Mpr);
+  C1 = C1 + 0.0104 * Math.sin(dr * 2 * F) - 0.0051 * Math.sin(dr * (M + Mpr));
+  C1 = C1 - 0.0074 * Math.sin(dr * (M - Mpr)) + 0.0004 * Math.sin(dr * (2 * F + M));
+  C1 = C1 - 0.0004 * Math.sin(dr * (2 * F - M)) - 0.0006 * Math.sin(dr * (2 * F + Mpr));
+  C1 = C1 + 0.0010 * Math.sin(dr * (2 * F - Mpr)) + 0.0005 * Math.sin(dr * (2 * Mpr + M));
+  if (T < -11) {
+    deltat = 0.001 + 0.000839 * T + 0.0002261 * T2 - 0.00000845 * T3 - 0.000000081 * T * T3;
+  } else {
+    deltat = -0.000278 + 0.000265 * T + 0.000262 * T2;
+  }
+  JdNew = Jd1 + C1 - deltat;
+  return JdNew;
+}
+
+/**
+ * Calculates sun's true longitude
+ */
+function SunLongitude(jdn) {
+  let T, T2, dr, M, L0, DL, L;
+  T = (jdn - 2451545.0) / 36525;
+  T2 = T * T;
+  dr = PI / 180;
+  M = 357.52910 + 35999.05030 * T - 0.0001559 * T2 - 0.00000048 * T * T2;
+  L0 = 280.46645 + 36000.76983 * T + 0.0003032 * T2;
+  DL = (1.914600 - 0.004817 * T - 0.000014 * T2) * Math.sin(dr * M);
+  DL = DL + (0.019993 - 0.000101 * T) * Math.sin(dr * 2 * M) + 0.000290 * Math.sin(dr * 3 * M);
+  L = L0 + DL;
+  L = L * dr;
+  L = L - PI * 2 * (INT(L / (PI * 2)));
+  if (L < 0) L += PI * 2;
+  return L;
+}
+
+function getSunLongitude(dayNumber, timeZone) {
+  return INT(SunLongitude(dayNumber - 0.5 - timeZone / 24) / PI * 6);
+}
+
+function getNewMoonDay(k, timeZone) {
+  return INT(NewMoon(k) + 0.5 + timeZone / 24);
+}
+
+function getLunarMonth11(yy, timeZone) {
+  let k, off, nm, sunLong;
+  off = jdFromDate(31, 12, yy) - 2415021;
+  k = INT(off / 29.530588853);
+  nm = getNewMoonDay(k, timeZone);
+  sunLong = getSunLongitude(nm, timeZone);
+  if (sunLong >= 9) {
+    nm = getNewMoonDay(k - 1, timeZone);
+  }
+  return nm;
+}
+
+function getLeapMonthOffset(a11, timeZone) {
+  let k, last, arc, i;
+  k = INT((a11 - 2415021.076998695) / 29.530588853 + 0.5);
+  last = 0;
+  i = 1;
+  arc = getSunLongitude(getNewMoonDay(k + i, timeZone), timeZone);
+  do {
+    last = arc;
+    i++;
+    arc = getSunLongitude(getNewMoonDay(k + i, timeZone), timeZone);
+  } while (arc != last && i < 14);
+  return i - 1;
+}
+
+/**
+ * Converts Gregorian solar date (dd/mm/yyyy) to Lunar date [lunarDay, lunarMonth, lunarYear, lunarLeap]
+ * Timezone offset: 7.0 for Vietnam
+ */
+function convertSolar2Lunar(dd, mm, yy, timeZone = 7.0) {
+  let k, dayNumber, monthStart, a11, b11, lunarDay, lunarMonth;
+  let lunarYear, lunarLeap, diff, leapMonthDiff;
+  
+  dayNumber = jdFromDate(dd, mm, yy);
+  k = INT((dayNumber - 2415021.076998695) / 29.530588853);
+  monthStart = getNewMoonDay(k + 1, timeZone);
+  if (monthStart > dayNumber) {
+    monthStart = getNewMoonDay(k, timeZone);
+  }
+  
+  a11 = getLunarMonth11(yy, timeZone);
+  b11 = a11;
+  if (a11 >= monthStart) {
+    lunarYear = yy;
+    a11 = getLunarMonth11(yy - 1, timeZone);
+  } else {
+    lunarYear = yy + 1;
+    b11 = getLunarMonth11(yy + 1, timeZone);
+  }
+  
+  lunarDay = dayNumber - monthStart + 1;
+  diff = INT((monthStart - a11) / 29);
+  lunarLeap = 0;
+  lunarMonth = diff + 11;
+  
+  if (b11 - a11 > 365) {
+    leapMonthDiff = getLeapMonthOffset(a11, timeZone);
+    if (diff >= leapMonthDiff) {
+      lunarMonth = diff + 10;
+      if (diff == leapMonthDiff) {
+        lunarLeap = 1;
+      }
+    }
+  }
+  if (lunarMonth > 12) {
+    lunarMonth = lunarMonth - 12;
+  }
+  if (lunarMonth >= 11 && diff < 4) {
+    lunarYear -= 1;
+  }
+  return [lunarDay, lunarMonth, lunarYear, lunarLeap];
+}
+
+// ==========================================
+// 2. CONSTANTS AND LUNI-SOLAR TERMINOLOGY
+// ==========================================
+
+const CANS = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
+const CHIS = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
+
+// Mapping of 12 branch houses for output JSON
+const CUNG_KEYS = ["Ty", "Suu", "Dan", "Mao", "Thin", "Ty2", "Ngo", "Mui", "Than", "Dau", "Tuat", "Hoi"];
+
+// 12 Palaces in order (counter-clockwise from Mệnh)
+const PALACE_NAMES = [
+  "Mệnh", "Phụ Mẫu", "Phúc Đức", "Điền Trạch", "Quan Lộc", "Nô Bộc",
+  "Thiên Di", "Tật Ách", "Tài Bạch", "Tử Tức", "Phu Thê", "Huynh Đệ"
+];
+
+// ==========================================
+// 3. UTILITY METHODS FOR CAN-CHI & METAPHYSICS
+// ==========================================
+
+function xetSo(so) {
+  let ret = so % 12;
+  if (ret <= 0) ret += 12;
+  return ret;
+}
+
+/**
+ * Gets Can-Chi of the year
+ */
+function getCanChiYear(lunarYear) {
+  let canIdx = (lunarYear - 4) % 10;
+  if (canIdx < 0) canIdx += 10;
+  let chiIdx = (lunarYear - 4) % 12;
+  if (chiIdx < 0) chiIdx += 12;
+  return { canIdx, chiIdx, text: `${CANS[canIdx]} ${CHIS[chiIdx]}` };
+}
+
+/**
+ * Gets Can-Chi of the lunar month
+ */
+function getCanChiMonth(lunarMonth, yearCanIdx) {
+  const startCanIndex = (yearCanIdx % 5) * 2 + 2; // Can of Month 1 (Dần)
+  const monthCanIdx = (startCanIndex + (lunarMonth - 1)) % 10;
+  const monthChiIdx = (lunarMonth - 1 + 2) % 12; // Month 1 is Dần (index 2)
+  return `${CANS[monthCanIdx]} ${CHIS[monthChiIdx]}`;
+}
+
+/**
+ * Gets Can-Chi of the day from Julian Day Number
+ */
+function getCanChiDay(jdn) {
+  let canIdx = (jdn + 9) % 10;
+  let chiIdx = (jdn + 1) % 12;
+  return { canIdx, chiIdx, text: `${CANS[canIdx]} ${CHIS[chiIdx]}` };
+}
+
+/**
+ * Gets Can-Chi of the hour
+ */
+function getCanChiHour(gioSinhIndex, dayCanIdx) {
+  const startCanIdx = (dayCanIdx % 5) * 2; // Can of Tý hour
+  const hourCanIdx = (startCanIdx + (gioSinhIndex - 1)) % 10;
+  const hourChiIdx = (gioSinhIndex - 1) % 12;
+  return `${CANS[hourCanIdx]} ${CHIS[hourChiIdx]}`;
+}
+
+/**
+ * Calculates Cục (State/Element) based on Can of Mệnh Cung and Chi of Mệnh Cung
+ */
+function getCuc(menhCanIndex, menhChiIndex) {
+  // Can value assignment for Nạp Âm
+  // Giáp/Ất=1, Bính/Đinh=2, Mậu/Kỷ=3, Canh/Tân=4, Nhâm/Quý=5
+  const canVal = Math.floor(menhCanIndex / 2) + 1;
+  
+  // Chi value assignment for Nạp Âm
+  // Tý/Sửu/Ngọ/Mùi=0, Dần/Mão/Thân/Dậu=1, Thìn/Tỵ/Tuất/Hợi=2
+  const CHI_VALS = [0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2];
+  const chiVal = CHI_VALS[menhChiIndex];
+  
+  let sum = canVal + chiVal;
+  if (sum > 5) sum -= 5;
+  
+  const CUC_MAP = {
+    1: { name: "Kim Tứ Cục", value: 4 },
+    2: { name: "Thủy Nhị Cục", value: 2 },
+    3: { name: "Hỏa Lục Cục", value: 6 },
+    4: { name: "Thổ Ngũ Cục", value: 5 },
+    5: { name: "Mộc Tam Cục", value: 3 }
+  };
+  return CUC_MAP[sum];
+}
+
+// ==========================================
+// 4. MAIN TỬ VI CALCULATION API
+// ==========================================
+
+/**
+ * Main chart calculation function
+ * @param {Object} input - { namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }
+ * @returns {Object} JSON result matching target structure
+ */
+export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh }) {
+  // 1. Julian Day & Hour calculation
+  // In Lunar calendar, 23:00 - 00:59 counts as Tý hour of the next day.
+  let jdn = jdFromDate(ngaySinh, thangSinh, namSinh);
+  const hourIndex = (gioSinh >= 23) ? 1 : Math.floor((gioSinh + 1) / 2) + 1; // 1-indexed, Tý=1, Sửu=2 ... Hợi=12
+  
+  if (gioSinh >= 23) {
+    jdn += 1; // Transition to next day
+  }
+  
+  // Convert JDN back to Gregorian date to compute adjusted Lunar date
+  const [adjDay, adjMonth, adjYear] = jdToDate(jdn);
+  const [lunarDay, lunarMonth, lunarYear, lunarLeap] = convertSolar2Lunar(adjDay, adjMonth, adjYear, 7.0);
+  
+  // 2. Leap Month rule handling
+  // If born in a leap month:
+  // - Before noon (11:00) on day 15: treat as the main month.
+  // - Noon (11:00) day 15 onwards: treat as the next month.
+  let thangTuVi = lunarMonth;
+  if (lunarLeap === 1) {
+    if (lunarDay > 15 || (lunarDay === 15 && gioSinh >= 11)) {
+      thangTuVi = lunarMonth + 1;
+      if (thangTuVi > 12) thangTuVi = 1;
+    }
+  }
+  
+  // 3. Can Chi values
+  const yearCanChi = getCanChiYear(lunarYear);
+  const monthCanChiStr = getCanChiMonth(thangTuVi, yearCanChi.canIdx);
+  const dayCanChi = getCanChiDay(jdn);
+  const hourCanChiStr = getCanChiHour(hourIndex, dayCanChi.canIdx);
+  
+  // Gender & Polarity classification
+  // Even years (Giáp, Bính, Mậu, Canh, Nhâm) are Dương. Odd are Âm.
+  const isDuong = (yearCanChi.canIdx % 2 === 0);
+  const phanLoai = (isDuong ? "Dương " : "Âm ") + (gioiTinh === 1 ? "Nam" : "Nữ");
+  
+  // 4. Mệnh & Thân Palace Placement (1-indexed: Tý=1, Sửu=2... Hợi=12)
+  // Mệnh: Start at Dần (3), move forward month steps, backward hour steps.
+  const menhPos = xetSo(3 + thangTuVi - hourIndex);
+  // Thân: Start at Dần (3), move forward month steps, forward hour steps.
+  const thanPos = xetSo(3 + thangTuVi + hourIndex - 2);
+  
+  const menhChiIndex = menhPos - 1; // 0-indexed
+  
+  // Can index of Mệnh cung (Ngũ hổ độn rule)
+  // Distance from Dần (index 2) to menhChiIndex
+  const distFromDan = (menhChiIndex - 2 + 12) % 12;
+  const startCanOfDan = (yearCanChi.canIdx % 5) * 2 + 2;
+  const menhCanIndex = (startCanOfDan + distFromDan) % 10;
+  
+  // Cục determination
+  const cuc = getCuc(menhCanIndex, menhChiIndex);
+  
+  // 5. Star Placement Calculations
+  // Prepare palaces database (0-indexed, Tý=0... Hợi=11)
+  const laSoPalaces = Array.from({ length: 12 }, (_, i) => ({
+    ten_cung: PALACE_NAMES[(menhPos - 1 - i + 12) % 12],
+    chinh_tinh: [],
+    phu_tinh: [],
+    dai_han: 0
+  }));
+  
+  // Đại Hạn (10-year major cycle age) calculation
+  // Direction: Dương Nam / Âm Nữ is clockwise (+1), else counter-clockwise (-1).
+  const isDuongNamAmNu = (isDuong && gioiTinh === 1) || (!isDuong && gioiTinh === 0);
+  const direction = isDuongNamAmNu ? 1 : -1;
+  const startAge = cuc.value;
+  
+  for (let k = 0; k < 12; k++) {
+    const palaceIdx = (menhPos - 1 + direction * k + 12) % 12;
+    laSoPalaces[palaceIdx].dai_han = startAge + 10 * k;
+  }
+  
+  // Vòng Tử Vi & Thiên Phủ Star Tables (1-indexed positions)
+  // Columns correspond to Lunar Days 1 to 30
+  const cucTables = {
+    2: [2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 1, 1, 2, 2, 3, 3, 4, 4, 5],
+    3: [5, 2, 3, 6, 3, 4, 7, 4, 5, 8, 5, 6, 9, 6, 7, 10, 7, 8, 11, 8, 9, 12, 9, 10, 1, 10, 11, 2, 11, 12],
+    4: [12, 5, 2, 3, 1, 6, 3, 4, 2, 7, 4, 5, 3, 8, 5, 6, 4, 9, 6, 7, 5, 10, 7, 8, 6, 11, 8, 9, 7, 12],
+    5: [7, 12, 5, 2, 3, 8, 1, 6, 3, 4, 9, 2, 7, 4, 5, 10, 3, 8, 5, 6, 11, 4, 9, 6, 7, 12, 5, 10, 7, 8],
+    6: [10, 7, 12, 5, 2, 3, 11, 8, 1, 6, 3, 4, 12, 9, 2, 7, 4, 5, 1, 10, 3, 8, 5, 6, 2, 11, 4, 9, 6, 7]
+  };
+  
+  // Position of Tử Vi star
+  const tv = cucTables[cuc.value][lunarDay - 1];
+  
+  // Position of Thiên Phủ star (symmetric to Tử Vi across horizontal Dần-Thân axis)
+  const tp = xetSo(6 - tv);
+  
+  // Helper list to map positions of all major stars
+  const starPositions = {
+    // Vòng Tử Vi (6 Chính tinh)
+    "Tử Vi": tv,
+    "Liêm Trinh": xetSo(tv + 4),
+    "Thiên Đồng": xetSo(tv + 7),
+    "Vũ Khúc": xetSo(tv + 8),
+    "Thái Dương": xetSo(tv + 9),
+    "Thiên Cơ": xetSo(tv + 11),
+    
+    // Vòng Thiên Phủ (8 Chính tinh)
+    "Thiên Phủ": tp,
+    "Thái Âm": xetSo(tp + 1),
+    "Tham Lang": xetSo(tp + 2),
+    "Cự Môn": xetSo(tp + 3),
+    "Thiên Tướng": xetSo(tp + 4),
+    "Thiên Lương": xetSo(tp + 5),
+    "Thất Sát": xetSo(tp + 6),
+    "Phá Quân": xetSo(tp + 10),
+    
+    // Month/Hour Stars needed for Tứ Hóa mapping
+    "Văn Xương": xetSo(11 - hourIndex + 1),
+    "Văn Khúc": xetSo(5 + hourIndex - 1),
+    "Tả Phù": xetSo(5 + thangTuVi - 1),
+    "Hữu Bật": xetSo(11 - thangTuVi + 1)
+  };
+  
+  // Place 14 Chính tinh into palaces
+  Object.entries(starPositions).forEach(([name, pos]) => {
+    if (name !== "Văn Xương" && name !== "Văn Khúc" && name !== "Tả Phù" && name !== "Hữu Bật") {
+      laSoPalaces[pos - 1].chinh_tinh.push(name);
+    }
+  });
+  
+  // Auxiliary stars (Phụ tinh) calculations
+  const tc1 = yearCanChi.canIdx + 1; // 1-indexed Can (Giáp = 1)
+  const dc1 = yearCanChi.chiIdx + 1; // 1-indexed Chi (Tý = 1)
+  
+  // Lộc Tồn, Kình Dương, Đà La placement
+  const ltTable = [3, 4, 6, 7, 6, 7, 9, 10, 12, 1];
+  const locTonPos = ltTable[tc1 - 1];
+  const kinhDuongPos = xetSo(locTonPos + 1);
+  const daLaPos = xetSo(locTonPos - 1);
+  
+  // Thiên Khôi & Thiên Việt placement
+  let khôiPos = 0, việtPos = 0;
+  switch (tc1) {
+    case 1: // Giáp
+    case 5: // Mậu
+      khôiPos = 2; // Sửu
+      việtPos = 8; // Mùi
+      break;
+    case 2: // Ất
+    case 6: // Kỷ
+      khôiPos = 1; // Tý
+      việtPos = 9; // Thân
+      break;
+    case 7: // Canh
+    case 8: // Tân
+      khôiPos = 7; // Ngọ
+      việtPos = 3; // Dần
+      break;
+    case 3: // Bính
+    case 4: // Đinh
+      khôiPos = 12; // Hợi
+      việtPos = 10; // Dậu
+      break;
+    case 9: // Nhâm
+    case 10: // Quý
+      khôiPos = 4; // Mão
+      việtPos = 6; // Tỵ
+      break;
+  }
+  
+  // Khốc Hư placement
+  const thienKhocPos = xetSo(7 - dc1 + 1);
+  const thienHuPos = xetSo(7 + dc1 - 1);
+  
+  // Địa Không, Địa Kiếp placement
+  const diaKhongPos = xetSo(12 - hourIndex + 1);
+  const diaKiepPos = xetSo(12 + hourIndex - 1);
+  
+  // Tứ Hóa Star Mapping Lists
+  const locStars = ["Liêm Trinh", "Thiên Cơ", "Thiên Đồng", "Thái Âm", "Tham Lang", "Vũ Khúc", "Thái Dương", "Cự Môn", "Thiên Lương", "Phá Quân"];
+  const quyenStars = ["Phá Quân", "Thiên Lương", "Thiên Cơ", "Thiên Đồng", "Thái Âm", "Tham Lang", "Vũ Khúc", "Thái Dương", "Tử Vi", "Cự Môn"];
+  const khoaStars = ["Vũ Khúc", "Tử Vi", "Văn Xương", "Thiên Cơ", "Hữu Bật", "Thiên Lương", "Thái Âm", "Văn Khúc", "Tả Phù", "Thái Âm"];
+  const kyStars = ["Thái Dương", "Thái Âm", "Liêm Trinh", "Cự Môn", "Thiên Cơ", "Văn Khúc", "Thiên Đồng", "Văn Xương", "Vũ Khúc", "Tham Lang"];
+  
+  const hoaLocPos = starPositions[locStars[tc1 - 1]] || locTonPos; // Fallback to Lộc Tồn if not in chính tinh list
+  const hoaQuyenPos = starPositions[quyenStars[tc1 - 1]];
+  const hoaKhoaPos = starPositions[khoaStars[tc1 - 1]];
+  const hoaKyPos = starPositions[kyStars[tc1 - 1]];
+  
+  // Add Phụ tinh to palaces (including Month and Hour stars)
+  const phuTinhList = [
+    { name: "Lộc Tồn", pos: locTonPos },
+    { name: "Kình Dương", pos: kinhDuongPos },
+    { name: "Đà La", pos: daLaPos },
+    { name: "Thiên Khôi", pos: khôiPos },
+    { name: "Thiên Việt", pos: việtPos },
+    { name: "Thiên Khốc", pos: thienKhocPos },
+    { name: "Thiên Hư", pos: thienHuPos },
+    { name: "Tả Phù", pos: starPositions["Tả Phù"] },
+    { name: "Hữu Bật", pos: starPositions["Hữu Bật"] },
+    { name: "Văn Xương", pos: starPositions["Văn Xương"] },
+    { name: "Văn Khúc", pos: starPositions["Văn Khúc"] },
+    { name: "Địa Không", pos: diaKhongPos },
+    { name: "Địa Kiếp", pos: diaKiepPos },
+    { name: "Hóa Lộc", pos: hoaLocPos },
+    { name: "Hóa Quyền", pos: hoaQuyenPos },
+    { name: "Hóa Khoa", pos: hoaKhoaPos },
+    { name: "Hóa Kỵ", pos: hoaKyPos }
+  ];
+  
+  phuTinhList.forEach(({ name, pos }) => {
+    laSoPalaces[pos - 1].phu_tinh.push(name);
+  });
+  
+  // 6. Build the final output JSON structure
+  const laSoOutput = {};
+  CUNG_KEYS.forEach((key, idx) => {
+    laSoOutput[key] = laSoPalaces[idx];
+  });
+  
+  return {
+    thong_tin_goc: {
+      am_lich: {
+        nam: yearCanChi.text,
+        thang: monthCanChiStr,
+        ngay: dayCanChi.text,
+        gio: hourCanChiStr
+      },
+      phan_loai: phanLoai,
+      cuc: cuc.name
+    },
+    la_so: laSoOutput
+  };
+}
