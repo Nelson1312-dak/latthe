@@ -1,23 +1,27 @@
 /* ============================================================
-   landing.css — lật thẻ landing page (Premium Cosmic Dark Theme)
+   landing.css — Lật Bài landing page (Warm Crafted Light Theme)
+   Design language: warm cream canvas, white rounded cards with
+   soft diffuse shadows, app-icon-style colored tiles. Each module
+   keeps its signature color. No glassmorphism / neon / mouse-glow.
    ============================================================ */
 
 :root {
   --font: 'Be Vietnam Pro', sans-serif;
 
-  --bg:       #06060c;
-  --surface:  rgba(255, 255, 255, 0.03);
-  --text:     #ffffff;
-  --sub:      rgba(255, 255, 255, 0.7);
-  --muted:    rgba(255, 255, 255, 0.4);
-  --border:   rgba(255, 255, 255, 0.08);
-  --shadow:   0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --shadow-h: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+  --bg:        #fbf3e4;
+  --bg-2:      #f6e8cf;
+  --surface:   #ffffff;
+  --text:      #2b1d0e;
+  --sub:       #6b563d;
+  --muted:     #a7937a;
+  --border:    rgba(120, 80, 25, 0.12);
+  --shadow:    0 6px 22px rgba(120, 75, 25, 0.09);
+  --shadow-h:  0 16px 44px rgba(120, 75, 25, 0.18);
 
-  --c-gieoque: #059669; /* Emerald/Jade */
-  --c-drink:   #ea580c; /* Neon Orange */
-  --c-tarot:   #8b5cf6; /* Cyber Purple */
-  --c-tuvi:    #fbbf24; /* Amber Gold */
+  --c-gieoque: #0d9668; /* Jade */
+  --c-drink:   #ea6a17; /* Warm Orange */
+  --c-tarot:   #7c3aed; /* Purple */
+  --c-tuvi:    #e8930a; /* Amber Gold */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,10 +31,8 @@ html { font-size: 16px; overflow-x: hidden; }
 body {
   font-family: var(--font);
   background-color: var(--bg);
-  background-image: 
-    radial-gradient(circle at 50% 0%, #1e1145 0%, #06060c 65%),
-    radial-gradient(circle at 10% 90%, rgba(5, 150, 105, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 90% 90%, rgba(139, 92, 246, 0.03) 0%, transparent 40%);
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% -10%, var(--bg-2) 0%, transparent 70%);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100dvh;
@@ -40,6 +42,25 @@ body {
 
 a { text-decoration: none; color: inherit; }
 
+/* Neutralize the dark-theme ambient glows from common.css on this page */
+.gemini-glow-1, .gemini-glow-2, .gemini-glow-3 { display: none !important; }
+
+/* ---- Decorative cloud band at top ---- */
+.l-clouds {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1400px;
+  max-width: 140vw;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+}
+.l-clouds svg { display: block; width: 100%; height: auto; }
+
 /* ---- Layout shell ---- */
 .l-page {
   min-height: 100dvh;
@@ -48,6 +69,7 @@ a { text-decoration: none; color: inherit; }
   align-items: center;
   padding: 0 20px 64px;
   position: relative;
+  z-index: 1;
 }
 
 /* ---- Hero ---- */
@@ -55,70 +77,64 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   max-width: 520px;
   text-align: center;
-  padding: 64px 0 40px;
-  z-index: 10;
+  padding: 72px 0 40px;
 }
 
-/* Brand icon mark */
+/* Brand icon mark — amber seal */
 .l-brand-icon {
-  font-size: 64px;
-  display: block;
-  margin: 0 auto 20px;
-  background: linear-gradient(135deg, #a78bfa 0%, #34d399 60%, #fbbf24 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 24px rgba(167, 139, 250, 0.55));
-  animation: brand-float 6s ease-in-out infinite;
+  width: 84px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 22px;
+  font-size: 40px;
+  color: #fff;
+  border-radius: 26px;
+  background: linear-gradient(150deg, #f5ab2e 0%, #e8930a 55%, #d97706 100%);
+  box-shadow: 0 12px 28px rgba(217, 119, 6, 0.32), inset 0 1px 0 rgba(255,255,255,0.4);
   line-height: 1;
-}
-
-@keyframes brand-float {
-  0%, 100% {
-    transform: translateY(0);
-    filter: drop-shadow(0 0 24px rgba(167, 139, 250, 0.55));
-  }
-  50% {
-    transform: translateY(-10px);
-    filter: drop-shadow(0 0 36px rgba(167, 139, 250, 0.8));
-  }
 }
 
 .l-brand-name {
   font-family: var(--font);
-  font-size: clamp(52px, 15vw, 88px);
+  font-size: clamp(48px, 14vw, 80px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -2px;
-  background: linear-gradient(110deg, #c4b5fd 0%, #ffffff 38%, #fde68a 72%, #c4b5fd 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text);
   margin-bottom: 16px;
-  animation: gemini-text-shimmer 8s linear infinite;
-}
-@keyframes gemini-text-shimmer {
-  0% { background-position: 0% center; }
-  100% { background-position: -200% center; }
 }
 
 .l-brand-sub {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   margin-bottom: 4px;
 }
-.bs-tuvi   { color: var(--c-tuvi); }
-.bs-gq     { color: var(--c-gieoque); }
-.bs-tarot  { color: var(--c-tarot); }
-.bs-drink  { color: var(--c-drink); }
-.l-dot     { color: var(--muted); font-size: 10px; line-height: 1; }
+.l-brand-sub span:not(.l-dot) {
+  padding: 4px 12px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+.bs-tuvi   { color: var(--c-tuvi);    background: rgba(232, 147, 10, 0.12); }
+.bs-gq     { color: var(--c-gieoque); background: rgba(13, 150, 104, 0.12); }
+.bs-tarot  { color: var(--c-tarot);   background: rgba(124, 58, 237, 0.12); }
+.bs-drink  { color: var(--c-drink);   background: rgba(234, 106, 23, 0.12); }
+.l-dot     { display: none; }
+
+.l-hero-tagline {
+  font-size: 13.5px;
+  color: var(--sub);
+  margin-top: 14px;
+  line-height: 1.6;
+  letter-spacing: 0.2px;
+}
 
 /* ---- Divider ---- */
 .l-divider {
@@ -128,6 +144,7 @@ a { text-decoration: none; color: inherit; }
   background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
   margin-bottom: 32px;
 }
+.l-divider--gap { margin-top: 40px; margin-bottom: 40px; }
 
 /* ---- Main Content Wrapper ---- */
 .l-main-content {
@@ -136,7 +153,6 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   flex-direction: column;
   gap: 36px;
-  z-index: 10;
 }
 
 /* ---- Module Groups ---- */
@@ -147,7 +163,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 .l-group-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -157,128 +173,76 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 2px;
   line-height: 1.2;
 }
-
-.l-group:nth-child(2) .l-group-title {
-  border-left-color: var(--c-drink);
-}
+.l-group:nth-child(2) .l-group-title { border-left-color: var(--c-drink); }
 
 .l-modules {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  z-index: 10;
 }
 
+/* ---- Cards ---- */
 .l-card {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
   background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 24px 22px 24px 0;
+  border-radius: 24px;
+  padding: 20px;
   box-shadow: var(--shadow);
   cursor: pointer;
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
               box-shadow 0.28s ease, border-color 0.28s ease;
   -webkit-tap-highlight-color: transparent;
-  overflow: hidden;
   position: relative;
-  opacity: 0;
-  animation: card-enter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-.l-tuvi    { animation-delay: 0.15s; --hover-glow: rgba(251, 191, 36, 0.12); }
-.l-gieoque { animation-delay: 0.25s; --hover-glow: rgba(5, 150, 105, 0.12); }
-.l-tarot   { animation-delay: 0.35s; --hover-glow: rgba(139, 92, 246, 0.12); }
-.l-drink   { animation-delay: 0.45s; --hover-glow: rgba(234, 88, 12, 0.12); }
-
-@keyframes card-enter {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 
 .l-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-h);
 }
+.l-card:active { transform: scale(0.99); }
 
-.l-card:active { transform: scale(0.98); }
+.l-tuvi:hover    { border-color: rgba(232, 147, 10, 0.4); }
+.l-gieoque:hover { border-color: rgba(13, 150, 104, 0.4); }
+.l-tarot:hover   { border-color: rgba(124, 58, 237, 0.4); }
+.l-drink:hover   { border-color: rgba(234, 106, 23, 0.4); }
 
-/* Mouse-tracked gradient glow overlay */
-.l-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle 140px at var(--mx, 50%) var(--my, 50%),
-              var(--hover-glow) 0%, transparent 80%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.l-card:hover::after { opacity: 1; }
-
-/* Left glowing light bar */
-.l-card::before {
-  content: '';
-  display: block;
-  width: 6px;
-  align-self: stretch;
-  flex-shrink: 0;
-  border-radius: 0 4px 4px 0;
-  margin-right: 4px;
-  transition: box-shadow 0.28s ease;
-}
-
-.l-gieoque::before { background: var(--c-gieoque); }
-.l-drink::before   { background: var(--c-drink); }
-.l-tarot::before   { background: var(--c-tarot); }
-.l-tuvi::before    { background: var(--c-tuvi); }
-
-.l-gieoque:hover { border-color: rgba(5, 150, 105, 0.35); }
-.l-gieoque:hover::before { box-shadow: 0 0 15px var(--c-gieoque); }
-
-.l-drink:hover   { border-color: rgba(234, 88, 12, 0.35); }
-.l-drink:hover::before { box-shadow: 0 0 15px var(--c-drink); }
-
-.l-tarot:hover   { border-color: rgba(139, 92, 246, 0.35); }
-.l-tarot:hover::before { box-shadow: 0 0 15px var(--c-tarot); }
-
-.l-tuvi:hover    { border-color: rgba(251, 191, 36, 0.35); }
-.l-tuvi:hover::before { box-shadow: 0 0 15px var(--c-tuvi); }
-
+/* App-icon-style colored tile */
 .l-card-icon {
-  font-size: 44px;
+  width: 60px;
+  height: 60px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  color: #fff;
+  border-radius: 18px;
   line-height: 1;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
   transition: transform 0.28s ease;
 }
-.l-card:hover .l-card-icon {
-  transform: scale(1.1) rotate(5deg);
-}
+.l-tuvi    .l-card-icon { background: linear-gradient(150deg, #f5ab2e, #d97706); box-shadow: 0 8px 18px rgba(217,119,6,0.3); }
+.l-gieoque .l-card-icon { background: linear-gradient(150deg, #14b884, #0d9668); box-shadow: 0 8px 18px rgba(13,150,104,0.3); }
+.l-tarot   .l-card-icon { background: linear-gradient(150deg, #9560f0, #7c3aed); box-shadow: 0 8px 18px rgba(124,58,237,0.3); }
+.l-drink   .l-card-icon { background: linear-gradient(150deg, #fb8a3c, #ea6a17); box-shadow: 0 8px 18px rgba(234,106,23,0.3); }
+.l-card:hover .l-card-icon { transform: scale(1.06) rotate(-3deg); }
 
-.l-card-body {
-  flex: 1;
-  min-width: 0;
-  z-index: 2;
-}
+.l-card-body { flex: 1; min-width: 0; }
 
 .l-card-label {
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
-.l-gieoque .l-card-label { color: #34d399; }
-.l-drink   .l-card-label { color: #fb923c; }
-.l-tarot   .l-card-label { color: #a78bfa; }
-.l-tuvi    .l-card-label { color: #fbbf24; }
+.l-tuvi    .l-card-label { color: var(--c-tuvi); }
+.l-gieoque .l-card-label { color: var(--c-gieoque); }
+.l-tarot   .l-card-label { color: var(--c-tarot); }
+.l-drink   .l-card-label { color: var(--c-drink); }
 
 .l-card-name {
   font-size: 20px;
@@ -298,138 +262,29 @@ a { text-decoration: none; color: inherit; }
   font-size: 20px;
   color: var(--muted);
   flex-shrink: 0;
-  padding-right: 6px;
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.28s ease;
-  z-index: 2;
 }
-.l-card:hover .l-card-arrow {
-  transform: translateX(4px);
-  color: var(--text);
-}
+.l-card:hover .l-card-arrow { transform: translateX(4px); color: var(--text); }
 
-/* ---- Footer ---- */
-.l-footer {
-  margin-top: 48px;
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  z-index: 10;
-}
-
-/* ---- Desktop Layouts ---- */
-@media (min-width: 768px) {
-  .l-hero    { max-width: 800px; padding: 100px 0 52px; }
-  .l-divider { max-width: 800px; }
-  
-  .l-main-content { max-width: 800px; gap: 40px; }
-  
-  .l-modules {
-    flex-direction: row;
-    gap: 20px;
-  }
-
-  .l-modules.drinking-group {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-  }
-
-  .l-card {
-    flex: 1;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0 0 28px;
-    gap: 0;
-    border-radius: 24px;
-    min-height: 280px;
-  }
-
-  /* Top accent stripe instead of left */
-  .l-card::before {
-    width: 100%;
-    height: 6px;
-    align-self: auto;
-    border-radius: 20px 20px 0 0;
-    margin-right: 0;
-    margin-bottom: 24px;
-  }
-
-  .l-card-icon {
-    font-size: 48px;
-    padding: 0 24px;
-    margin-bottom: 14px;
-  }
-
-  .l-card-body {
-    padding: 0 24px;
-  }
-
-  .l-card-name  { font-size: 22px; margin-bottom: 8px; }
-  .l-card-desc  { font-size: 13px; }
-
-  .l-card-arrow { display: none; }
-}
-
-@media (min-width: 1024px) {
-  .l-hero    { max-width: 980px; padding: 120px 0 64px; }
-  .l-divider { max-width: 980px; }
-
-  .l-main-content { max-width: 980px; }
-
-  .l-modules { gap: 28px; }
-
-  .l-modules.drinking-group {
-    gap: 28px;
-  }
-
-  .l-card-icon  { font-size: 56px; padding: 0 28px; }
-  .l-card-body  { padding: 0 28px; }
-  .l-card-name  { font-size: 24px; }
-  .l-card-desc  { font-size: 13.5px; }
-}
-
-/* ============================================================
-   Hero tagline
-   ============================================================ */
-.l-hero-tagline {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.32);
-  margin-top: 10px;
-  line-height: 1.6;
-  letter-spacing: 0.3px;
-}
-
-/* ============================================================
-   Divider variant with top gap
-   ============================================================ */
-.l-divider--gap {
-  margin-top: 40px;
-  margin-bottom: 40px;
-}
-
-/* ============================================================
-   Module badge (AI / NEW)
-   ============================================================ */
+/* ---- Module badge (AI / NEW) ---- */
 .l-badge {
   display: inline-block;
   font-size: 8.5px;
   font-weight: 800;
   letter-spacing: 0.8px;
-  color: #000;
+  color: #fff;
   background: var(--c-tuvi);
-  border-radius: 4px;
+  border-radius: 5px;
   padding: 1px 5px;
   margin-left: 5px;
   vertical-align: middle;
   text-transform: uppercase;
   line-height: 1.6;
 }
-.l-badge-green  { background: var(--c-gieoque); color: #fff; }
-.l-badge-purple { background: var(--c-tarot);   color: #fff; }
+.l-badge-green  { background: var(--c-gieoque); }
+.l-badge-purple { background: var(--c-tarot); }
 
-/* ============================================================
-   Section title (shared by About & FAQ)
-   ============================================================ */
+/* ---- Section title (shared by About & FAQ) ---- */
 .l-section-title {
   font-size: 11px;
   font-weight: 800;
@@ -437,18 +292,12 @@ a { text-decoration: none; color: inherit; }
   letter-spacing: 3px;
   color: var(--muted);
   margin-bottom: 20px;
-  border-left: 3px solid rgba(251, 191, 36, 0.5);
+  border-left: 3px solid var(--c-tuvi);
   padding-left: 10px;
 }
 
-/* ============================================================
-   About section
-   ============================================================ */
-.l-about {
-  width: 100%;
-  max-width: 520px;
-  z-index: 10;
-}
+/* ---- About section ---- */
+.l-about { width: 100%; max-width: 520px; }
 
 .l-about-lead {
   font-size: 14px;
@@ -456,11 +305,7 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.78;
   margin-bottom: 24px;
 }
-
-.l-about-lead strong {
-  color: var(--text);
-  font-weight: 700;
-}
+.l-about-lead strong { color: var(--text); font-weight: 700; }
 
 .l-features {
   display: grid;
@@ -474,16 +319,24 @@ a { text-decoration: none; color: inherit; }
   gap: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px 14px 14px 14px;
-  transition: border-color 0.2s ease;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.l-feature:hover { border-color: rgba(255,255,255,0.15); }
+.l-feature:hover { transform: translateY(-2px); box-shadow: var(--shadow-h); }
 
 .l-feature-icon {
-  font-size: 18px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
-  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  border-radius: 12px;
+  color: var(--c-tuvi);
+  background: rgba(232, 147, 10, 0.12);
   line-height: 1;
 }
 
@@ -503,14 +356,8 @@ a { text-decoration: none; color: inherit; }
   margin: 0;
 }
 
-/* ============================================================
-   FAQ section
-   ============================================================ */
-.l-faq {
-  width: 100%;
-  max-width: 520px;
-  z-index: 10;
-}
+/* ---- FAQ section ---- */
+.l-faq { width: 100%; max-width: 520px; }
 
 .l-faq-list {
   display: flex;
@@ -521,13 +368,12 @@ a { text-decoration: none; color: inherit; }
 .l-faq-item {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: var(--shadow);
   transition: border-color 0.2s ease;
 }
-.l-faq-item[open] {
-  border-color: rgba(251, 191, 36, 0.22);
-}
+.l-faq-item[open] { border-color: rgba(232, 147, 10, 0.4); }
 
 .l-faq-q {
   list-style: none;
@@ -545,7 +391,7 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.4;
 }
 .l-faq-q::-webkit-details-marker { display: none; }
-.l-faq-q::marker { display: none; }
+.l-faq-q::marker { content: ''; }
 
 .l-faq-q::after {
   content: '+';
@@ -573,23 +419,25 @@ a { text-decoration: none; color: inherit; }
 .l-faq-a strong { color: var(--text); font-weight: 600; }
 .l-faq-a em { color: var(--muted); font-style: normal; font-size: 12px; }
 
-/* ============================================================
-   Footer (enhanced)
-   ============================================================ */
+/* ---- Footer ---- */
+.l-footer {
+  margin-top: 48px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
 .l-footer-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
-
 .l-footer-brand {
   font-size: 15px;
   font-weight: 800;
-  color: rgba(255,255,255,0.5);
+  color: var(--sub);
   letter-spacing: -0.3px;
 }
-
 .l-footer-nav {
   display: flex;
   align-items: center;
@@ -603,38 +451,59 @@ a { text-decoration: none; color: inherit; }
   text-decoration: none;
   transition: color 0.2s;
 }
-.l-footer-nav a:hover { color: var(--text); }
-.l-footer-nav span { color: rgba(255,255,255,0.18); font-size: 10px; }
-
-.l-footer-note {
-  font-size: 11.5px;
-  color: rgba(255,255,255,0.28);
-}
-
-.l-footer-copy {
-  font-size: 10.5px;
-  color: rgba(255,255,255,0.15);
-  letter-spacing: 0.3px;
-}
+.l-footer-nav a:hover { color: var(--c-tuvi); }
+.l-footer-nav span { color: var(--border); font-size: 10px; }
+.l-footer-note { font-size: 11.5px; color: var(--muted); }
+.l-footer-copy { font-size: 10.5px; color: var(--muted); opacity: 0.7; letter-spacing: 0.3px; }
 
 /* ============================================================
-   Desktop responsive for new sections
+   Desktop Layouts
    ============================================================ */
 @media (min-width: 768px) {
-  .l-about, .l-faq { max-width: 800px; }
+  .l-hero    { max-width: 800px; padding: 100px 0 52px; }
+  .l-divider { max-width: 800px; }
+  .l-main-content { max-width: 800px; gap: 40px; }
 
-  .l-features {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+  .l-modules { flex-direction: row; gap: 20px; }
+  .l-modules.drinking-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
   }
-  .l-feature { flex-direction: column; gap: 10px; }
-  .l-feature-icon { font-size: 22px; }
+
+  .l-card {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 28px 24px;
+    gap: 18px;
+    min-height: 264px;
+  }
+  .l-card-icon { width: 64px; height: 64px; font-size: 32px; border-radius: 20px; }
+  .l-card-name { font-size: 22px; margin-bottom: 8px; }
+  .l-card-desc { font-size: 13px; }
+  .l-card-arrow { display: none; }
+
+  .l-about, .l-faq { max-width: 800px; }
+  .l-features { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .l-feature { flex-direction: column; gap: 12px; }
 
   .l-faq-q { font-size: 14px; padding: 16px 22px; }
   .l-faq-a { font-size: 13.5px; padding: 12px 22px 16px; }
 }
 
 @media (min-width: 1024px) {
+  .l-hero    { max-width: 980px; padding: 120px 0 64px; }
+  .l-divider { max-width: 980px; }
+  .l-main-content { max-width: 980px; }
+
+  .l-modules { gap: 28px; }
+  .l-modules.drinking-group { gap: 28px; }
+
+  .l-card-icon { width: 68px; height: 68px; font-size: 34px; }
+  .l-card-name { font-size: 24px; }
+  .l-card-desc { font-size: 13.5px; }
+
   .l-about, .l-faq { max-width: 980px; }
   .l-about-lead { font-size: 15px; }
   .l-divider--gap { margin-top: 56px; margin-bottom: 56px; }

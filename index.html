@@ -7,13 +7,13 @@
   <meta name="keywords" content="gieo quẻ online, lá số tử vi, xem tarot online, bói bài tarot, tử vi đẩu số, kinh dịch online, drinking game, bộ bài uống rượu, lật bài, bói dịch online, tử vi ai, gieo quẻ kinh dịch">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Lật Bài">
-  <meta name="theme-color" content="#06060c">
-  <link rel="canonical" href="https://latbai.vn">
+  <meta name="theme-color" content="#fbf3e4">
+  <link rel="canonical" href="https://latbai.vn/">
   <title>Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot & Drinking Game</title>
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://latbai.vn">
+  <meta property="og:url" content="https://latbai.vn/">
   <meta property="og:site_name" content="Lật Bài">
   <meta property="og:locale" content="vi_VN">
   <meta property="og:title" content="Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot & Drinking Game">
@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap&subset=vietnamese" rel="stylesheet">
   <link rel="stylesheet" href="css/common.css?v=14">
-  <link rel="stylesheet" href="css/landing.css?v=16">
+  <link rel="stylesheet" href="css/landing.css?v=17">
 
   <!-- Vercel Web Analytics & Speed Insights -->
   <script>
@@ -166,9 +166,18 @@
   </script>
 </head>
 <body>
-  <div class="gemini-glow-1"></div>
-  <div class="gemini-glow-2"></div>
-  <div class="gemini-glow-3"></div>
+  <div class="l-clouds" aria-hidden="true">
+    <svg viewBox="0 0 1400 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#d99a3a" stroke-width="2" stroke-linecap="round" opacity="0.6">
+        <path d="M80 70c40-26 96-22 120 8 18-30 78-34 104-6 30-10 64 6 70 34"/>
+        <path d="M150 96c30 8 70 6 96-10"/>
+        <path d="M1320 60c-40-26-96-22-120 8-18-30-78-34-104-6-30-10-64 6-70 34"/>
+        <path d="M1250 86c-30 8-70 6-96-10"/>
+        <path d="M520 40c34-22 84-18 106 8 16-26 70-30 92-6 26-8 56 6 62 30"/>
+        <path d="M700 150c40-24 96-20 120 8 18-28 78-32 104-6"/>
+      </g>
+    </svg>
+  </div>
 
   <div class="l-page">
 
@@ -251,28 +260,28 @@
       </p>
       <div class="l-features" role="list">
         <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true">✦</span>
+          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-gift"></i></span>
           <div>
             <strong>Miễn phí vĩnh viễn</strong>
             <p>Không phí ẩn, không gói premium, không quảng cáo — mãi mãi.</p>
           </div>
         </div>
         <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true">🤖</span>
+          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-sparkles"></i></span>
           <div>
             <strong>AI luận giải tiếng Việt</strong>
             <p>Phân tích chuyên sâu bằng AI, không dịch máy, không câu trả lời cố định.</p>
           </div>
         </div>
         <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true">🔒</span>
+          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-lock"></i></span>
           <div>
             <strong>Riêng tư tuyệt đối</strong>
             <p>Không yêu cầu đăng ký. Dữ liệu chỉ lưu trên thiết bị của bạn.</p>
           </div>
         </div>
         <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true">📱</span>
+          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-device-mobile"></i></span>
           <div>
             <strong>Mọi thiết bị</strong>
             <p>Hoạt động mượt trên điện thoại và máy tính. Cài được như app.</p>
@@ -354,15 +363,6 @@
   </div>
 
   <script>
-    // Mouse-tracked glow on landing cards
-    document.querySelectorAll('.l-card').forEach(card => {
-      card.addEventListener('pointermove', e => {
-        const r = card.getBoundingClientRect();
-        card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
-        card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
-      });
-    });
-
     // Register service worker (PWA offline shell)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

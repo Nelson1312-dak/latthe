@@ -1,7 +1,7 @@
 /* === Lá Số Tử Vi — Traditional Warm Theme === */
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 .ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 :root {
   --cream: #fdf6e3;

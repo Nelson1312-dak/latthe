@@ -13,6 +13,7 @@ const SOURCES = [
   { src: 'og-source-gieoque.svg',  out: 'og-gieoque.png' },
   { src: 'og-source-tarot.svg',    out: 'og-tarot.png' },
   { src: 'og-source-drinking.svg', out: 'og-drinking.png' },
+  { src: 'og-source-tuvi.svg',     out: 'og-tuvi.png' },
 ];
 
 for (const { src, out } of SOURCES) {

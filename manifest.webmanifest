@@ -27,6 +27,13 @@
   ],
   "shortcuts": [
     {
+      "name": "Lá Số Tử Vi",
+      "short_name": "Tử Vi",
+      "description": "Lập lá số Tử Vi Đẩu Số",
+      "url": "/tuvi/",
+      "icons": [{ "src": "/images/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
       "name": "Gieo Quẻ",
       "short_name": "Gieo Quẻ",
       "description": "Gieo quẻ Kinh Dịch",

@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#1f0d00"/>
+      <stop offset="100%" stop-color="#0e0600"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="75%" cy="50%" r="45%">
+      <stop offset="0%"  stop-color="#e8930a" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#e8930a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <ellipse cx="900" cy="315" rx="420" ry="340" fill="url(#glow)"/>
+
+  <!-- Decorative dots -->
+  <g fill="#d4a642" opacity="0.55">
+    <circle cx="110" cy="90"  r="2"/>
+    <circle cx="200" cy="55"  r="1.5"/>
+    <circle cx="55"  cy="230" r="1.5"/>
+    <circle cx="180" cy="510" r="2"/>
+    <circle cx="265" cy="548" r="1.5"/>
+    <circle cx="1100" cy="90"  r="2"/>
+    <circle cx="1148" cy="530" r="1.5"/>
+  </g>
+
+  <!-- Top label -->
+  <text x="80" y="158"
+    font-family="'Be Vietnam Pro', system-ui, sans-serif"
+    font-size="18" font-weight="700" fill="#e8930a" letter-spacing="3">TỬ VI ĐẨU SỐ · CHIÊM TINH PHƯƠNG ĐÔNG</text>
+
+  <!-- Main title -->
+  <text x="80" y="268"
+    font-family="'Be Vietnam Pro', system-ui, sans-serif"
+    font-size="88" font-weight="900" fill="#fdf6e3" letter-spacing="-2">Lá Số Tử Vi</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="336"
+    font-family="'Be Vietnam Pro', system-ui, sans-serif"
+    font-size="38" font-weight="700" fill="#e8930a">Dựng lá số · AI luận giải</text>
+
+  <line x1="80" y1="374" x2="200" y2="374" stroke="#e8930a" stroke-width="3"/>
+
+  <text x="80" y="424"
+    font-family="'Be Vietnam Pro', system-ui, sans-serif"
+    font-size="23" font-weight="500" fill="rgba(253,246,227,0.82)">12 cung · Chính tinh &amp; Phụ tinh · Đại hạn</text>
+  <text x="80" y="460"
+    font-family="'Be Vietnam Pro', system-ui, sans-serif"
+    font-size="23" font-weight="500" fill="rgba(253,246,227,0.82)">Âm lịch · Bắc Phái · Luận giải tiếng Việt</text>
+
+  <text x="80" y="560"
+    font-family="'Be Vietnam Pro', system-ui, sans-serif"
+    font-size="19" font-weight="500" fill="rgba(253,246,227,0.38)">latbai.vn/tuvi · miễn phí · không quảng cáo</text>
+
+  <!-- Right: Tử Vi 4×4 chart grid -->
+  <g transform="translate(738 75)">
+    <!-- Grid shell -->
+    <rect x="0" y="0" width="400" height="440" rx="12"
+      fill="rgba(232,147,10,0.06)" stroke="rgba(232,147,10,0.28)" stroke-width="2"/>
+
+    <!-- Horizontal dividers -->
+    <line x1="0"   y1="110" x2="400" y2="110" stroke="rgba(232,147,10,0.2)" stroke-width="1"/>
+    <line x1="0"   y1="220" x2="400" y2="220" stroke="rgba(232,147,10,0.2)" stroke-width="1"/>
+    <line x1="0"   y1="330" x2="400" y2="330" stroke="rgba(232,147,10,0.2)" stroke-width="1"/>
+
+    <!-- Vertical dividers -->
+    <line x1="100" y1="0"   x2="100" y2="440" stroke="rgba(232,147,10,0.2)" stroke-width="1"/>
+    <line x1="200" y1="0"   x2="200" y2="440" stroke="rgba(232,147,10,0.2)" stroke-width="1"/>
+    <line x1="300" y1="0"   x2="300" y2="440" stroke="rgba(232,147,10,0.2)" stroke-width="1"/>
+
+    <!-- Center 2×2 panel highlight -->
+    <rect x="100" y="110" width="200" height="220" rx="4"
+      fill="rgba(232,147,10,0.14)" stroke="rgba(232,147,10,0.45)" stroke-width="1.5"/>
+
+    <!-- Center: Tử Vi symbol -->
+    <text x="200" y="202" text-anchor="middle"
+      font-family="serif" font-size="24" font-weight="700" fill="#e8930a" opacity="0.95">紫微斗數</text>
+    <text x="200" y="232" text-anchor="middle"
+      font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="rgba(232,147,10,0.7)">Tử Vi Đẩu Số</text>
+
+    <!-- Branch labels (12 chi) - outer ring -->
+    <text x="50"  y="52"  text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Tỵ</text>
+    <text x="150" y="52"  text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Ngọ</text>
+    <text x="250" y="52"  text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Mùi</text>
+    <text x="350" y="52"  text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Thân</text>
+    <text x="50"  y="162" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Thìn</text>
+    <text x="350" y="162" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Dậu</text>
+    <text x="50"  y="272" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Mão</text>
+    <text x="350" y="272" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Tuất</text>
+    <text x="50"  y="382" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Dần</text>
+    <text x="150" y="382" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Sửu</text>
+    <text x="250" y="382" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Tý</text>
+    <text x="350" y="382" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="rgba(253,246,227,0.55)">Hợi</text>
+
+    <!-- Sample stars in cells -->
+    <text x="50"  y="72"  text-anchor="middle" font-family="system-ui" font-size="9" fill="#e8930a" opacity="0.75">Thiên Phủ</text>
+    <text x="150" y="72"  text-anchor="middle" font-family="system-ui" font-size="9" fill="#cc0000" opacity="0.8">Tử Vi ☆</text>
+    <text x="350" y="182" text-anchor="middle" font-family="system-ui" font-size="9" fill="#0044bb" opacity="0.75">Thiên Cơ</text>
+    <text x="50"  y="292" text-anchor="middle" font-family="system-ui" font-size="9" fill="#e8930a" opacity="0.75">Thái Dương</text>
+    <text x="350" y="292" text-anchor="middle" font-family="system-ui" font-size="9" fill="#cc0000" opacity="0.75">Liêm Trinh</text>
+    <text x="150" y="402" text-anchor="middle" font-family="system-ui" font-size="9" fill="#0044bb" opacity="0.75">Thiên Đồng</text>
+  </g>
+</svg>
