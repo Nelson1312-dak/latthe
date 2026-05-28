@@ -234,17 +234,17 @@ body {
 .chart-container {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, minmax(170px, auto));
+  grid-template-rows: repeat(4, minmax(130px, auto));
   gap: 1px;
 }
 
 /* ==================== PALACE CARD ==================== */
 .palace-card {
   background: #fffdf5;
-  padding: 7px 8px 5px;
+  padding: 5px 6px 4px;
   display: flex;
   flex-direction: column;
-  min-height: 170px;
+  min-height: 130px;
   position: relative;
 }
 
@@ -254,13 +254,13 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   border-bottom: 1px solid var(--brown-light);
-  padding-bottom: 4px;
-  margin-bottom: 5px;
+  padding-bottom: 2px;
+  margin-bottom: 3px;
   gap: 4px;
 }
 
 .pc-chi {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--brown-mid);
   font-weight: 700;
   flex-shrink: 0;
@@ -273,7 +273,7 @@ body {
 }
 
 .pc-cung {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: 0.3px;
@@ -283,19 +283,19 @@ body {
 .palace-card.is-menh .pc-cung {
   color: var(--white);
   background: #cc0000;
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 0 4px;
+  border-radius: 2px;
 }
 
 .pc-than-badge {
   display: inline-block;
-  font-size: 9px;
+  font-size: 8.5px;
   color: var(--s-good);
   font-weight: 700;
   border: 1px solid var(--s-good);
-  padding: 0 4px;
-  border-radius: 3px;
-  margin-left: 3px;
+  padding: 0 3px;
+  border-radius: 2px;
+  margin-left: 2px;
   vertical-align: middle;
 }
 
@@ -303,8 +303,8 @@ body {
   display: inline-block;
   font-size: 8px;
   font-weight: 800;
-  padding: 0 3px;
-  border-radius: 3px;
+  padding: 0 2px;
+  border-radius: 2px;
   margin-left: 2px;
   text-transform: uppercase;
   vertical-align: middle;
@@ -326,7 +326,7 @@ body {
 }
 
 .pc-daihan {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
   color: var(--brown-mid);
   flex-shrink: 0;
@@ -338,34 +338,34 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1.5px;
 }
 
 .pc-chinh .star-main {
   display: block;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 800;
   color: var(--s-main);
-  line-height: 1.5;
+  line-height: 1.35;
 }
 
 /* Two-column phụ tinh grid */
 .pc-phu {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0 6px;
+  gap: 0 4px;
   align-content: start;
 }
 
 .phu-col-left, .phu-col-right {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1.5px;
 }
 
 .phu-col-left .star-item, .phu-col-right .star-item {
-  font-size: 10.5px;
-  line-height: 1.4;
+  font-size: 9.5px;
+  line-height: 1.3;
   font-weight: 600;
 }
 
@@ -400,9 +400,9 @@ body {
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid var(--brown-light);
-  padding-top: 4px;
-  margin-top: 5px;
-  font-size: 10.5px;
+  padding-top: 2px;
+  margin-top: 3px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -416,7 +416,7 @@ body {
   background: var(--cream-mid);
   padding: 0 4px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: 9.5px;
 }
 
 /* ==================== CENTER PANEL ==================== */
@@ -427,7 +427,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 18px;
+  padding: 6px 12px;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -438,8 +438,8 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 90%;
-  height: 90%;
+  width: 65%;
+  height: 65%;
   color: rgba(139, 96, 32, 0.05);
   pointer-events: none;
   z-index: 0;
@@ -447,12 +447,12 @@ body {
 
 .cp-side-decor {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: 6px;
+  bottom: 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   opacity: 0.85;
   pointer-events: none;
   z-index: 1;
@@ -461,7 +461,7 @@ body {
 .cp-calligraphy {
   font-family: 'Be Vietnam Pro', serif;
   writing-mode: vertical-rl;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 2px;
   color: rgba(26, 8, 0, 0.08);
@@ -469,8 +469,8 @@ body {
 }
 
 .cp-seal {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: 1.5px solid #cc0000;
   padding: 2px;
   display: flex;
@@ -483,7 +483,7 @@ body {
 
 .cp-seal-inner {
   color: #cc0000;
-  font-size: 7px;
+  font-size: 6px;
   font-weight: 900;
   line-height: 1.1;
   text-align: center;
@@ -493,10 +493,10 @@ body {
 }
 
 .cp-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--text);
-  margin-bottom: 5px;
+  margin-bottom: 2px;
   position: relative;
   z-index: 2;
 }
@@ -506,31 +506,31 @@ body {
   background: #fff0d0;
   border: 1px solid var(--amber);
   color: var(--amber-dark);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 2px 10px;
+  padding: 1px 8px;
   border-radius: 20px;
-  margin-bottom: 9px;
+  margin-bottom: 4px;
   position: relative;
   z-index: 2;
 }
 
 .cp-table {
   width: 100%;
-  font-size: 11px;
+  font-size: 10.5px;
   border-collapse: collapse;
   text-align: left;
   position: relative;
   z-index: 2;
 }
 
-.cp-table tr td { padding: 1.5px 3px; }
+.cp-table tr td { padding: 1px 2px; }
 
 .cp-label {
   color: var(--text-soft);
   font-weight: 500;
   white-space: nowrap;
-  width: 72px;
+  width: 64px;
 }
 
 .cp-value {
@@ -547,7 +547,7 @@ body {
   border: none;
   border-top: 1px solid var(--brown-light);
   width: 100%;
-  margin: 6px 0;
+  margin: 4px 0;
   position: relative;
   z-index: 2;
 }
