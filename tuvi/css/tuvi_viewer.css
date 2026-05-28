@@ -554,15 +554,15 @@ body {
 
 /* Chart legend wrapper */
 .chart-legends-wrapper {
-  margin-top: 10px;
-  padding: 8px 6px 4px;
-  border-top: 1px solid var(--brown-light);
+  margin-top: 1px;
+  padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: var(--text-soft);
+  color: var(--text-mid);
   width: 100%;
+  background: #fffdf5;
 }
 
 .rating-legend {
