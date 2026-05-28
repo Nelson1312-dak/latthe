@@ -105,17 +105,19 @@
             <div class="cp-name" id="disp-name">—</div>
             <div class="cp-badge" id="disp-class">—</div>
             <table class="cp-table">
-              <tr><td class="cp-label">Dương lịch</td><td class="cp-value" id="disp-solar">—</td></tr>
-              <tr><td class="cp-label">Năm ÂL</td>   <td class="cp-value" id="disp-ly-year">—</td></tr>
-              <tr><td class="cp-label">Tháng ÂL</td> <td class="cp-value" id="disp-ly-month">—</td></tr>
-              <tr><td class="cp-label">Ngày ÂL</td>  <td class="cp-value" id="disp-ly-day">—</td></tr>
-              <tr><td class="cp-label">Giờ ÂL</td>   <td class="cp-value" id="disp-ly-hour">—</td></tr>
-              <tr><td class="cp-label">Năm xem</td>  <td class="cp-value" id="disp-namxem">—</td></tr>
+              <tr><td class="cp-label">Dương lịch</td><td class="cp-value"       id="disp-solar">—</td></tr>
+              <tr><td class="cp-label">Năm ÂL</td>    <td class="cp-value"       id="disp-ly-year">—</td></tr>
+              <tr><td class="cp-label">Tháng ÂL</td>  <td class="cp-value"       id="disp-ly-month">—</td></tr>
+              <tr><td class="cp-label">Ngày ÂL</td>   <td class="cp-value"       id="disp-ly-day">—</td></tr>
+              <tr><td class="cp-label">Giờ ÂL</td>    <td class="cp-value"       id="disp-ly-hour">—</td></tr>
+              <tr><td class="cp-label">Năm xem</td>   <td class="cp-value amber" id="disp-namxem">—</td></tr>
             </table>
             <hr class="cp-divider">
             <table class="cp-table">
-              <tr><td class="cp-label">Âm Dương</td><td class="cp-value blue" id="disp-phanloai">—</td></tr>
-              <tr><td class="cp-label">Cục</td>      <td class="cp-value red"  id="disp-cuc">—</td></tr>
+              <tr><td class="cp-label">Âm Dương</td>  <td class="cp-value blue" id="disp-phanloai">—</td></tr>
+              <tr><td class="cp-label">Cục</td>        <td class="cp-value red"  id="disp-cuc">—</td></tr>
+              <tr><td class="cp-label">Mệnh chủ</td>  <td class="cp-value"      id="disp-menhchu">—</td></tr>
+              <tr><td class="cp-label">Thân chủ</td>  <td class="cp-value"      id="disp-thanchu">—</td></tr>
             </table>
           </div>
 
@@ -198,6 +200,36 @@
     const GOOD_STARS= new Set(["Lộc Tồn","Thiên Khôi","Thiên Việt","Tả Phù","Hữu Bật","Văn Xương","Văn Khúc"]);
     const BAD_STARS = new Set(["Kình Dương","Đà La","Địa Không","Địa Kiếp"]);
     const GRAY_STARS= new Set(["Thiên Khốc","Thiên Hư"]);
+
+    // Can heavenly stems
+    const CAN_NAMES = ['Giáp','Ất','Bính','Đinh','Mậu','Kỷ','Canh','Tân','Nhâm','Quý'];
+    const CAN_ABBR  = ['G',   'Á', 'B',   'Đ',   'M',  'K', 'C',   'T',  'N',   'Q'];
+
+    // Mệnh chủ lookup by giờ sinh chi index (0=Tý…11=Hợi)
+    const MENH_CHU = [
+      'Tham Lang','Cự Môn','Thiên Tướng','Thiên Lương','Thiên Đồng','Văn Xương',
+      'Tham Lang','Cự Môn','Thiên Tướng','Thiên Lương','Thiên Đồng','Văn Khúc'
+    ];
+
+    // Thân chủ lookup by Thân palace chi index (0=Tý…11=Hợi)
+    const THAN_CHU = [
+      'Thiên Tướng','Thiên Lương','Thiên Đồng','Văn Xương','Tham Lang','Cự Môn',
+      'Thiên Tướng','Thiên Lương','Thiên Đồng','Văn Khúc',  'Tham Lang','Cự Môn'
+    ];
+
+    // Convert hour value → giờ chi index (0=Tý)
+    function hourToChiIdx(h) {
+      if (h === 23) return 0;
+      return Math.floor((h + 1) / 2) % 12;
+    }
+
+    // Get Can abbreviation for a palace at chiIdx, given year Can
+    function getPalaceCanAbbr(chiIdx, yearCanIdx) {
+      // Ngũ Hổ Độn: Can of Dần palace
+      const danCan = ((yearCanIdx % 5) * 2 + 2) % 10;
+      const palaceCan = (danCan + ((chiIdx - 2 + 12) % 12)) % 10;
+      return CAN_ABBR[palaceCan];
+    }
 
     // ==================== POPULATE DROPDOWNS ====================
     (function fill() {
@@ -294,6 +326,16 @@
       document.getElementById('disp-phanloai').textContent = chart.thong_tin_goc.phan_loai;
       document.getElementById('disp-cuc').textContent      = chart.thong_tin_goc.cuc;
 
+      // Mệnh chủ / Thân chủ
+      const gioChiIdx  = hourToChiIdx(hour);
+      const thanChiIdx = (chart.thong_tin_goc.than_pos - 1 + 12) % 12;
+      document.getElementById('disp-menhchu').textContent = MENH_CHU[gioChiIdx]  || '—';
+      document.getElementById('disp-thanchu').textContent = THAN_CHU[thanChiIdx] || '—';
+
+      // Year Can for palace headers
+      const yearCanStr = chart.thong_tin_goc.am_lich.nam.split(' ')[0];
+      const yearCanIdx = CAN_NAMES.indexOf(yearCanStr);
+
       // Render palace cards
       CUNG_KEYS.forEach((key, idx) => {
         const p    = chart.la_so[key];
@@ -303,26 +345,28 @@
 
         card.className = `palace-card${isMenh ? ' is-menh' : ''}`;
 
+        const canAbbr  = yearCanIdx >= 0 ? getPalaceCanAbbr(idx, yearCanIdx) : '';
+        const chiLabel = canAbbr ? `${canAbbr}.${CUNG_CHI[idx]}` : CUNG_CHI[idx];
+
         const chinhHTML = p.chinh_tinh.map(s =>
           `<span class="star-main">${s}</span>`
         ).join('');
 
         const phuHTML = p.phu_tinh.map(s => {
           let cls = 'star-neutral';
-          if      (HOA_TOT.has(s))   cls = 'star-hoa-tot';
-          else if (HOA_XAU.has(s))   cls = 'star-hoa-ky';
+          if      (HOA_TOT.has(s))    cls = 'star-hoa-tot';
+          else if (HOA_XAU.has(s))    cls = 'star-hoa-ky';
           else if (GOOD_STARS.has(s)) cls = 'star-good';
           else if (BAD_STARS.has(s))  cls = 'star-bad';
           else if (GRAY_STARS.has(s)) cls = 'star-gray';
           return `<span class="${cls}">${s}</span>`;
         }).join('');
 
-        const thanBadge = isThan
-          ? `<span class="pc-than-badge">Thân</span>` : '';
+        const thanBadge = isThan ? `<span class="pc-than-badge">Thân</span>` : '';
 
         card.innerHTML = `
           <div class="pc-header">
-            <span class="pc-chi">${CUNG_CHI[idx]}</span>
+            <span class="pc-chi">${chiLabel}</span>
             <div class="pc-cung-wrap">
               <span class="pc-cung">${p.ten_cung}</span>${thanBadge}
             </div>
@@ -333,8 +377,8 @@
             <div class="pc-phu">${phuHTML}</div>
           </div>
           <div class="pc-footer">
-            <span>${p.trang_sinh || ''}</span>
-            <span>${p.nguyet_han ? 'T.' + p.nguyet_han : ''}</span>
+            <span class="pc-trangs">${p.trang_sinh || ''}</span>
+            <span class="pc-nguyet">${p.nguyet_han ? 'T.' + p.nguyet_han : ''}</span>
           </div>`;
       });
 
