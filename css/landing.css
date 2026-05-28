@@ -55,38 +55,48 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   max-width: 520px;
   text-align: center;
-  padding: 80px 0 40px;
+  padding: 64px 0 40px;
   z-index: 10;
 }
 
-.l-brand-mark {
-  width: 88px;
-  height: 88px;
-  margin: 0 auto 20px;
+/* Brand icon mark */
+.l-brand-icon {
+  font-size: 64px;
   display: block;
-  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.25));
-  animation: brand-float 5s ease-in-out infinite;
+  margin: 0 auto 20px;
+  background: linear-gradient(135deg, #a78bfa 0%, #34d399 60%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 24px rgba(167, 139, 250, 0.55));
+  animation: brand-float 6s ease-in-out infinite;
+  line-height: 1;
 }
 
 @keyframes brand-float {
-  0%, 100% { transform: translateY(0) rotate(-3deg); }
-  50%      { transform: translateY(-8px) rotate(3deg); }
+  0%, 100% {
+    transform: translateY(0);
+    filter: drop-shadow(0 0 24px rgba(167, 139, 250, 0.55));
+  }
+  50% {
+    transform: translateY(-10px);
+    filter: drop-shadow(0 0 36px rgba(167, 139, 250, 0.8));
+  }
 }
 
 .l-brand-name {
   font-family: var(--font);
-  font-size: clamp(48px, 14vw, 80px);
+  font-size: clamp(52px, 15vw, 88px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -2px;
-  background: linear-gradient(90deg, #ffffff 10%, #a78bfa 40%, #059669 60%, #a78bfa 80%, #ffffff 90%);
+  background: linear-gradient(110deg, #c4b5fd 0%, #ffffff 38%, #fde68a 72%, #c4b5fd 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: 14px;
-  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.3));
-  animation: gemini-text-shimmer 6s linear infinite;
+  margin-bottom: 16px;
+  animation: gemini-text-shimmer 8s linear infinite;
 }
 @keyframes gemini-text-shimmer {
   0% { background-position: 0% center; }
@@ -94,12 +104,21 @@ a { text-decoration: none; color: inherit; }
 }
 
 .l-brand-sub {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  letter-spacing: 4px;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
+.bs-tuvi   { color: var(--c-tuvi); }
+.bs-gq     { color: var(--c-gieoque); }
+.bs-tarot  { color: var(--c-tarot); }
+.bs-drink  { color: var(--c-drink); }
+.l-dot     { color: var(--muted); font-size: 10px; line-height: 1; }
 
 /* ---- Divider ---- */
 .l-divider {
