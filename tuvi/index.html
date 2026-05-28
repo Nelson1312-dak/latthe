@@ -3,131 +3,183 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lá Số Tử Vi AI — Lật Bài</title>
+  <meta name="description" content="Dựng lá số Tử Vi Đẩu Số chuẩn xác theo phương pháp cổ truyền phương Đông. Nhận luận giải chi tiết từ chuyên gia AI.">
+  <meta name="theme-color" content="#e8930a">
+  <title>Lá Số Tử Vi Đẩu Số — Lật Bài</title>
+  <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
   <link rel="stylesheet" href="./css/tuvi_viewer.css">
 </head>
 <body>
 
-  <header>
-    <a href="../index.html" class="btn-back">← Về Trang Chủ</a>
-    <h1>TỬ VI ĐẨU SỐ AI</h1>
-    <p class="subtitle">Dựng lá số Tử Vi chuẩn Đông Phương & Tham vấn chi tiết cùng chuyên gia AI</p>
-  </header>
+  <!-- Nav -->
+  <nav class="top-nav">
+    <a href="../index.html" class="back-btn">← Trang Chủ</a>
+  </nav>
 
-  <!-- INPUT CONTROLS -->
-  <section class="input-section">
-    <form id="tuvi-form">
-      <div class="input-grid">
-        <div class="form-group">
-          <label for="name">Họ và Tên</label>
-          <input type="text" id="name" placeholder="Nguyễn Văn A" value="Đông Phương Mệnh" required>
+  <!-- ===== FORM SECTION ===== -->
+  <div class="form-wrapper">
+    <div class="form-card">
+      <h2 class="form-title">Khởi tạo lá số</h2>
+      <p class="form-subtitle">Khám phá vận mệnh - định hướng tương lai</p>
+
+      <form id="tuvi-form">
+        <!-- Họ và tên -->
+        <div class="field-row">
+          <input type="text" id="f-name" class="field-input" placeholder="Họ và tên" required>
         </div>
-        <div class="form-group">
-          <label for="birth-date">Ngày sinh (Dương lịch)</label>
-          <input type="date" id="birth-date" value="1996-12-13" required>
-        </div>
-        <div class="form-group">
-          <label for="birth-hour">Giờ sinh (Giờ Dương)</label>
-          <select id="birth-hour" required>
-            <option value="0">23:00 - 00:59 (Giờ Tý)</option>
-            <option value="2">01:00 - 02:59 (Giờ Sửu)</option>
-            <option value="4">03:00 - 04:59 (Giờ Dần)</option>
-            <option value="6">05:00 - 06:59 (Giờ Mão)</option>
-            <option value="8">07:00 - 08:59 (Giờ Thìn)</option>
-            <option value="10">09:00 - 10:59 (Giờ Tỵ)</option>
-            <option value="12">11:00 - 12:59 (Giờ Ngọ)</option>
-            <option value="14">13:00 - 14:59 (Giờ Mùi)</option>
-            <option value="16">15:00 - 16:59 (Giờ Thân)</option>
-            <option value="18">17:00 - 18:59 (Giờ Dậu)</option>
-            <option value="20">19:00 - 20:59 (Giờ Tuất)</option>
-            <option value="22">21:00 - 22:59 (Giờ Hợi)</option>
+
+        <!-- Ngày / Tháng / Năm / Loại lịch -->
+        <div class="field-row date-row">
+          <select id="f-day" class="field-select day-sel" required>
+            <option value="">Ngày</option>
+          </select>
+          <select id="f-month" class="field-select month-sel" required>
+            <option value="">Tháng</option>
+          </select>
+          <select id="f-year" class="field-select year-sel" required>
+            <option value="">Năm</option>
+          </select>
+          <select id="f-cal" class="field-select cal-sel">
+            <option value="solar">Dương lịch</option>
+            <option value="lunar">Âm lịch</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="gender">Giới tính</label>
-          <select id="gender" required>
-            <option value="1">Nam</option>
-            <option value="0">Nữ</option>
+
+        <!-- Giờ sinh -->
+        <div class="field-row">
+          <select id="f-hour" class="field-select" required>
+            <option value="">Giờ sinh</option>
+            <option value="23">23:00 – 00:59 · Giờ Tý</option>
+            <option value="1">01:00 – 02:59 · Giờ Sửu</option>
+            <option value="3">03:00 – 04:59 · Giờ Dần</option>
+            <option value="5">05:00 – 06:59 · Giờ Mão</option>
+            <option value="7">07:00 – 08:59 · Giờ Thìn</option>
+            <option value="9">09:00 – 10:59 · Giờ Tỵ</option>
+            <option value="11">11:00 – 12:59 · Giờ Ngọ</option>
+            <option value="13">13:00 – 14:59 · Giờ Mùi</option>
+            <option value="15">15:00 – 16:59 · Giờ Thân</option>
+            <option value="17">17:00 – 18:59 · Giờ Dậu</option>
+            <option value="19">19:00 – 20:59 · Giờ Tuất</option>
+            <option value="21">21:00 – 22:59 · Giờ Hợi</option>
           </select>
         </div>
-      </div>
-      <button type="submit" class="btn-submit">DỰNG LÁ SỐ TỬ VI</button>
-    </form>
-  </section>
 
-  <!-- 12 PALACES GRID INTERFACE -->
-  <main class="chart-container" id="chart-grid" style="display: none;">
-    <!-- Row 1 -->
-    <div class="palace-card" id="cung-Ty2" style="grid-area: 1 / 1;"></div>
-    <div class="palace-card" id="cung-Ngo" style="grid-area: 1 / 2;"></div>
-    <div class="palace-card" id="cung-Mui" style="grid-area: 1 / 3;"></div>
-    <div class="palace-card" id="cung-Than" style="grid-area: 1 / 4;"></div>
+        <!-- Giới tính + Năm xem -->
+        <div class="field-row two-col-row">
+          <select id="f-gender" class="field-select">
+            <option value="1">Nam giới</option>
+            <option value="0">Nữ giới</option>
+          </select>
+          <select id="f-namxem" class="field-select">
+            <!-- Filled by JS -->
+          </select>
+        </div>
 
-    <!-- Row 2 -->
-    <div class="palace-card" id="cung-Thin" style="grid-area: 2 / 1;"></div>
-    
-    <!-- Central Information Panel -->
-    <div class="center-panel" id="cung-center">
-      <h2 id="disp-name">Họ và Tên</h2>
-      <div id="disp-class" class="highlight-badge">Dương Nam</div>
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="label">Dương Lịch</span>
-          <span class="value" id="disp-solar">13/12/1996</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Âm Lịch</span>
-          <span class="value" id="disp-lunar">04/11/Bính Tý</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Giờ Âm</span>
-          <span class="value" id="disp-lunar-hour">Giáp Tý</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Cục</span>
-          <span class="value cuc-badge" id="disp-cuc">Thổ Ngũ Cục</span>
+        <button type="submit" class="btn-submit">Xem luận giải</button>
+
+        <p class="form-demo-link">
+          Bạn có thể xem lá số minh họa <a href="#" id="btn-demo">Tại đây</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== CHART SECTION ===== -->
+  <div class="chart-wrapper" id="chart-wrapper" style="display:none;">
+    <div class="chart-title" id="chart-title">Lá số Tử Vi</div>
+    <div class="chart-scroll">
+      <div class="chart-outer">
+        <div class="chart-container" id="chart-grid">
+
+          <!-- Row 1: Tỵ · Ngọ · Mùi · Thân -->
+          <div class="palace-card" id="cung-Ty2" style="grid-area:1/1"></div>
+          <div class="palace-card" id="cung-Ngo"  style="grid-area:1/2"></div>
+          <div class="palace-card" id="cung-Mui"  style="grid-area:1/3"></div>
+          <div class="palace-card" id="cung-Than" style="grid-area:1/4"></div>
+
+          <!-- Row 2: Thìn · [CENTER] · Dậu -->
+          <div class="palace-card" id="cung-Thin" style="grid-area:2/1"></div>
+
+          <!-- Center 2×2 info panel -->
+          <div class="center-panel" id="cung-center">
+            <div class="cp-name" id="disp-name">—</div>
+            <div class="cp-badge" id="disp-class">—</div>
+            <table class="cp-table">
+              <tr><td class="cp-label">Dương lịch</td><td class="cp-value" id="disp-solar">—</td></tr>
+              <tr><td class="cp-label">Năm ÂL</td>   <td class="cp-value" id="disp-ly-year">—</td></tr>
+              <tr><td class="cp-label">Tháng ÂL</td> <td class="cp-value" id="disp-ly-month">—</td></tr>
+              <tr><td class="cp-label">Ngày ÂL</td>  <td class="cp-value" id="disp-ly-day">—</td></tr>
+              <tr><td class="cp-label">Giờ ÂL</td>   <td class="cp-value" id="disp-ly-hour">—</td></tr>
+              <tr><td class="cp-label">Năm xem</td>  <td class="cp-value" id="disp-namxem">—</td></tr>
+            </table>
+            <hr class="cp-divider">
+            <table class="cp-table">
+              <tr><td class="cp-label">Âm Dương</td><td class="cp-value blue" id="disp-phanloai">—</td></tr>
+              <tr><td class="cp-label">Cục</td>      <td class="cp-value red"  id="disp-cuc">—</td></tr>
+            </table>
+          </div>
+
+          <div class="palace-card" id="cung-Dau"  style="grid-area:2/4"></div>
+
+          <!-- Row 3: Mão · [CENTER] · Tuất -->
+          <div class="palace-card" id="cung-Mao"  style="grid-area:3/1"></div>
+          <div class="palace-card" id="cung-Tuat" style="grid-area:3/4"></div>
+
+          <!-- Row 4: Dần · Sửu · Tý · Hợi -->
+          <div class="palace-card" id="cung-Dan"  style="grid-area:4/1"></div>
+          <div class="palace-card" id="cung-Suu"  style="grid-area:4/2"></div>
+          <div class="palace-card" id="cung-Ty"   style="grid-area:4/3"></div>
+          <div class="palace-card" id="cung-Hoi"  style="grid-area:4/4"></div>
         </div>
       </div>
     </div>
-    
-    <div class="palace-card" id="cung-Dau" style="grid-area: 2 / 4;"></div>
 
-    <!-- Row 3 -->
-    <div class="palace-card" id="cung-Mao" style="grid-area: 3 / 1;"></div>
-    <div class="palace-card" id="cung-Tuat" style="grid-area: 3 / 4;"></div>
+    <!-- Legend -->
+    <div class="chart-legend">
+      <span><span class="legend-dot" style="color:#cc0000">●</span> Chính tinh</span>
+      <span><span class="legend-dot" style="color:#0044bb">●</span> Sao tốt</span>
+      <span><span class="legend-dot" style="color:#cc3300">●</span> Sao xấu</span>
+      <span><span class="legend-dot" style="color:#cc5500">●</span> Hóa tốt</span>
+      <span><span class="legend-dot" style="color:#880000">●</span> Hóa Kỵ</span>
+    </div>
+  </div>
 
-    <!-- Row 4 -->
-    <div class="palace-card" id="cung-Dan" style="grid-area: 4 / 1;"></div>
-    <div class="palace-card" id="cung-Suu" style="grid-area: 4 / 2;"></div>
-    <div class="palace-card" id="cung-Ty" style="grid-area: 4 / 3;"></div>
-    <div class="palace-card" id="cung-Hoi" style="grid-area: 4 / 4;"></div>
-  </main>
-
-  <!-- AI CONSULTATION PANEL -->
-  <section class="ai-section" id="ai-panel" style="display: none;">
+  <!-- ===== AI SECTION ===== -->
+  <section class="ai-section" id="ai-panel" style="display:none;">
     <div class="ai-container">
       <div class="ai-header">
         <span class="ai-icon">🔮</span>
-        <h3>BẢN TỰ VẤN LÁ SỐ CÙNG BẬC THẦY AI</h3>
+        <h3>Tham vấn Lá Số cùng Chuyên gia AI</h3>
       </div>
-      
-      <!-- Chat history area -->
+
       <div class="ai-chat-log" id="ai-chat-log">
         <div class="ai-message assistant">
-          <p>Lá số Tử Vi Đẩu Số của bạn đã được lập thành công trên bàn số. Hãy chọn một chủ đề bên dưới hoặc nhập câu hỏi chi tiết của riêng bạn để bắt đầu luận giải cùng tôi.</p>
+          <p>Lá số Tử Vi Đẩu Số của bạn đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p>
         </div>
       </div>
-      
-      <!-- Query controls -->
+
       <div class="ai-input-area">
         <div class="ai-prompts">
-          <button type="button" class="prompt-chip" data-question="Hãy luận giải chi tiết tổng quan lá số Tử Vi này của tôi về điểm mạnh, điểm yếu và cách cục lớn?">Tổng quan lá số 🌐</button>
-          <button type="button" class="prompt-chip" data-question="Vận trình công danh, sự nghiệp, tiền tài và cơ hội thăng tiến của tôi trong tương lai thế nào?">Công danh & Tài lộc 💼</button>
-          <button type="button" class="prompt-chip" data-question="Đường tình duyên, hôn nhân và các mối quan hệ gia đạo của tôi có thuận lợi tốt đẹp không?">Tình duyên & Hôn nhân ❤️</button>
-          <button type="button" class="prompt-chip" data-question="Có những vận hạn xấu, tai ương hay vấn đề sức khỏe nào tôi cần đặc biệt lưu ý và hóa giải không?">Hạn xấu & Sức khỏe ⚠️</button>
+          <button type="button" class="prompt-chip"
+            data-q="Hãy luận giải chi tiết tổng quan lá số Tử Vi này về điểm mạnh, điểm yếu và cách cục lớn?">
+            Tổng quan lá số 🌐
+          </button>
+          <button type="button" class="prompt-chip"
+            data-q="Vận trình công danh, sự nghiệp, tiền tài và cơ hội thăng tiến trong tương lai thế nào?">
+            Công danh &amp; Tài lộc 💼
+          </button>
+          <button type="button" class="prompt-chip"
+            data-q="Đường tình duyên, hôn nhân và các mối quan hệ gia đạo có thuận lợi không?">
+            Tình duyên &amp; Hôn nhân ❤️
+          </button>
+          <button type="button" class="prompt-chip"
+            data-q="Có những vận hạn xấu, tai ương hay sức khỏe nào cần lưu ý và hóa giải không?">
+            Hạn xấu &amp; Sức khỏe ⚠️
+          </button>
         </div>
         <div class="ai-input-row">
-          <input type="text" id="ai-question" placeholder="Nhập câu hỏi của bạn (ví dụ: cung Mệnh của tôi có tốt không?)..." autocomplete="off">
+          <input type="text" id="ai-question"
+            placeholder="Nhập câu hỏi của bạn về lá số..." autocomplete="off">
           <button type="button" id="btn-ask-ai" class="btn-ask">THAM VẤN AI</button>
         </div>
       </div>
@@ -137,348 +189,311 @@
   <script type="module">
     import { getTuViChart } from './js/tuvi.js';
 
-    const CUNG_KEYS = ["Ty", "Suu", "Dan", "Mao", "Thin", "Ty2", "Ngo", "Mui", "Than", "Dau", "Tuat", "Hoi"];
-    const CUNG_CHI_NAMES = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
+    // ==================== CONSTANTS ====================
+    const CUNG_KEYS = ["Ty","Suu","Dan","Mao","Thin","Ty2","Ngo","Mui","Than","Dau","Tuat","Hoi"];
+    const CUNG_CHI  = ["Tý","Sửu","Dần","Mão","Thìn","Tỵ","Ngọ","Mùi","Thân","Dậu","Tuất","Hợi"];
 
-    const GOOD_STARS = ["Lộc Tồn", "Thiên Khôi", "Thiên Việt", "Tả Phù", "Hữu Bật", "Văn Xương", "Văn Khúc", "Hóa Lộc", "Hóa Quyền", "Hóa Khoa"];
-    const BAD_STARS = ["Kình Dương", "Đà La", "Thiên Khốc", "Thiên Hư", "Địa Không", "Địa Kiếp", "Hóa Kỵ"];
+    const HOA_TOT   = new Set(["Hóa Lộc","Hóa Quyền","Hóa Khoa"]);
+    const HOA_XAU   = new Set(["Hóa Kỵ"]);
+    const GOOD_STARS= new Set(["Lộc Tồn","Thiên Khôi","Thiên Việt","Tả Phù","Hữu Bật","Văn Xương","Văn Khúc"]);
+    const BAD_STARS = new Set(["Kình Dương","Đà La","Địa Không","Địa Kiếp"]);
+    const GRAY_STARS= new Set(["Thiên Khốc","Thiên Hư"]);
 
-    const form = document.getElementById('tuvi-form');
-    const grid = document.getElementById('chart-grid');
-    const aiPanel = document.getElementById('ai-panel');
-    const chatLog = document.getElementById('ai-chat-log');
-    const askBtn = document.getElementById('btn-ask-ai');
-    const questionInput = document.getElementById('ai-question');
+    // ==================== POPULATE DROPDOWNS ====================
+    (function fill() {
+      const dayEl   = document.getElementById('f-day');
+      const monEl   = document.getElementById('f-month');
+      const yrEl    = document.getElementById('f-year');
+      const nxEl    = document.getElementById('f-namxem');
+      const curYr   = new Date().getFullYear();
 
-    let currentChart = null;
-    let chatHistory = [];
-    let isSavingProfile = false;
-    let savedProfileId = null;
-    let questionsAsked = 0;
+      for (let d = 1; d <= 31; d++)
+        dayEl.innerHTML += `<option value="${d}">${d}</option>`;
 
-    form.addEventListener('submit', async (e) => {
+      for (let m = 1; m <= 12; m++)
+        monEl.innerHTML += `<option value="${m}">Tháng ${m}</option>`;
+
+      for (let y = curYr - 10; y >= 1920; y--)
+        yrEl.innerHTML += `<option value="${y}">${y}</option>`;
+
+      for (let y = curYr - 1; y <= curYr + 6; y++) {
+        const sel = y === curYr ? ' selected' : '';
+        nxEl.innerHTML += `<option value="${y}"${sel}>Năm xem ${y}</option>`;
+      }
+    })();
+
+    // ==================== DEMO DATA ====================
+    document.getElementById('btn-demo').addEventListener('click', e => {
       e.preventDefault();
-      
-      const name = document.getElementById('name').value;
-      const dateVal = document.getElementById('birth-date').value; // yyyy-mm-dd
-      const hour = parseInt(document.getElementById('birth-hour').value);
-      const gender = parseInt(document.getElementById('gender').value);
+      document.getElementById('f-name').value  = 'Nguyễn Tân Đời';
+      document.getElementById('f-day').value   = '21';
+      document.getElementById('f-month').value = '1';
+      document.getElementById('f-year').value  = '1924';
+      document.getElementById('f-cal').value   = 'solar';
+      document.getElementById('f-hour').value  = '11';
+      document.getElementById('f-gender').value= '0';
+      document.getElementById('tuvi-form').requestSubmit();
+    });
 
-      if (!dateVal) return;
+    // ==================== STATE ====================
+    let currentChart  = null;
+    let chatHistory   = [];
+    let questionsAsked= 0;
 
-      const [year, month, day] = dateVal.split('-').map(num => parseInt(num));
+    const form        = document.getElementById('tuvi-form');
+    const chartWrapper= document.getElementById('chart-wrapper');
+    const aiPanel     = document.getElementById('ai-panel');
+    const chatLog     = document.getElementById('ai-chat-log');
+    const askBtn      = document.getElementById('btn-ask-ai');
+    const qInput      = document.getElementById('ai-question');
 
-      // 1. Calculate chart
+    // ==================== FORM SUBMIT ====================
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const name   = document.getElementById('f-name').value.trim();
+      const day    = parseInt(document.getElementById('f-day').value);
+      const month  = parseInt(document.getElementById('f-month').value);
+      const year   = parseInt(document.getElementById('f-year').value);
+      const cal    = document.getElementById('f-cal').value;
+      const hour   = parseInt(document.getElementById('f-hour').value);
+      const gender = parseInt(document.getElementById('f-gender').value);
+      const namXem = parseInt(document.getElementById('f-namxem').value);
+
+      if (!day || !month || !year || isNaN(hour)) {
+        alert('Vui lòng điền đầy đủ thông tin ngày tháng năm sinh và giờ sinh.');
+        return;
+      }
+
       const chart = getTuViChart({
-        namSinh: year,
-        thangSinh: month,
-        ngaySinh: day,
-        gioSinh: hour,
-        gioiTinh: gender
+        namSinh: year, thangSinh: month, ngaySinh: day,
+        gioSinh: hour, gioiTinh: gender,
+        namXem, inputCalendar: cal
       });
       currentChart = chart;
 
-      // Reset chat history and count
-      chatHistory = [];
-      questionsAsked = 0;
-      questionInput.disabled = false;
-      askBtn.disabled = false;
-      questionInput.placeholder = "Nhập câu hỏi của bạn (ví dụ: cung Mệnh của tôi có tốt không?)...";
-      
-      chatLog.innerHTML = `
-        <div class="ai-message assistant">
-          <p>Lá số Tử Vi Đẩu Số của bạn đã được lập thành công trên bàn số. Hãy chọn một chủ đề bên dưới hoặc nhập câu hỏi chi tiết của riêng bạn để bắt đầu luận giải cùng tôi.</p>
-        </div>
-      `;
+      // Reset chat state
+      chatHistory = []; questionsAsked = 0;
+      qInput.disabled = false; askBtn.disabled = false;
+      qInput.placeholder = 'Nhập câu hỏi của bạn về lá số...';
+      chatLog.innerHTML = `<div class="ai-message assistant"><p>Lá số Tử Vi Đẩu Số của <strong>${name}</strong> đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p></div>`;
 
-      // 2. Update Center Info
-      document.getElementById('disp-name').textContent = name;
-      document.getElementById('disp-class').textContent = chart.thong_tin_goc.phan_loai;
-      document.getElementById('disp-solar').textContent = `${day}/${month}/${year}`;
-      document.getElementById('disp-lunar').textContent = `${chart.thong_tin_goc.am_lich.ngay} (${chart.thong_tin_goc.am_lich.thang}) năm ${chart.thong_tin_goc.am_lich.nam}`;
-      document.getElementById('disp-lunar-hour').textContent = chart.thong_tin_goc.am_lich.gio;
-      document.getElementById('disp-cuc').textContent = chart.thong_tin_goc.cuc;
+      // Update chart title
+      document.getElementById('chart-title').textContent = `Lá số Tử Vi · ${name}`;
 
-      // 3. Update 12 Palaces
+      // Update center panel
+      const al = chart.thong_tin_goc.am_lich;
+      document.getElementById('disp-name').textContent     = name;
+      document.getElementById('disp-class').textContent    = chart.thong_tin_goc.phan_loai;
+      document.getElementById('disp-solar').textContent    = `${day}/${month}/${year}`;
+      document.getElementById('disp-ly-year').textContent  = al.nam;
+      document.getElementById('disp-ly-month').textContent = al.thang;
+      document.getElementById('disp-ly-day').textContent   = al.ngay;
+      document.getElementById('disp-ly-hour').textContent  = al.gio;
+      document.getElementById('disp-namxem').textContent   = namXem;
+      document.getElementById('disp-phanloai').textContent = chart.thong_tin_goc.phan_loai;
+      document.getElementById('disp-cuc').textContent      = chart.thong_tin_goc.cuc;
+
+      // Render palace cards
       CUNG_KEYS.forEach((key, idx) => {
-        const palaceData = chart.la_so[key];
+        const p    = chart.la_so[key];
         const card = document.getElementById(`cung-${key}`);
-        
-        const goodStars = palaceData.phu_tinh.filter(s => GOOD_STARS.includes(s));
-        const badStars = palaceData.phu_tinh.filter(s => BAD_STARS.includes(s));
-        const otherStars = palaceData.phu_tinh.filter(s => !GOOD_STARS.includes(s) && !BAD_STARS.includes(s));
+        const isMenh = p.ten_cung === 'Mệnh';
+        const isThan = p.is_than;
+
+        card.className = `palace-card${isMenh ? ' is-menh' : ''}`;
+
+        const chinhHTML = p.chinh_tinh.map(s =>
+          `<span class="star-main">${s}</span>`
+        ).join('');
+
+        const phuHTML = p.phu_tinh.map(s => {
+          let cls = 'star-neutral';
+          if      (HOA_TOT.has(s))   cls = 'star-hoa-tot';
+          else if (HOA_XAU.has(s))   cls = 'star-hoa-ky';
+          else if (GOOD_STARS.has(s)) cls = 'star-good';
+          else if (BAD_STARS.has(s))  cls = 'star-bad';
+          else if (GRAY_STARS.has(s)) cls = 'star-gray';
+          return `<span class="${cls}">${s}</span>`;
+        }).join('');
+
+        const thanBadge = isThan
+          ? `<span class="pc-than-badge">Thân</span>` : '';
 
         card.innerHTML = `
-          <div class="palace-header">
-            <span class="palace-name">${palaceData.ten_cung}</span>
-            <span class="palace-branch">${CUNG_CHI_NAMES[idx]}</span>
-          </div>
-          <div class="stars-container">
-            <div class="chinh-tinh-list">
-              ${palaceData.chinh_tinh.map(s => `<span class="star-chinh-item">⭐ ${s}</span>`).join('')}
+          <div class="pc-header">
+            <span class="pc-chi">${CUNG_CHI[idx]}</span>
+            <div class="pc-cung-wrap">
+              <span class="pc-cung">${p.ten_cung}</span>${thanBadge}
             </div>
-            <div class="phu-tinh-grid">
-              <div class="phu-tinh-col">
-                ${goodStars.map(s => `<span class="star-good-item">${s}</span>`).join('')}
-              </div>
-              <div class="phu-tinh-col">
-                ${badStars.map(s => `<span class="star-bad-item">${s}</span>`).join('')}
-                ${otherStars.map(s => `<span class="star-neutral-item" style="color: var(--star-neutral); font-weight:600;">${s}</span>`).join('')}
-              </div>
-            </div>
+            <span class="pc-daihan">${p.dai_han}</span>
           </div>
-          <div class="palace-footer">
-            <span class="dai-han-val">Đ.Hạn: ${palaceData.dai_han}</span>
-            <span style="opacity: 0.5;">Cung ${idx + 1}</span>
+          <div class="pc-stars">
+            <div class="pc-chinh">${chinhHTML}</div>
+            <div class="pc-phu">${phuHTML}</div>
           </div>
-        `;
+          <div class="pc-footer">
+            <span>${p.trang_sinh || ''}</span>
+            <span>${p.nguyet_han ? 'T.' + p.nguyet_han : ''}</span>
+          </div>`;
       });
 
-      // Show grid and AI panel
-      grid.style.display = 'grid';
+      // Show sections
+      chartWrapper.style.display = 'block';
       aiPanel.style.display = 'block';
-      
-      // Auto-scroll to grid
-      grid.scrollIntoView({ behavior: 'smooth' });
+      chartWrapper.scrollIntoView({ behavior: 'smooth' });
 
-      // 4. Save profile asynchronously to database
-      saveProfileToDB(name, dateVal, hour, gender, chart);
+      // Save to DB (silent)
+      saveProfile(name, `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`, hour, gender, chart);
     });
 
-    // Save profile to database helper
-    async function saveProfileToDB(name, dateVal, hour, gender, chart) {
-      if (isSavingProfile) return;
-      isSavingProfile = true;
-      savedProfileId = null;
-
+    // ==================== SAVE PROFILE ====================
+    let isSaving = false;
+    async function saveProfile(name, dateVal, hour, gender, chart) {
+      if (isSaving) return;
+      isSaving = true;
       try {
-        const payload = {
-          name,
-          birth_date: dateVal,
-          birth_hour: hour,
-          gender,
-          lunar_date: `${chart.thong_tin_goc.am_lich.ngay} (${chart.thong_tin_goc.am_lich.thang}) năm ${chart.thong_tin_goc.am_lich.nam}`,
-          lunar_hour: chart.thong_tin_goc.am_lich.gio,
-          chart_json: chart
-        };
-
-        const response = await fetch('/api/save-profile', {
+        const al = chart.thong_tin_goc.am_lich;
+        await fetch('/api/save-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            name, birth_date: dateVal, birth_hour: hour, gender,
+            lunar_date: `${al.ngay} (${al.thang}) năm ${al.nam}`,
+            lunar_hour: al.gio, chart_json: chart
+          })
         });
-
-        if (response.ok) {
-          const resData = await response.json();
-          savedProfileId = resData.id;
-          console.log("[DB] Profile saved successfully with ID:", savedProfileId);
-        } else {
-          console.warn("[DB] Failed to save profile:", await response.text());
-        }
-      } catch (err) {
-        console.error("[DB] Error saving profile:", err);
-      } finally {
-        isSavingProfile = false;
-      }
+      } catch (_) { /* silent */ }
+      finally { isSaving = false; }
     }
 
-    // AI Consultation event handlers
+    // ==================== AI CONSULTATION ====================
     askBtn.addEventListener('click', () => {
-      const q = questionInput.value.trim();
+      const q = qInput.value.trim();
       if (q) handleAskAI(q);
     });
 
-    questionInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        const q = questionInput.value.trim();
-        if (q) handleAskAI(q);
-      }
+    qInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') { const q = qInput.value.trim(); if (q) handleAskAI(q); }
     });
 
-    // Quick prompt chip click listener
     document.querySelectorAll('.prompt-chip').forEach(chip => {
       chip.addEventListener('click', () => {
-        if (chatHistory.length > 0 && questionsAsked >= 5) {
-          alert("Bạn đã đặt tối đa 5 câu hỏi phụ cho lá số này. Vui lòng nhập thông tin để 'Dựng Lá Số Mới' để tiếp tục.");
+        if (questionsAsked >= 5) {
+          alert('Đã đạt giới hạn 5 câu hỏi. Vui lòng tạo lá số mới để tiếp tục.');
           return;
         }
-        const q = chip.getAttribute('data-question');
-        handleAskAI(q);
+        handleAskAI(chip.getAttribute('data-q'));
       });
     });
 
     async function handleAskAI(questionText) {
       if (!currentChart) return;
-
       const isFollowUp = chatHistory.length > 0;
-      if (isFollowUp) {
-        if (questionsAsked >= 5) {
-          alert("Bạn đã đặt tối đa 5 câu hỏi phụ cho lá số này. Vui lòng nhập thông tin để 'Dựng Lá Số Mới' để tiếp tục.");
-          return;
-        }
-        questionsAsked++;
+      if (isFollowUp && questionsAsked >= 5) {
+        alert('Đã đạt giới hạn 5 câu hỏi. Vui lòng tạo lá số mới để tiếp tục.');
+        return;
       }
-      
-      // Clear input
-      questionInput.value = '';
+      if (isFollowUp) questionsAsked++;
 
-      // Append user message to log
-      appendMessage('user', questionText);
-
-      // Disable inputs while loading
+      qInput.value = '';
+      appendMsg('user', questionText);
       setLoading(true);
-
-      // Append temporary typing indicator
-      const loaderId = appendTypingIndicator();
+      const loaderId = appendTyping();
 
       try {
-        // Construct summary context
-        const contextStr = buildChartSummary(currentChart);
-
-        const payload = {
-          question: questionText,
-          context: contextStr,
-          type: 'tuvi',
-          history: chatHistory
-        };
-
-        const response = await fetch('/api/interpret', {
+        const res = await fetch('/api/interpret', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            question: questionText,
+            context: buildSummary(currentChart),
+            type: 'tuvi',
+            history: chatHistory
+          })
         });
 
-        // Remove typing indicator
-        removeTypingIndicator(loaderId);
+        removeTyping(loaderId);
 
-        if (!response.ok) {
-          const errText = await response.text();
-          appendMessage('assistant', `⚠️ Lỗi từ hệ thống AI: ${errText || 'Không phản hồi'}`);
-          if (isFollowUp) {
-            questionsAsked--; // Revert count on error so they can retry
-          }
+        if (!res.ok) {
+          appendMsg('assistant', `⚠️ Lỗi hệ thống AI: ${await res.text()}`);
+          if (isFollowUp) questionsAsked--;
         } else {
-          const data = await response.json();
+          const data = await res.json();
           const answer = data.answer || '';
-          
-          // Append assistant message
-          appendMessage('assistant', answer);
-
-          // Update memory chat history
+          appendMsg('assistant', answer);
           chatHistory.push({ role: 'user', content: questionText });
           chatHistory.push({ role: 'assistant', content: answer });
-          
-          // Limit memory length to keep Qwen within bounds
-          if (chatHistory.length > 8) {
-            chatHistory = chatHistory.slice(-8);
-          }
+          if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
 
-          // Check if limit is reached
           if (questionsAsked >= 5) {
-            questionInput.placeholder = "Đã đạt giới hạn 5 câu hỏi bổ sung...";
-            questionInput.disabled = true;
-            askBtn.disabled = true;
-            appendMessage('assistant', '💡 **Thông báo:** Bạn đã gửi đủ 5 câu hỏi bổ sung cho lá số này. Để tiếp tục hỏi thêm các câu hỏi khác, bạn vui lòng nhập lại thông tin để **Dựng Lá Số Mới** ở trên nhé!');
+            qInput.placeholder = 'Đã đạt giới hạn 5 câu hỏi bổ sung...';
+            qInput.disabled = true; askBtn.disabled = true;
           }
         }
       } catch (err) {
-        removeTypingIndicator(loaderId);
-        appendMessage('assistant', `⚠️ Không thể kết nối với máy chủ AI: ${err.message}`);
-        if (isFollowUp) {
-          questionsAsked--; // Revert count on error so they can retry
-        }
+        removeTyping(loaderId);
+        appendMsg('assistant', `⚠️ Không thể kết nối AI: ${err.message}`);
+        if (isFollowUp) questionsAsked--;
       } finally {
         setLoading(false);
       }
     }
 
-    // Markdown simple regex parser
-    function parseMarkdown(md) {
-      if (!md) return "";
-      let html = md;
-      html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
-      html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
-      html = html.replace(/^# (.*$)/gim, '<h2>$1</h2>');
-      html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
-      html = html.replace(/^\- (.*$)/gim, '<li>$1</li>');
-      
-      const lines = html.split('\n');
+    function buildSummary(chart) {
+      const al = chart.thong_tin_goc.am_lich;
+      let s = `Giới tính: ${chart.thong_tin_goc.phan_loai}, Cục: ${chart.thong_tin_goc.cuc}\n`;
+      s += `Âm lịch: ${al.ngay}/${al.thang}/${al.nam}, Giờ: ${al.gio}\n`;
+      Object.entries(chart.la_so).forEach(([, p]) => {
+        s += `Cung ${p.ten_cung}: Chính [${p.chinh_tinh.join(', ') || 'Vô'}], Phụ [${p.phu_tinh.join(', ')}], Đại hạn ${p.dai_han}\n`;
+      });
+      return s;
+    }
+
+    // Simple markdown renderer
+    function parseMd(md) {
+      let h = md || '';
+      h = h.replace(/^### (.+)$/gim, '<h4>$1</h4>');
+      h = h.replace(/^## (.+)$/gim,  '<h3>$1</h3>');
+      h = h.replace(/\*\*(.+?)\*\*/gim, '<strong>$1</strong>');
+      h = h.replace(/^\- (.+)$/gim, '<li>$1</li>');
+      const lines = h.split('\n');
       let inList = false;
       for (let i = 0; i < lines.length; i++) {
         if (lines[i].trim().startsWith('<li>')) {
-          if (!inList) {
-            lines[i] = '<ul>' + lines[i];
-            inList = true;
-          }
-        } else {
-          if (inList) {
-            lines[i - 1] = lines[i - 1] + '</ul>';
-            inList = false;
-          }
-        }
+          if (!inList) { lines[i] = '<ul>' + lines[i]; inList = true; }
+        } else if (inList) { lines[i-1] += '</ul>'; inList = false; }
       }
-      if (inList) {
-        lines[lines.length - 1] = lines[lines.length - 1] + '</ul>';
-      }
-      html = lines.join('\n');
-      html = html.replace(/^\-\-\-$/gim, '<hr>');
-      html = html.replace(/\n/g, '<br>');
-      return html;
+      if (inList) lines[lines.length-1] += '</ul>';
+      return lines.join('\n').replace(/\n/g, '<br>');
     }
 
-    function appendMessage(sender, text) {
-      const msgDiv = document.createElement('div');
-      msgDiv.className = `ai-message ${sender}`;
-      
-      if (sender === 'user') {
-        msgDiv.innerHTML = `<p>${text}</p>`;
-      } else {
-        msgDiv.innerHTML = `<div class="md-content">${parseMarkdown(text)}</div>`;
-      }
-      
-      chatLog.appendChild(msgDiv);
+    function appendMsg(sender, text) {
+      const div = document.createElement('div');
+      div.className = `ai-message ${sender}`;
+      div.innerHTML = sender === 'user'
+        ? `<p>${text}</p>`
+        : `<div class="md-content">${parseMd(text)}</div>`;
+      chatLog.appendChild(div);
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    function appendTypingIndicator() {
-      const id = 'loader-' + Date.now();
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'ai-message assistant typing-indicator-msg';
-      msgDiv.id = id;
-      msgDiv.innerHTML = `
-        <div class="typing-dots">
-          <span></span><span></span><span></span>
-        </div>
-      `;
-      chatLog.appendChild(msgDiv);
+    function appendTyping() {
+      const id = 'ld-' + Date.now();
+      const div = document.createElement('div');
+      div.id = id; div.className = 'ai-message assistant';
+      div.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+      chatLog.appendChild(div);
       chatLog.scrollTop = chatLog.scrollHeight;
       return id;
     }
 
-    function removeTypingIndicator(id) {
-      const loader = document.getElementById(id);
-      if (loader) loader.remove();
-    }
+    function removeTyping(id) { document.getElementById(id)?.remove(); }
 
-    function setLoading(loading) {
-      askBtn.disabled = loading;
-      questionInput.disabled = loading;
-      document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = loading);
-      if (loading) {
-        askBtn.textContent = 'ĐANG LUẬN...';
-      } else {
-        askBtn.textContent = 'THAM VẤN AI';
-      }
-    }
-
-    function buildChartSummary(chart) {
-      let summary = `Họ tên: ${document.getElementById('name').value}, Giới tính: ${chart.thong_tin_goc.phan_loai}, Cục: ${chart.thong_tin_goc.cuc}\n`;
-      summary += `Lịch âm: ${chart.thong_tin_goc.am_lich.ngay} (${chart.thong_tin_goc.am_lich.thang}) năm ${chart.thong_tin_goc.am_lich.nam}, Giờ: ${chart.thong_tin_goc.am_lich.gio}\n`;
-      summary += `Cung vị:\n`;
-      Object.entries(chart.la_so).forEach(([key, palace]) => {
-        summary += `- Cung ${palace.ten_cung} (tại ${key}): Chính tinh [${palace.chinh_tinh.join(', ') || 'Vô chính diệu'}], Phụ tinh [${palace.phu_tinh.join(', ') || 'Không có'}], Đại hạn [${palace.dai_han}]\n`;
-      });
-      return summary;
+    function setLoading(on) {
+      askBtn.disabled = on; qInput.disabled = on;
+      document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = on);
+      askBtn.textContent = on ? 'ĐANG LUẬN...' : 'THAM VẤN AI';
     }
   </script>
 
