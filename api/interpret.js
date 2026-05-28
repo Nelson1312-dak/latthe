@@ -543,7 +543,7 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
 
   // ---- Call Ollama first, fall back to Groq on any failure ----
   const temperature = isFollowUp ? 0.4 : 0.2;
-  const maxTokens   = isFollowUp ? 500 : 650;
+  const maxTokens   = isFollowUp ? 500 : 1000;
   let answer = '';
   let source = 'ollama';
   let ollamaErr = null;

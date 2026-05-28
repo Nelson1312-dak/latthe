@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#e8930a">
   <title>Lá Số Tử Vi Đẩu Số — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=14">
+  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=15">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -680,22 +680,41 @@
       return s;
     }
 
-    // Simple markdown renderer
+    // Markdown renderer — block-aware to avoid double spacing
     function parseMd(md) {
-      let h = md || '';
-      h = h.replace(/^### (.+)$/gim, '<h4>$1</h4>');
-      h = h.replace(/^## (.+)$/gim,  '<h3>$1</h3>');
-      h = h.replace(/\*\*(.+?)\*\*/gim, '<strong>$1</strong>');
-      h = h.replace(/^\- (.+)$/gim, '<li>$1</li>');
-      const lines = h.split('\n');
+      if (!md) return '';
+      const inline = s => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const lines = md.split('\n');
+      const out = [];
       let inList = false;
+
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim().startsWith('<li>')) {
-          if (!inList) { lines[i] = '<ul>' + lines[i]; inList = true; }
-        } else if (inList) { lines[i-1] += '</ul>'; inList = false; }
+        const t = lines[i].trim();
+
+        // Close list when we hit a non-list non-empty line
+        if (inList && t !== '' && !/^[-•]\s/.test(t)) {
+          out.push('</ul>');
+          inList = false;
+        }
+
+        if (t === '---') {
+          out.push('<hr>');
+        } else if (/^###\s/.test(t)) {
+          out.push(`<h4>${inline(t.slice(4))}</h4>`);
+        } else if (/^##\s/.test(t)) {
+          out.push(`<h3>${inline(t.slice(3))}</h3>`);
+        } else if (/^[-•]\s/.test(t)) {
+          if (!inList) { out.push('<ul>'); inList = true; }
+          out.push(`<li>${inline(t.replace(/^[-•]\s/, ''))}</li>`);
+        } else if (t === '') {
+          if (!inList) out.push('<br>'); // single gap between paragraphs; skip inside lists
+        } else {
+          out.push(`<p>${inline(t)}</p>`);
+        }
       }
-      if (inList) lines[lines.length-1] += '</ul>';
-      return lines.join('\n').replace(/\n/g, '<br>');
+
+      if (inList) out.push('</ul>');
+      return out.join('');
     }
 
     function appendMsg(sender, text) {

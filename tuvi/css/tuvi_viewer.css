@@ -653,16 +653,20 @@ body {
   color: var(--amber-dark);
   font-size: 13.5px;
   font-weight: 700;
-  margin: 10px 0 4px;
+  margin: 10px 0 3px;
   padding-bottom: 3px;
   border-bottom: 1px solid var(--cream-mid);
 }
 
 .md-content h4:first-child { margin-top: 0; }
+.md-content p { margin: 0 0 5px; line-height: 1.55; }
+.md-content p:last-child { margin-bottom: 0; }
 .md-content strong { color: var(--amber-dark); }
-.md-content ul { margin: 6px 0 6px 18px; }
-.md-content li { margin-bottom: 3px; }
-.md-content hr { border: none; border-top: 1px solid var(--brown-light); margin: 10px 0; }
+.md-content ul { margin: 4px 0 6px 18px; }
+.md-content li { margin-bottom: 4px; line-height: 1.5; }
+.md-content li:last-child { margin-bottom: 0; }
+.md-content hr { border: none; border-top: 1px solid var(--brown-light); margin: 8px 0; }
+.md-content br { display: block; content: ''; margin-top: 4px; }
 
 /* AI input area */
 .ai-input-area {
