@@ -464,8 +464,30 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
     dai_han: 0,
     trang_sinh: "",
     nguyet_han: 0,
-    is_than: false
+    is_than: false,
+    tuan: false,
+    triet: false
   }));
+
+  // Calculate Triệt
+  const yearCanIdx = yearCanChi.canIdx; // 0 to 9
+  let trietPalaces = [];
+  if (yearCanIdx === 0 || yearCanIdx === 5) trietPalaces = [8, 9];      // Thân, Dậu
+  else if (yearCanIdx === 1 || yearCanIdx === 6) trietPalaces = [6, 7]; // Ngọ, Mùi
+  else if (yearCanIdx === 2 || yearCanIdx === 7) trietPalaces = [4, 5]; // Thìn, Tỵ
+  else if (yearCanIdx === 3 || yearCanIdx === 8) trietPalaces = [2, 3]; // Dần, Mão
+  else if (yearCanIdx === 4 || yearCanIdx === 9) trietPalaces = [0, 11]; // Tý, Hợi
+  
+  trietPalaces.forEach(idx => {
+    laSoPalaces[idx].triet = true;
+  });
+
+  // Calculate Tuần
+  const startChi = (yearCanChi.chiIdx - yearCanIdx + 12) % 12;
+  const tuanPalaces = [(startChi + 10) % 12, (startChi + 11) % 12];
+  tuanPalaces.forEach(idx => {
+    laSoPalaces[idx].tuan = true;
+  });
   
   // Đại Hạn (10-year major cycle age) calculation
   const isDuongNamAmNu = (isDuong && gioiTinh === 1) || (!isDuong && gioiTinh === 0);
@@ -571,6 +593,45 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
   const hoaKhoaPos = starPositions[khoaStars[tc1 - 1]];
   const hoaKyPos = starPositions[kyStars[tc1 - 1]];
   
+  // Additional minor stars
+  const yChi = yearCanChi.chiIdx; // 0 to 11
+
+  // Thiên Mã
+  let thienMaPos = 3; // Default Dần (3)
+  if (yChi === 2 || yChi === 6 || yChi === 10) thienMaPos = 9;      // Thân
+  else if (yChi === 8 || yChi === 0 || yChi === 4) thienMaPos = 3;  // Dần
+  else if (yChi === 5 || yChi === 9 || yChi === 1) thienMaPos = 12; // Hợi
+  else if (yChi === 11 || yChi === 3 || yChi === 7) thienMaPos = 6; // Tỵ
+
+  // Đào Hoa
+  let daoHoaPos = 1; // Default Tý (1)
+  if (yChi === 2 || yChi === 6 || yChi === 10) daoHoaPos = 4;      // Mão
+  else if (yChi === 8 || yChi === 0 || yChi === 4) daoHoaPos = 10; // Dậu
+  else if (yChi === 5 || yChi === 9 || yChi === 1) daoHoaPos = 7;  // Ngọ
+  else if (yChi === 11 || yChi === 3 || yChi === 7) daoHoaPos = 1; // Tý
+
+  // Hồng Loan
+  const hongLoanPos = xetSo(4 - yChi);
+
+  // Thiên Hỷ
+  const thienHyPos = xetSo(hongLoanPos + 6);
+
+  // Cô Thần, Quả Tú
+  let coThanPos = 3, quaTuPos = 11;
+  if (yChi === 11 || yChi === 0 || yChi === 1) {
+    coThanPos = 3; quaTuPos = 11; // Dần, Tuất
+  } else if (yChi === 2 || yChi === 3 || yChi === 4) {
+    coThanPos = 6; quaTuPos = 2;  // Tỵ, Sửu
+  } else if (yChi === 5 || yChi === 6 || yChi === 7) {
+    coThanPos = 9; quaTuPos = 5;  // Thân, Thìn
+  } else if (yChi === 8 || yChi === 9 || yChi === 10) {
+    coThanPos = 12; quaTuPos = 8; // Hợi, Mùi
+  }
+
+  // Song Hao (Đại Hao & Tiểu Hao)
+  const daiHaoPos = xetSo(yChi + 3);
+  const tieuHaoPos = xetSo(daiHaoPos + 6);
+
   const phuTinhList = [
     { name: "Lộc Tồn", pos: locTonPos },
     { name: "Kình Dương", pos: kinhDuongPos },
@@ -588,7 +649,15 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
     { name: "Hóa Lộc", pos: hoaLocPos },
     { name: "Hóa Quyền", pos: hoaQuyenPos },
     { name: "Hóa Khoa", pos: hoaKhoaPos },
-    { name: "Hóa Kỵ", pos: hoaKyPos }
+    { name: "Hóa Kỵ", pos: hoaKyPos },
+    { name: "Thiên Mã", pos: thienMaPos },
+    { name: "Đào Hoa", pos: daoHoaPos },
+    { name: "Hồng Loan", pos: hongLoanPos },
+    { name: "Thiên Hỷ", pos: thienHyPos },
+    { name: "Cô Thần", pos: coThanPos },
+    { name: "Quả Tú", pos: quaTuPos },
+    { name: "Đại Hao", pos: daiHaoPos },
+    { name: "Tiểu Hao", pos: tieuHaoPos }
   ];
   
   phuTinhList.forEach(({ name, pos }) => {

@@ -8,6 +8,7 @@
   <title>Lá Số Tử Vi Đẩu Số — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
   <link rel="stylesheet" href="./css/tuvi_viewer.css?v=4">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -86,7 +87,10 @@
 
   <!-- ===== CHART SECTION ===== -->
   <div class="chart-wrapper" id="chart-wrapper" style="display:none;">
-    <div class="chart-title" id="chart-title">Lá số Tử Vi</div>
+    <div class="chart-title-row">
+      <div class="chart-title" id="chart-title">Lá số Tử Vi</div>
+      <button type="button" id="btn-export-img" class="btn-export">Xuất ảnh lá số 📸</button>
+    </div>
     <div class="chart-scroll">
       <div class="chart-outer">
         <div class="chart-container" id="chart-grid">
@@ -197,8 +201,8 @@
 
     const HOA_TOT   = new Set(["Hóa Lộc","Hóa Quyền","Hóa Khoa"]);
     const HOA_XAU   = new Set(["Hóa Kỵ"]);
-    const GOOD_STARS= new Set(["Lộc Tồn","Thiên Khôi","Thiên Việt","Tả Phù","Hữu Bật","Văn Xương","Văn Khúc"]);
-    const BAD_STARS = new Set(["Kình Dương","Đà La","Địa Không","Địa Kiếp"]);
+    const GOOD_STARS= new Set(["Lộc Tồn","Thiên Khôi","Thiên Việt","Tả Phù","Hữu Bật","Văn Xương","Văn Khúc","Thiên Mã","Đào Hoa","Hồng Loan","Thiên Hỷ"]);
+    const BAD_STARS = new Set(["Kình Dương","Đà La","Địa Không","Địa Kiếp","Cô Thần","Quả Tú","Đại Hao","Tiểu Hao"]);
     const GRAY_STARS= new Set(["Thiên Khốc","Thiên Hư"]);
 
     // Can heavenly stems
@@ -363,10 +367,14 @@
         }).join('');
 
         const thanBadge = isThan ? `<span class="pc-than-badge">Thân</span>` : '';
+        let ttLabel = '';
+        if (p.tuan && p.triet) ttLabel = `<span class="pc-tt-badge black">T.Triệt</span>`;
+        else if (p.tuan)        ttLabel = `<span class="pc-tt-badge blue">Tuần</span>`;
+        else if (p.triet)       ttLabel = `<span class="pc-tt-badge red">Triệt</span>`;
 
         card.innerHTML = `
           <div class="pc-header">
-            <span class="pc-chi">${chiLabel}</span>
+            <span class="pc-chi">${chiLabel} ${ttLabel}</span>
             <div class="pc-cung-wrap">
               <span class="pc-cung">${p.ten_cung}</span>${thanBadge}
             </div>
@@ -390,7 +398,36 @@
       // Save to DB (silent)
       saveProfile(name, `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`, hour, gender, chart);
     });
-
+    // ==================== IMAGE EXPORT ====================
+    document.getElementById('btn-export-img').addEventListener('click', () => {
+      const target = document.querySelector('.chart-outer');
+      const nameVal = document.getElementById('f-name').value.trim() || 'vo-danh';
+      const exportBtn = document.getElementById('btn-export-img');
+      
+      exportBtn.disabled = true;
+      exportBtn.textContent = 'Đang xuất... ⏳';
+      
+      setTimeout(() => {
+        html2canvas(target, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#faf6ed'
+        }).then(canvas => {
+          const link = document.createElement('a');
+          link.download = `la-so-tu-vi-${nameVal.replace(/\s+/g, '-')}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          
+          exportBtn.disabled = false;
+          exportBtn.textContent = 'Xuất ảnh lá số 📸';
+        }).catch(err => {
+          console.error('Export error:', err);
+          alert('Có lỗi xảy ra khi xuất ảnh lá số.');
+          exportBtn.disabled = false;
+          exportBtn.textContent = 'Xuất ảnh lá số 📸';
+        });
+      }, 100);
+    });
     // ==================== SAVE PROFILE ====================
     let isSaving = false;
     async function saveProfile(name, dateVal, hour, gender, chart) {
