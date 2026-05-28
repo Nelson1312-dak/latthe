@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#e8930a">
   <title>Lá Số Tử Vi Đẩu Số — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=15">
+  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=16">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -680,35 +680,42 @@
       return s;
     }
 
-    // Markdown renderer — block-aware to avoid double spacing
+    // Markdown renderer — deferred-break to avoid gaps around block elements
     function parseMd(md) {
       if (!md) return '';
       const inline = s => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const isHrLine = t => /^[\-–—]{3,}$/.test(t.replace(/\s/g, '')) || t === '- - -' || t === '– – –';
       const lines = md.split('\n');
       const out = [];
       let inList = false;
+      let pendingBreak = false; // deferred: only flush when actual content follows
 
       for (let i = 0; i < lines.length; i++) {
         const t = lines[i].trim();
 
-        // Close list when we hit a non-list non-empty line
+        // Close list on non-list non-empty line
         if (inList && t !== '' && !/^[-•]\s/.test(t)) {
           out.push('</ul>');
           inList = false;
         }
 
-        if (t === '---') {
+        if (isHrLine(t)) {
+          pendingBreak = false; // suppress gap before hr
           out.push('<hr>');
         } else if (/^###\s/.test(t)) {
+          pendingBreak = false; // suppress gap before heading
           out.push(`<h4>${inline(t.slice(4))}</h4>`);
         } else if (/^##\s/.test(t)) {
+          pendingBreak = false;
           out.push(`<h3>${inline(t.slice(3))}</h3>`);
         } else if (/^[-•]\s/.test(t)) {
+          if (pendingBreak && !inList) { out.push('<br>'); pendingBreak = false; }
           if (!inList) { out.push('<ul>'); inList = true; }
           out.push(`<li>${inline(t.replace(/^[-•]\s/, ''))}</li>`);
         } else if (t === '') {
-          if (!inList) out.push('<br>'); // single gap between paragraphs; skip inside lists
+          if (!inList) pendingBreak = true; // defer; blank lines inside lists are ignored
         } else {
+          if (pendingBreak) { out.push('<br>'); pendingBreak = false; }
           out.push(`<p>${inline(t)}</p>`);
         }
       }
