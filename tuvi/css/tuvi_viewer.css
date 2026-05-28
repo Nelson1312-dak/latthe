@@ -171,7 +171,7 @@ body {
 
 /* ==================== CHART SECTION ==================== */
 .chart-wrapper {
-  max-width: 1100px;
+  max-width: 640px;
   margin: 0 auto 32px;
   padding: 0 12px;
 }
@@ -228,13 +228,13 @@ body {
 .chart-outer {
   border: 2px solid var(--brown);
   background: var(--brown);
-  min-width: 680px;
+  min-width: 600px;
 }
 
 .chart-container {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, minmax(110px, auto));
+  grid-template-rows: repeat(4, minmax(150px, auto));
   gap: 1px;
 }
 
@@ -244,7 +244,7 @@ body {
   padding: 5px 6px 4px;
   display: flex;
   flex-direction: column;
-  min-height: 110px;
+  min-height: 150px;
   position: relative;
 }
 
