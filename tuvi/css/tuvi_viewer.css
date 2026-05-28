@@ -662,11 +662,11 @@ body {
 .md-content p { margin: 0 0 5px; line-height: 1.55; }
 .md-content p:last-child { margin-bottom: 0; }
 .md-content strong { color: var(--amber-dark); }
-.md-content ul { margin: 4px 0 6px 18px; }
-.md-content li { margin-bottom: 4px; line-height: 1.5; }
+.md-content ul { margin: 2px 0 4px 16px; }
+.md-content li { margin-bottom: 3px; line-height: 1.5; }
 .md-content li:last-child { margin-bottom: 0; }
-.md-content hr { border: none; border-top: 1px solid var(--brown-light); margin: 8px 0; }
-.md-content br { display: block; content: ''; margin-top: 4px; }
+.md-content hr { border: none; border-top: 1px solid var(--brown-light); margin: 5px 0; }
+.md-content br { display: block; content: ''; margin-top: 3px; }
 
 /* AI input area */
 .ai-input-area {

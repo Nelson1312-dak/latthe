@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Dựng lá số Tử Vi Đẩu Số chuẩn xác theo phương pháp cổ truyền phương Đông. Nhận luận giải chi tiết từ chuyên gia AI.">
   <meta name="theme-color" content="#e8930a">
-  <title>Lá Số Tử Vi Đẩu Số — Lật Bài</title>
+  <title>Lá Số Tử Vi — Lật Bài</title>
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=16">
+  <link rel="stylesheet" href="./css/tuvi_viewer.css?v=17">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -188,7 +188,7 @@
 
       <div class="ai-chat-log" id="ai-chat-log">
         <div class="ai-message assistant">
-          <p>Lá số Tử Vi Đẩu Số của bạn đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p>
+          <p>Lá số Tử Vi của bạn đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p>
         </div>
       </div>
 
@@ -442,7 +442,7 @@
       chatHistory = []; questionsAsked = 0;
       qInput.disabled = false; askBtn.disabled = false;
       qInput.placeholder = 'Nhập câu hỏi của bạn về lá số...';
-      chatLog.innerHTML = `<div class="ai-message assistant"><p>Lá số Tử Vi Đẩu Số của <strong>${name}</strong> đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p></div>`;
+      chatLog.innerHTML = `<div class="ai-message assistant"><p>Lá số Tử Vi của <strong>${name}</strong> đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p></div>`;
 
       // Update chart title
       document.getElementById('chart-title').textContent = `Lá số Tử Vi · ${name}`;
@@ -684,7 +684,12 @@
     function parseMd(md) {
       if (!md) return '';
       const inline = s => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      const isHrLine = t => /^[\-–—]{3,}$/.test(t.replace(/\s/g, '')) || t === '- - -' || t === '– – –';
+      // Detect any line made entirely of dashes/en-dashes/em-dashes + spaces
+      const isHrLine = t => {
+        if (t.length < 3) return false;
+        const cleaned = t.replace(/[-–—\s]/g, '');
+        return cleaned === '' && /[-–—]/.test(t);
+      };
       const lines = md.split('\n');
       const out = [];
       let inList = false;
