@@ -867,32 +867,4 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
       ratings: STAR_RATINGS
     }
   };
-}LimitPalace(yearCanChi.chiIdx, gioiTinh, lunarYear, namXem);
-  let month1Idx = (minorLimitIdx - (thangTuVi - 1) + (hourIndex - 1) + 12) % 12;
-  
-  for (let idx = 0; idx < 12; idx++) {
-    const monthNum = (idx - month1Idx + 12) % 12 + 1;
-    laSoPalaces[idx].nguyet_han = monthNum;
-  }
-  
-  // 8. Build the final output JSON structure
-  const laSoOutput = {};
-  CUNG_KEYS.forEach((key, idx) => {
-    laSoOutput[key] = laSoPalaces[idx];
-  });
-  
-  return {
-    thong_tin_goc: {
-      am_lich: {
-        nam: yearCanChi.text,
-        thang: monthCanChiStr,
-        ngay: dayCanChi.text,
-        gio: hourCanChiStr
-      },
-      phan_loai: phanLoai,
-      cuc: cuc.name,
-      than_pos: thanPos
-    },
-    la_so: laSoOutput
-  };
 }
