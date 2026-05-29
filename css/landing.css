@@ -81,7 +81,7 @@ a { text-decoration: none; color: inherit; }
   padding: 72px 0 40px;
 }
 
-/* Brand icon mark — amber seal */
+/* Brand icon mark — animated floating amber seal */
 .l-brand-icon {
   width: 84px;
   height: 84px;
@@ -92,53 +92,58 @@ a { text-decoration: none; color: inherit; }
   font-size: 40px;
   color: #fff;
   border-radius: 26px;
-  background: linear-gradient(150deg, #f5ab2e 0%, #e8930a 55%, #d97706 100%);
-  box-shadow: 0 12px 28px rgba(217, 119, 6, 0.32), inset 0 1px 0 rgba(255,255,255,0.4);
+  background: linear-gradient(135deg, #fb923c 0%, #ea580c 55%, #c2410c 100%);
+  box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.45);
   line-height: 1;
+  animation: brand-float-spin 6s ease-in-out infinite;
+}
+.l-brand-icon i {
+  display: inline-block;
+  animation: brand-icon-flip 6s ease-in-out infinite;
+}
+
+@keyframes brand-float-spin {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35);
+  }
+  50% {
+    transform: translateY(-8px) rotate(6deg);
+    box-shadow: 0 20px 35px rgba(234, 88, 12, 0.45);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+    box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35);
+  }
+}
+
+@keyframes brand-icon-flip {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12) rotate(-8deg); }
 }
 
 .l-brand-name {
   font-family: var(--font);
   font-size: clamp(48px, 14vw, 80px);
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.25; /* Increased to prevent accent cutting */
+  padding: 6px 0 12px 0; /* Extra vertical room for accent signs and descenders */
   letter-spacing: 1px;
   text-transform: uppercase;
   background: linear-gradient(135deg, #1a0a00 25%, #7a3800 60%, #e8930a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
-
-.l-brand-sub {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  margin-bottom: 4px;
-}
-.l-brand-sub span:not(.l-dot) {
-  padding: 4px 12px;
-  border-radius: 999px;
-  line-height: 1.4;
-}
-.bs-tuvi   { color: var(--c-tuvi);    background: rgba(232, 147, 10, 0.12); }
-.bs-gq     { color: var(--c-gieoque); background: rgba(13, 150, 104, 0.12); }
-.bs-tarot  { color: var(--c-tarot);   background: rgba(124, 58, 237, 0.12); }
-.bs-drink  { color: var(--c-drink);   background: rgba(234, 106, 23, 0.12); }
-.l-dot     { display: none; }
 
 .l-hero-tagline {
-  font-size: 13.5px;
+  font-size: 14.5px;
+  font-weight: 600;
   color: var(--sub);
-  margin-top: 14px;
-  line-height: 1.6;
-  letter-spacing: 0.2px;
+  margin-top: 4px;
+  line-height: 1.5;
+  letter-spacing: 0.3px;
 }
 
 /* ---- Divider ---- */
