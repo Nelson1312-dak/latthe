@@ -190,3 +190,185 @@
   0% { background-position: 0% 0%, 0% 50%; }
   100% { background-position: 0% 0%, -200% 50%; }
 }
+
+/* ============================================================
+   Floating Navigation Dock (Thanh Điều Hướng Nhanh)
+   ============================================================ */
+.floating-dock {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  
+  /* Mobile default: bottom floating bar */
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  height: 56px;
+  background: rgba(20, 15, 10, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 0 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Light theme adaptation (homepage, thuvien) */
+body.light-theme .floating-dock,
+body:not(.dark-theme) .floating-dock {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(120, 80, 25, 0.15);
+  box-shadow: 0 10px 30px rgba(120, 75, 25, 0.1);
+}
+
+.dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 20px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+body.light-theme .dock-item,
+body:not(.dark-theme) .dock-item {
+  color: rgba(107, 86, 61, 0.6);
+}
+
+.dock-item:hover, .dock-item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-theme .dock-item:hover,
+body.light-theme .dock-item.active,
+body:not(.dark-theme) .dock-item:hover,
+body:not(.dark-theme) .dock-item.active {
+  color: #2b1d0e;
+  background: rgba(120, 80, 25, 0.08);
+}
+
+/* Active colors matching brand palettes */
+.dock-item[data-module="tuvi"].active { color: #e8930a !important; }
+.dock-item[data-module="gieoque"].active { color: #0d9668 !important; }
+.dock-item[data-module="tarot"].active { color: #7c3aed !important; }
+.dock-item[data-module="drinking"].active { color: #ea6a17 !important; }
+.dock-item[data-module="thuvien"].active { color: #2563eb !important; }
+.dock-item[data-module="home"].active { color: #d97706 !important; }
+
+.dock-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-theme .dock-divider,
+body:not(.dark-theme) .dock-divider {
+  background: rgba(120, 80, 25, 0.15);
+}
+
+.dock-item .dock-label {
+  display: none;
+}
+
+/* Desktop layout: Vertical Floating Sidebar */
+@media (min-width: 768px) {
+  .floating-dock {
+    flex-direction: column;
+    left: 20px;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    width: 60px;
+    height: auto;
+    padding: 16px 0;
+    gap: 8px;
+    border-radius: 24px;
+  }
+  
+  .dock-divider {
+    width: 32px;
+    height: 1px;
+    margin: 4px 0;
+  }
+
+  .dock-item .dock-label {
+    display: block;
+    position: absolute;
+    left: 70px;
+    top: 50%;
+    transform: translateY(-50%) scale(0.9);
+    background: rgba(20, 15, 10, 0.9);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  body.light-theme .dock-item .dock-label,
+  body:not(.dark-theme) .dock-item .dock-label {
+    background: #2b1d0e;
+  }
+
+  .dock-item:hover .dock-label {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+    left: 64px;
+  }
+}
+
+/* Shared stylings for custom SEO links in app pages (which we can style as buttons) */
+.seo-library-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  margin: 32px 0 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Dark mode modules (tuvi, gieoque, tarot) link button style */
+.dark-theme .seo-library-link,
+body:not(.light-theme) .seo-library-link {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+.dark-theme .seo-library-link:hover,
+body:not(.light-theme) .seo-library-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+/* Gieoque-specific button color focus on hover */
+.dark-theme .seo-library-link:hover {
+  border-color: rgba(13, 150, 104, 0.4);
+}
+/* Tarot-specific button color focus on hover */
+body:not(.light-theme) .seo-library-link:hover {
+  /* tarot is on body:not(.light-theme) */
+}
+
