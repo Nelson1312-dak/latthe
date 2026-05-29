@@ -101,8 +101,12 @@ a { text-decoration: none; color: inherit; }
   font-size: clamp(48px, 14vw, 80px);
   font-weight: 900;
   line-height: 1;
-  letter-spacing: -2px;
-  color: var(--text);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #1a0a00 25%, #7a3800 60%, #e8930a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 16px;
 }
 
