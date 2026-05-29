@@ -331,20 +331,25 @@ body {
   border-bottom: none;
 }
 
-/* FAQ accordion */
+/* FAQ section inside an article body — override common.css standalone spacing */
 .faq-section {
-  margin-top: 40px;
-  padding-top: 32px;
+  max-width: none;
+  margin: 40px 0 0;
+  padding: 32px 0 0;
   border-top: 1px dashed var(--border);
+  text-align: left;
 }
 
+/* Note: the Q&A item visuals (list / item / question / answer + blue ? bullet)
+   come from the theme-aware "Premium FAQ List Layout" in common.css. Here we
+   only adapt the section wrapper so it sits naturally inside the article body
+   (left-aligned, no extra centering/inset that common.css adds for standalone use). */
 .faq-title {
   font-size: 20px;
   font-weight: 800;
+  text-align: left;
   margin-bottom: 20px;
 }
-
-
 
 /* Author Box */
 .author-box {
@@ -450,4 +455,14 @@ body {
 
 .footer-nav a:hover {
   color: var(--text);
+}
+
+/* --- FLOATING DOCK SAFE-AREAS --- */
+/* Mobile: bottom bar — keep footer clear of it */
+@media (max-width: 767px) {
+  body.thuvien-theme { padding-bottom: 84px; }
+}
+/* Desktop: left sidebar rail — give content a left gutter so it never overlaps */
+@media (min-width: 768px) {
+  body.thuvien-theme { padding-left: 80px; }
 }
