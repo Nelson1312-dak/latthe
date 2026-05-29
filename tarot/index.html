@@ -37,8 +37,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap&subset=vietnamese" rel="stylesheet">
-  <link rel="stylesheet" href="../css/common.css?v=32">
-  <link rel="stylesheet" href="css/tarot.css?v=21">
+  <link rel="stylesheet" href="../css/common.css?v=33">
+  <link rel="stylesheet" href="css/tarot.css?v=22">
 
   <!-- Vercel Web Analytics & Speed Insights -->
   <script>
@@ -126,7 +126,7 @@
 
         <!-- Question input -->
         <div class="question-box">
-          <label class="question-label"><i class="ti ti-sparkles"></i> Câu hỏi của bạn</label>
+          <label class="question-label"><i class="ti ti-sparkles"></i> Bước 1: Nhập câu hỏi của bạn</label>
           <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên chuyển việc vào lúc này không?" rows="3" maxlength="200"></textarea>
           <div class="suggested-questions">
             <span class="sq-label">Gợi ý câu hỏi:</span>
@@ -139,21 +139,34 @@
           <p class="question-hint">AI sẽ luận giải dựa trên câu hỏi và lá bài của bạn</p>
         </div>
 
+        <div class="spread-section-header">
+          <i class="ti ti-hand-finger"></i> Bước 2: Chọn kiểu rải bài để bắt đầu bốc
+        </div>
+
         <div class="spread-options">
           <button class="spread-btn" data-spread="one">
             <span class="spread-icon">🃏</span>
-            <span class="spread-name">1 Lá</span>
-            <span class="spread-desc">Thông điệp hôm nay</span>
+            <div class="spread-info">
+              <span class="spread-name">1 Lá</span>
+              <span class="spread-desc">Thông điệp hôm nay</span>
+            </div>
+            <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
           </button>
           <button class="spread-btn" data-spread="three">
             <span class="spread-icon">🃏🃏🃏</span>
-            <span class="spread-name">3 Lá</span>
-            <span class="spread-desc">Quá khứ · Hiện tại · Tương lai</span>
+            <div class="spread-info">
+              <span class="spread-name">3 Lá</span>
+              <span class="spread-desc">Quá khứ · Hiện tại · Tương lai</span>
+            </div>
+            <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
           </button>
           <button class="spread-btn" data-spread="five">
             <span class="spread-icon">🃏🃏🃏🃏🃏</span>
-            <span class="spread-name">5 Lá</span>
-            <span class="spread-desc">Tình huống phức tạp</span>
+            <div class="spread-info">
+              <span class="spread-name">5 Lá</span>
+              <span class="spread-desc">Tình huống phức tạp</span>
+            </div>
+            <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
           </button>
         </div>
 

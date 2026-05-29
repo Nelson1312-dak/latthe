@@ -115,8 +115,47 @@ a { text-decoration: none; color: inherit; }
   transform: translateY(-2px);
 }
 .spread-icon { font-size: 24px; flex-shrink: 0; }
-.spread-name { font-family: var(--font-heading); font-size: 18px; font-weight: 800; flex: 1; }
+.spread-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  text-align: left;
+}
+.spread-name { font-family: var(--font-heading); font-size: 17px; font-weight: 800; color: var(--text); }
 .spread-desc { font-size: 12px; color: var(--muted); }
+.spread-cta-btn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: var(--purple-dim, rgba(124, 58, 237, 0.08));
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  color: var(--purple, #7c3aed);
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.22s ease;
+}
+.spread-btn:hover .spread-cta-btn {
+  background: var(--purple, #7c3aed);
+  color: #ffffff;
+  border-color: var(--purple);
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.35);
+}
+.spread-section-header {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--purple, #7c3aed);
+  margin: 28px 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
 .t-footer-note { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
 
 /* ---- Shuffle screen ---- */
@@ -824,6 +863,10 @@ a { text-decoration: none; color: inherit; }
     text-align: center;
     padding: 24px 16px;
     gap: 10px;
+  }
+  .spread-info {
+    align-items: center;
+    text-align: center;
   }
   .spread-icon {
     font-size: 36px;
