@@ -785,25 +785,6 @@ body {
 }
 
 /* ==================== RESPONSIVE ==================== */
-/* ==================== DESKTOP LAYOUT ==================== */
-@media (min-width: 900px) {
-  .form-wrapper {
-    max-width: 1020px;
-    display: grid;
-    grid-template-columns: 440px 1fr;
-    gap: 52px;
-    align-items: start;
-    padding: 0 32px 48px;
-  }
-  .tuvi-seo-content {
-    max-width: none;
-    margin: 0;
-    padding: 0;
-  }
-  .tuvi-seo-content h3 { font-size: 14.5px; }
-  .tuvi-seo-content p  { font-size: 14px; }
-  .tuvi-seo-content details.faq-item summary { font-size: 14px; }
-}
 
 @media (max-width: 520px) {
   .form-card  { padding: 22px 16px 18px; }
@@ -818,9 +799,9 @@ body {
 
 /* ---- SEO + FAQ section (form page) ---- */
 .tuvi-seo-content {
-  width: 100%; max-width: 540px;
-  margin: 28px auto 40px;
-  padding: 0 20px;
+  width: 100%; max-width: 860px;
+  margin: 0 auto 48px;
+  padding: 32px 24px 0;
   text-align: left;
 }
 .tuvi-seo-title {
