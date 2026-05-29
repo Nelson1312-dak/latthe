@@ -37,8 +37,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap&subset=vietnamese" rel="stylesheet">
-  <link rel="stylesheet" href="../css/common.css?v=31">
-  <link rel="stylesheet" href="css/gieoque.css?v=15">
+  <link rel="stylesheet" href="../css/common.css?v=32">
+  <link rel="stylesheet" href="css/gieoque.css?v=16">
 
   <!-- Vercel Web Analytics & Speed Insights -->
   <script>
@@ -101,10 +101,10 @@
 
   <div id="app">
 
-    <header class="gq-header">
+    <header class="module-header gieoque-theme">
       <a href="/" class="btn-back"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
-      <span class="gq-header-title"><i class="ti ti-yin-yang" style="margin-right:6px;"></i>Gieo Quẻ</span>
-      <div class="gq-header-actions">
+      <span class="header-title"><i class="ti ti-yin-yang"></i>Gieo Quẻ</span>
+      <div class="header-actions">
         <button id="btn-history" class="btn-ghost" title="Lịch sử quẻ đã gieo" aria-label="Mở lịch sử quẻ đã gieo"><i class="ti ti-history"></i></button>
         <button id="btn-restart" class="btn-ghost hidden">Làm Lại</button>
       </div>
@@ -117,6 +117,9 @@
           <div class="yin-yang-anim"><i class="ti ti-yin-yang"></i></div>
           <h1 class="gq-title">Kinh Dịch</h1>
           <p class="gq-subtitle">64 Quẻ • Gieo đồng xu • Luận quẻ Kinh Dịch</p>
+          <div class="seo-app-intro">
+            Gieo quẻ hỏi về công việc, tài lộc, tình cảm. AI luận giải ý nghĩa 64 quẻ và hào biến.
+          </div>
         </div>
 
         <!-- Question input -->
@@ -132,35 +135,6 @@
             </div>
           </div>
           <p class="question-hint">AI sẽ luận giải quẻ dựa trên câu hỏi của bạn</p>
-        </div>
-
-        <div class="intro-card">
-          <h3 class="intro-card-title"><i class="ti ti-book"></i> Cách Gieo Quẻ</h3>
-          <div class="intro-steps">
-            <div class="intro-step">
-              <span class="step-num">1</span>
-              <span>Tập trung vào câu hỏi trong tâm trí</span>
-            </div>
-            <div class="intro-step">
-              <span class="step-num">2</span>
-              <span>Nhấn gieo — máy tự tung 3 xu cho cả 6 hào</span>
-            </div>
-            <div class="intro-step">
-              <span class="step-num">3</span>
-              <span>Kết quả tạo thành quẻ 6 hào</span>
-            </div>
-            <div class="intro-step">
-              <span class="step-num">4</span>
-              <span>Hào động tạo quẻ biến — đọc cả hai</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="coin-legend">
-          <div class="legend-item"><span class="coin coin-yang">●</span><span>Sấp = Dương (3đ)</span></div>
-          <div class="legend-item"><span class="coin coin-yin">○</span><span>Ngửa = Âm (2đ)</span></div>
-          <div class="legend-item"><span class="coin coin-old-yang">◉</span><span>9đ = Lão Dương (hào động)</span></div>
-          <div class="legend-item"><span class="coin coin-old-yin">◎</span><span>6đ = Lão Âm (hào động)</span></div>
         </div>
 
         <!-- Trigger for BLOCK 2 Guide Popup -->
@@ -298,6 +272,37 @@
         <button id="btn-close-guide" class="btn-close-popup" type="button">&times;</button>
         
         <h3 class="popup-title"><i class="ti ti-book" style="margin-right:6px;"></i>Cẩm Nang Tra Cứu Kinh Dịch Nhanh</h3>
+
+        <div class="popup-section" style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+          <h4 style="margin-bottom: 12px;"><i class="ti ti-help"></i> Hướng Dẫn Gieo Quẻ</h4>
+          <div class="intro-card" style="box-shadow: none; border: none; padding: 0; margin-bottom: 16px; background: transparent;">
+            <div class="intro-steps">
+              <div class="intro-step">
+                <span class="step-num">1</span>
+                <span>Tập trung vào câu hỏi trong tâm trí</span>
+              </div>
+              <div class="intro-step">
+                <span class="step-num">2</span>
+                <span>Nhấn gieo — máy tự tung 3 xu cho cả 6 hào</span>
+              </div>
+              <div class="intro-step">
+                <span class="step-num">3</span>
+                <span>Kết quả tạo thành quẻ 6 hào</span>
+              </div>
+              <div class="intro-step">
+                <span class="step-num">4</span>
+                <span>Hào động tạo quẻ biến — đọc cả hai</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="coin-legend" style="margin-bottom: 0;">
+            <div class="legend-item"><span class="coin coin-yang">●</span><span>Sấp = Dương (3đ)</span></div>
+            <div class="legend-item"><span class="coin coin-yin">○</span><span>Ngửa = Âm (2đ)</span></div>
+            <div class="legend-item"><span class="coin coin-old-yang">◉</span><span>9đ = Lão Dương (hào động)</span></div>
+            <div class="legend-item"><span class="coin coin-old-yin">◎</span><span>6đ = Lão Âm (hào động)</span></div>
+          </div>
+        </div>
         
         <div class="popup-section">
           <h4>1. Quy Ước 3 Đồng Xu Gieo Hào</h4>

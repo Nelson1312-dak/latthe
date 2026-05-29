@@ -37,45 +37,7 @@ a { text-decoration: none; color: inherit; }
 .gemini-glow-1, .gemini-glow-2, .gemini-glow-3 { display: none !important; }
 
 /* ---- Header ---- */
-.t-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  padding: 12px 16px;
-  background: rgba(251,243,228,0.82);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-}
-.btn-back {
-  font-size: 13px;
-  color: var(--muted);
-  padding: 6px 10px;
-  border-radius: 8px;
-  transition: color 0.2s, background 0.2s;
-  justify-self: start;
-}
-.btn-back:hover { color: var(--text); background: var(--bg-surface); }
-.t-header-title {
-  font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--purple);
-}
-.btn-ghost {
-  font-size: 13px;
-  color: var(--muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 8px;
-  transition: color 0.2s, background 0.2s;
-}
-.btn-ghost:hover { color: var(--text); background: var(--bg-surface); }
+
 
 /* ---- Screens ---- */
 .screen {
@@ -977,10 +939,10 @@ a { text-decoration: none; color: inherit; }
   }
   
   /* Header styling adjust */
-  .t-header {
+  .module-header {
     padding: 16px 32px;
   }
-  .t-header-title {
+  .module-header .header-title {
     font-size: 20px;
   }
   .btn-back, .btn-ghost {

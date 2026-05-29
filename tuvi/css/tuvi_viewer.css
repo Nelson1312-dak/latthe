@@ -905,3 +905,45 @@ body {
 .author-box p:last-child {
   margin-bottom: 0 !important;
 }
+
+/* ==================== CELESTIAL HERO SYSTEM ==================== */
+.tv-hero {
+  text-align: center;
+  margin-top: 12px;
+  margin-bottom: 24px;
+}
+.tv-sparkles {
+  font-size: 64px;
+  display: inline-block;
+  color: var(--amber);
+  animation: tv-glow 4s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 16px rgba(232, 147, 10, 0.35));
+}
+@keyframes tv-glow {
+  0% { transform: scale(1) rotate(0deg); opacity: 0.85; }
+  100% { transform: scale(1.06) rotate(6deg); opacity: 1; filter: drop-shadow(0 0 24px rgba(232, 147, 10, 0.55)); }
+}
+.tv-title {
+  font-family: var(--font-heading);
+  font-size: clamp(30px, 8vw, 42px);
+  font-weight: 800;
+  color: var(--text);
+  margin: 10px 0 6px;
+}
+.tv-subtitle {
+  font-size: 13px;
+  color: var(--text-soft);
+  letter-spacing: 0.3px;
+  margin-bottom: 12px;
+}
+.seo-app-intro {
+  font-size: 13.5px;
+  color: var(--text-soft);
+  max-width: 440px;
+  margin: 12px auto 0;
+  line-height: 1.5;
+  text-align: center;
+  border-top: 1px dashed rgba(200, 168, 112, 0.3);
+  padding-top: 12px;
+}
+
