@@ -81,7 +81,7 @@ a { text-decoration: none; color: inherit; }
   padding: 72px 0 40px;
 }
 
-/* Brand icon mark — animated floating clean card holder */
+/* Brand icon mark — animated floating mystical seal/astrolabe */
 .l-brand-icon {
   width: 96px;
   height: 96px;
@@ -90,9 +90,9 @@ a { text-decoration: none; color: inherit; }
   justify-content: center;
   margin: 0 auto 22px;
   border-radius: 28px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 28px rgba(120, 75, 25, 0.08);
+  background: radial-gradient(circle at 50% 50%, #2e1047 0%, #11031c 100%);
+  border: 1.5px solid rgba(217, 138, 10, 0.45);
+  box-shadow: 0 12px 36px rgba(17, 3, 28, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
   animation: brand-float-spin 6s ease-in-out infinite;
 }
 .l-brand-icon svg {
@@ -100,42 +100,28 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* Micro-interactions inside the custom logo SVG */
-.l-brand-icon svg g {
+.l-brand-icon svg g[transform*="rotate(-12)"] {
   animation: brand-card-float 4s ease-in-out infinite alternate;
-}
-.l-brand-icon svg rect[transform*="rotate(-16)"] {
-  animation: brand-card-tilt-left 5s ease-in-out infinite alternate;
-}
-.l-brand-icon svg rect[transform*="rotate(16)"] {
-  animation: brand-card-tilt-right 5s ease-in-out infinite alternate;
 }
 
 @keyframes brand-float-spin {
   0% {
     transform: translateY(0) rotate(0deg);
-    box-shadow: 0 10px 28px rgba(120, 75, 25, 0.08);
+    box-shadow: 0 12px 36px rgba(17, 3, 28, 0.4);
   }
   50% {
-    transform: translateY(-6px) rotate(3deg);
-    box-shadow: 0 18px 36px rgba(120, 75, 25, 0.14);
+    transform: translateY(-8px) rotate(4deg);
+    box-shadow: 0 20px 48px rgba(217, 138, 10, 0.25);
   }
   100% {
     transform: translateY(0) rotate(0deg);
-    box-shadow: 0 10px 28px rgba(120, 75, 25, 0.08);
+    box-shadow: 0 12px 36px rgba(17, 3, 28, 0.4);
   }
 }
 
 @keyframes brand-card-float {
-  0% { transform: translate(50px, 48px) rotate(0deg); }
-  100% { transform: translate(50px, 45px) rotate(2deg); }
-}
-@keyframes brand-card-tilt-left {
-  0% { transform: translate(40px, 50px) rotate(-16deg); }
-  100% { transform: translate(38px, 51px) rotate(-20deg); }
-}
-@keyframes brand-card-tilt-right {
-  0% { transform: translate(60px, 50px) rotate(16deg); }
-  100% { transform: translate(62px, 51px) rotate(20deg); }
+  0% { transform: translate(50px, 50px) rotate(-12deg) scale(1); }
+  100% { transform: translate(50px, 48px) rotate(-7deg) scale(1.05); }
 }
 
 .l-brand-name {
