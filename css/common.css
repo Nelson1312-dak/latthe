@@ -608,6 +608,10 @@
   background: rgba(124, 58, 237, 0.1);
   color: var(--c-tarot, #7c3aed);
 }
+.light-theme.tuvi-theme .faq-item::before {
+  background: rgba(217, 138, 10, 0.1);
+  color: var(--gold, #d98a0a);
+}
 .light-theme.thuvien-theme .faq-item::before {
   background: rgba(37, 99, 235, 0.1);
   color: var(--c-thuvien, #2563eb);

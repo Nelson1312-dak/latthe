@@ -4,6 +4,9 @@
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 :root {
+  --font-heading: 'Be Vietnam Pro', sans-serif;
+  --font-body:    'Be Vietnam Pro', sans-serif;
+
   --cream: #fdf6e3;
   --cream-mid: #f5e6c8;
   --cream-deep: #f0ddc0;
@@ -17,6 +20,18 @@
   --text: #1a0800;
   --text-mid: #5c3d1e;
   --text-soft: #9a7a5a;
+
+  /* Shared variables for common.css compatibility */
+  --bg:           #fdf6e3;
+  --bg-2:         #f5e6c8;
+  --bg-surface:   #ffffff;
+  --bg-glass:     rgba(232, 147, 10, 0.06);
+  --text-secondary: #5c3d1e;
+  --muted:        #9a7a5a;
+  --border:       rgba(200, 168, 112, 0.25);
+  --gold:         #d98a0a;
+  --gold-dim:     rgba(217, 138, 10, 0.16);
+  --shadow:       0 6px 22px rgba(120, 75, 25, 0.10);
 
   /* Star colors */
   --s-main: #cc0000;
