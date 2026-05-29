@@ -216,9 +216,8 @@
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Light theme adaptation (homepage, thuvien) */
-body.light-theme .floating-dock,
-body:not(.dark-theme) .floating-dock {
+/* Light theme adaptation */
+.light-theme .floating-dock {
   background: rgba(255, 255, 255, 0.8);
   border-color: rgba(120, 80, 25, 0.15);
   box-shadow: 0 10px 30px rgba(120, 75, 25, 0.1);
@@ -231,7 +230,7 @@ body:not(.dark-theme) .floating-dock {
   justify-content: center;
   width: 44px;
   height: 44px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
   border-radius: 12px;
   text-decoration: none;
   font-size: 20px;
@@ -239,20 +238,17 @@ body:not(.dark-theme) .floating-dock {
   position: relative;
 }
 
-body.light-theme .dock-item,
-body:not(.dark-theme) .dock-item {
-  color: rgba(107, 86, 61, 0.6);
+.light-theme .dock-item {
+  color: rgba(107, 86, 61, 0.55);
 }
 
 .dock-item:hover, .dock-item.active {
   color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-body.light-theme .dock-item:hover,
-body.light-theme .dock-item.active,
-body:not(.dark-theme) .dock-item:hover,
-body:not(.dark-theme) .dock-item.active {
+.light-theme .dock-item:hover,
+.light-theme .dock-item.active {
   color: #2b1d0e;
   background: rgba(120, 80, 25, 0.08);
 }
@@ -271,8 +267,7 @@ body:not(.dark-theme) .dock-item.active {
   background: rgba(255, 255, 255, 0.1);
 }
 
-body.light-theme .dock-divider,
-body:not(.dark-theme) .dock-divider {
+.light-theme .dock-divider {
   background: rgba(120, 80, 25, 0.15);
 }
 
@@ -308,7 +303,7 @@ body:not(.dark-theme) .dock-divider {
     left: 70px;
     top: 50%;
     transform: translateY(-50%) scale(0.9);
-    background: rgba(20, 15, 10, 0.9);
+    background: rgba(20, 15, 10, 0.95);
     color: #fff;
     padding: 6px 12px;
     border-radius: 8px;
@@ -321,8 +316,7 @@ body:not(.dark-theme) .dock-divider {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
-  body.light-theme .dock-item .dock-label,
-  body:not(.dark-theme) .dock-item .dock-label {
+  .light-theme .dock-item .dock-label {
     background: #2b1d0e;
   }
 
@@ -333,42 +327,278 @@ body:not(.dark-theme) .dock-divider {
   }
 }
 
-/* Shared stylings for custom SEO links in app pages (which we can style as buttons) */
+/* ============================================================
+   Redirection CTA Buttons (Nút Chuyển Động Đẹp Đến Thư Viện)
+   ============================================================ */
 .seo-library-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-radius: 16px;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 580px;
+  margin: 32px auto 24px;
+  padding: 20px 36px;
+  border-radius: 22px;
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 700;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-  margin: 32px 0 16px;
-  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1.5px solid transparent;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Dark mode modules (tuvi, gieoque, tarot) link button style */
-.dark-theme .seo-library-link,
-body:not(.light-theme) .seo-library-link {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-}
-.dark-theme .seo-library-link:hover,
-body:not(.light-theme) .seo-library-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+.seo-library-link i:first-child {
+  font-size: 20px;
 }
 
-/* Gieoque-specific button color focus on hover */
+.seo-library-link .ti-arrow-right {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.seo-library-link:hover .ti-arrow-right {
+  transform: translateX(6px);
+  opacity: 1 !important;
+}
+
+/* Light Theme Button: Premium White Card Style */
+.light-theme .seo-library-link {
+  background: #ffffff;
+  color: #2b1d0e;
+  border-color: rgba(120, 80, 25, 0.15);
+  box-shadow: 0 6px 20px rgba(120, 75, 25, 0.05);
+}
+.light-theme .seo-library-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(120, 75, 25, 0.15);
+}
+
+/* Dark Theme Button: Sleek Translucent Style */
+.dark-theme .seo-library-link {
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
 .dark-theme .seo-library-link:hover {
-  border-color: rgba(13, 150, 104, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
 }
-/* Tarot-specific button color focus on hover */
-body:not(.light-theme) .seo-library-link:hover {
-  /* tarot is on body:not(.light-theme) */
+
+/* brand hover highlights */
+.tuvi-page-cta {
+  border-color: rgba(232, 147, 10, 0.25) !important;
+}
+.light-theme .tuvi-page-cta {
+  color: #c97808 !important;
+}
+.tuvi-page-cta:hover {
+  border-color: var(--amber, #e8930a) !important;
+  color: var(--amber, #e8930a) !important;
+  background: rgba(232, 147, 10, 0.05) !important;
+}
+
+.gieoque-page-cta {
+  border-color: rgba(13, 150, 104, 0.25) !important;
+}
+.dark-theme .gieoque-page-cta {
+  color: #10b981 !important;
+}
+.gieoque-page-cta:hover {
+  border-color: var(--c-gieoque, #0d9668) !important;
+  color: #059669 !important;
+  background: rgba(13, 150, 104, 0.06) !important;
+}
+
+.tarot-page-cta {
+  border-color: rgba(124, 58, 237, 0.25) !important;
+}
+.dark-theme .tarot-page-cta {
+  color: #a78bfa !important;
+}
+.tarot-page-cta:hover {
+  border-color: var(--c-tarot, #7c3aed) !important;
+  color: #c084fc !important;
+  background: rgba(124, 58, 237, 0.06) !important;
+}
+
+/* ============================================================
+   Premium FAQ Grid & Card Styling (Dạng Ngang)
+   ============================================================ */
+.faq-section {
+  width: 100%;
+  max-width: 860px;
+  margin: 40px auto 48px;
+  padding: 0 20px;
+}
+
+.faq-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  text-align: center;
+  letter-spacing: -0.3px;
+}
+
+.light-theme .faq-title { color: #1a0800; }
+.dark-theme .faq-title { color: #ffffff; }
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .faq-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+details.faq-item {
+  border-radius: 16px;
+  padding: 0 !important;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1.5px solid transparent;
+  display: block;
+}
+
+/* Theme styling for FAQ Cards */
+.light-theme details.faq-item {
+  background: #ffffff;
+  border-color: rgba(120, 80, 25, 0.12);
+  box-shadow: 0 4px 12px rgba(120, 75, 25, 0.04);
+}
+.light-theme details.faq-item[open] {
+  border-color: var(--amber, #e8930a);
+  box-shadow: 0 8px 24px rgba(232, 147, 10, 0.08);
+}
+.light-theme .gieoque-theme details.faq-item[open] {
+  border-color: var(--c-gieoque, #0d9668);
+  box-shadow: 0 8px 24px rgba(13, 150, 104, 0.08);
+}
+.light-theme .tarot-theme details.faq-item[open] {
+  border-color: var(--c-tarot, #7c3aed);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.08);
+}
+
+.dark-theme details.faq-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.dark-theme details.faq-item[open] {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.dark-theme.gieoque-theme details.faq-item[open] {
+  border-color: var(--c-gieoque, #0d9668);
+}
+.dark-theme.tarot-theme details.faq-item[open] {
+  border-color: var(--c-tarot, #7c3aed);
+}
+
+/* FAQ Summary / Header */
+details.faq-item summary {
+  padding: 18px 22px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  list-style: none;
+  transition: all 0.25s ease;
+}
+details.faq-item summary::-webkit-details-marker { display: none; }
+details.faq-item summary::after {
+  content: '▼';
+  font-size: 10px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.light-theme details.faq-item summary {
+  color: #2b1d0e;
+}
+.light-theme details.faq-item summary::after {
+  color: rgba(120, 80, 25, 0.5);
+}
+.light-theme details.faq-item[open] summary {
+  color: var(--amber, #e8930a);
+}
+.light-theme.gieoque-theme details.faq-item[open] summary {
+  color: var(--c-gieoque, #0d9668);
+}
+.light-theme.tarot-theme details.faq-item[open] summary {
+  color: var(--c-tarot, #7c3aed);
+}
+.light-theme details.faq-item[open] summary::after {
+  transform: rotate(180deg);
+  color: var(--amber, #e8930a);
+}
+.light-theme.gieoque-theme details.faq-item[open] summary::after {
+  color: var(--c-gieoque, #0d9668);
+}
+.light-theme.tarot-theme details.faq-item[open] summary::after {
+  color: var(--c-tarot, #7c3aed);
+}
+
+.dark-theme details.faq-item summary {
+  color: rgba(255, 255, 255, 0.95);
+}
+.dark-theme details.faq-item summary::after {
+  color: rgba(255, 255, 255, 0.4);
+}
+.dark-theme details.faq-item[open] summary {
+  color: #ffffff;
+}
+.dark-theme.gieoque-theme details.faq-item[open] summary {
+  color: #10b981;
+}
+.dark-theme.tarot-theme details.faq-item[open] summary {
+  color: #a78bfa;
+}
+.dark-theme details.faq-item[open] summary::after {
+  transform: rotate(180deg);
+  color: #ffffff;
+}
+.dark-theme.gieoque-theme details.faq-item[open] summary::after {
+  color: #10b981;
+}
+.dark-theme.tarot-theme details.faq-item[open] summary::after {
+  color: #a78bfa;
+}
+
+/* FAQ Answer Content */
+details.faq-item p {
+  padding: 0 22px 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  animation: faqFadeIn 0.3s ease;
+}
+
+.light-theme details.faq-item p {
+  color: #5c3d1e;
+}
+.dark-theme details.faq-item p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes faqFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 

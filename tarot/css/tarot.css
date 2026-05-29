@@ -1070,38 +1070,6 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.65; margin-bottom: 12px;
 }
 .t-seo-content strong { color: var(--text); }
-.t-seo-content .faq-section {
-  margin-top: 28px;
-  border-top: 1px solid var(--border);
-  padding-top: 20px;
-}
-.t-seo-content .faq-title {
-  color: var(--gold); font-size: 14px;
-  font-weight: 700; margin-bottom: 10px;
-}
-.t-seo-content details.faq-item {
-  border-bottom: 1px solid var(--border);
-  padding: 13px 0;
-}
-.t-seo-content details.faq-item summary {
-  list-style: none; cursor: pointer;
-  color: var(--text); font-size: 13.5px; font-weight: 600;
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 8px;
-}
-.t-seo-content details.faq-item summary::-webkit-details-marker { display: none; }
-.t-seo-content details.faq-item summary::after {
-  content: '▼'; font-size: 10px;
-  color: var(--muted); flex-shrink: 0;
-  transition: transform 0.25s ease;
-}
-.t-seo-content details.faq-item[open] summary::after {
-  transform: rotate(180deg); color: var(--purple);
-}
-.t-seo-content details.faq-item p {
-  margin-top: 10px; margin-bottom: 0;
-  color: var(--muted); font-size: 13px; line-height: 1.65;
-}
 
 /* SEO / GEO Enhanced Styling */
 .t-seo-content {

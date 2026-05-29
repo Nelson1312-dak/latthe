@@ -825,38 +825,6 @@ body {
   line-height: 1.65; margin-bottom: 12px;
 }
 .tuvi-seo-content strong { color: var(--text-mid); }
-.tuvi-seo-content .faq-section {
-  margin-top: 28px;
-  border-top: 1px solid rgba(200,168,112,0.4);
-  padding-top: 20px;
-}
-.tuvi-seo-content .faq-title {
-  font-size: 14px; font-weight: 700;
-  color: var(--text-mid); margin-bottom: 10px;
-}
-.tuvi-seo-content details.faq-item {
-  border-bottom: 1px solid rgba(200,168,112,0.3);
-  padding: 13px 0;
-}
-.tuvi-seo-content details.faq-item summary {
-  list-style: none; cursor: pointer;
-  color: var(--text); font-size: 13.5px; font-weight: 600;
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 8px;
-}
-.tuvi-seo-content details.faq-item summary::-webkit-details-marker { display: none; }
-.tuvi-seo-content details.faq-item summary::after {
-  content: '▼'; font-size: 10px;
-  color: var(--text-soft); flex-shrink: 0;
-  transition: transform 0.25s ease;
-}
-.tuvi-seo-content details.faq-item[open] summary::after {
-  transform: rotate(180deg); color: var(--amber);
-}
-.tuvi-seo-content details.faq-item p {
-  margin-top: 10px; margin-bottom: 0;
-  color: var(--text-soft); font-size: 13px; line-height: 1.65;
-}
 
 /* SEO / GEO Enhanced Styling */
 .seo-direct-answer {
