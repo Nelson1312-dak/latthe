@@ -7,7 +7,9 @@
  */
 
 const AI_ENDPOINT = '/api/interpret';
-const AI_TIMEOUT_MS = 60_000;
+// Headroom for the worst-case server path: slow Ollama hitting its timeout, then
+// the Groq fallback running to completion. Must stay above the server's combined budget.
+const AI_TIMEOUT_MS = 70_000;
 
 function categoriseError(status, serverMsg) {
   if (status === 429) {
@@ -75,7 +77,7 @@ async function askAI({ question, context, type, history = [], onToken, onDone, o
   } catch (err) {
     clearTimeout(timer);
     if (err.name === 'AbortError') {
-      onError({ code: 'timeout', message: 'AI phản hồi quá lâu (>60s). Vui lòng thử lại.', retryable: true });
+      onError({ code: 'timeout', message: 'AI phản hồi quá lâu. Vui lòng thử lại.', retryable: true });
     } else {
       onError({ code: 'network', message: 'Mất kết nối mạng. Kiểm tra wifi rồi thử lại.', retryable: true });
     }

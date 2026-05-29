@@ -56,11 +56,21 @@ function checkRateLimit(ip) {
   return { allowed: true };
 }
 
+// ---- Infra-down detector ----
+// Distinguishes "the local box / ngrok tunnel is unreachable" (network error or
+// timeout) from "the server answered with an error status" (still up). Only the
+// former should trip the circuit breaker that skips remaining local calls.
+function isInfraDown(err) {
+  if (!err) return false;
+  if (err.name === 'AbortError' || err.name === 'TypeError') return true;
+  return /fetch failed|ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket hang up|network/i.test(err.message || '');
+}
+
 // ---- Groq fallback (called when local Ollama is down or slow) ----
 
-async function callGroq({ apiKey, model, messages, temperature, maxTokens }) {
+async function callGroq({ apiKey, model, messages, temperature, maxTokens, timeoutMs = 22000 }) {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 25000);
+  const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -87,7 +97,7 @@ async function callGroq({ apiKey, model, messages, temperature, maxTokens }) {
     return { ok: true, content };
   } catch (err) {
     clearTimeout(t);
-    return { ok: false, error: err.name === 'AbortError' ? 'Groq timeout (>25s)' : err.message };
+    return { ok: false, error: err.name === 'AbortError' ? `Groq timeout (>${Math.round(timeoutMs / 1000)}s)` : err.message };
   }
 }
 
@@ -122,10 +132,10 @@ function cleanChineseLeaks(text) {
 
 // ---- RAG helpers ----
 
-async function getEmbedding(ollamaUrl, embedModel, text) {
-  if (!ollamaUrl) return null;
+async function getEmbedding(ollamaUrl, embedModel, text, breaker) {
+  if (!ollamaUrl || breaker.localDown) return null;
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 8000);
+  const t = setTimeout(() => controller.abort(), 5000);
   try {
     const res = await fetch(`${ollamaUrl}/api/embeddings`, {
       method: 'POST',
@@ -137,15 +147,17 @@ async function getEmbedding(ollamaUrl, embedModel, text) {
     if (!res.ok) return null;
     const data = await res.json();
     return data.embedding || null;
-  } catch {
+  } catch (err) {
+    clearTimeout(t);
+    if (isInfraDown(err)) breaker.localDown = true;
     return null;
   }
 }
 
-async function retrieveSimilar(sbUrl, sbKey, embedding, type) {
-  if (!embedding || !sbUrl) return [];
+async function retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) {
+  if (!embedding || !sbUrl || breaker.localDown) return [];
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 5000);
+  const t = setTimeout(() => controller.abort(), 4000);
   try {
     const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
     const path = isLocal ? '/rpc/match_documents' : '/rest/v1/rpc/match_documents';
@@ -172,7 +184,9 @@ async function retrieveSimilar(sbUrl, sbKey, embedding, type) {
     clearTimeout(t);
     if (!res.ok) return [];
     return await res.json();
-  } catch {
+  } catch (err) {
+    clearTimeout(t);
+    if (isInfraDown(err)) breaker.localDown = true;
     return [];
   }
 }
@@ -202,10 +216,10 @@ async function storeDoc(sbUrl, sbKey, payload) {
   }
 }
 
-async function checkExactMatchCache(sbUrl, sbKey, type, question, context) {
-  if (!sbUrl) return null;
+async function checkExactMatchCache(sbUrl, sbKey, type, question, context, breaker) {
+  if (!sbUrl || breaker.localDown) return null;
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 4000);
+  const t = setTimeout(() => controller.abort(), 3000);
   try {
     const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
     const basePath = isLocal ? '/documents' : '/rest/v1/documents';
@@ -235,7 +249,9 @@ async function checkExactMatchCache(sbUrl, sbKey, type, question, context) {
       return data[0].answer || null;
     }
     return null;
-  } catch {
+  } catch (err) {
+    clearTimeout(t);
+    if (isInfraDown(err)) breaker.localDown = true;
     return null;
   }
 }
@@ -320,12 +336,14 @@ export default async function handler(req, res) {
   }
 
   const ollamaUrl  = (process.env.OLLAMA_BASE_URL  || '').trim();
-  const model      = (process.env.OLLAMA_MODEL      || '').trim() || 'qwen2.5:7b';
+  const model      = (process.env.OLLAMA_MODEL      || '').trim() || 'qwen3.5:2b';
   const embedModel = (process.env.OLLAMA_EMBED_MODEL|| '').trim() || 'nomic-embed-text';
   const sbUrl      = (process.env.SUPABASE_URL      || '').trim();
   const sbKey      = (process.env.SUPABASE_ANON_KEY || '').trim();
   const groqKey    = (process.env.GROQ_API_KEY      || '').trim();
   const groqModel  = (process.env.GROQ_MODEL        || '').trim() || 'llama-3.3-70b-versatile';
+  const ollamaTimeoutMs = parseInt(process.env.OLLAMA_TIMEOUT_MS || '', 10) || 20000;
+  const groqTimeoutMs   = parseInt(process.env.GROQ_TIMEOUT_MS   || '', 10) || 22000;
 
   if (!ollamaUrl && !groqKey) {
     return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL hoặc GROQ_API_KEY)' });
@@ -334,15 +352,39 @@ export default async function handler(req, res) {
   const { question, context, type, history = [] } = req.body || {};
   if (!question?.trim()) return res.status(400).json({ error: 'Thiếu câu hỏi' });
 
-  // ---- 1. Tier 1 Cache: Exact Match Cache (fast GET bypass) ----
-  const exactCached = await checkExactMatchCache(sbUrl, sbKey, type, question, context);
+  const isFollowUp = history.length > 0;
+
+  // Circuit breaker: the DB (PostgREST) and Ollama share one ngrok tunnel, so when
+  // the local box is down they ALL fail. The first local call that hits a network
+  // error / timeout flips this flag; every later local call then short-circuits
+  // instantly instead of waiting out its own timeout — that prevents the stacked
+  // ~47s wait that previously blew past the client's timeout before Groq could run.
+  const breaker = { localDown: false };
+
+  // Tử Vi charts are unique per person, so cache lookups almost never hit and just
+  // burn a local round-trip — skip caching/RAG for tuvi entirely.
+  const cacheEligible = type !== 'tuvi' && !isFollowUp;
+  // Embedding is only used for semantic cache, RAG retrieval and storeDoc. None of
+  // those apply to tuvi or follow-ups, so don't spend a round-trip computing it.
+  const needEmbedding = type !== 'tuvi' && !isFollowUp;
+
+  // ---- 1. Tier-1 exact-match cache + embedding (run in parallel; both are local) ----
+  let exactCached = null;
+  let embedding = null;
+  await Promise.all([
+    cacheEligible
+      ? checkExactMatchCache(sbUrl, sbKey, type, question, context, breaker).then((v) => { exactCached = v; })
+      : Promise.resolve(),
+    needEmbedding
+      ? getEmbedding(ollamaUrl, embedModel, question, breaker).then((v) => { embedding = v; })
+      : Promise.resolve(),
+  ]);
   if (exactCached) {
+    res.setHeader('X-AI-Source', 'cache-exact');
     return res.status(200).json({ answer: exactCached, cached: true });
   }
   // ---- System prompt ----
   const langRule = 'QUY TẮC BẮT BUỘC: Bạn là người Việt Nam và chỉ được phép trả lời hoàn toàn bằng tiếng Việt thuần túy. Tuyệt đối KHÔNG viết bất kỳ chữ Hán (chữ Trung Quốc giản thể/phồn thể) hay chữ tiếng Anh nào. Bắt buộc phải dịch mọi tên lá bài hoặc tên quẻ sang tiếng Việt và trả lời trôi chảy, không kèm theo bản dịch hay ghi chú bằng tiếng Trung/tiếng Anh dưới mọi hình thức.';
-
-  const isFollowUp = history.length > 0;
 
   const tarotFollowUpSystemPrompt = `${langRule}
 
@@ -493,28 +535,24 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
         ? tarotSystemPrompt
         : (type === 'tuvi' ? tuviSystemPrompt : gieoqueSystemPrompt));
 
-  // ---- 2. RAG & Tier 2 Cache: Semantic Cache ----
-  // Follow-ups are skipped from cache — their answers depend on conversation history and cannot be reused.
-  const embedding = await getEmbedding(ollamaUrl, embedModel, question);
-
+  // ---- 2. RAG & Tier-2 semantic cache ----
+  // The embedding was computed above (in parallel with the exact-cache check).
+  // Skipped for tuvi / follow-ups, and skipped entirely if the local box is down.
   let fullContext = context || '';
 
-  if (!isFollowUp) {
-    const similar = await retrieveSimilar(sbUrl, sbKey, embedding, type);
+  if (needEmbedding && embedding && !breaker.localDown) {
+    const similar = await retrieveSimilar(sbUrl, sbKey, embedding, type, breaker);
 
     if (similar && similar.length > 0) {
       const bestMatch = similar[0];
       if (bestMatch.similarity >= 0.90 && bestMatch.context === context) {
+        res.setHeader('X-AI-Source', 'cache-semantic');
         return res.status(200).json({ answer: bestMatch.answer, cached: true, semanticCached: true });
       }
-      // Tuvi: each chart is unique per person — injecting another person's cached answer
-      // as RAG reference causes the model to echo their đại hạn numbers and star details.
-      if (type !== 'tuvi') {
-        const ragBlock = similar
-          .map(d => `Câu hỏi tương tự: "${d.question}"\nCâu trả lời: ${d.answer}`)
-          .join('\n---\n');
-        fullContext += `\n\n[Tham khảo từ cơ sở dữ liệu]\n${ragBlock}`;
-      }
+      const ragBlock = similar
+        .map(d => `Câu hỏi tương tự: "${d.question}"\nCâu trả lời: ${d.answer}`)
+        .join('\n---\n');
+      fullContext += `\n\n[Tham khảo từ cơ sở dữ liệu]\n${ragBlock}`;
     }
   }
 
@@ -558,12 +596,14 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
   const maxTokens   = isFollowUp ? 500 : (type === 'tuvi' ? 1400 : 1000);
   let answer = '';
   let source = 'ollama';
-  let ollamaErr = null;
+  let ollamaErr = breaker.localDown ? 'local backend down (circuit breaker)' : null;
 
-  if (ollamaUrl) {
+  // Skip the chat attempt outright if an earlier local call already proved the box
+  // is unreachable — no point waiting out another 20s timeout.
+  if (ollamaUrl && !breaker.localDown) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), ollamaTimeoutMs);
 
       const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
         method: 'POST',
@@ -586,27 +626,38 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
         answer = data.message?.content || data.response || '';
       }
     } catch (err) {
-      ollamaErr = err.name === 'AbortError' ? 'Ollama timeout (>30s)' : err.message;
+      ollamaErr = err.name === 'AbortError' ? `Ollama timeout (>${Math.round(ollamaTimeoutMs / 1000)}s)` : err.message;
+      if (isInfraDown(err)) breaker.localDown = true;
     }
   }
 
   if (!answer && groqKey) {
     source = 'groq';
-    const groqRes = await callGroq({ apiKey: groqKey, model: groqModel, messages: ollamaMessages, temperature, maxTokens });
+    console.warn(`[interpret] Ollama unavailable (${ollamaErr || 'n/a'}) — falling back to Groq (${groqModel})`);
+    const groqRes = await callGroq({ apiKey: groqKey, model: groqModel, messages: ollamaMessages, temperature, maxTokens, timeoutMs: groqTimeoutMs });
     if (!groqRes.ok) {
+      console.error(`[interpret] Groq fallback failed: ${groqRes.error}`);
       return res.status(502).json({ error: `AI không phản hồi (Ollama: ${ollamaErr || 'n/a'}; Groq: ${groqRes.error})` });
     }
     answer = groqRes.content;
   }
 
   if (!answer) {
+    if (!groqKey) {
+      console.error('[interpret] Ollama produced no answer and GROQ_API_KEY is not set — no fallback available.');
+    }
     return res.status(502).json({ error: `AI không phản hồi: ${ollamaErr || 'không có nội dung trả về'}` });
   }
 
   answer = cleanChineseLeaks(answer);
 
-  // ---- RAG: store all Q&As; follow-ups flagged and excluded from cache retrieval ----
-  storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp });
+  // ---- Store Q&A for cache/RAG. Only meaningful when we have an embedding (so tuvi
+  // and follow-ups are naturally skipped) and the DB is reachable. Fire-and-forget. ----
+  if (embedding && !breaker.localDown) {
+    storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp });
+  }
+
+  res.setHeader('X-AI-Source', source);
 
   return res.status(200).json({ answer, source });
 }
