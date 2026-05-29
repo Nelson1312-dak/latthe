@@ -1156,13 +1156,13 @@ a { text-decoration: none; color: inherit; }
 
 /* BLOCK 1: Text tren App */
 .seo-app-intro {
-  font-size: 13px;
-  color: var(--text-soft, rgba(255, 255, 255, 0.6));
+  font-size: 13.5px;
+  color: var(--text-secondary);
   max-width: 480px;
   margin: 12px auto 0;
   line-height: 1.5;
   text-align: center;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  border-top: 1px dashed var(--border);
   padding-top: 12px;
 }
 
