@@ -2230,7 +2230,7 @@ body[data-theme="forest"] {
 .game-title {
   font-size: 38px;
   letter-spacing: -2px;
-  background: linear-gradient(150deg, #eee8ff 0%, #b8a9f5 45%, #818cf8 100%);
+  background: linear-gradient(150deg, #ffe9d5 0%, #fdba74 45%, #f97316 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -2282,13 +2282,13 @@ body[data-theme="forest"] {
 }
 
 .splash-mode-featured {
-  background: rgba(99,102,241,0.06) !important;
-  border-color: rgba(99,102,241,0.22) !important;
+  background: rgba(234,106,23,0.07) !important;
+  border-color: rgba(234,106,23,0.26) !important;
   box-shadow: none !important;
 }
 .splash-mode-featured:hover {
-  background: rgba(99,102,241,0.10) !important;
-  border-color: rgba(99,102,241,0.35) !important;
+  background: rgba(234,106,23,0.12) !important;
+  border-color: rgba(234,106,23,0.4) !important;
 }
 .splash-mode-featured .mode-icon { filter: none; }
 
@@ -2319,32 +2319,32 @@ body[data-theme="forest"] {
   box-shadow: none !important;
 }
 .splash-footer { font-size: 11px; margin-top: 8px; color: var(--text-muted); letter-spacing: 0; }
-.particle { background: rgba(99,102,241,0.18); }
+.particle { background: rgba(234,106,23,0.20); }
 
 /* ---- BUTTONS ---- */
 .btn-primary {
-  background: #4f46e5;
-  box-shadow: 0 2px 12px rgba(79,70,229,0.25);
+  background: #ea6a17;
+  box-shadow: 0 2px 12px rgba(234,106,23,0.28);
 }
 .btn-glow { animation: none; }
 
 #btn-play:not(:disabled) {
-  background: #4f46e5;
+  background: #ea6a17;
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 0;
-  box-shadow: 0 4px 16px rgba(79,70,229,0.22);
+  box-shadow: 0 4px 16px rgba(234,106,23,0.26);
 }
 
 .btn-quick-fill {
-  background: rgba(99,102,241,0.04) !important;
-  border: 1px dashed rgba(99,102,241,0.22) !important;
-  color: #818cf8 !important;
+  background: rgba(234,106,23,0.05) !important;
+  border: 1px dashed rgba(234,106,23,0.26) !important;
+  color: #fb8a3c !important;
 }
 .btn-quick-fill:hover {
-  background: rgba(99,102,241,0.08) !important;
-  border-color: rgba(99,102,241,0.38) !important;
-  color: #a5b4fc !important;
+  background: rgba(234,106,23,0.10) !important;
+  border-color: rgba(234,106,23,0.42) !important;
+  color: #fdba74 !important;
   box-shadow: none;
 }
 
@@ -2363,8 +2363,8 @@ body[data-theme="forest"] {
 }
 
 #player-name-input:focus {
-  border-color: rgba(99,102,241,0.45);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.07);
+  border-color: rgba(234,106,23,0.5);
+  box-shadow: 0 0 0 3px rgba(234,106,23,0.09);
   background: rgba(255,255,255,0.06);
 }
 

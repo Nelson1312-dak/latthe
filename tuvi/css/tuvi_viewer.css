@@ -73,9 +73,9 @@ body {
 
 .form-card {
   background: var(--white);
-  border-radius: 20px;
+  border-radius: 24px;
   padding: 28px 24px 22px;
-  box-shadow: 0 8px 40px rgba(180, 100, 20, 0.14);
+  box-shadow: 0 6px 22px rgba(120, 75, 25, 0.10);
 }
 
 .form-title {
