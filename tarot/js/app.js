@@ -448,4 +448,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnNewReading.addEventListener('click', goNewReading);
   btnRestart.addEventListener('click', goNewReading);
+
+  // ---- BLOCK 2 Guide Popup Toggle ----
+  const btnOpenGuide = document.getElementById('btn-open-guide');
+  const btnCloseGuide = document.getElementById('btn-close-guide');
+  const guidePopup = document.getElementById('t-guide-popup');
+
+  if (btnOpenGuide && btnCloseGuide && guidePopup) {
+    btnOpenGuide.addEventListener('click', () => {
+      guidePopup.classList.remove('hidden');
+    });
+    btnCloseGuide.addEventListener('click', () => {
+      guidePopup.classList.add('hidden');
+    });
+    guidePopup.addEventListener('click', (e) => {
+      if (e.target === guidePopup) {
+        guidePopup.classList.add('hidden');
+      }
+    });
+  }
 });
