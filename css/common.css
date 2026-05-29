@@ -428,19 +428,20 @@
 }
 
 /* ============================================================
-   Premium FAQ Grid & Card Styling (Dạng Ngang)
+   Premium FAQ List Layout (Dạng List)
    ============================================================ */
 .faq-section {
   width: 100%;
-  max-width: 860px;
+  max-width: 820px;
   margin: 40px auto 48px;
   padding: 0 20px;
+  text-align: left;
 }
 
 .faq-title {
   font-size: 20px;
   font-weight: 800;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   text-align: center;
   letter-spacing: -0.3px;
 }
@@ -448,157 +449,83 @@
 .light-theme .faq-title { color: #1a0800; }
 .dark-theme .faq-title { color: #ffffff; }
 
-.faq-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .faq-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-details.faq-item {
-  border-radius: 16px;
-  padding: 0 !important;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1.5px solid transparent;
-  display: block;
-}
-
-/* Theme styling for FAQ Cards */
-.light-theme details.faq-item {
-  background: #ffffff;
-  border-color: rgba(120, 80, 25, 0.12);
-  box-shadow: 0 4px 12px rgba(120, 75, 25, 0.04);
-}
-.light-theme details.faq-item[open] {
-  border-color: var(--amber, #e8930a);
-  box-shadow: 0 8px 24px rgba(232, 147, 10, 0.08);
-}
-.light-theme .gieoque-theme details.faq-item[open] {
-  border-color: var(--c-gieoque, #0d9668);
-  box-shadow: 0 8px 24px rgba(13, 150, 104, 0.08);
-}
-.light-theme .tarot-theme details.faq-item[open] {
-  border-color: var(--c-tarot, #7c3aed);
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.08);
-}
-
-.dark-theme details.faq-item {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-.dark-theme details.faq-item[open] {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-.dark-theme.gieoque-theme details.faq-item[open] {
-  border-color: var(--c-gieoque, #0d9668);
-}
-.dark-theme.tarot-theme details.faq-item[open] {
-  border-color: var(--c-tarot, #7c3aed);
-}
-
-/* FAQ Summary / Header */
-details.faq-item summary {
-  padding: 18px 22px;
-  font-weight: 700;
-  font-size: 15px;
-  cursor: pointer;
-  outline: none;
-  user-select: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
+.faq-list {
   list-style: none;
-  transition: all 0.25s ease;
-}
-details.faq-item summary::-webkit-details-marker { display: none; }
-details.faq-item summary::after {
-  content: '▼';
-  font-size: 10px;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  flex-shrink: 0;
-}
-
-.light-theme details.faq-item summary {
-  color: #2b1d0e;
-}
-.light-theme details.faq-item summary::after {
-  color: rgba(120, 80, 25, 0.5);
-}
-.light-theme details.faq-item[open] summary {
-  color: var(--amber, #e8930a);
-}
-.light-theme.gieoque-theme details.faq-item[open] summary {
-  color: var(--c-gieoque, #0d9668);
-}
-.light-theme.tarot-theme details.faq-item[open] summary {
-  color: var(--c-tarot, #7c3aed);
-}
-.light-theme details.faq-item[open] summary::after {
-  transform: rotate(180deg);
-  color: var(--amber, #e8930a);
-}
-.light-theme.gieoque-theme details.faq-item[open] summary::after {
-  color: var(--c-gieoque, #0d9668);
-}
-.light-theme.tarot-theme details.faq-item[open] summary::after {
-  color: var(--c-tarot, #7c3aed);
-}
-
-.dark-theme details.faq-item summary {
-  color: rgba(255, 255, 255, 0.95);
-}
-.dark-theme details.faq-item summary::after {
-  color: rgba(255, 255, 255, 0.4);
-}
-.dark-theme details.faq-item[open] summary {
-  color: #ffffff;
-}
-.dark-theme.gieoque-theme details.faq-item[open] summary {
-  color: #10b981;
-}
-.dark-theme.tarot-theme details.faq-item[open] summary {
-  color: #a78bfa;
-}
-.dark-theme details.faq-item[open] summary::after {
-  transform: rotate(180deg);
-  color: #ffffff;
-}
-.dark-theme.gieoque-theme details.faq-item[open] summary::after {
-  color: #10b981;
-}
-.dark-theme.tarot-theme details.faq-item[open] summary::after {
-  color: #a78bfa;
-}
-
-/* FAQ Answer Content */
-details.faq-item p {
-  padding: 0 22px 18px;
-  font-size: 14px;
-  line-height: 1.6;
+  padding: 0;
   margin: 0;
-  animation: faqFadeIn 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
-.light-theme details.faq-item p {
-  color: #5c3d1e;
-}
-.dark-theme details.faq-item p {
-  color: rgba(255, 255, 255, 0.7);
+.faq-item {
+  position: relative;
+  padding-left: 36px;
 }
 
-@keyframes faqFadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Bullet icon/indicator */
+.faq-item::before {
+  content: '?';
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.light-theme .faq-item::before {
+  background: rgba(232, 147, 10, 0.1);
+  color: var(--amber, #e8930a);
+}
+.light-theme.gieoque-theme .faq-item::before {
+  background: rgba(13, 150, 104, 0.1);
+  color: var(--c-gieoque, #0d9668);
+}
+.light-theme.tarot-theme .faq-item::before {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--c-tarot, #7c3aed);
+}
+.light-theme.thuvien-theme .faq-item::before {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--c-thuvien, #2563eb);
+}
+
+.dark-theme .faq-item::before {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.dark-theme.gieoque-theme .faq-item::before {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+.dark-theme.tarot-theme .faq-item::before {
+  background: rgba(124, 58, 237, 0.15);
+  color: #a78bfa;
+}
+
+.faq-question {
+  font-size: 15.5px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+  letter-spacing: -0.1px;
+}
+
+.light-theme .faq-question { color: #2b1d0e; }
+.dark-theme .faq-question { color: rgba(255, 255, 255, 0.95); }
+
+.faq-answer {
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.light-theme .faq-answer { color: #5c3d1e; }
+.dark-theme .faq-answer { color: rgba(255, 255, 255, 0.70); }
 

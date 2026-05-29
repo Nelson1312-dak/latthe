@@ -344,28 +344,7 @@ body {
   margin-bottom: 20px;
 }
 
-.faq-item {
-  background: var(--bg-2);
-  border-radius: 12px;
-  margin-bottom: 12px;
-  overflow: hidden;
-}
 
-.faq-item summary {
-  padding: 16px;
-  font-weight: 700;
-  font-size: 15px;
-  cursor: pointer;
-  outline: none;
-  user-select: none;
-}
-
-.faq-item p {
-  padding: 0 16px 16px;
-  font-size: 14px;
-  color: var(--sub);
-  margin-bottom: 0 !important;
-}
 
 /* Author Box */
 .author-box {
