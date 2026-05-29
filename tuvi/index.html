@@ -847,7 +847,7 @@
       return s;
     }
 
-    // Markdown renderer — deferred-break to avoid gaps around block elements
+    // Markdown renderer — clean block rendering
     function parseMd(md) {
       if (!md) return '';
       const inline = s => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -860,7 +860,6 @@
       const lines = md.split('\n');
       const out = [];
       let inList = false;
-      let pendingBreak = false; // deferred: only flush when actual content follows
 
       for (let i = 0; i < lines.length; i++) {
         const t = lines[i].trim();
@@ -872,22 +871,17 @@
         }
 
         if (isHrLine(t)) {
-          pendingBreak = false; // suppress gap before hr
           out.push('<hr>');
         } else if (/^###\s/.test(t)) {
-          pendingBreak = false; // suppress gap before heading
           out.push(`<h4>${inline(t.slice(4))}</h4>`);
         } else if (/^##\s/.test(t)) {
-          pendingBreak = false;
           out.push(`<h3>${inline(t.slice(3))}</h3>`);
         } else if (/^[-•]\s/.test(t)) {
-          if (pendingBreak && !inList) { out.push('<br>'); pendingBreak = false; }
           if (!inList) { out.push('<ul>'); inList = true; }
           out.push(`<li>${inline(t.replace(/^[-•]\s/, ''))}</li>`);
         } else if (t === '') {
-          if (!inList) pendingBreak = true; // defer; blank lines inside lists are ignored
+          continue;
         } else {
-          if (pendingBreak) { out.push('<br>'); pendingBreak = false; }
           out.push(`<p>${inline(t)}</p>`);
         }
       }
