@@ -52,9 +52,9 @@ CREATE POLICY "anon_insert" ON documents FOR INSERT TO anon WITH CHECK (true);
 CREATE TABLE IF NOT EXISTS tuvi_profiles (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   name        text        NOT NULL,
-  birth_date  text        NOT NULL,        -- stored as the string the client sends
-  birth_hour  int         NOT NULL,        -- chi-hour index (0–11) or hour
-  gender      smallint     NOT NULL,        -- 0 / 1
+  birth_date  date        NOT NULL,
+  birth_hour  integer     NOT NULL,        -- chi-hour index (0–11) or hour
+  gender      integer     NOT NULL,        -- 0 / 1
   lunar_date  text,
   lunar_hour  text,
   chart_json  jsonb,                        -- full computed chart
@@ -62,11 +62,6 @@ CREATE TABLE IF NOT EXISTS tuvi_profiles (
 );
 
 CREATE INDEX IF NOT EXISTS tuvi_profiles_created_idx ON tuvi_profiles (created_at DESC);
-
-ALTER TABLE tuvi_profiles ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "anon_insert" ON tuvi_profiles FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "anon_select" ON tuvi_profiles FOR SELECT TO anon USING (true);
 
 -- ============================================================
 -- RPC function: vector similarity search
