@@ -6,6 +6,14 @@
  *   Requires: OLLAMA_EMBED_MODEL pulled in Ollama (default: nomic-embed-text)
  */
 
+// Prevent uncaught exceptions / unhandled rejections from crashing the dev server
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // ---- CORS + rate-limit config ----
 
 const ALLOWED_ORIGINS = new Set([
