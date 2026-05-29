@@ -247,6 +247,78 @@ body {
   }
 }
 
+/* --- TABLE OF CONTENTS ("Mục lục") --- */
+.article-toc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+  margin-bottom: 28px;
+}
+
+.toc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--c-thuvien);
+  margin-bottom: 12px;
+}
+
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toc-list a {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--sub);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border-left: 2px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.toc-list a:hover {
+  background: var(--bg-2);
+  color: var(--text);
+}
+
+.toc-list a.active {
+  color: var(--c-thuvien);
+  font-weight: 700;
+  border-left-color: var(--c-thuvien);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+/* Wide desktop: float the TOC into the right gutter as a sticky panel.
+   The article is centered inside body's content box, which is shifted
+   right by the 80px left-dock padding — so its center sits at ~50%+40px
+   and its right edge at ~50%+420px. Park the TOC just past that. */
+@media (min-width: 1280px) {
+  .article-toc {
+    position: fixed;
+    top: 96px;
+    left: calc(50% + 430px);
+    width: 190px;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    margin-bottom: 0;
+    z-index: 5;
+  }
+}
+
 .article-body {
   background: var(--surface);
   border-radius: 28px;
