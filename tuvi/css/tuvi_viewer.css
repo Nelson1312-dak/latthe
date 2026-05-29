@@ -928,22 +928,26 @@ body {
   margin-bottom: 24px;
 }
 .tv-sparkles {
-  font-size: 64px;
+  font-size: 80px;
   display: inline-block;
   color: var(--amber);
-  animation: tv-glow 4s ease-in-out infinite alternate;
-  filter: drop-shadow(0 0 16px rgba(232, 147, 10, 0.35));
+  animation: tv-sparkle-spin 20s linear infinite;
+  filter: drop-shadow(0 0 16px rgba(232, 147, 10, 0.45));
 }
-@keyframes tv-glow {
-  0% { transform: scale(1) rotate(0deg); opacity: 0.85; }
-  100% { transform: scale(1.06) rotate(6deg); opacity: 1; filter: drop-shadow(0 0 24px rgba(232, 147, 10, 0.55)); }
+@keyframes tv-sparkle-spin {
+  from { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.1); }
+  to   { transform: rotate(360deg) scale(1); }
 }
 .tv-title {
   font-family: var(--font-heading);
-  font-size: clamp(30px, 8vw, 42px);
-  font-weight: 800;
-  color: var(--text);
-  margin: 10px 0 6px;
+  font-size: clamp(38px, 11vw, 56px);
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--text) 20%, var(--amber) 65%, var(--brown) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 10px 0 12px;
 }
 .tv-subtitle {
   font-size: 13px;

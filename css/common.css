@@ -509,6 +509,7 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  text-decoration: none !important;
 }
 
 /* Hover highlights by theme */
