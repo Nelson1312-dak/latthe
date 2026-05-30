@@ -812,34 +812,8 @@ body {
   }
 }
 
-/* ---- SEO + FAQ section (form page) ---- */
-.tuvi-seo-content {
-  width: 100%; max-width: 860px;
-  margin: 0 auto 48px;
-  padding: 32px 24px 0;
-  text-align: left;
-}
-.tuvi-seo-title {
-  font-size: 16px; font-weight: 800;
-  color: var(--amber);
-  margin-bottom: 12px;
-  position: relative; padding-bottom: 8px;
-}
-.tuvi-seo-title::after {
-  content: ''; position: absolute;
-  bottom: 0; left: 0;
-  width: 36px; height: 2px;
-  background: var(--amber); border-radius: 2px;
-}
-.tuvi-seo-content h3 {
-  font-size: 13.5px; font-weight: 700;
-  color: var(--text-mid); margin: 18px 0 8px;
-}
-.tuvi-seo-content p {
-  font-size: 13.5px; color: var(--text-soft);
-  line-height: 1.65; margin-bottom: 12px;
-}
-.tuvi-seo-content strong { color: var(--text-mid); }
+/* ---- SEO section (form page) ---- */
+/* On-page SEO intro now uses the shared .seo-app-intro line under the hero */
 
 /* SEO / GEO Enhanced Styling */
 .seo-direct-answer {
@@ -958,11 +932,11 @@ body {
 .seo-app-intro {
   font-size: 13.5px;
   color: var(--text-soft);
-  max-width: 440px;
+  max-width: 480px;
   margin: 12px auto 0;
   line-height: 1.5;
   text-align: center;
-  border-top: 1px dashed rgba(200, 168, 112, 0.3);
+  border-top: 1px dashed var(--border);
   padding-top: 12px;
 }
 

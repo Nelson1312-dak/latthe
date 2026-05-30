@@ -1047,39 +1047,10 @@ a { text-decoration: none; color: inherit; }
 }
 .history-clear:hover { background: rgba(251,113,133,0.18); }
 
-/* ---- SEO + FAQ section (screen-spread) ---- */
-.t-seo-content {
-  width: 100%; max-width: 480px;
-  margin: 32px auto 0;
-  text-align: left;
-}
-.t-seo-title {
-  font-family: var(--font-heading);
-  color: var(--gold);
-  font-size: 16px; font-weight: 800;
-  margin-bottom: 12px;
-  position: relative; padding-bottom: 8px;
-}
-.t-seo-title::after {
-  content: ''; position: absolute;
-  bottom: 0; left: 0;
-  width: 36px; height: 2px;
-  background: var(--gold); border-radius: 2px;
-}
-.t-seo-content h3 {
-  color: var(--text); font-size: 13.5px;
-  font-weight: 700; margin: 18px 0 8px;
-}
-.t-seo-content p {
-  color: var(--muted); font-size: 13.5px;
-  line-height: 1.65; margin-bottom: 12px;
-}
-.t-seo-content strong { color: var(--text); }
+/* ---- SEO section (screen-spread) ---- */
+/* On-page SEO intro uses the shared .seo-app-intro line under the hero */
 
 /* SEO / GEO Enhanced Styling */
-.t-seo-content {
-  max-width: 100% !important;
-}
 .seo-direct-answer {
   background: rgba(124, 58, 237, 0.05);
   border-left: 4px solid var(--purple);
