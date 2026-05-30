@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="dc-reveal-hint">Lật thẻ</span>
           </div>
           <div class="dc-card-front${reversed ? ' reversed' : ''}">
-            <img class="dc-card-img" src="images/${card.id}.jpg" alt="${card.vn}">
+            <img class="dc-card-img" src="images/${card.id}.webp" alt="${card.vn}" width="900" height="1510" decoding="async" loading="lazy">
             <span class="dc-vn-name">${card.vn}</span>
           </div>
         </div>

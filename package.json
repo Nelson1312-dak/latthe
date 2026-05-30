@@ -1,7 +1,8 @@
 {
   "type": "module",
   "scripts": {
-    "build:og": "node scripts/build-og.js"
+    "build:og": "node scripts/build-og.js",
+    "build:tarot": "node scripts/build-tarot-webp.js"
   },
   "devDependencies": {
     "sharp": "^0.34.5"
