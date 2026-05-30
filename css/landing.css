@@ -372,68 +372,7 @@ a { text-decoration: none; color: inherit; }
   margin: 0;
 }
 
-/* ---- FAQ section ---- */
-.l-faq { width: 100%; max-width: 520px; }
-
-.l-faq-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.l-faq-item {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  transition: border-color 0.2s ease;
-}
-.l-faq-item[open] { border-color: rgba(232, 147, 10, 0.4); }
-
-.l-faq-q {
-  list-style: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 15px 18px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  line-height: 1.4;
-}
-.l-faq-q::-webkit-details-marker { display: none; }
-.l-faq-q::marker { content: ''; }
-
-.l-faq-q::after {
-  content: '+';
-  font-size: 20px;
-  font-weight: 300;
-  color: var(--muted);
-  flex-shrink: 0;
-  line-height: 1;
-  transition: transform 0.25s ease, color 0.2s ease;
-}
-.l-faq-item[open] .l-faq-q::after {
-  content: '−';
-  color: var(--c-tuvi);
-}
-
-.l-faq-a {
-  padding: 0 18px 15px;
-  font-size: 13px;
-  color: var(--sub);
-  line-height: 1.72;
-  margin: 0;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-}
-.l-faq-a strong { color: var(--text); font-weight: 600; }
-.l-faq-a em { color: var(--muted); font-style: normal; font-size: 12px; }
+/* FAQ accordion now uses the shared .faq-* classes in common.css */
 
 /* ---- Footer ---- */
 .l-footer {
@@ -500,12 +439,9 @@ a { text-decoration: none; color: inherit; }
   .l-card-desc { font-size: 13px; }
   .l-card-arrow { display: none; }
 
-  .l-about, .l-faq { max-width: 800px; }
+  .l-about { max-width: 800px; }
   .l-features { grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .l-feature { flex-direction: column; gap: 12px; }
-
-  .l-faq-q { font-size: 14px; padding: 16px 22px; }
-  .l-faq-a { font-size: 13.5px; padding: 12px 22px 16px; }
 }
 
 @media (min-width: 1024px) {
@@ -520,7 +456,7 @@ a { text-decoration: none; color: inherit; }
   .l-card-name { font-size: 24px; }
   .l-card-desc { font-size: 13.5px; }
 
-  .l-about, .l-faq { max-width: 980px; }
+  .l-about { max-width: 980px; }
   .l-about-lead { font-size: 15px; }
   .l-divider--gap { margin-top: 56px; margin-bottom: 56px; }
 }
