@@ -772,7 +772,7 @@
         } else {
           const data = await res.json();
           const answer = data.answer || '';
-          appendMsg('assistant', answer);
+          streamMsg(answer);
           chatHistory.push({ role: 'user', content: questionText });
           chatHistory.push({ role: 'assistant', content: answer });
           if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
@@ -885,6 +885,34 @@
         : `<div class="md-content">${parseMd(text)}</div>`;
       chatLog.appendChild(div);
       chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Reveal an assistant answer word-by-word, matching the cadence of js/ai.js
+    // used by Gieo Quẻ / Tarot. Renders plain text while streaming, then swaps to
+    // formatted markdown once complete.
+    function streamMsg(text) {
+      const div = document.createElement('div');
+      div.className = 'ai-message assistant';
+      const body = document.createElement('div');
+      body.className = 'md-content';
+      div.appendChild(body);
+      chatLog.appendChild(div);
+
+      const words = (text || '').split(' ');
+      let i = 0;
+      let acc = '';
+      const interval = setInterval(() => {
+        if (i < words.length) {
+          acc += (i === 0 ? '' : ' ') + words[i];
+          body.textContent = acc;
+          chatLog.scrollTop = chatLog.scrollHeight;
+          i++;
+        } else {
+          clearInterval(interval);
+          body.innerHTML = parseMd(text);
+          chatLog.scrollTop = chatLog.scrollHeight;
+        }
+      }, 30);
     }
 
     function appendTyping() {
