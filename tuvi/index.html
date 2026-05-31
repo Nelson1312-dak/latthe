@@ -904,7 +904,9 @@
       const interval = setInterval(() => {
         if (i < words.length) {
           acc += (i === 0 ? '' : ' ') + words[i];
-          body.textContent = acc;
+          // Render markdown progressively (like Gieo Quẻ / Tarot) so the
+          // formatting stays intact instead of showing raw ** / ### symbols.
+          body.innerHTML = parseMd(acc);
           chatLog.scrollTop = chatLog.scrollHeight;
           i++;
         } else {
