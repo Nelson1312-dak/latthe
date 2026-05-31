@@ -563,6 +563,16 @@
   align-items: center;
   justify-content: flex-end;
   justify-self: end;
+  flex-shrink: 0;
+}
+
+/* Narrow phones: tighten the header so back / title / actions don't crowd each
+   other (the title sits in the center column of a 1fr auto 1fr grid). */
+@media (max-width: 400px) {
+  .module-header { padding: 12px 12px; column-gap: 8px; }
+  .module-header .btn-back,
+  .module-header .btn-ghost { padding: 8px 10px; }
+  .module-header .header-title { font-size: 16px; }
 }
 
 .module-header .btn-ghost {
