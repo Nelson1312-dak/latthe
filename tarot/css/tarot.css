@@ -598,6 +598,7 @@ a { text-decoration: none; color: inherit; }
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 18px;
+  margin-top: 16px;
   margin-bottom: 12px;
   box-shadow: 0 6px 22px rgba(124,58,237,0.08);
 }
