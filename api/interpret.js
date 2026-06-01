@@ -26,8 +26,14 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_WINDOW_SEC = RATE_LIMIT_WINDOW_MS / 1000;
 const RATE_LIMIT_MAX = 5;
-const rateLimitStore = new Map(); // ip -> { count, windowStart }
+
+const UPSTASH_URL   = (process.env.UPSTASH_REDIS_REST_URL   || '').trim();
+const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || '').trim();
+const upstashEnabled = !!(UPSTASH_URL && UPSTASH_TOKEN);
+
+const rateLimitStore = new Map(); // ip -> { count, windowStart } — in-memory fallback
 
 function getClientIp(req) {
   const xff = req.headers['x-forwarded-for'];
@@ -35,9 +41,10 @@ function getClientIp(req) {
   return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
 }
 
-function checkRateLimit(ip) {
+// In-memory limiter — per-instance only. Used as a fallback when Upstash is not
+// configured or unreachable, so a misconfig never takes the whole endpoint down.
+function checkRateLimitLocal(ip) {
   const now = Date.now();
-  // Opportunistic cleanup to keep the in-memory map bounded
   if (rateLimitStore.size > 500) {
     for (const [k, v] of rateLimitStore) {
       if (now - v.windowStart > RATE_LIMIT_WINDOW_MS) rateLimitStore.delete(k);
@@ -54,6 +61,59 @@ function checkRateLimit(ip) {
   }
   record.count++;
   return { allowed: true };
+}
+
+// Distributed limiter backed by Upstash Redis (shared across all serverless
+// instances, unlike the in-memory Map). Fixed-window counter: INCR the per-IP
+// key, and set a TTL on the first hit of each window so it auto-expires. Done in
+// one pipelined REST call. Any failure falls back to the in-memory limiter.
+async function checkRateLimit(ip) {
+  if (!upstashEnabled) return checkRateLimitLocal(ip);
+
+  const key = `rl:interpret:${ip}`;
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 2000);
+  try {
+    const res = await fetch(`${UPSTASH_URL}/pipeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${UPSTASH_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      // INCR returns the new count; EXPIRE NX sets TTL only if none exists, so the
+      // window starts at the first request and is not extended by later ones.
+      body: JSON.stringify([
+        ['INCR', key],
+        ['EXPIRE', key, String(RATE_LIMIT_WINDOW_SEC), 'NX'],
+      ]),
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return checkRateLimitLocal(ip);
+
+    const data = await res.json();
+    const count = Array.isArray(data) ? Number(data[0]?.result) : NaN;
+    if (!Number.isFinite(count)) return checkRateLimitLocal(ip);
+
+    if (count > RATE_LIMIT_MAX) {
+      // Read remaining TTL to give the client an accurate Retry-After.
+      let retryAfter = RATE_LIMIT_WINDOW_SEC;
+      try {
+        const ttlRes = await fetch(`${UPSTASH_URL}/ttl/${encodeURIComponent(key)}`, {
+          headers: { 'Authorization': `Bearer ${UPSTASH_TOKEN}` },
+        });
+        if (ttlRes.ok) {
+          const ttl = Number((await ttlRes.json())?.result);
+          if (Number.isFinite(ttl) && ttl > 0) retryAfter = ttl;
+        }
+      } catch { /* keep default */ }
+      return { allowed: false, retryAfter };
+    }
+    return { allowed: true };
+  } catch (err) {
+    clearTimeout(t);
+    return checkRateLimitLocal(ip);
+  }
 }
 
 // ---- Infra-down detector ----
@@ -361,7 +421,7 @@ export default async function handler(req, res) {
 
   // ---- Rate limit per IP ----
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const rl = await checkRateLimit(ip);
   if (!rl.allowed) {
     res.setHeader('Retry-After', String(rl.retryAfter));
     return res.status(429).json({
