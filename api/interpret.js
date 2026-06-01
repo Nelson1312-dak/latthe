@@ -29,8 +29,14 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_WINDOW_SEC = RATE_LIMIT_WINDOW_MS / 1000;
 const RATE_LIMIT_MAX = 5;
 
-const UPSTASH_URL   = (process.env.UPSTASH_REDIS_REST_URL   || '').trim();
-const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || '').trim();
+// Strip accidental surrounding quotes/whitespace and any trailing slash — a
+// common copy-paste mistake when pasting env values that otherwise makes the
+// fetch URL malformed (throws TypeError) and silently drops us to in-memory.
+function cleanEnv(v) {
+  return (v || '').trim().replace(/^['"]+|['"]+$/g, '').trim().replace(/\/+$/, '');
+}
+const UPSTASH_URL   = cleanEnv(process.env.UPSTASH_REDIS_REST_URL);
+const UPSTASH_TOKEN = cleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
 const upstashEnabled = !!(UPSTASH_URL && UPSTASH_TOKEN);
 
 const rateLimitStore = new Map(); // ip -> { count, windowStart } — in-memory fallback
