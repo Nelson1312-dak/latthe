@@ -301,6 +301,40 @@ Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định
 - Tóm tắt lá số Tử Vi: ${ctx}
 
 Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định dạng đầu ra bắt buộc của chuyên gia Tử Vi. (Chỉ dùng tiếng Việt, tuyệt đối không dùng bất kỳ chữ Hán hay tiếng Anh nào)`;
+  } else if (t === 'thansohoc') {
+    let parsedCtx = {};
+    try {
+      parsedCtx = JSON.parse(ctx);
+    } catch {
+      parsedCtx = { raw: ctx };
+    }
+    if (isFollowUp) {
+      return `# INPUT CONTEXT (Dữ liệu Thần Số Học & Lịch sử):
+- Câu hỏi ban đầu của user: ${q}
+- Họ & tên: ${parsedCtx.fullName || ''}
+- Ngày sinh: ${parsedCtx.birthDate || ''}
+- Số Chủ Đạo: ${parsedCtx.lifePath || ''}
+- Số Sứ Mệnh: ${parsedCtx.destiny || ''}
+- Số Linh Hồn: ${parsedCtx.soul || ''}
+- Số Nhân Cách: ${parsedCtx.personality || ''}
+- Số Thái Độ: ${parsedCtx.attitude || ''}
+- Số Ngày Sinh: ${parsedCtx.birthdayNumber || ''}
+- Mũi tên cá tính: ${parsedCtx.arrows || ''}`;
+    }
+
+    return `# INPUT CONTEXT (Dữ liệu Thần Số Học):
+- Câu hỏi của user: ${q}
+- Họ & tên: ${parsedCtx.fullName || ''}
+- Ngày sinh: ${parsedCtx.birthDate || ''}
+- Số Chủ Đạo: ${parsedCtx.lifePath || ''}
+- Số Sứ Mệnh: ${parsedCtx.destiny || ''}
+- Số Linh Hồn: ${parsedCtx.soul || ''}
+- Số Nhân Cách: ${parsedCtx.personality || ''}
+- Số Thái Độ: ${parsedCtx.attitude || ''}
+- Số Ngày Sinh: ${parsedCtx.birthdayNumber || ''}
+- Mũi tên cá tính: ${parsedCtx.arrows || ''}
+
+Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định dạng đầu ra bắt buộc của chuyên gia Thần Số Học. (Chỉ dùng tiếng Việt, tuyệt đối không dùng bất kỳ chữ Hán hay tiếng Anh nào)`;
   } else {
     const prefix = `Thông tin bài Tarot:\n${fullContext}\n\n`;
     return `${prefix}Câu hỏi của user: "${q}"
@@ -426,6 +460,16 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài. Người hỏi đan
 2. Trả lời ngắn gọn, súc tích (3-5 câu), đi thẳng vào trọng tâm vấn đề.
 3. Không lặp lại định dạng ban đầu hay thêm lời thoại thừa.`;
 
+  const thansohocFollowUpSystemPrompt = `${langRule}
+
+# ROLE:
+Bạn là một nhà tham vấn Thần Số Học Pythagoras lỗi lạc. Người hỏi đang muốn hỏi sâu hơn về các con số của họ hoặc các khuyên răn trước đó.
+
+# INSTRUCTIONS:
+1. Trả lời trực diện câu hỏi mới của người dùng, liên kết với các con số cốt lõi (Số Chủ Đạo, Sứ Mệnh, Linh Hồn...) và biểu đồ ngày sinh của họ.
+2. Trả lời ngắn gọn, súc tích (3-5 câu), mang tính định hướng tích cực, truyền cảm hứng và thấu cảm.
+3. Không lặp lại định dạng ban đầu hay thêm lời thoại thừa.`;
+
   const tarotSystemPrompt = `${langRule}
 
 # ROLE:
@@ -529,11 +573,42 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
 
 "Đức năng thắng số, nhân định thắng thiên. Vạn sự tùy duyên, cát tường như ý."`;
 
+  const thansohocSystemPrompt = `${langRule}
+
+# ROLE:
+Bạn là một chuyên gia Thần Số Học (Numerology) lỗi lạc theo hệ thống Pythagoras. Nhiệm vụ của bạn là nhận thông tin các con số cốt lõi và các mũi tên cá tính trong biểu đồ ngày sinh của người dùng, kết hợp với câu hỏi cụ thể của họ để đưa ra lời luận giải súc tích, uyên thâm, định hướng cuộc sống và đánh thức năng lực tiềm ẩn.
+
+# CHARACTERISTICS (ĐẶC ĐIỂM HÀNH VĂN):
+- Ngôn từ: Trí tuệ, tích cực, truyền cảm hứng, điềm đạm nhưng phải đi trực tiếp vào vấn đề của người hỏi.
+- Định dạng: Luôn trả về kết quả theo đúng định dạng được yêu cầu, không thêm lời thoại hay lời chào/kết thừa từ AI.
+
+# OUTPUT FORMAT (Định dạng đầu ra bắt buộc):
+### 🔮 LUẬN GIẢI THẦN SỐ HỌC AI
+
+- **Câu hỏi người dùng:** {USER_QUESTION}
+- **Năng lượng cốt lõi:** [1-2 câu ngắn gọn nêu bật ý nghĩa con số Chủ Đạo và Sứ Mệnh liên quan đến câu hỏi.]
+
+---
+
+### 🌌 1. Sức Mạnh Bản Thể (Con Số & Mũi Tên)
+[Phân tích 3-4 câu ngắn gọn về thế mạnh của các con số và các mũi tên cá tính nổi trội hỗ trợ cho khát khao của người dùng.]
+
+### 🧭 2. Thử Thách & Cơ Hội
+[Phân tích 3-4 câu ngắn gọn về bài học nghiệp quả, con số thiếu hoặc các mũi tên trống, điểm cần bổ sung/hoàn thiện và hướng hành động.]
+
+### 🕯️ 3. Lời Khuyên Hành Trình
+- **Hành động khuyên dùng:** [Viết 1 hành động thực tế khuyên user thực hiện]
+- **Tư duy cần tránh:** [Viết 1 thái độ hoặc suy nghĩ nên từ bỏ]
+
+"Thay đổi tư duy, chuyển dịch số mệnh. Vững bước hành trình, khai mở tiềm năng."`;
+
   const systemPrompt = isFollowUp
-    ? (type === 'tarot' ? tarotFollowUpSystemPrompt : (type === 'tuvi' ? tuviFollowUpSystemPrompt : gieoqueFollowUpSystemPrompt))
+    ? (type === 'tarot' ? tarotFollowUpSystemPrompt : (type === 'tuvi' ? tuviFollowUpSystemPrompt : (type === 'thansohoc' ? thansohocFollowUpSystemPrompt : gieoqueFollowUpSystemPrompt)))
     : (type === 'tarot'
         ? tarotSystemPrompt
-        : (type === 'tuvi' ? tuviSystemPrompt : gieoqueSystemPrompt));
+        : (type === 'tuvi'
+            ? tuviSystemPrompt
+            : (type === 'thansohoc' ? thansohocSystemPrompt : gieoqueSystemPrompt)));
 
   // ---- 2. RAG & Tier-2 semantic cache ----
   // The embedding was computed above (in parallel with the exact-cache check).
@@ -587,13 +662,15 @@ Bạn là một chuyên gia Tử Vi Đẩu Số đại tài và nhà chiêm tinh
       ? `CÂU HỎI MỚI: "${question}"\n\n(Trả lời 3-5 câu, phân tích góc nhìn MỚI từ các lá bài. Không lặp câu trả lời trước.)`
       : (type === 'tuvi'
           ? `CÂU HỎI MỚI: "${question}"\n\n(Trả lời 3-5 câu ngắn gọn, trực diện liên quan đến lá số Tử Vi và các sao của bạn. Không lặp lại định dạng cũ.)`
-          : `CÂU HỎI MỚI: "${question}"\n\nTrả lời theo đúng format:\n**Nhận định:** [...]\n**Trả lời:** [...]\n- **Nên làm:** [...]\n- **Cần tránh:** [...]`);
+          : (type === 'thansohoc'
+              ? `CÂU HỎI MỚI: "${question}"\n\n(Trả lời 3-5 câu ngắn gọn, phân tích các con số và biểu đồ ngày sinh Thần Số Học của bạn dưới góc nhìn mới.)`
+              : `CÂU HỎI MỚI: "${question}"\n\nTrả lời theo đúng format:\n**Nhận định:** [...]\n**Trả lời:** [...]\n- **Nên làm:** [...]\n- **Cần tránh:** [...]`));
     ollamaMessages.push({ role: 'user', content: finalInstruction });
   }
 
   // ---- Call Ollama first, fall back to Groq on any failure ----
   const temperature = isFollowUp ? 0.4 : 0.2;
-  const maxTokens   = isFollowUp ? 500 : (type === 'tuvi' ? 1400 : 1000);
+  const maxTokens   = isFollowUp ? 500 : (type === 'tuvi' || type === 'thansohoc' ? 1400 : 1000);
   let answer = '';
   let source = 'ollama';
   let ollamaErr = breaker.localDown ? 'local backend down (circuit breaker)' : null;

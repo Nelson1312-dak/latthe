@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Thần Số Học AI — Tra cứu biểu đồ ngày sinh Pythagoras, tính toán các con số cốt lõi (Số chủ đạo, Sứ mệnh, Linh hồn...) và trò chuyện luận giải cùng chuyên gia AI.">
+  <meta name="keywords" content="thần số học, tra cứu thần số học, biểu đồ ngày sinh, số chủ đạo, sứ mệnh, linh hồn, nhân cách, thần số học ai, pythagoras online">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Lật Bài">
+  <meta name="theme-color" content="#fbf3e4">
+  <title>Thần Số Học AI — Tra Cứu Biểu Đồ Ngày Sinh Pythagoras</title>
+
+  <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap&subset=vietnamese" rel="stylesheet">
+  <link rel="stylesheet" href="../css/common.css?v=36">
+  <link rel="stylesheet" href="css/thansohoc.css?v=1">
+
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script defer src="/_vercel/speed-insights/script.js"></script>
+</head>
+<body class="light-theme thansohoc-theme">
+
+  <!-- Nav Header -->
+  <header class="module-header thansohoc-theme">
+    <a href="/" class="btn-back"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
+    <span class="header-title"><i class="ti ti-hash"></i> Thần Số Học</span>
+    <div class="header-actions">
+      <button id="btn-history" class="btn-ghost" title="Lịch sử xem thần số học" aria-label="Mở lịch sử"><i class="ti ti-history"></i></button>
+      <button id="btn-restart" class="btn-ghost hidden">Tra Cứu Mới</button>
+    </div>
+  </header>
+
+  <h1 class="sr-only">Thần Số Học Pythagoras — Tra Cứu Biểu Đồ Ngày Sinh Online Miễn Phí</h1>
+
+  <div id="app">
+    <!-- ===== SCREEN 1: INPUT ===== -->
+    <div id="screen-input" class="screen active">
+      <div class="screen-inner">
+        <div class="tsh-hero">
+          <div class="tsh-sparkles">
+            <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="tshGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#a5b4fc" />
+                  <stop offset="50%" stop-color="#6366f1" />
+                  <stop offset="100%" stop-color="#4f46e5" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="44" stroke="url(#tshGold)" stroke-width="1.5" stroke-dasharray="2 3" />
+              <path d="M 35 30 L 42 50 L 50 35 L 58 50 L 65 30" stroke="url(#tshGold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="35" cy="30" r="4" fill="url(#tshGold)"/>
+              <circle cx="50" cy="35" r="4" fill="url(#tshGold)"/>
+              <circle cx="65" cy="30" r="4" fill="url(#tshGold)"/>
+              <circle cx="42" cy="50" r="4" fill="url(#tshGold)"/>
+              <circle cx="58" cy="50" r="4" fill="url(#tshGold)"/>
+              <path d="M 30 70 L 70 70 M 50 60 L 50 80" stroke="url(#tshGold)" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2 class="tsh-title">Thần Số Học</h2>
+          <p class="tsh-subtitle">Biểu đồ ngày sinh • 6 Chỉ số cốt lõi • Luận giải nhân số học AI</p>
+        </div>
+
+        <div class="form-card">
+          <form id="tsh-form">
+            <div class="field-row">
+              <input type="text" id="f-name" class="field-input" placeholder="Họ và tên đầy đủ (Ví dụ: Nguyễn Văn A)" required autocomplete="name">
+            </div>
+
+            <div class="field-row date-row">
+              <select id="f-day" class="field-select day-sel" required>
+                <option value="">Ngày sinh</option>
+              </select>
+              <select id="f-month" class="field-select month-sel" required>
+                <option value="">Tháng</option>
+              </select>
+              <select id="f-year" class="field-select year-sel" required>
+                <option value="">Năm sinh</option>
+              </select>
+            </div>
+
+            <button type="submit" id="btn-submit" class="btn-tsh-primary">Khám Phá Bản Thân <i class="ti ti-arrow-right" style="margin-left:6px;"></i></button>
+          </form>
+        </div>
+
+        <!-- FAQ SECTION IN INPUT SCREEN -->
+        <div class="faq-section">
+          <h3 class="faq-title">Câu hỏi thường gặp về Thần Số Học (FAQ)</h3>
+          <ul class="faq-list">
+            <li class="faq-item">
+              <h4 class="faq-question">Thần Số Học Pythagoras là gì?</h4>
+              <p class="faq-answer">Thần Số Học (Numerology) theo trường phái Pythagoras là bộ môn khoa học cổ đại nghiên cứu về năng lượng sóng rung của các con số tương ứng với họ tên và ngày sinh của mỗi người, giúp giải mã tính cách, sứ mệnh và hành trình cuộc đời.</p>
+            </li>
+            <li class="faq-item">
+              <h4 class="faq-question">Các con số chủ đạo và mũi tên cá tính nói lên điều gì?</h4>
+              <p class="faq-answer">Số chủ đạo thể hiện bài học đường đời lớn nhất bạn cần học. Biểu đồ ngày sinh (gồm 9 ô từ 1 đến 9) thể hiện các nét tính cách bẩm sinh. Các hàng/cột/chéo có đủ 3 số tạo nên Mũi tên cá tính chỉ thế mạnh độc đáo, còn các hàng trống tạo ra Mũi tên trống chỉ điểm yếu cần khắc phục.</p>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 2: RESULT ===== -->
+    <div id="screen-result" class="screen">
+      <div class="screen-inner">
+        
+        <!-- Welcome Card -->
+        <div class="profile-summary">
+          <h3 id="display-name" class="profile-name">NGUYỄN VĂN A</h3>
+          <p id="display-dob" class="profile-dob">Sinh ngày: 15/09/1992</p>
+        </div>
+
+        <!-- 6 Indicators Board -->
+        <div class="indicators-grid">
+          <div class="indicator-card" data-type="lifepath">
+            <span class="ind-label">Số Chủ Đạo <i class="ti ti-help"></i></span>
+            <span id="ind-lifepath" class="ind-val">-</span>
+            <span class="ind-sub">Bài học đường đời</span>
+          </div>
+          <div class="indicator-card" data-type="destiny">
+            <span class="ind-label">Số Sứ Mệnh <i class="ti ti-help"></i></span>
+            <span id="ind-destiny" class="ind-val">-</span>
+            <span class="ind-sub">Mục tiêu cuộc đời</span>
+          </div>
+          <div class="indicator-card" data-type="soul">
+            <span class="ind-label">Số Linh Hồn <i class="ti ti-help"></i></span>
+            <span id="ind-soul" class="ind-val">-</span>
+            <span class="ind-sub">Khao khát ẩn sâu</span>
+          </div>
+          <div class="indicator-card" data-type="personality">
+            <span class="ind-label">Số Nhân Cách <i class="ti ti-help"></i></span>
+            <span id="ind-personality" class="ind-val">-</span>
+            <span class="ind-sub">Ấn tượng bên ngoài</span>
+          </div>
+          <div class="indicator-card" data-type="birthday">
+            <span class="ind-label">Số Ngày Sinh <i class="ti ti-help"></i></span>
+            <span id="ind-birthday" class="ind-val">-</span>
+            <span class="ind-sub">Năng lực tự nhiên</span>
+          </div>
+          <div class="indicator-card" data-type="attitude">
+            <span class="ind-label">Số Thái Độ <i class="ti ti-help"></i></span>
+            <span id="ind-attitude" class="ind-val">-</span>
+            <span class="ind-sub">Cách phản ứng</span>
+          </div>
+        </div>
+
+        <!-- Birth Chart Grid Section -->
+        <div class="chart-section-wrapper">
+          <h3 class="section-title"><i class="ti ti-grid"></i> Biểu đồ Ngày Sinh</h3>
+          <p class="section-subtitle">Sự phân bổ các số trong ngày sinh của bạn trên ma trận Pythagoras 3x3</p>
+          
+          <div class="birth-chart-container">
+            <div class="chart-grid">
+              <!-- Grid cell 3 -->
+              <div class="grid-cell" data-num="3">
+                <span class="cell-num">3</span>
+                <span id="cell-cnt-3" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 6 -->
+              <div class="grid-cell" data-num="6">
+                <span class="cell-num">6</span>
+                <span id="cell-cnt-6" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 9 -->
+              <div class="grid-cell" data-num="9">
+                <span class="cell-num">9</span>
+                <span id="cell-cnt-9" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 2 -->
+              <div class="grid-cell" data-num="2">
+                <span class="cell-num">2</span>
+                <span id="cell-cnt-2" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 5 -->
+              <div class="grid-cell" data-num="5">
+                <span class="cell-num">5</span>
+                <span id="cell-cnt-5" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 8 -->
+              <div class="grid-cell" data-num="8">
+                <span class="cell-num">8</span>
+                <span id="cell-cnt-8" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 1 -->
+              <div class="grid-cell" data-num="1">
+                <span class="cell-num">1</span>
+                <span id="cell-cnt-1" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 4 -->
+              <div class="grid-cell" data-num="4">
+                <span class="cell-num">4</span>
+                <span id="cell-cnt-4" class="cell-count"></span>
+              </div>
+              <!-- Grid cell 7 -->
+              <div class="grid-cell" data-num="7">
+                <span class="cell-num">7</span>
+                <span id="cell-cnt-7" class="cell-count"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personality Arrows Section -->
+        <div class="arrows-section-wrapper">
+          <h3 class="section-title"><i class="ti ti-vector"></i> Mũi Tên Cá Tính</h3>
+          <p class="section-subtitle">Các hàng số đầy hoặc trống tạo ra các đặc tính độc đáo</p>
+          <div id="arrows-list" class="arrows-list">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- AI Interpretation Panel -->
+        <div id="ai-section" class="ai-section gemini-glow-border">
+          <div class="ai-header">
+            <span class="ai-icon"><i class="ti ti-hash"></i></span>
+            <div>
+              <p class="ai-label">Nhân Số Học AI · Luận giải chuyên sâu</p>
+              <p id="ai-question-display" class="ai-question-display">Đang chuẩn bị luận giải biểu đồ ngày sinh...</p>
+            </div>
+          </div>
+
+          <div id="ai-chat-messages" class="ai-chat-messages">
+            <!-- Messages stream here -->
+          </div>
+
+          <div id="ai-loading" class="ai-loading hidden">
+            <div class="gemini-loader"></div>
+            <span class="ai-loading-text">Chuyên gia Nhân số học AI đang tính toán & luận giải...</span>
+          </div>
+
+          <p id="ai-error" class="ai-error hidden"></p>
+
+          <div class="ai-chat-row">
+            <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về biểu đồ thần số học của bạn..." maxlength="300">
+            <button id="btn-ask-ai" class="btn-chat-send"><i class="ti ti-send"></i></button>
+          </div>
+        </div>
+
+        <!-- CTAs -->
+        <button id="btn-new-calc" class="btn-tsh-secondary">Tra Cứu Lần Khác <i class="ti ti-refresh"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Detail Drawer -->
+  <div id="tsh-drawer" class="tsh-drawer">
+    <div class="tsh-drawer-overlay"></div>
+    <div class="tsh-drawer-content">
+      <div class="tsh-drawer-header">
+        <h3 id="drawer-title" class="drawer-title">Tên Chỉ Số</h3>
+        <button id="btn-close-drawer" class="btn-close-drawer" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="tsh-drawer-body">
+        <div class="drawer-number-badge">
+          <span id="drawer-number-val">-</span>
+        </div>
+        <div id="drawer-desc" class="drawer-desc">
+          <!-- Dynamically populated detail description -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Drawer -->
+  <div id="history-drawer" class="tsh-drawer">
+    <div class="tsh-drawer-overlay"></div>
+    <div class="tsh-drawer-content">
+      <div class="tsh-drawer-header">
+        <h3 class="drawer-title"><i class="ti ti-history"></i> Lịch Sử Tra Cứu</h3>
+        <button id="btn-close-history" class="btn-close-drawer" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="tsh-drawer-body">
+        <div id="history-list" class="history-list">
+          <p class="history-empty">Chưa có lịch sử tra cứu nào trên thiết bị này.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/ai.js?v=2"></script>
+  <script src="js/app.js?v=1"></script>
+</body>
+</html>

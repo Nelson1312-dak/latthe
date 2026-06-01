@@ -23,6 +23,7 @@
   --c-tarot:   #7c3aed; /* Purple */
   --c-tuvi:    #e8930a; /* Amber Gold */
   --c-thuvien: #2563eb; /* Deep Blue */
+  --c-thansohoc: #6366f1; /* Indigo */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -222,6 +223,7 @@ a { text-decoration: none; color: inherit; }
 .l-tarot:hover   { border-color: rgba(124, 58, 237, 0.4); }
 .l-drink:hover   { border-color: rgba(234, 106, 23, 0.4); }
 .l-thuvien:hover { border-color: rgba(37, 99, 235, 0.4); }
+.l-thansohoc:hover { border-color: rgba(99, 102, 241, 0.4); }
 
 /* App-icon-style colored tile */
 .l-card-icon {
@@ -242,6 +244,7 @@ a { text-decoration: none; color: inherit; }
 .l-tarot   .l-card-icon { background: linear-gradient(150deg, #9560f0, #7c3aed); box-shadow: 0 8px 18px rgba(124,58,237,0.3); }
 .l-drink   .l-card-icon { background: linear-gradient(150deg, #fb8a3c, #ea6a17); box-shadow: 0 8px 18px rgba(234,106,23,0.3); }
 .l-thuvien .l-card-icon { background: linear-gradient(150deg, #3b82f6, #2563eb); box-shadow: 0 8px 18px rgba(37,99,235,0.3); }
+.l-thansohoc .l-card-icon { background: linear-gradient(150deg, #818cf8, #4f46e5); box-shadow: 0 8px 18px rgba(79,70,229,0.3); }
 .l-card:hover .l-card-icon { transform: scale(1.06) rotate(-3deg); }
 
 .l-card-body { flex: 1; min-width: 0; }
@@ -258,6 +261,7 @@ a { text-decoration: none; color: inherit; }
 .l-tarot   .l-card-label { color: var(--c-tarot); }
 .l-drink   .l-card-label { color: var(--c-drink); }
 .l-thuvien .l-card-label { color: var(--c-thuvien); }
+.l-thansohoc .l-card-label { color: var(--c-thansohoc); }
 
 .l-card-name {
   font-size: 20px;
@@ -299,6 +303,7 @@ a { text-decoration: none; color: inherit; }
 .l-badge-green  { background: var(--c-gieoque); }
 .l-badge-purple { background: var(--c-tarot); }
 .l-badge-blue   { background: var(--c-thuvien); }
+.l-badge-indigo { background: var(--c-thansohoc); }
 
 /* ---- Section title (shared by About & FAQ) ---- */
 .l-section-title {
