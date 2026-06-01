@@ -68,7 +68,7 @@ function checkRateLimitLocal(ip) {
 // key, and set a TTL on the first hit of each window so it auto-expires. Done in
 // one pipelined REST call. Any failure falls back to the in-memory limiter.
 async function checkRateLimit(ip) {
-  if (!upstashEnabled) return checkRateLimitLocal(ip);
+  if (!upstashEnabled) return { ...checkRateLimitLocal(ip), backend: 'memory-noenv' };
 
   const key = `rl:interpret:${ip}`;
   const controller = new AbortController();
@@ -89,11 +89,11 @@ async function checkRateLimit(ip) {
       signal: controller.signal,
     });
     clearTimeout(t);
-    if (!res.ok) return checkRateLimitLocal(ip);
+    if (!res.ok) return { ...checkRateLimitLocal(ip), backend: `memory-http${res.status}` };
 
     const data = await res.json();
     const count = Array.isArray(data) ? Number(data[0]?.result) : NaN;
-    if (!Number.isFinite(count)) return checkRateLimitLocal(ip);
+    if (!Number.isFinite(count)) return { ...checkRateLimitLocal(ip), backend: 'memory-badresp' };
 
     if (count > RATE_LIMIT_MAX) {
       // Read remaining TTL to give the client an accurate Retry-After.
@@ -107,12 +107,12 @@ async function checkRateLimit(ip) {
           if (Number.isFinite(ttl) && ttl > 0) retryAfter = ttl;
         }
       } catch { /* keep default */ }
-      return { allowed: false, retryAfter };
+      return { allowed: false, retryAfter, backend: 'upstash' };
     }
-    return { allowed: true };
+    return { allowed: true, backend: 'upstash' };
   } catch (err) {
     clearTimeout(t);
-    return checkRateLimitLocal(ip);
+    return { ...checkRateLimitLocal(ip), backend: `memory-err:${err.name || 'unknown'}` };
   }
 }
 
@@ -422,6 +422,8 @@ export default async function handler(req, res) {
   // ---- Rate limit per IP ----
   const ip = getClientIp(req);
   const rl = await checkRateLimit(ip);
+  // Diagnostic: which limiter served this request (upstash vs memory-*).
+  res.setHeader('X-RateLimit-Backend', rl.backend || 'unknown');
   if (!rl.allowed) {
     res.setHeader('Retry-After', String(rl.retryAfter));
     return res.status(429).json({
