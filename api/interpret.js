@@ -29,11 +29,16 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_WINDOW_SEC = RATE_LIMIT_WINDOW_MS / 1000;
 const RATE_LIMIT_MAX = 5;
 
-// Strip accidental surrounding quotes/whitespace and any trailing slash — a
-// common copy-paste mistake when pasting env values that otherwise makes the
-// fetch URL malformed (throws TypeError) and silently drops us to in-memory.
+// Strip accidental surrounding junk from pasted env values — quotes, angle
+// brackets (e.g. copied from a markdown <url> link), whitespace and trailing
+// slashes — which otherwise make the fetch URL malformed (throws TypeError) and
+// silently drop us to the in-memory limiter.
 function cleanEnv(v) {
-  return (v || '').trim().replace(/^['"]+|['"]+$/g, '').trim().replace(/\/+$/, '');
+  return (v || '')
+    .trim()
+    .replace(/^[<'"]+|[>'"]+$/g, '') // wrapping < > ' "
+    .trim()
+    .replace(/\/+$/, '');            // trailing slash(es)
 }
 const UPSTASH_URL   = cleanEnv(process.env.UPSTASH_REDIS_REST_URL);
 const UPSTASH_TOKEN = cleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
