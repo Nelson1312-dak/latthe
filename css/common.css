@@ -427,6 +427,21 @@
   background: rgba(124, 58, 237, 0.06) !important;
 }
 
+.thansohoc-page-cta {
+  border-color: rgba(99, 102, 241, 0.25) !important;
+}
+.light-theme .thansohoc-page-cta {
+  color: #4f46e5 !important;
+}
+.dark-theme .thansohoc-page-cta {
+  color: #818cf8 !important;
+}
+.thansohoc-page-cta:hover {
+  border-color: #6366f1 !important;
+  color: #4f46e5 !important;
+  background: rgba(99, 102, 241, 0.06) !important;
+}
+
 /* ============================================================
    Unified FAQ Accordion (đồng nhất với trang chủ)
    ============================================================ */
@@ -479,6 +494,7 @@
 .light-theme.tarot-theme .faq-item[open] { border-color: rgba(124, 58, 237, 0.4); }
 .light-theme.tuvi-theme .faq-item[open] { border-color: rgba(217, 138, 10, 0.4); }
 .light-theme.thuvien-theme .faq-item[open] { border-color: rgba(37, 99, 235, 0.4); }
+.light-theme.thansohoc-theme .faq-item[open] { border-color: rgba(99, 102, 241, 0.4); }
 
 /* ============================================================
    Unified Occult Module Headers
@@ -651,6 +667,7 @@
 .light-theme.tarot-theme .faq-item[open] .faq-question::after { color: var(--c-tarot, #7c3aed); }
 .light-theme.tuvi-theme .faq-item[open] .faq-question::after { color: var(--gold, #d98a0a); }
 .light-theme.thuvien-theme .faq-item[open] .faq-question::after { color: var(--c-thuvien, #2563eb); }
+.light-theme.thansohoc-theme .faq-item[open] .faq-question::after { color: #6366f1; }
 
 .faq-answer {
   padding: 0 18px 15px;
@@ -679,4 +696,100 @@
     padding-bottom: 96px;
   }
 }
+
+/* ============================================================
+   Unified Brand Logo Container & Theme Variables
+   ============================================================ */
+:root {
+  /* Logo theme variables fallback */
+  --logo-bg: linear-gradient(135deg, #ffffff 0%, #fbf3e4 100%);
+  --logo-border: rgba(217, 138, 10, 0.45);
+  --logo-shadow: 0 10px 24px rgba(120, 75, 25, 0.08);
+  --logo-shadow-hover: 0 16px 32px rgba(120, 75, 25, 0.15);
+}
+
+/* Theme overrides for brand icon container */
+body.home-theme {
+  --logo-bg: linear-gradient(135deg, #ffffff 0%, #fbf3e4 100%);
+  --logo-border: rgba(217, 138, 10, 0.45);
+  --logo-shadow: 0 10px 28px rgba(120, 75, 25, 0.08);
+  --logo-shadow-hover: 0 18px 36px rgba(120, 75, 25, 0.16);
+}
+
+body.tuvi-theme {
+  --logo-bg: linear-gradient(135deg, #ffffff 0%, #fffbf2 100%);
+  --logo-border: rgba(232, 147, 10, 0.4);
+  --logo-shadow: 0 8px 24px rgba(232, 147, 10, 0.12);
+  --logo-shadow-hover: 0 14px 32px rgba(232, 147, 10, 0.2);
+}
+
+body.gieoque-theme {
+  --logo-bg: linear-gradient(135deg, #ffffff 0%, #f4fbf8 100%);
+  --logo-border: rgba(13, 150, 104, 0.4);
+  --logo-shadow: 0 8px 24px rgba(13, 150, 104, 0.12);
+  --logo-shadow-hover: 0 14px 32px rgba(13, 150, 104, 0.2);
+}
+
+body.tarot-theme {
+  --logo-bg: linear-gradient(135deg, #25163a 0%, #170d24 100%);
+  --logo-border: rgba(124, 58, 237, 0.4);
+  --logo-shadow: 0 8px 24px rgba(124, 58, 237, 0.2);
+  --logo-shadow-hover: 0 14px 32px rgba(124, 58, 237, 0.35);
+}
+
+body.thansohoc-theme {
+  --logo-bg: linear-gradient(135deg, #ffffff 0%, #f4f5ff 100%);
+  --logo-border: rgba(99, 102, 241, 0.4);
+  --logo-shadow: 0 8px 24px rgba(99, 102, 241, 0.12);
+  --logo-shadow-hover: 0 14px 32px rgba(99, 102, 241, 0.2);
+}
+
+body.drinking-theme {
+  --logo-bg: linear-gradient(135deg, #1f1f3a 0%, #0d0d1e 100%);
+  --logo-border: rgba(234, 106, 23, 0.4);
+  --logo-shadow: 0 8px 24px rgba(234, 106, 23, 0.2);
+  --logo-shadow-hover: 0 14px 32px rgba(234, 106, 23, 0.35);
+}
+
+/* Brand icon element - floats and spins slightly */
+.l-brand-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  border-radius: 24px;
+  background: var(--logo-bg);
+  border: 1.5px solid var(--logo-border);
+  box-shadow: var(--logo-shadow);
+  animation: brand-float-spin 6s ease-in-out infinite;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.l-brand-icon img,
+.l-brand-icon svg {
+  display: block;
+  width: 85%;
+  height: 85%;
+  pointer-events: none;
+}
+
+@keyframes brand-float-spin {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    box-shadow: var(--logo-shadow);
+  }
+  50% {
+    transform: translateY(-6px) rotate(3deg);
+    box-shadow: var(--logo-shadow-hover);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+    box-shadow: var(--logo-shadow);
+  }
+}
+
 
