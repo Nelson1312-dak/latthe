@@ -118,7 +118,7 @@ async function checkRateLimit(ip) {
     return { allowed: true, backend: 'upstash' };
   } catch (err) {
     clearTimeout(t);
-    return { ...checkRateLimitLocal(ip), backend: `memory-err:${err.name || 'unknown'}` };
+    return { ...checkRateLimitLocal(ip), backend: `memory-err:${err.name || 'unknown'}`, errMsg: err.message || String(err) };
   }
 }
 
@@ -430,6 +430,9 @@ export default async function handler(req, res) {
   const rl = await checkRateLimit(ip);
   // Diagnostic: which limiter served this request (upstash vs memory-*).
   res.setHeader('X-RateLimit-Backend', rl.backend || 'unknown');
+  // Temp debug: confirm env is loaded & sanitized as expected (no secrets leaked).
+  res.setHeader('X-Debug-Upstash', `en=${upstashEnabled};urlLen=${UPSTASH_URL.length};urlHead=${UPSTASH_URL.slice(0, 8)};tokLen=${UPSTASH_TOKEN.length}`);
+  if (rl.errMsg) res.setHeader('X-Debug-Err', String(rl.errMsg).slice(0, 80));
   if (!rl.allowed) {
     res.setHeader('Retry-After', String(rl.retryAfter));
     return res.status(429).json({
