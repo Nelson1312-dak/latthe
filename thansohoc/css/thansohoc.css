@@ -724,7 +724,7 @@ body {
 .chat-bubble:empty { display: none; }
 
 /* User question = compact bubble on the right. */
-.user-bubble {
+.chat-user {
   align-self: flex-end;
   max-width: 85%;
   background: rgba(99, 102, 241, 0.1);
@@ -733,7 +733,7 @@ body {
   border-bottom-right-radius: 4px;
 }
 /* AI interpretation = full-width readable panel on the left. */
-.ai-bubble {
+.chat-ai {
   align-self: stretch;
   width: 100%;
   background: var(--bg-glass);

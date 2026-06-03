@@ -472,46 +472,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==================== CHAT AI CONTROLLER ====================
-  function appendBubble(role, content) {
-    const bubble = document.createElement('div');
-    bubble.className = `chat-bubble ${role}-bubble`;
-    bubble.innerHTML = parseMarkdown(content);
-    aiChatMessages.appendChild(bubble);
-    aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
-    return bubble;
-  }
+  const chat = Chat.createChat({ messagesEl: aiChatMessages, loadingEl: aiLoading, inputEl: aiChatInput, btnEl: btnAskAI });
 
-  function parseMarkdown(text) {
-    if (!text) return '';
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/### (.*?)(<br>|$)/g, '<h4>$1</h4>')
-      .replace(/## (.*?)(<br>|$)/g, '<h3>$1</h3>')
-      .replace(/- \*\*(.*?)\*\*/g, '<li><strong>$1</strong>')
-      .replace(/- (.*?)(<br>|$)/g, '<li>$1</li>');
-  }
-
-  function startAIReading() {
-    if (!currentProfileData) return;
-    
-    chatHistory = [];
-    questionsAsked = 0;
-    aiChatMessages.innerHTML = '';
-    aiChatInput.value = '';
-    aiChatInput.disabled = true;
-    btnAskAI.disabled = true;
-
-    aiQuestionDisplay.textContent = `Luận giải biểu đồ Thần Số Học: ${currentProfileData.fullName}`;
-    const aiBubble = appendBubble('ai', '');
-    aiLoading.classList.remove('hidden');
-    aiError.classList.add('hidden');
-
-    const formattedContext = JSON.stringify({
+  function buildThansohocContext() {
+    return JSON.stringify({
       fullName: currentProfileData.fullName,
       birthDate: currentProfileData.birthDate,
       lifePath: currentProfileData.lifePath,
@@ -520,109 +484,57 @@ document.addEventListener('DOMContentLoaded', () => {
       personality: currentProfileData.personality,
       attitude: currentProfileData.attitude,
       birthdayNumber: currentProfileData.birthdayNumber,
-      arrows: currentProfileData.arrows.map(a => a.name).join(', ')
+      arrows: currentProfileData.arrows.map(a => a.name).join(', '),
     });
+  }
 
-    let aiResponseText = '';
+  function startAIReading() {
+    if (!currentProfileData) return;
+    chatHistory = [];
+    questionsAsked = 0;
+    aiChatMessages.innerHTML = '';
+    aiChatInput.value = '';
+    aiError.classList.add('hidden');
+    aiQuestionDisplay.textContent = `Luận giải biểu đồ Thần Số Học: ${currentProfileData.fullName}`;
 
-    askAI({
+    chat.sendWithUI({
       question: `Hãy giải mã cuộc đời tôi dựa trên họ tên ${currentProfileData.fullName} và ngày sinh ${currentProfileData.birthDate}`,
-      context: formattedContext,
+      context: buildThansohocContext(),
       type: 'thansohoc',
       history: [],
-      onToken: (token) => {
-        aiLoading.classList.add('hidden');
-        aiResponseText += token;
-        aiBubble.innerHTML = parseMarkdown(aiResponseText);
-        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
-      },
-      onDone: (fullAnswer) => {
-        aiLoading.classList.add('hidden');
-        aiBubble.innerHTML = parseMarkdown(fullAnswer);
-        chatHistory.push({ role: 'user', content: `Hãy giải mã cuộc đời tôi.` });
-        chatHistory.push({ role: 'assistant', content: fullAnswer });
-        aiChatInput.disabled = false;
-        btnAskAI.disabled = false;
+      onDone(answer) {
+        chatHistory.push({ role: 'user', content: 'Hãy giải mã cuộc đời tôi.' });
+        chatHistory.push({ role: 'assistant', content: answer });
         aiChatInput.placeholder = "Hỏi thêm chuyên gia Nhân số học...";
       },
-      onError: (err) => {
-        aiLoading.classList.add('hidden');
-        aiBubble.innerHTML = '';
-        aiBubble.classList.add('chat-error');
-        const errText = document.createElement('div');
-        errText.textContent = `⚠️ Lỗi: ${err.message}. Vui lòng bấm làm mới để thử lại.`;
-        aiBubble.appendChild(errText);
-      }
     });
   }
 
   function handleAskFollowUp() {
     const q = aiChatInput.value.trim();
     if (!q || !currentProfileData || questionsAsked >= 5) return;
-
     questionsAsked++;
     aiChatInput.value = '';
-    aiChatInput.disabled = true;
-    btnAskAI.disabled = true;
-
-    appendBubble('user', q);
-    const aiBubble = appendBubble('ai', '');
-    aiLoading.classList.remove('hidden');
     aiError.classList.add('hidden');
 
-    const formattedContext = JSON.stringify({
-      fullName: currentProfileData.fullName,
-      birthDate: currentProfileData.birthDate,
-      lifePath: currentProfileData.lifePath,
-      destiny: currentProfileData.destiny,
-      soul: currentProfileData.soul,
-      personality: currentProfileData.personality,
-      attitude: currentProfileData.attitude,
-      birthdayNumber: currentProfileData.birthdayNumber,
-      arrows: currentProfileData.arrows.map(a => a.name).join(', ')
-    });
-
-    let aiResponseText = '';
-
-    askAI({
+    chat.sendWithUI({
       question: q,
-      context: formattedContext,
+      context: buildThansohocContext(),
       type: 'thansohoc',
       history: chatHistory,
-      onToken: (token) => {
-        aiLoading.classList.add('hidden');
-        aiResponseText += token;
-        aiBubble.innerHTML = parseMarkdown(aiResponseText);
-        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
-      },
-      onDone: (fullAnswer) => {
-        aiLoading.classList.add('hidden');
-        aiBubble.innerHTML = parseMarkdown(fullAnswer);
+      onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
-        chatHistory.push({ role: 'assistant', content: fullAnswer });
+        chatHistory.push({ role: 'assistant', content: answer });
         if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
-        
         if (questionsAsked >= 5) {
           aiChatInput.placeholder = "Đã đạt giới hạn 5 câu hỏi bổ sung...";
           aiChatInput.disabled = true;
           btnAskAI.disabled = true;
-          appendBubble('ai', '💡 *Thông báo:* Bạn đã gửi đủ 5 câu hỏi bổ sung cho bản đồ này. Để hỏi tiếp các câu hỏi mới, vui lòng bấm nút **Tra Cứu Lần Khác** nhé!');
+          chat.appendBubble('ai', '💡 *Thông báo:* Bạn đã gửi đủ 5 câu hỏi bổ sung cho bản đồ này. Để hỏi tiếp các câu hỏi mới, vui lòng bấm nút **Tra Cứu Lần Khác** nhé!');
         } else {
-          aiChatInput.disabled = false;
-          btnAskAI.disabled = false;
           aiChatInput.placeholder = "Hỏi thêm chuyên gia Nhân số học...";
         }
       },
-      onError: (err) => {
-        aiLoading.classList.add('hidden');
-        aiBubble.innerHTML = '';
-        aiBubble.classList.add('chat-error');
-        const errText = document.createElement('div');
-        errText.textContent = `⚠️ Lỗi: ${err.message}.`;
-        aiBubble.appendChild(errText);
-        aiChatInput.disabled = false;
-        btnAskAI.disabled = false;
-      }
     });
   }
 

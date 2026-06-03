@@ -252,126 +252,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('\n\n');
   }
 
-  function parseMarkdown(text) {
-    if (!text) return '';
-    let lines = text.split('\n');
-    let result = [];
-    let inList = false;
-
-    for (let line of lines) {
-      let trimmed = line.trim();
-      
-      // Convert bold: **text** -> <strong>text</strong>
-      trimmed = trimmed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-      
-      if (trimmed.startsWith('###')) {
-        if (inList) { result.push('</ul>'); inList = false; }
-        const content = trimmed.substring(3).trim();
-        result.push(`<h3 class="chat-heading">${content}</h3>`);
-      } else if (trimmed.startsWith('##')) {
-        if (inList) { result.push('</ul>'); inList = false; }
-        const content = trimmed.substring(2).trim();
-        result.push(`<h2 class="chat-heading">${content}</h2>`);
-      } else if (trimmed.startsWith('#')) {
-        if (inList) { result.push('</ul>'); inList = false; }
-        const content = trimmed.substring(1).trim();
-        result.push(`<h1 class="chat-heading">${content}</h1>`);
-      } else if (trimmed === '---') {
-        if (inList) { result.push('</ul>'); inList = false; }
-        result.push('<hr class="chat-hr">');
-      } else if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-        if (!inList) {
-          result.push('<ul class="chat-list">');
-          inList = true;
-        }
-        const content = trimmed.substring(2).trim();
-        result.push(`<li>${content}</li>`);
-      } else if (trimmed === '') {
-        if (inList) { result.push('</ul>'); inList = false; }
-        result.push('<div class="chat-break"></div>');
-      } else {
-        if (inList) { result.push('</ul>'); inList = false; }
-        result.push(`<p class="chat-p">${trimmed}</p>`);
-      }
-    }
-    if (inList) {
-      result.push('</ul>');
-    }
-
-    return result.join('\n');
-  }
-
-  function appendBubble(role, text) {
-    const div = document.createElement('div');
-    div.className = `chat-bubble chat-${role}`;
-    if (role === 'ai') {
-      div.innerHTML = parseMarkdown(text);
-    } else {
-      div.textContent = text;
-    }
-    aiChatMessages.appendChild(div);
-    aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
-    return div;
-  }
+  const chat = Chat.createChat({ messagesEl: aiChatMessages, loadingEl: aiLoading, inputEl: aiChatInput, btnEl: btnAskAI });
 
   function sendMessage(question) {
     const q = question.trim();
     if (!q) return;
 
-    appendBubble('user', q);
-    const aiBubble = appendBubble('ai', '');
-    aiLoading.classList.remove('hidden');
     aiError.classList.add('hidden');
-    aiChatInput.disabled = true;
-    btnAskAI.disabled = true;
-
-    let aiResponseText = '';
-
-    askAI({
+    chat.sendWithUI({
       question: q,
       context: buildTarotContext(),
       type: 'tarot',
       history: chatHistory,
-      onToken: (token) => {
-        aiLoading.classList.add('hidden');
-        aiResponseText += token;
-        aiBubble.innerHTML = parseMarkdown(aiResponseText);
-        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
-      },
-      onDone: (fullAnswer) => {
-        aiLoading.classList.add('hidden');
-        aiBubble.innerHTML = parseMarkdown(fullAnswer);
+      onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
-        chatHistory.push({ role: 'assistant', content: fullAnswer });
+        chatHistory.push({ role: 'assistant', content: answer });
         if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
-        aiChatInput.disabled = false;
-        btnAskAI.disabled = false;
         aiChatInput.value = '';
-      },
-      onError: (err) => {
-        aiLoading.classList.add('hidden');
-        aiBubble.innerHTML = '';
-        aiBubble.classList.add('chat-error');
-
-        const text = document.createElement('div');
-        text.textContent = '⚠️ ' + err.message;
-        aiBubble.appendChild(text);
-
-        if (err.retryable) {
-          const retry = document.createElement('button');
-          retry.className = 'btn-retry';
-          retry.textContent = 'Thử lại';
-          retry.onclick = () => {
-            aiBubble.remove();
-            const userBubbles = aiChatMessages.querySelectorAll('.chat-bubble.chat-user');
-            if (userBubbles.length) userBubbles[userBubbles.length - 1].remove();
-            sendMessage(q);
-          };
-          aiBubble.appendChild(retry);
-        }
-
-        aiChatInput.disabled = false;
-        btnAskAI.disabled = false;
       },
     });
   }
