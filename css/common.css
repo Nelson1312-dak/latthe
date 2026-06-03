@@ -804,3 +804,23 @@ body.drinking-theme {
 }
 
 
+
+/* ============================================================
+   iOS auto-zoom fix (added 2026-06-03)
+   Mobile Safari zooms in when a focused input/textarea/select has
+   font-size < 16px. Force >=16px on small screens across all modules
+   so tapping a field never triggers that jump. Desktop keeps its
+   designed sizes. Viewport is left zoomable (no maximum-scale) so
+   users can still pinch-zoom manually.
+   ============================================================ */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select,
+  .question-input,
+  .ai-chat-input,
+  .field-input,
+  .field-select {
+    font-size: 16px !important;
+  }
+}
