@@ -217,6 +217,22 @@ body {
   border-color: var(--indigo);
 }
 
+/* "Xem biểu đồ mẫu" link under the submit button */
+.form-demo-link {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 14px;
+}
+.form-demo-link a {
+  color: var(--indigo-dark);
+  text-decoration: none;
+  font-weight: 700;
+}
+.form-demo-link a:hover {
+  text-decoration: underline;
+}
+
 /* ==================== RESULT SCREEN ==================== */
 .profile-summary {
   text-align: center;

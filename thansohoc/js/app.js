@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   for (let i = 1; i <= 12; i++) {
     const opt = document.createElement('option');
-    opt.value = i; opt.textContent = `Tháng ${i}`;
+    opt.value = i; opt.textContent = i;
     monthSelect.appendChild(opt);
   }
   const currYear = new Date().getFullYear();
@@ -273,6 +273,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const opt = document.createElement('option');
     opt.value = i; opt.textContent = i;
     yearSelect.appendChild(opt);
+  }
+
+  // Demo: fill a random sample profile and submit, so users can preview a chart.
+  const btnDemo = document.getElementById('btn-demo');
+  if (btnDemo) {
+    btnDemo.addEventListener('click', (e) => {
+      e.preventDefault();
+      const lastNames  = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Phan", "Vũ", "Đặng", "Bùi", "Đỗ", "Ngô", "Dương", "Lý"];
+      const midNames   = ["Thành", "Đức", "Văn", "Mạnh", "Hữu", "Khánh", "Minh", "Quang", "Anh", "Ngọc", "Tuấn", "Thanh", "Như", "Kim", "Quốc"];
+      const firstNames = ["Đạt", "Hiển", "Hùng", "Hải", "Sơn", "Nam", "Bình", "Phong", "Huy", "Tùng", "Duy", "Linh", "Trang", "Lan", "Hương", "Vy", "Yến", "Mai", "Cường", "Dũng", "Khang", "Phúc"];
+      const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+      document.getElementById('f-name').value = `${pick(lastNames)} ${pick(midNames)} ${pick(firstNames)}`;
+      daySelect.value   = String(Math.floor(Math.random() * 28) + 1);
+      monthSelect.value = String(Math.floor(Math.random() * 12) + 1);
+      yearSelect.value  = String(Math.floor(Math.random() * (2005 - 1960 + 1)) + 1960);
+
+      form.requestSubmit();
+    });
   }
 
   // Drawers trigger
