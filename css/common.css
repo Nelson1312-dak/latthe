@@ -581,11 +581,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 .gieoque-theme .module-header .header-title { color: var(--jade, #0d9668); }
 .tarot-theme .module-header .header-title { color: var(--purple, #7c3aed); }
 .tuvi-theme .module-header .header-title { color: var(--gold, #d98a0a); }
 .thuvien-theme .module-header .header-title { color: var(--c-thuvien, #2563eb); }
+.thansohoc-theme .module-header .header-title { color: #4f46e5; }
 
 /* Header Actions */
 .module-header .header-actions {
