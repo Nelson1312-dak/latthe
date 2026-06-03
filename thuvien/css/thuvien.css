@@ -1,4 +1,4 @@
-@import url('/css/common.css?v=45');
+@import url('/css/common.css?v=46');
 
 /* --- DESIGN SYSTEM & VARIABLES --- */
 :root {
@@ -539,4 +539,56 @@ body {
 /* Desktop: left sidebar rail — give content a left gutter so it never overlaps */
 @media (min-width: 768px) {
   body.thuvien-theme { padding-left: 80px; }
+}
+
+/* ============================================================
+   Library category grouping (added 2026-06-03)
+   ============================================================ */
+.lib-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.lib-chip {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow);
+}
+.lib-chip:hover { border-color: var(--c-thuvien); color: var(--text); }
+.lib-chip.active {
+  background: var(--c-thuvien);
+  border-color: var(--c-thuvien);
+  color: #fff;
+}
+
+.lib-group { margin-bottom: 40px; }
+.lib-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+}
+.lib-group-title i { color: var(--c-thuvien); font-size: 22px; }
+.lib-group-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-thuvien);
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: auto;
 }

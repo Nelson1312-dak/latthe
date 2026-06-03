@@ -10,6 +10,9 @@
 /* ---- Tabler icon base tweak ---- */
 .ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
 
+/* ---- Screen-reader-only (visually hidden, kept for SEO/a11y) ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
 /* ---- Header actions container ---- */
 .gq-header-actions,
 .t-header-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
@@ -236,6 +239,12 @@
   font-size: 20px;
   transition: all 0.2s ease;
   position: relative;
+}
+
+/* 7 dock items can overflow very narrow phones — let them shrink to fit. */
+@media (max-width: 380px) {
+  .floating-dock { padding: 0 6px; }
+  .dock-item { width: auto; flex: 1; min-width: 0; font-size: 19px; }
 }
 
 .light-theme .dock-item {
