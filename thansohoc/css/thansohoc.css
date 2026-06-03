@@ -43,7 +43,7 @@ body {
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
-  padding: 80px 16px 40px;
+  padding: 24px 16px 40px;
   min-height: calc(100dvh - 80px);
 }
 
