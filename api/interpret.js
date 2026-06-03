@@ -203,6 +203,10 @@ function cleanChineseLeaks(text) {
 
 // ---- RAG helpers ----
 
+function isLocalUrl(url) {
+  return url.includes('localhost') || url.includes('127.0.0.1') || url.includes('postgrest') || url.includes(':3001');
+}
+
 async function getEmbedding(ollamaUrl, embedModel, text, breaker) {
   if (!ollamaUrl || breaker.localDown) return null;
   const controller = new AbortController();
@@ -230,7 +234,7 @@ async function retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 4000);
   try {
-    const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
+    const isLocal = isLocalUrl(sbUrl);
     const path = isLocal ? '/rpc/match_documents' : '/rest/v1/rpc/match_documents';
     
     const headers = {
@@ -264,7 +268,7 @@ async function retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) {
 
 async function storeDoc(sbUrl, sbKey, payload) {
   if (!sbUrl || !payload.embedding) return;
-  const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
+  const isLocal = isLocalUrl(sbUrl);
   const path = isLocal ? '/documents' : '/rest/v1/documents';
   
   const headers = {
@@ -292,7 +296,7 @@ async function checkExactMatchCache(sbUrl, sbKey, type, question, context, break
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 3000);
   try {
-    const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
+    const isLocal = isLocalUrl(sbUrl);
     const basePath = isLocal ? '/documents' : '/rest/v1/documents';
     
     const url = new URL(`${sbUrl}${basePath}`);
