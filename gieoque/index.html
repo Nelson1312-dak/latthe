@@ -40,13 +40,8 @@
   <link rel="stylesheet" href="../css/common.css?v=48">
   <link rel="stylesheet" href="css/gieoque.css?v=17">
 
-  <!-- Vercel Web Analytics & Speed Insights -->
-  <script>
-    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-  </script>
-  <script defer src="/_vercel/insights/script.js"></script>
-  <script defer src="/_vercel/speed-insights/script.js"></script>
+  <!-- Shared shell: floating dock, service worker, Vercel analytics -->
+  <script src="/js/shell.js?v=1" defer></script>
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -379,37 +374,10 @@
 
   </div>
 
-  <!-- FLOATING NAVIGATION DOCK -->
-  <nav class="floating-dock">
-    <a href="/" class="dock-item" data-module="home" title="Trang chủ"><i class="ti ti-home"></i><span class="dock-label">Trang chủ</span></a>
-    <a href="/tuvi/" class="dock-item" data-module="tuvi" title="Tử Vi AI"><i class="ti ti-stars"></i><span class="dock-label">Tử Vi AI</span></a>
-    <a href="/gieoque/" class="dock-item active" data-module="gieoque" title="Gieo Quẻ"><i class="ti ti-yin-yang"></i><span class="dock-label">Gieo Quẻ</span></a>
-    <a href="/tarot/" class="dock-item" data-module="tarot" title="Bài Tarot"><i class="ti ti-wand"></i><span class="dock-label">Bài Tarot</span></a>
-    <a href="/thansohoc/" class="dock-item" data-module="thansohoc" title="Thần Số Học"><i class="ti ti-hash"></i><span class="dock-label">Thần Số Học</span></a>
-    <a href="/drinking/" class="dock-item" data-module="drinking" title="Drinking Game"><i class="ti ti-beer"></i><span class="dock-label">Drinking Game</span></a>
-    <div class="dock-divider"></div>
-    <a href="/thuvien/" class="dock-item" data-module="thuvien" title="Thư Viện"><i class="ti ti-books"></i><span class="dock-label">Thư Viện</span></a>
-  </nav>
-
   <script src="js/hexagrams.js?v=12"></script>
   <script src="../js/ai.js?v=12"></script>
   <script src="../js/history.js?v=12"></script>
   <script src="../js/chat.js?v=1"></script>
   <script src="js/app.js?v=14"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
-      });
-
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-    }
-  </script>
 </body>
 </html>

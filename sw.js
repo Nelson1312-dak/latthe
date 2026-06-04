@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v68-2026-06-04';
+const CACHE_VERSION = 'v69-2026-06-04';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -23,6 +23,7 @@ const SHELL = [
   '/js/ai.js',
   '/js/chat.js',
   '/js/history.js',
+  '/js/shell.js',
   // Thư Viện module
   '/thuvien/',
   '/thuvien/index.html',

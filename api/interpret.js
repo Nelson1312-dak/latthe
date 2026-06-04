@@ -6,6 +6,8 @@
  *   Requires: OLLAMA_EMBED_MODEL pulled in Ollama (default: nomic-embed-text)
  */
 
+import { applyCors } from './_cors.js';
+
 // Prevent uncaught exceptions / unhandled rejections from crashing the dev server
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -14,16 +16,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// ---- CORS + rate-limit config ----
-
-const ALLOWED_ORIGINS = new Set([
-  'https://latbai.vn',
-  'https://www.latbai.vn',
-  'https://gieoque.vn',
-  'https://www.gieoque.vn',
-  'http://localhost:5005',
-  'http://localhost:3000',
-]);
+// ---- Rate-limit config ----
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_WINDOW_SEC = RATE_LIMIT_WINDOW_MS / 1000;
@@ -617,18 +610,7 @@ Bạn là một nhà tham vấn Thần Số Học Pythagoras lỗi lạc. Ngư�
 // ---- Main handler ----
 
 export default async function handler(req, res) {
-  // ---- CORS whitelist ----
-  const origin = req.headers.origin || '';
-  if (ALLOWED_ORIGINS.has(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  } else if (origin) {
-    return res.status(403).json({ error: 'Truy cập bị từ chối: nguồn gọi không hợp lệ.' });
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!applyCors(req, res)) return;
 
   // ---- Rate limit per IP ----
   const ip = getClientIp(req);

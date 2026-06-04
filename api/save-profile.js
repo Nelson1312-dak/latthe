@@ -3,28 +3,10 @@
  * Saves user birth profile info into PostgreSQL / Supabase
  */
 
-const ALLOWED_ORIGINS = new Set([
-  'https://latbai.vn',
-  'https://www.latbai.vn',
-  'https://gieoque.vn',
-  'https://www.gieoque.vn',
-  'http://localhost:5005',
-  'http://localhost:3000',
-]);
+import { applyCors } from './_cors.js';
 
 export default async function handler(req, res) {
-  // ---- CORS whitelist ----
-  const origin = req.headers.origin || '';
-  if (ALLOWED_ORIGINS.has(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  } else if (origin) {
-    return res.status(403).json({ error: 'Truy cập bị từ chối: nguồn gọi không hợp lệ.' });
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!applyCors(req, res)) return;
 
   const sbUrl = (process.env.SUPABASE_URL || '').trim();
   const sbKey = (process.env.SUPABASE_ANON_KEY || '').trim();
