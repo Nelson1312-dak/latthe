@@ -571,7 +571,7 @@ body {
 
 .cp-label {
   color: var(--text-soft);
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   width: 64px;
 }
@@ -609,7 +609,7 @@ body {
 }
 
 .rating-legend {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .legend-label {

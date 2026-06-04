@@ -368,7 +368,7 @@ body {
 }
 .cell-num {
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--muted);
   position: absolute;
   top: 8px;
@@ -534,7 +534,7 @@ body {
   background: none;
   border: none;
   font-size: 28px;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--muted);
   cursor: pointer;
   padding: 0 4px;

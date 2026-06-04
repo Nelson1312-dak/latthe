@@ -667,7 +667,7 @@
 .faq-question::after {
   content: '+';
   font-size: 20px;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--muted);
   flex-shrink: 0;
   line-height: 1;
