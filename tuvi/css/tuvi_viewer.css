@@ -1,5 +1,5 @@
 /* === Lá Số Tử Vi — Traditional Warm Theme === */
-@import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css');
+/* Tabler icons now come from the self-hosted subset in common.css */
 .ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 

@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v70-2026-06-04';
+const CACHE_VERSION = 'v71-2026-06-04';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -20,6 +20,7 @@ const SHELL = [
   '/images/logo.svg',
   '/css/landing.css',
   '/css/common.css',
+  '/fonts/tabler-icons-subset.woff2',
   '/js/ai.js',
   '/js/chat.js',
   '/js/history.js',
