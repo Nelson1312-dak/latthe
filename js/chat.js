@@ -45,8 +45,13 @@ const Chat = (() => {
     function appendBubble(role, text) {
       const div = document.createElement('div');
       div.className = `chat-bubble chat-${role}`;
-      if (role === 'ai') div.innerHTML = text ? parseMarkdown(text) : '';
-      else div.textContent = text || '';
+      if (role === 'ai') {
+        div.innerHTML = text
+          ? parseMarkdown(text)
+          : '<div class="chat-typing"><span></span><span></span><span></span></div>';
+      } else {
+        div.textContent = text || '';
+      }
       messagesEl.appendChild(div);
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return div;
@@ -57,9 +62,9 @@ const Chat = (() => {
       if (!q) return;
 
       const userBubble = appendBubble('user', q);
-      const aiBubble   = appendBubble('ai', '');
+      const aiBubble   = appendBubble('ai', '');  // shows typing dots
 
-      loadingEl.classList.remove('hidden');
+      if (loadingEl) loadingEl.classList.add('hidden');
       if (inputEl) inputEl.disabled = true;
       if (btnEl)   btnEl.disabled   = true;
 

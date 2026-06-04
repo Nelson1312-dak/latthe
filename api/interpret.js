@@ -809,7 +809,20 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: `AI không phản hồi: ${ollamaErr || 'không có nội dung trả về'}` });
   }
 
+  // Strip <think>...</think> blocks that qwen3 emits even when think:false is set
+  answer = answer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
   answer = cleanChineseLeaks(answer);
+
+  // Deduplicate: small models sometimes repeat the entire structured response.
+  // If the first markdown section header (### ...) appears a second time, truncate there.
+  const firstHeaderMatch = answer.match(/###\s+\S/);
+  if (firstHeaderMatch) {
+    const h   = firstHeaderMatch[0];
+    const pos = answer.indexOf(h);
+    const dup = answer.indexOf(h, pos + h.length);
+    if (dup > pos) answer = answer.slice(0, dup).trim();
+  }
 
   // ---- Store Q&A for cache/RAG. Only meaningful when we have an embedding (so tuvi
   // and follow-ups are naturally skipped) and the DB is reachable. Fire-and-forget. ----

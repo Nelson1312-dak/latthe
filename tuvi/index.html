@@ -1031,18 +1031,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-          .then(reg => {
-            reg.addEventListener('updatefound', () => {
-              const nw = reg.installing;
-              nw.addEventListener('statechange', () => {
-                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                  window.location.reload();
-                }
-              });
-            });
-          })
-          .catch(() => {});
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
       });
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {

@@ -703,7 +703,9 @@
 @media (max-width: 767px) {
   body.gieoque-theme,
   body.tarot-theme,
-  body.tuvi-theme {
+  body.tuvi-theme,
+  body.thansohoc-theme,
+  body.drinking-theme {
     padding-bottom: 96px;
   }
 }
@@ -804,6 +806,32 @@ body.drinking-theme {
 }
 
 
+
+/* ============================================================
+   Shared chat typing-dots animation
+   Used by chat.js for the AI bubble loading placeholder.
+   ============================================================ */
+.chat-typing {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 4px 2px;
+}
+.chat-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+  animation: chat-typing-bounce 1.2s ease-in-out infinite;
+}
+.chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes chat-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.45; }
+  30%            { transform: translateY(-6px); opacity: 1;    }
+}
 
 /* ============================================================
    iOS auto-zoom fix (added 2026-06-03)
