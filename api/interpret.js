@@ -130,13 +130,14 @@ function isInfraDown(err) {
   return /fetch failed|ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket hang up|network/i.test(err.message || '');
 }
 
-// ---- Groq fallback (called when local Ollama is down or slow) ----
+// ---- Cloud LLM fallback (OpenAI-compatible; used when local Ollama is down) ----
+// Works for any OpenAI-style /chat/completions endpoint (DeepSeek, Groq, etc.).
 
-async function callGroq({ apiKey, model, messages, temperature, maxTokens, timeoutMs = 22000 }) {
+async function callCloudLLM({ url, apiKey, model, messages, temperature, maxTokens, timeoutMs = 25000, label = 'Cloud' }) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -154,14 +155,14 @@ async function callGroq({ apiKey, model, messages, temperature, maxTokens, timeo
     clearTimeout(t);
     if (!res.ok) {
       const errText = await res.text();
-      return { ok: false, error: `Groq ${res.status}: ${errText.slice(0, 200)}` };
+      return { ok: false, error: `${label} ${res.status}: ${errText.slice(0, 200)}` };
     }
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || '';
     return { ok: true, content };
   } catch (err) {
     clearTimeout(t);
-    return { ok: false, error: err.name === 'AbortError' ? `Groq timeout (>${Math.round(timeoutMs / 1000)}s)` : err.message };
+    return { ok: false, error: err.name === 'AbortError' ? `${label} timeout (>${Math.round(timeoutMs / 1000)}s)` : err.message };
   }
 }
 
@@ -629,13 +630,16 @@ export default async function handler(req, res) {
   const embedModel = (process.env.OLLAMA_EMBED_MODEL|| '').trim() || 'nomic-embed-text';
   const sbUrl      = (process.env.SUPABASE_URL      || '').trim();
   const sbKey      = (process.env.SUPABASE_ANON_KEY || '').trim();
-  const groqKey    = (process.env.GROQ_API_KEY      || '').trim();
-  const groqModel  = (process.env.GROQ_MODEL        || '').trim() || 'llama-3.3-70b-versatile';
-  const ollamaTimeoutMs = parseInt(process.env.OLLAMA_TIMEOUT_MS || '', 10) || 20000;
-  const groqTimeoutMs   = parseInt(process.env.GROQ_TIMEOUT_MS   || '', 10) || 22000;
+  const dsKey      = (process.env.DEEPSEEK_API_KEY  || '').trim();
+  const dsModel    = (process.env.DEEPSEEK_MODEL    || '').trim() || 'deepseek-chat';
+  // Full OpenAI-compatible completions URL. DeepSeek default; override to point at
+  // any other provider (e.g. Groq) without code changes.
+  const dsUrl      = (process.env.DEEPSEEK_BASE_URL || '').trim() || 'https://api.deepseek.com/chat/completions';
+  const ollamaTimeoutMs = parseInt(process.env.OLLAMA_TIMEOUT_MS   || '', 10) || 20000;
+  const dsTimeoutMs     = parseInt(process.env.DEEPSEEK_TIMEOUT_MS || '', 10) || 25000;
 
-  if (!ollamaUrl && !groqKey) {
-    return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL hoặc GROQ_API_KEY)' });
+  if (!ollamaUrl && !dsKey) {
+    return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL hoặc DEEPSEEK_API_KEY)' });
   }
 
   const { question, context, type, history = [] } = req.body || {};
@@ -647,7 +651,7 @@ export default async function handler(req, res) {
   // the local box is down they ALL fail. The first local call that hits a network
   // error / timeout flips this flag; every later local call then short-circuits
   // instantly instead of waiting out its own timeout — that prevents the stacked
-  // ~47s wait that previously blew past the client's timeout before Groq could run.
+  // ~47s wait that previously blew past the client's timeout before DeepSeek could run.
   const breaker = { localDown: false };
 
   // Tử Vi charts are unique per person, so cache lookups almost never hit and just
@@ -733,7 +737,7 @@ export default async function handler(req, res) {
     ollamaMessages.push({ role: 'user', content: finalInstruction });
   }
 
-  // ---- Call Ollama first, fall back to Groq on any failure ----
+  // ---- Call Ollama first, fall back to DeepSeek on any failure ----
   const temperature = isFollowUp ? 0.4 : 0.2;
   const maxTokens   = isFollowUp ? 500 : (type === 'tuvi' || type === 'thansohoc' ? 1400 : 1000);
   let answer = '';
@@ -773,20 +777,20 @@ export default async function handler(req, res) {
     }
   }
 
-  if (!answer && groqKey) {
-    source = 'groq';
-    console.warn(`[interpret] Ollama unavailable (${ollamaErr || 'n/a'}) — falling back to Groq (${groqModel})`);
-    const groqRes = await callGroq({ apiKey: groqKey, model: groqModel, messages: ollamaMessages, temperature, maxTokens, timeoutMs: groqTimeoutMs });
-    if (!groqRes.ok) {
-      console.error(`[interpret] Groq fallback failed: ${groqRes.error}`);
-      return res.status(502).json({ error: `AI không phản hồi (Ollama: ${ollamaErr || 'n/a'}; Groq: ${groqRes.error})` });
+  if (!answer && dsKey) {
+    source = 'deepseek';
+    console.warn(`[interpret] Ollama unavailable (${ollamaErr || 'n/a'}) — falling back to DeepSeek (${dsModel})`);
+    const dsRes = await callCloudLLM({ url: dsUrl, apiKey: dsKey, model: dsModel, messages: ollamaMessages, temperature, maxTokens, timeoutMs: dsTimeoutMs, label: 'DeepSeek' });
+    if (!dsRes.ok) {
+      console.error(`[interpret] DeepSeek fallback failed: ${dsRes.error}`);
+      return res.status(502).json({ error: `AI không phản hồi (Ollama: ${ollamaErr || 'n/a'}; DeepSeek: ${dsRes.error})` });
     }
-    answer = groqRes.content;
+    answer = dsRes.content;
   }
 
   if (!answer) {
-    if (!groqKey) {
-      console.error('[interpret] Ollama produced no answer and GROQ_API_KEY is not set — no fallback available.');
+    if (!dsKey) {
+      console.error('[interpret] Ollama produced no answer and DEEPSEEK_API_KEY is not set — no fallback available.');
     }
     return res.status(502).json({ error: `AI không phản hồi: ${ollamaErr || 'không có nội dung trả về'}` });
   }

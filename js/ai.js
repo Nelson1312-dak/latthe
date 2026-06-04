@@ -8,7 +8,7 @@
 
 const AI_ENDPOINT = '/api/interpret';
 // Headroom for the worst-case server path: slow Ollama hitting its timeout, then
-// the Groq fallback running to completion. Must stay above the server's combined budget.
+// the DeepSeek fallback running to completion. Must stay above the server's combined budget.
 const AI_TIMEOUT_MS = 70_000;
 
 function categoriseError(status, serverMsg) {
