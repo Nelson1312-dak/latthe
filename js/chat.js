@@ -42,6 +42,8 @@ const Chat = (() => {
   }
 
   function createChat({ messagesEl, loadingEl, inputEl, btnEl }) {
+    messagesEl.setAttribute('aria-live', 'polite');
+
     function appendBubble(role, text) {
       const div = document.createElement('div');
       div.className = `chat-bubble chat-${role}`;
@@ -57,7 +59,7 @@ const Chat = (() => {
       return div;
     }
 
-    function sendWithUI({ question, context, type, history = [], onDone }) {
+    function sendWithUI({ question, context, type, history = [], onDone, onError: onErrorCb }) {
       const q = question.trim();
       if (!q) return;
 
@@ -76,20 +78,20 @@ const Chat = (() => {
         type,
         history,
         onToken(token) {
-          loadingEl.classList.add('hidden');
+          if (loadingEl) loadingEl.classList.add('hidden');
           built += token;
           aiBubble.innerHTML = parseMarkdown(built);
           messagesEl.scrollTop = messagesEl.scrollHeight;
         },
         onDone(fullAnswer) {
-          loadingEl.classList.add('hidden');
+          if (loadingEl) loadingEl.classList.add('hidden');
           aiBubble.innerHTML = parseMarkdown(fullAnswer);
           if (inputEl) inputEl.disabled = false;
           if (btnEl)   btnEl.disabled   = false;
           if (onDone)  onDone(fullAnswer);
         },
         onError(err) {
-          loadingEl.classList.add('hidden');
+          if (loadingEl) loadingEl.classList.add('hidden');
           aiBubble.innerHTML = '';
           aiBubble.classList.add('chat-error');
 
@@ -111,6 +113,7 @@ const Chat = (() => {
 
           if (inputEl) inputEl.disabled = false;
           if (btnEl)   btnEl.disabled   = false;
+          if (onErrorCb) onErrorCb(err);
         },
       });
     }

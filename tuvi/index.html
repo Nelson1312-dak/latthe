@@ -128,25 +128,25 @@
       <form id="tuvi-form">
         <!-- Họ và tên -->
         <div class="field-row">
-          <input type="text" id="f-name" class="field-input" placeholder="Họ và tên" required>
+          <input type="text" id="f-name" class="field-input" placeholder="Họ và tên" required aria-label="Họ và tên">
         </div>
 
         <!-- Ngày / Tháng / Năm -->
         <div class="field-row date-row">
-          <select id="f-day" class="field-select day-sel" required>
+          <select id="f-day" class="field-select day-sel" required aria-label="Ngày sinh">
             <option value="">Ngày</option>
           </select>
-          <select id="f-month" class="field-select month-sel" required>
+          <select id="f-month" class="field-select month-sel" required aria-label="Tháng sinh">
             <option value="">Tháng</option>
           </select>
-          <select id="f-year" class="field-select year-sel" required>
+          <select id="f-year" class="field-select year-sel" required aria-label="Năm sinh">
             <option value="">Năm</option>
           </select>
         </div>
 
         <!-- Giờ sinh -->
         <div class="field-row">
-          <select id="f-hour" class="field-select" required>
+          <select id="f-hour" class="field-select" required aria-label="Giờ sinh">
             <option value="">Giờ sinh</option>
             <option value="23">23:00 – 00:59 · Giờ Tý</option>
             <option value="1">01:00 – 02:59 · Giờ Sửu</option>
@@ -165,15 +165,15 @@
 
         <!-- Loại lịch + Giới tính + Năm xem -->
         <div class="field-row three-col-row">
-          <select id="f-cal" class="field-select cal-sel">
+          <select id="f-cal" class="field-select cal-sel" aria-label="Loại lịch">
             <option value="solar">Dương lịch</option>
             <option value="lunar">Âm lịch</option>
           </select>
-          <select id="f-gender" class="field-select gender-sel">
+          <select id="f-gender" class="field-select gender-sel" aria-label="Giới tính">
             <option value="1">Nam giới</option>
             <option value="0">Nữ giới</option>
           </select>
-          <select id="f-namxem" class="field-select namxem-sel">
+          <select id="f-namxem" class="field-select namxem-sel" aria-label="Năm xem">
             <!-- Filled by JS -->
           </select>
         </div>
@@ -311,8 +311,8 @@
       </div>
 
       <div class="ai-chat-log" id="ai-chat-log">
-        <div class="ai-message assistant">
-          <p>Lá số Tử Vi của bạn đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p>
+        <div class="chat-bubble chat-ai">
+          <p class="chat-p">Lá số Tử Vi của bạn đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p>
         </div>
       </div>
 
@@ -337,13 +337,15 @@
         </div>
         <div class="ai-input-row">
           <input type="text" id="ai-question"
-            placeholder="Nhập câu hỏi của bạn về lá số..." autocomplete="off">
+            placeholder="Nhập câu hỏi của bạn về lá số..." autocomplete="off" aria-label="Câu hỏi cho AI">
           <button type="button" id="btn-ask-ai" class="btn-ask">THAM VẤN AI</button>
         </div>
       </div>
     </div>
   </section>
 
+  <script src="/js/ai.js?v=12"></script>
+  <script src="/js/chat.js?v=2"></script>
   <script type="module">
     import { getTuViChart } from './js/tuvi.js';
 
@@ -539,6 +541,13 @@
     const askBtn      = document.getElementById('btn-ask-ai');
     const qInput      = document.getElementById('ai-question');
 
+    const chat = Chat.createChat({
+      messagesEl: chatLog,
+      loadingEl: null,
+      inputEl: qInput,
+      btnEl: askBtn
+    });
+
     // ==================== FORM SUBMIT ====================
     form.addEventListener('submit', e => {
       e.preventDefault();
@@ -570,7 +579,10 @@
       chatHistory = []; questionsAsked = 0;
       qInput.disabled = false; askBtn.disabled = false;
       qInput.placeholder = 'Nhập câu hỏi của bạn về lá số...';
-      chatLog.innerHTML = `<div class="ai-message assistant"><p>Lá số Tử Vi của <strong>${name}</strong> đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.</p></div>`;
+      askBtn.textContent = 'THAM VẤN AI';
+      document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = false);
+      chatLog.innerHTML = '';
+      chat.appendBubble('ai', `Lá số Tử Vi của **${name}** đã được lập thành công. Hãy chọn chủ đề bên dưới hoặc nhập câu hỏi để bắt đầu luận giải.`);
 
       // Update chart title
       document.getElementById('chart-title').textContent = `Lá số Tử Vi · ${name}`;
@@ -740,7 +752,7 @@
       });
     });
 
-    async function handleAskAI(questionText) {
+    function handleAskAI(questionText) {
       if (!currentChart) return;
       const isFollowUp = chatHistory.length > 0;
       if (isFollowUp && questionsAsked >= 5) {
@@ -750,47 +762,34 @@
       if (isFollowUp) questionsAsked++;
 
       qInput.value = '';
-      appendMsg('user', questionText);
-      setLoading(true);
-      const loaderId = appendTyping();
+      askBtn.textContent = 'ĐANG LUẬN...';
+      document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = true);
 
-      try {
-        const res = await fetch('/api/interpret', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            question: questionText,
-            context: buildSummary(currentChart, currentBirthYear, currentNamXem),
-            type: 'tuvi',
-            history: chatHistory
-          })
-        });
-
-        removeTyping(loaderId);
-
-        if (!res.ok) {
-          appendMsg('assistant', `⚠️ Lỗi hệ thống AI: ${await res.text()}`);
-          if (isFollowUp) questionsAsked--;
-        } else {
-          const data = await res.json();
-          const answer = data.answer || '';
-          streamMsg(answer);
+      chat.sendWithUI({
+        question: questionText,
+        context: buildSummary(currentChart, currentBirthYear, currentNamXem),
+        type: 'tuvi',
+        history: chatHistory,
+        onDone(fullAnswer) {
           chatHistory.push({ role: 'user', content: questionText });
-          chatHistory.push({ role: 'assistant', content: answer });
+          chatHistory.push({ role: 'assistant', content: fullAnswer });
           if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
+
+          askBtn.textContent = 'THAM VẤN AI';
+          document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = false);
 
           if (questionsAsked >= 5) {
             qInput.placeholder = 'Đã đạt giới hạn 5 câu hỏi bổ sung...';
             qInput.disabled = true; askBtn.disabled = true;
+            document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = true);
           }
+        },
+        onError() {
+          if (isFollowUp) questionsAsked--;
+          askBtn.textContent = 'THAM VẤN AI';
+          document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = false);
         }
-      } catch (err) {
-        removeTyping(loaderId);
-        appendMsg('assistant', `⚠️ Không thể kết nối AI: ${err.message}`);
-        if (isFollowUp) questionsAsked--;
-      } finally {
-        setLoading(false);
-      }
+      });
     }
 
     function buildSummary(chart, birthYear, namXem) {
@@ -807,13 +806,11 @@
         palaces.push(`${p.ten_cung}: [${chinh}]${phu ? ' + ' + phu : ''}`);
         if (p.ten_cung === 'Mệnh') menhInfo = chinh;
         if (p.is_than) thanInfo = `${p.ten_cung} [${chinh}]`;
-        // Find the active đại hạn: largest dai_han that doesn't exceed currentAge
         if (p.dai_han <= currentAge && (!currentDH || p.dai_han > currentDH.dai_han)) {
           currentDH = p;
         }
       });
 
-      // Find the next đại hạn
       if (currentDH) {
         const nextAge = currentDH.dai_han + 10;
         Object.entries(chart.la_so).forEach(([, p]) => {
@@ -834,107 +831,6 @@
       }
       s += '\nTóm tắt 12 cung:\n' + palaces.join('\n');
       return s;
-    }
-
-    // Markdown renderer — clean block rendering
-    function parseMd(md) {
-      if (!md) return '';
-      const inline = s => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      // Detect any line made entirely of dashes/en-dashes/em-dashes + spaces
-      const isHrLine = t => {
-        if (t.length < 3) return false;
-        const cleaned = t.replace(/[-–—\s]/g, '');
-        return cleaned === '' && /[-–—]/.test(t);
-      };
-      const lines = md.split('\n');
-      const out = [];
-      let inList = false;
-
-      for (let i = 0; i < lines.length; i++) {
-        const t = lines[i].trim();
-
-        // Close list on non-list non-empty line
-        if (inList && t !== '' && !/^[-•]\s/.test(t)) {
-          out.push('</ul>');
-          inList = false;
-        }
-
-        if (isHrLine(t)) {
-          out.push('<hr>');
-        } else if (/^###\s/.test(t)) {
-          out.push(`<h4>${inline(t.slice(4))}</h4>`);
-        } else if (/^##\s/.test(t)) {
-          out.push(`<h3>${inline(t.slice(3))}</h3>`);
-        } else if (/^[-•]\s/.test(t)) {
-          if (!inList) { out.push('<ul>'); inList = true; }
-          out.push(`<li>${inline(t.replace(/^[-•]\s/, ''))}</li>`);
-        } else if (t === '') {
-          continue;
-        } else {
-          out.push(`<p>${inline(t)}</p>`);
-        }
-      }
-
-      if (inList) out.push('</ul>');
-      return out.join('');
-    }
-
-    function appendMsg(sender, text) {
-      const div = document.createElement('div');
-      div.className = `ai-message ${sender}`;
-      div.innerHTML = sender === 'user'
-        ? `<p>${text}</p>`
-        : `<div class="md-content">${parseMd(text)}</div>`;
-      chatLog.appendChild(div);
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
-    // Reveal an assistant answer word-by-word, matching the cadence of js/ai.js
-    // used by Gieo Quẻ / Tarot. Renders plain text while streaming, then swaps to
-    // formatted markdown once complete.
-    function streamMsg(text) {
-      const div = document.createElement('div');
-      div.className = 'ai-message assistant';
-      const body = document.createElement('div');
-      body.className = 'md-content';
-      div.appendChild(body);
-      chatLog.appendChild(div);
-
-      const words = (text || '').split(' ');
-      let i = 0;
-      let acc = '';
-      const interval = setInterval(() => {
-        if (i < words.length) {
-          acc += (i === 0 ? '' : ' ') + words[i];
-          // Render markdown progressively (like Gieo Quẻ / Tarot) so the
-          // formatting stays intact instead of showing raw ** / ### symbols.
-          body.innerHTML = parseMd(acc);
-          chatLog.scrollTop = chatLog.scrollHeight;
-          i++;
-        } else {
-          clearInterval(interval);
-          body.innerHTML = parseMd(text);
-          chatLog.scrollTop = chatLog.scrollHeight;
-        }
-      }, 30);
-    }
-
-    function appendTyping() {
-      const id = 'ld-' + Date.now();
-      const div = document.createElement('div');
-      div.id = id; div.className = 'ai-message assistant';
-      div.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
-      chatLog.appendChild(div);
-      chatLog.scrollTop = chatLog.scrollHeight;
-      return id;
-    }
-
-    function removeTyping(id) { document.getElementById(id)?.remove(); }
-
-    function setLoading(on) {
-      askBtn.disabled = on; qInput.disabled = on;
-      document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = on);
-      askBtn.textContent = on ? 'ĐANG LUẬN...' : 'THAM VẤN AI';
     }
 
     // ==================== CHIẾU OVERLAY ====================

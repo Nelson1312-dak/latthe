@@ -129,17 +129,17 @@
         <div class="form-card">
           <form id="tsh-form">
             <div class="field-row">
-              <input type="text" id="f-name" class="field-input" placeholder="Họ và tên đầy đủ (Ví dụ: Nguyễn Văn A)" required autocomplete="name">
+              <input type="text" id="f-name" class="field-input" placeholder="Họ và tên đầy đủ (Ví dụ: Nguyễn Văn A)" required autocomplete="name" aria-label="Họ và tên">
             </div>
 
             <div class="field-row date-row">
-              <select id="f-day" class="field-select day-sel" required>
+              <select id="f-day" class="field-select day-sel" required aria-label="Ngày sinh">
                 <option value="">Ngày</option>
               </select>
-              <select id="f-month" class="field-select month-sel" required>
+              <select id="f-month" class="field-select month-sel" required aria-label="Tháng sinh">
                 <option value="">Tháng</option>
               </select>
-              <select id="f-year" class="field-select year-sel" required>
+              <select id="f-year" class="field-select year-sel" required aria-label="Năm sinh">
                 <option value="">Năm</option>
               </select>
             </div>
@@ -310,7 +310,7 @@
           <p id="ai-error" class="ai-error hidden"></p>
 
           <div class="ai-chat-row">
-            <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về biểu đồ thần số học của bạn..." maxlength="300">
+            <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về biểu đồ thần số học của bạn..." maxlength="300" aria-label="Câu hỏi cho AI">
             <button id="btn-ask-ai" class="btn-chat-send"><i class="ti ti-send"></i></button>
           </div>
         </div>

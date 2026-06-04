@@ -128,7 +128,7 @@
 
         <!-- Question input -->
         <div class="question-box">
-          <label class="question-label"><i class="ti ti-sparkles"></i> Bước 1: Nhập câu hỏi của bạn</label>
+          <label class="question-label" for="tarot-question"><i class="ti ti-sparkles"></i> Bước 1: Nhập câu hỏi của bạn</label>
           <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên chuyển việc vào lúc này không?" rows="3" maxlength="200"></textarea>
           <div class="suggested-questions">
             <span class="sq-label">Gợi ý câu hỏi:</span>
@@ -262,7 +262,7 @@
           </div>
           <p id="ai-error" class="ai-error hidden"></p>
           <div class="ai-chat-row">
-            <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về bài Tarot..." maxlength="300">
+            <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về bài Tarot..." maxlength="300" aria-label="Hỏi thêm về bài Tarot">
             <button id="btn-ask-ai" class="btn-chat-send"><i class="ti ti-send"></i></button>
           </div>
         </div>

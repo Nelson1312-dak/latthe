@@ -668,7 +668,7 @@ body {
   min-height: 60px;
 }
 
-.ai-message {
+.chat-bubble {
   padding: 10px 14px;
   border-radius: 10px;
   font-size: 14px;
@@ -682,24 +682,23 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.ai-message.assistant {
+.chat-ai {
   align-self: flex-start;
   background: var(--cream);
   border: 1px solid var(--brown-light);
   color: var(--text);
-  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
 }
 
-.ai-message.user {
+.chat-user {
   align-self: flex-end;
   background: #fff0d0;
   border: 1px solid var(--amber);
   color: var(--text-mid);
-  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
 }
 
-/* Markdown */
-.md-content h4 {
+.chat-bubble .chat-heading {
   color: var(--amber-dark);
   font-size: 13.5px;
   font-weight: 700;
@@ -707,16 +706,15 @@ body {
   padding-bottom: 3px;
   border-bottom: 1px solid var(--cream-mid);
 }
-
-.md-content h4:first-child { margin-top: 0; }
-.md-content p { margin: 0 0 5px; line-height: 1.55; }
-.md-content p:last-child { margin-bottom: 0; }
-.md-content strong { color: var(--amber-dark); }
-.md-content ul { margin: 2px 0 4px 16px; }
-.md-content li { margin-bottom: 3px; line-height: 1.5; }
-.md-content li:last-child { margin-bottom: 0; }
-.md-content hr { border: none; border-top: 1px solid var(--brown-light); margin: 5px 0; }
-.md-content br { display: block; content: ''; margin-top: 5px; line-height: 0; font-size: 0; }
+.chat-bubble .chat-heading:first-child { margin-top: 0; }
+.chat-bubble .chat-p { margin: 0 0 5px; line-height: 1.55; }
+.chat-bubble .chat-p:last-child { margin-bottom: 0; }
+.chat-bubble strong { color: var(--amber-dark); }
+.chat-bubble .chat-list { margin: 2px 0 4px 16px; }
+.chat-bubble li { margin-bottom: 3px; line-height: 1.5; }
+.chat-bubble li:last-child { margin-bottom: 0; }
+.chat-bubble .chat-hr { border: none; border-top: 1px solid var(--brown-light); margin: 5px 0; }
+.chat-bubble .chat-break { height: 5px; }
 
 /* AI input area */
 .ai-input-area {
@@ -779,25 +777,7 @@ body {
 .btn-ask:hover:not(:disabled) { background: var(--amber-dark); }
 .btn-ask:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Typing dots */
-.typing-dots { display: flex; align-items: center; gap: 4px; padding: 4px 0; }
-
-.typing-dots span {
-  width: 6px;
-  height: 6px;
-  background: var(--text-soft);
-  border-radius: 50%;
-  opacity: 0.5;
-  animation: tdot 1.4s infinite;
-}
-
-.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes tdot {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
-  40%           { transform: scale(1);   opacity: 1; }
-}
+/* Typing dots — uses shared .chat-typing from common.css */
 
 /* ==================== RESPONSIVE ==================== */
 
