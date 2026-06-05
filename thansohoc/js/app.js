@@ -311,7 +311,47 @@ document.addEventListener('DOMContentLoaded', () => {
         arrowsList.appendChild(item);
       });
     }
+
+    // Draw the detected arrows as lines over the 3x3 grid
+    drawArrowsOnChart(data.arrows);
   }
+
+  // Connect the cells of each detected arrow with an SVG line over the chart.
+  // Strength arrows = solid indigo, weakness (empty) = dashed rose.
+  function drawArrowsOnChart(arrows) {
+    const svg = document.getElementById('chart-arrows-svg');
+    const grid = svg && svg.parentElement;
+    if (!svg || !grid) return;
+    requestAnimationFrame(() => {
+      svg.innerHTML = '';
+      const svgRect = svg.getBoundingClientRect();
+      if (!svgRect.width) return;
+      const center = (num) => {
+        const cell = grid.querySelector(`.grid-cell[data-num="${num}"]`);
+        const r = cell.getBoundingClientRect();
+        return { x: r.left + r.width / 2 - svgRect.left, y: r.top + r.height / 2 - svgRect.top };
+      };
+      arrows.forEach((arr, i) => {
+        const nums = arr.key.split('-').map(Number);
+        const a = center(nums[0]);
+        const b = center(nums[nums.length - 1]);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+        line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+        line.setAttribute('class', arr.type === 'strength' ? 'arrow-strong' : 'arrow-weak');
+        line.style.animationDelay = (i * 0.08) + 's';
+        svg.appendChild(line);
+      });
+    });
+  }
+
+  // Redraw arrow lines if the viewport size changes (orientation, etc.)
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (!currentProfileData || !screenResult.classList.contains('active')) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => drawArrowsOnChart(currentProfileData.arrows), 150);
+  });
 
   // Click indicators to show detail drawer — per-number meaning for every indicator
   document.querySelectorAll('.indicator-card').forEach(card => {
