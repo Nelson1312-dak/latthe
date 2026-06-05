@@ -263,6 +263,10 @@ Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định
 - Số Nhân Cách: ${parsedCtx.personality || ''}
 - Số Thái Độ: ${parsedCtx.attitude || ''}
 - Số Ngày Sinh: ${parsedCtx.birthdayNumber || ''}
+- Số Trưởng Thành: ${parsedCtx.maturity || ''}
+- Năm Cá Nhân (hiện tại): ${parsedCtx.personalYear || ''}
+- Đỉnh cuộc đời: ${parsedCtx.pinnacles || ''}
+- Thử thách: ${parsedCtx.challenges || ''}
 - Mũi tên cá tính: ${parsedCtx.arrows || ''}`;
     }
 
@@ -276,6 +280,10 @@ Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định
 - Số Nhân Cách: ${parsedCtx.personality || ''}
 - Số Thái Độ: ${parsedCtx.attitude || ''}
 - Số Ngày Sinh: ${parsedCtx.birthdayNumber || ''}
+- Số Trưởng Thành: ${parsedCtx.maturity || ''}
+- Năm Cá Nhân (hiện tại): ${parsedCtx.personalYear || ''}
+- Đỉnh cuộc đời: ${parsedCtx.pinnacles || ''}
+- Thử thách: ${parsedCtx.challenges || ''}
 - Mũi tên cá tính: ${parsedCtx.arrows || ''}
 
 Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định dạng đầu ra bắt buộc của chuyên gia Thần Số Học. (Chỉ dùng tiếng Việt, tuyệt đối không dùng bất kỳ chữ Hán hay tiếng Anh nào)`;

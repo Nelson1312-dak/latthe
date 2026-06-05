@@ -179,3 +179,71 @@ const ARROWS_INFO = {
     weakness: "<h4>Mũi Tên Hoài Nghi (3-5-7 trống)</h4><p>Bạn có xu hướng đa nghi, chỉ tin vào những thứ chứng minh được bằng logic thuần túy và dễ hoài nghi lòng tốt của người khác. Hãy rèn luyện lòng biết ơn để mở lòng hơn.</p>"
   }
 };
+
+// ============================================================
+// CÁC TẦNG SÂU HƠN — Trưởng Thành, Năm Cá Nhân, Đỉnh Cuộc Đời, Thử Thách
+// ============================================================
+
+// SỐ TRƯỞNG THÀNH — con người bạn trở thành ở nửa sau cuộc đời (~ tuổi 35+)
+const MATURITY_MEANINGS = {
+  "1": "<h4>Trưởng thành thành Người Dẫn Đầu</h4><p>Nửa sau cuộc đời, bạn trở nên <strong>độc lập, quyết đoán và tự tin</strong> hơn bao giờ hết. Đây là giai đoạn bạn dám đứng ra dẫn dắt và sống đúng với ý chí của mình.</p>",
+  "2": "<h4>Trưởng thành thành Người Kết Nối</h4><p>Bạn ngày càng <strong>điềm tĩnh, tinh tế và giỏi hợp tác</strong>. Hạnh phúc về sau đến từ các mối quan hệ sâu sắc và vai trò hòa giải, cố vấn cho người khác.</p>",
+  "3": "<h4>Trưởng thành thành Người Truyền Cảm Hứng</h4><p>Về sau bạn tỏa sáng với <strong>khả năng sáng tạo và giao tiếp</strong>. Đây là lúc bạn được công nhận nhờ tài năng biểu đạt và tinh thần lạc quan.</p>",
+  "4": "<h4>Trưởng thành thành Người Kiến Tạo</h4><p>Bạn trở nên <strong>vững vàng, kỷ luật và đáng tin cậy</strong>. Nửa sau cuộc đời, bạn gặt hái thành quả từ những nền tảng đã kiên trì xây dựng.</p>",
+  "5": "<h4>Trưởng thành thành Người Tự Do</h4><p>Càng lớn tuổi bạn càng <strong>cởi mở, linh hoạt và ưa trải nghiệm</strong>. Đây là giai đoạn bạn cho phép mình sống phóng khoáng và đón nhận thay đổi.</p>",
+  "6": "<h4>Trưởng thành thành Người Nuôi Dưỡng</h4><p>Bạn dồn năng lượng vào <strong>gia đình, cộng đồng và trách nhiệm yêu thương</strong>. Hạnh phúc về sau gắn với tổ ấm và việc chăm sóc người khác.</p>",
+  "7": "<h4>Trưởng thành thành Người Hiền Triết</h4><p>Nửa sau cuộc đời nghiêng về <strong>chiều sâu nội tâm, tri thức và tâm linh</strong>. Bạn tìm thấy sự bình an trong suy ngẫm và thấu hiểu bản chất cuộc sống.</p>",
+  "8": "<h4>Trưởng thành thành Người Thành Đạt</h4><p>Bạn bước vào giai đoạn <strong>gặt hái về tài chính, quyền lực và uy tín</strong>. Đây là lúc năng lực quản trị và bản lĩnh của bạn được đền đáp xứng đáng.</p>",
+  "9": "<h4>Trưởng thành thành Người Nhân Ái</h4><p>Về sau bạn sống vì <strong>lý tưởng lớn và sự phụng sự</strong>. Bạn tìm thấy ý nghĩa khi cho đi, tha thứ và đóng góp cho điều gì đó vượt khỏi bản thân.</p>",
+  "11": "<h4>Trưởng thành thành Người Khai Sáng (11)</h4><p>Bạn trở thành nguồn <strong>cảm hứng và ánh sáng tinh thần</strong> cho người khác, sống theo trực giác và sứ mệnh dẫn đường của mình.</p>",
+  "22": "<h4>Trưởng thành thành Người Kiến Tạo Lớn (22)</h4><p>Nửa sau cuộc đời, bạn có thể <strong>hiện thực hóa những công trình để đời</strong> có ảnh hưởng đến nhiều người.</p>",
+  "33": "<h4>Trưởng thành thành Người Thầy (33)</h4><p>Bạn trở thành biểu tượng của <strong>tình thương và sự chữa lành</strong>, nâng đỡ tinh thần cho cộng đồng quanh mình.</p>",
+};
+
+// NĂM CÁ NHÂN — năng lượng chủ đạo của năm nay trong chu kỳ 9 năm
+const PERSONAL_YEAR_MEANINGS = {
+  "1": "<h4>Năm Khởi Đầu</h4><p>Một chu kỳ 9 năm mới bắt đầu. Đây là năm để <strong>gieo hạt, khởi sự dự án mới và hành động độc lập</strong>. Hãy dũng cảm bắt đầu — những gì bạn khởi xướng năm nay sẽ định hình cả chu kỳ.</p>",
+  "2": "<h4>Năm Vun Đắp</h4><p>Năm của <strong>kiên nhẫn, hợp tác và xây dựng quan hệ</strong>. Mọi việc cần thời gian chín muồi; hãy nuôi dưỡng những gì đã gieo, lắng nghe và kết nối thay vì vội vàng.</p>",
+  "3": "<h4>Năm Tỏa Sáng</h4><p>Năng lượng <strong>sáng tạo, giao tiếp và niềm vui</strong> lên cao. Đây là năm mở rộng quan hệ xã hội, thể hiện bản thân và tận hưởng cuộc sống. Tránh phân tán quá nhiều hướng.</p>",
+  "4": "<h4>Năm Xây Nền</h4><p>Năm của <strong>lao động chăm chỉ, kỷ luật và xây dựng nền tảng</strong>. Không phải lúc để bay bổng — hãy tổ chức, làm việc bền bỉ và đặt những viên gạch vững chắc cho tương lai.</p>",
+  "5": "<h4>Năm Chuyển Động</h4><p>Năm của <strong>thay đổi, tự do và cơ hội bất ngờ</strong>. Có thể có dịch chuyển, du lịch, công việc mới. Hãy linh hoạt đón nhận, nhưng tránh quyết định bốc đồng.</p>",
+  "6": "<h4>Năm Tổ Ấm</h4><p>Năm xoay quanh <strong>gia đình, tình yêu và trách nhiệm</strong>. Thích hợp cho cưới hỏi, vun vén tổ ấm, chăm sóc người thân. Hãy cân bằng giữa cho đi và giữ gìn năng lượng bản thân.</p>",
+  "7": "<h4>Năm Hướng Nội</h4><p>Năm của <strong>nghỉ ngơi, học hỏi và chiêm nghiệm</strong>. Hãy dành thời gian cho bản thân, trau dồi tri thức và lắng nghe nội tâm. Đừng ép mình chạy theo thành tích vật chất.</p>",
+  "8": "<h4>Năm Gặt Hái</h4><p>Năm của <strong>thành tựu, tài chính và quyền lực</strong>. Nỗ lực nhiều năm có thể được đền đáp. Đây là thời điểm tốt cho kinh doanh, thăng tiến và các quyết định lớn về tiền bạc.</p>",
+  "9": "<h4>Năm Hoàn Tất</h4><p>Năm khép lại chu kỳ — thời điểm <strong>buông bỏ, dọn dẹp và cho đi</strong>. Hãy kết thúc những điều không còn phù hợp để chuẩn bị cho khởi đầu mới. Sống vị tha và rộng lượng.</p>",
+};
+
+// ĐỈNH CUỘC ĐỜI (Pinnacles) — 4 giai đoạn lớn, mỗi giai đoạn mang một bài học
+const PINNACLE_MEANINGS = {
+  "1": "<h4>Đỉnh của sự Độc Lập</h4><p>Giai đoạn rèn luyện <strong>tính tự chủ, ý chí và khả năng tự đứng vững</strong>. Bạn học cách tự quyết định và khẳng định bản thân.</p>",
+  "2": "<h4>Đỉnh của sự Hợp Tác</h4><p>Giai đoạn phát triển <strong>sự nhạy cảm, kiên nhẫn và kỹ năng quan hệ</strong>. Bài học là làm việc cùng người khác và xây dựng sự đồng điệu.</p>",
+  "3": "<h4>Đỉnh của sự Sáng Tạo</h4><p>Giai đoạn nở rộ về <strong>biểu đạt, giao tiếp và niềm vui sống</strong>. Đây là lúc tài năng nghệ thuật và sức cuốn hút xã hội của bạn được khai mở.</p>",
+  "4": "<h4>Đỉnh của sự Xây Dựng</h4><p>Giai đoạn của <strong>lao động, kỷ luật và tạo lập nền tảng</strong>. Bạn học giá trị của sự kiên trì và xây dựng những thứ bền vững.</p>",
+  "5": "<h4>Đỉnh của sự Đổi Thay</h4><p>Giai đoạn nhiều <strong>biến động, tự do và trải nghiệm mới</strong>. Bài học là thích nghi với thay đổi và tận dụng cơ hội mà không mất phương hướng.</p>",
+  "6": "<h4>Đỉnh của Trách Nhiệm</h4><p>Giai đoạn xoay quanh <strong>gia đình, tình yêu và sự cống hiến</strong>. Bạn học cách yêu thương, gánh vác và mang lại sự hài hòa cho người thân.</p>",
+  "7": "<h4>Đỉnh của Trí Tuệ</h4><p>Giai đoạn hướng vào <strong>chiều sâu, tri thức và tâm linh</strong>. Đây là thời kỳ chiêm nghiệm, nghiên cứu và tìm hiểu bản chất cuộc sống.</p>",
+  "8": "<h4>Đỉnh của Thành Tựu</h4><p>Giai đoạn của <strong>quyền lực, tài chính và sự nghiệp lớn</strong>. Bạn học cách làm chủ nguồn lực và gặt hái thành công vật chất.</p>",
+  "9": "<h4>Đỉnh của sự Cho Đi</h4><p>Giai đoạn sống vì <strong>lý tưởng, lòng nhân ái và cộng đồng</strong>. Bài học là bao dung, phụng sự và buông bỏ cái tôi.</p>",
+  "11": "<h4>Đỉnh Khai Sáng (11)</h4><p>Giai đoạn đặc biệt với <strong>trực giác mạnh và sứ mệnh truyền cảm hứng</strong>. Năng lượng tâm linh dâng cao, đòi hỏi bạn làm chủ cảm xúc.</p>",
+  "22": "<h4>Đỉnh Kiến Tạo Lớn (22)</h4><p>Giai đoạn có thể <strong>hiện thực hóa những điều vĩ đại</strong> có ích cho số đông, kết hợp tầm nhìn và sức xây dựng.</p>",
+};
+
+// THỬ THÁCH (Challenges) — điểm yếu/bài học cần vượt qua, có thể bằng 0
+const CHALLENGE_MEANINGS = {
+  "0": "<h4>Thử thách số 0 — Tự Do Lựa Chọn</h4><p>Bạn không bị ràng buộc bởi một bài học cố định mà phải <strong>tự chọn con đường của mình</strong>. Thử thách là dùng tự do ấy một cách khôn ngoan, không né tránh trách nhiệm.</p>",
+  "1": "<h4>Thử thách số 1 — Tự Tin</h4><p>Bài học là vượt qua <strong>sự phụ thuộc, rụt rè và thiếu chính kiến</strong>. Hãy học cách tự quyết, đứng vững trên đôi chân mình và dám nói lên ý kiến.</p>",
+  "2": "<h4>Thử thách số 2 — Nhạy Cảm</h4><p>Bạn dễ <strong>quá nhạy cảm, sợ bị phán xét và mất tự tin</strong> trong quan hệ. Hãy học cách cân bằng cảm xúc và tin vào giá trị bản thân.</p>",
+  "3": "<h4>Thử thách số 3 — Biểu Đạt</h4><p>Bài học là vượt qua <strong>sự tự ti khi thể hiện, hoặc xu hướng chỉ trích, tản mạn</strong>. Hãy dùng lời nói và sáng tạo một cách tích cực, có trọng tâm.</p>",
+  "4": "<h4>Thử thách số 4 — Kỷ Luật</h4><p>Bạn cần khắc phục <strong>sự lười biếng, thiếu tổ chức hoặc cứng nhắc</strong>. Hãy xây dựng thói quen, tính kiên nhẫn và làm việc có hệ thống.</p>",
+  "5": "<h4>Thử thách số 5 — Tiết Chế</h4><p>Bài học là kiểm soát <strong>ham muốn tự do thái quá, bốc đồng và sa đà</strong>. Hãy tận hưởng trải nghiệm nhưng giữ kỷ luật và trách nhiệm.</p>",
+  "6": "<h4>Thử thách số 6 — Kỳ Vọng</h4><p>Bạn dễ <strong>áp đặt tiêu chuẩn hoàn hảo và ôm đồm trách nhiệm</strong>. Hãy học cách yêu thương vô điều kiện và thiết lập ranh giới lành mạnh.</p>",
+  "7": "<h4>Thử thách số 7 — Niềm Tin</h4><p>Bài học là vượt qua <strong>sự hoài nghi, khép kín và cô lập</strong>. Hãy mở lòng tin tưởng người khác và chia sẻ thế giới nội tâm của mình.</p>",
+  "8": "<h4>Thử thách số 8 — Tiền Bạc & Quyền Lực</h4><p>Bạn cần cân bằng mối quan hệ với <strong>tiền bạc, quyền lực và cái tôi</strong>. Hãy theo đuổi thành công một cách chính trực, không để vật chất chi phối.</p>",
+};
+
+const LAYER_NAMES = {
+  maturity:    "Số Trưởng Thành",
+  personalYear:"Năm Cá Nhân",
+  pinnacle:    "Đỉnh Cuộc Đời",
+  challenge:   "Thử Thách",
+};

@@ -40,6 +40,14 @@ function reduceNumber(num, keepMaster = true) {
   return num;
 }
 
+// Fully reduce to a single digit 1-9 (no master numbers) — for intermediate steps.
+function reduceToSingle(num) {
+  while (num > 9) {
+    num = num.toString().split('').reduce((sum, d) => sum + parseInt(d), 0);
+  }
+  return num;
+}
+
 function calculateNumerology(fullName, day, month, year) {
   const cleanName = removeVietnameseAccents(fullName).replace(/[^A-Z]/g, '');
   
@@ -113,6 +121,46 @@ function calculateNumerology(fullName, day, month, year) {
     }
   }
 
+  // 6. Số Trưởng Thành (Maturity) = rút gọn(Chủ Đạo + Sứ Mệnh)
+  const maturityVal = reduceNumber(
+    reduceToSingle(parseInt(lifePathVal)) + reduceToSingle(parseInt(destinyVal)),
+    true
+  ).toString();
+
+  // 7. Năm Cá Nhân (Personal Year) cho năm hiện tại
+  const nowYear = new Date().getFullYear();
+  const personalYearVal = reduceToSingle(
+    reduceToSingle(parseInt(day)) + reduceToSingle(parseInt(month)) + reduceToSingle(nowYear)
+  ).toString();
+
+  // 8. Đỉnh Cuộc Đời (Pinnacles) + mốc tuổi
+  const m = reduceToSingle(parseInt(month));
+  const d = reduceToSingle(parseInt(day));
+  const y = reduceToSingle(parseInt(year));
+  const p1 = reduceNumber(m + d, true);
+  const p2 = reduceNumber(d + y, true);
+  const p3 = reduceNumber(reduceToSingle(p1) + reduceToSingle(p2), true);
+  const p4 = reduceNumber(m + y, true);
+  const end1 = 36 - reduceToSingle(parseInt(lifePathVal));
+  const pinnacles = [
+    { num: p1.toString(), age: `0 – ${end1} tuổi` },
+    { num: p2.toString(), age: `${end1 + 1} – ${end1 + 9} tuổi` },
+    { num: p3.toString(), age: `${end1 + 10} – ${end1 + 18} tuổi` },
+    { num: p4.toString(), age: `${end1 + 19} tuổi trở đi` },
+  ];
+
+  // 9. Thử Thách (Challenges) — hiệu tuyệt đối, có thể bằng 0
+  const c1 = Math.abs(m - d);
+  const c2 = Math.abs(d - y);
+  const c3 = Math.abs(c1 - c2);
+  const c4 = Math.abs(m - y);
+  const challenges = [
+    { num: c1.toString(), label: "Thử thách đầu đời" },
+    { num: c2.toString(), label: "Thử thách trung niên" },
+    { num: c3.toString(), label: "Thử thách chủ đạo" },
+    { num: c4.toString(), label: "Thử thách cuối đời" },
+  ];
+
   return {
     fullName,
     birthDate: `${day}/${month}/${year}`,
@@ -122,6 +170,10 @@ function calculateNumerology(fullName, day, month, year) {
     personality: personalityVal,
     birthdayNumber: birthdayVal,
     attitude: attitudeVal,
+    maturity: maturityVal,
+    personalYear: personalYearVal,
+    pinnacles,
+    challenges,
     cellCounts,
     arrows: detectedArrows
   };
@@ -148,7 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const indPersonality   = document.getElementById('ind-personality');
   const indBirthday      = document.getElementById('ind-birthday');
   const indAttitude      = document.getElementById('ind-attitude');
+  const indMaturity      = document.getElementById('ind-maturity');
+  const indPersonalYear  = document.getElementById('ind-personalyear');
   const arrowsList       = document.getElementById('arrows-list');
+  const pinnaclesList    = document.getElementById('pinnacles-list');
+  const challengesList   = document.getElementById('challenges-list');
 
   // Drawers
   const detailDrawer     = document.getElementById('tsh-drawer');
@@ -274,6 +330,10 @@ document.addEventListener('DOMContentLoaded', () => {
     indPersonality.textContent = data.personality;
     indBirthday.textContent = data.birthdayNumber;
     indAttitude.textContent = data.attitude;
+    if (indMaturity)     indMaturity.textContent = data.maturity;
+    if (indPersonalYear) indPersonalYear.textContent = data.personalYear;
+    renderPinnacles(data.pinnacles || []);
+    renderChallenges(data.challenges || []);
 
     // Render 3x3 birth chart grid
     for (let i = 1; i <= 9; i++) {
@@ -353,11 +413,66 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeTimer = setTimeout(() => drawArrowsOnChart(currentProfileData.arrows), 150);
   });
 
+  // ---- Deeper layers: Pinnacles & Challenges ----
+  function renderPinnacles(pins) {
+    if (!pinnaclesList) return;
+    pinnaclesList.innerHTML = '';
+    pins.forEach((p, idx) => {
+      const item = document.createElement('div');
+      item.className = 'layer-item';
+      item.innerHTML =
+        `<span class="layer-num">${p.num}</span>` +
+        `<div class="layer-info"><span class="layer-item-title">Đỉnh ${idx + 1}</span>` +
+        `<span class="layer-item-meta">${p.age}</span></div>` +
+        `<i class="ti ti-chevron-right layer-arrow"></i>`;
+      item.addEventListener('click', () => {
+        const body = PINNACLE_MEANINGS[p.num] ||
+          `<p>Đỉnh số <strong>${p.num}</strong> — đang cập nhật. Hãy hỏi chuyên gia AI để được luận giải sâu hơn.</p>`;
+        openDrawer(`Đỉnh ${idx + 1} Cuộc Đời · ${p.age}`, p.num, body);
+      });
+      pinnaclesList.appendChild(item);
+    });
+  }
+
+  function renderChallenges(chs) {
+    if (!challengesList) return;
+    challengesList.innerHTML = '';
+    chs.forEach((c) => {
+      const item = document.createElement('div');
+      item.className = 'layer-item';
+      item.innerHTML =
+        `<span class="layer-num">${c.num}</span>` +
+        `<div class="layer-info"><span class="layer-item-title">${c.label}</span>` +
+        `<span class="layer-item-meta">Bấm để xem bài học cần vượt qua</span></div>` +
+        `<i class="ti ti-chevron-right layer-arrow"></i>`;
+      item.addEventListener('click', () => {
+        const body = CHALLENGE_MEANINGS[c.num] ||
+          `<p>Thử thách số <strong>${c.num}</strong> — đang cập nhật.</p>`;
+        openDrawer(`${c.label} (Số ${c.num})`, c.num, body);
+      });
+      challengesList.appendChild(item);
+    });
+  }
+
+  // Maturity & Personal Year cards open their own detail drawer
+  document.querySelectorAll('.layer-card').forEach(card => {
+    card.addEventListener('click', () => {
+      if (!currentProfileData) return;
+      const layer = card.dataset.layer; // 'maturity' | 'personalYear'
+      const val = currentProfileData[layer];
+      const meanings = layer === 'maturity' ? MATURITY_MEANINGS : PERSONAL_YEAR_MEANINGS;
+      const name = (typeof LAYER_NAMES !== 'undefined' && LAYER_NAMES[layer]) || layer;
+      const body = meanings[val] ||
+        `<p>Số <strong>${val}</strong> — đang cập nhật luận giải.</p>`;
+      openDrawer(name, val, body);
+    });
+  });
+
   // Click indicators to show detail drawer — per-number meaning for every indicator
   document.querySelectorAll('.indicator-card').forEach(card => {
     card.addEventListener('click', () => {
       const type = card.dataset.type;
-      if (!currentProfileData) return;
+      if (!type || !currentProfileData) return; // layer cards (no data-type) handled separately
 
       const val = currentProfileData[type];
       const name = INDICATOR_NAMES[type] || type;
@@ -442,6 +557,10 @@ document.addEventListener('DOMContentLoaded', () => {
       personality: currentProfileData.personality,
       attitude: currentProfileData.attitude,
       birthdayNumber: currentProfileData.birthdayNumber,
+      maturity: currentProfileData.maturity,
+      personalYear: currentProfileData.personalYear,
+      pinnacles: (currentProfileData.pinnacles || []).map((p, i) => `Đỉnh ${i + 1} (${p.age}): ${p.num}`).join('; '),
+      challenges: (currentProfileData.challenges || []).map(c => `${c.label}: ${c.num}`).join('; '),
       arrows: currentProfileData.arrows.map(a => a.name).join(', '),
     });
   }
