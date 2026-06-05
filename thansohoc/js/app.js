@@ -3,89 +3,7 @@
  * Numerology Pythagorean calculations, birth chart rendering, arrow detection, and AI master chat.
  */
 
-// ==================== DICTIONARIES & EXPLANATIONS ====================
-const INDICATORS_INFO = {
-  lifepath: {
-    name: "Số Chủ Đạo (Life Path Number)",
-    desc: {
-      "2": "<h4>Hành trình của Người Hòa Giải & Kết Nối</h4><p>Bạn sở hữu tần số nhạy cảm cao, trực giác nhạy bén, khả năng thấu cảm và lắng nghe xuất sắc. Bạn thích làm việc nhóm hơn là dẫn đầu, là nhân tố hòa giải tuyệt vời trong mọi xung đột.</p><h4>Lời khuyên:</h4><ul><li>Học cách nói 'không' khi cần thiết.</li><li>Tin tưởng vào trực giác của mình.</li><li>Tránh gánh vác cảm xúc tiêu cực của người khác.</li></ul>",
-      "3": "<h4>Hành trình của Người Truyền Cảm Hứng & Trí Tuệ</h4><p>Bạn là người có tư duy nhanh nhạy, hoạt ngôn, có khiếu hài hước và khả năng truyền đạt xuất sắc. Bạn tỏa sáng khi được thể hiện sự sáng tạo và năng lượng trí tuệ.</p><h4>Lời khuyên:</h4><ul><li>Tránh chỉ trích người khác bằng lời nói sắc bén.</li><li>Tập trung năng lượng vào các dự án cụ thể, tránh phân tán.</li><li>Rèn luyện tính kiên nhẫn.</li></ul>",
-      "4": "<h4>Hành trình của Người Kiến Tạo & Kỷ Luật</h4><p>Bạn thực tế, ngăn nắp, coi trọng tính chính xác và an toàn. Bạn là điểm tựa vững chắc, đáng tin cậy trong công việc lẫn cuộc sống gia đình nhờ sự chăm chỉ và nguyên tắc.</p><h4>Lời khuyên:</h4><ul><li>Học cách linh hoạt và mở lòng đón nhận thay đổi.</li><li>Tránh làm việc quá sức (Workaholic).</li><li>Dành thời gian phát triển thế giới tinh thần.</li></ul>",
-      "5": "<h4>Hành trình của Người Khám Phá & Tự Do</h4><p>Năng lượng của bạn là tự do, phiêu lưu, thích trải nghiệm những điều mới lạ. Bạn có óc sáng tạo cao, giàu lòng trắc ẩn và rất linh hoạt trong mọi hoàn cảnh.</p><h4>Lời khuyên:</h4><ul><li>Xây dựng kỷ luật tự thân để tránh mất phương hướng.</li><li>Tránh các thói quen tiêu cực do ham muốn tự do thái quá.</li><li>Suy nghĩ kỹ trước khi đưa ra quyết định lớn.</li></ul>",
-      "6": "<h4>Hành trình của Người Sáng Tạo & Nuôi Dưỡng</h4><p>Bạn mang năng lượng của tình yêu thương gia đình, sự chăm sóc và trách nhiệm cao cả. Bạn có khiếu thẩm mỹ tốt và khát khao cống hiến vẻ đẹp cho đời.</p><h4>Lời khuyên:</h4><ul><li>Học cách chăm sóc bản thân trước khi lo lắng cho người khác.</li><li>Tránh áp đặt tiêu chuẩn hoàn hảo lên người thân.</li><li>Bớt lo lắng thái quá về những chuyện chưa xảy ra.</li></ul>",
-      "7": "<h4>Hành trình của Người Tìm Kiếm Chân Lý & Trải Nghiệm</h4><p>Bạn thích tự mình trải nghiệm để đúc rút bài học sâu sắc. Bạn có năng lượng của một nhà triết học, nhà nghiên cứu tâm linh hoặc người dẫn đường bằng trí tuệ thực chứng.</p><h4>Lời khuyên:</h4><ul><li>Tránh tự cô lập bản thân quá lâu.</li><li>Nhìn nhận thất bại như là bài học quý giá thay vì oán trách.</li><li>Chia sẻ kiến thức rộng rãi hơn.</li></ul>",
-      "8": "<h4>Hành trình của Người Độc Lập & Thực Thi</h4><p>Bạn độc lập, tự chủ, có năng lực quản lý và thu hút sự thịnh vượng vật chất mạnh mẽ. Tuy nhiên, sâu thẳm bên trong bạn là một người giàu lòng trắc ẩn và tình cảm ấm áp.</p><h4>Lời khuyên:</h4><ul><li>Học cách thể hiện cảm xúc và tình yêu thương rõ ràng hơn.</li><li>Tránh để cái tôi và lòng kiêu hãnh cản trở mối quan hệ.</li><li>Cân bằng giữa thế giới vật chất và tinh thần.</li></ul>",
-      "9": "<h4>Hành trình của Người Nhân Ái & Hoài Bão</h4><p>Bạn mang hoài bão lớn, giàu lý tưởng xã hội, luôn hướng về cộng đồng và sự nhân văn. Bạn sống có trách nhiệm và sẵn sàng tha thứ, giúp đỡ người khác.</p><h4>Lời khuyên:</h4><ul><li>Học cách kiên định và thực tế hơn trong kế hoạch cá nhân.</li><li>Đừng để những thất vọng về thế giới làm bạn chán nản.</li><li>Giải quyết những vết thương lòng trong quá khứ.</li></ul>",
-      "10": "<h4>Hành trình của Người Tiên Phong & Thích Ứng</h4><p>Bạn tự tin, năng động, dễ thích nghi với mọi môi trường mới. Bạn sở hữu lòng dũng cảm của người tiên phong và khả năng thu hút đám đông rất tự nhiên.</p><h4>Lời khuyên:</h4><ul><li>Tránh rơi vào trạng thái tự cao tự đại.</li><li>Kiên trì theo đuổi mục tiêu thay vì dễ cả thèm chóng chán.</li><li>Lắng nghe ý kiến của người khác nhiều hơn.</li></ul>",
-      "11": "<h4>Hành trình của Người Dẫn Đường Tâm Linh (Master 11)</h4><p>Bạn sở hữu trực giác siêu nhạy, khả năng tâm linh bẩm sinh và nhận thức sâu sắc về thế giới tinh thần. Bạn ở đây để mang ánh sáng nhận thức và hòa bình đến cho nhân loại.</p><h4>Lời khuyên:</h4><ul><li>Học cách cân bằng cảm xúc cá nhân để tránh căng thẳng thần kinh.</li><li>Tránh xa thế giới vật chất cám dỗ làm mờ đi sứ mệnh.</li><li>Thực hành thiền định hoặc kết nối thiên nhiên.</li></ul>",
-      "22/4": "<h4>Hành trình của Người Kiến Tạo Vĩ Đại (Master 22/4)</h4><p>Được coi là con số mạnh nhất trong Thần số học. Bạn kết hợp trực giác nhạy bén của số 11 và tính thực tế vững chắc của số 4. Bạn có khả năng hiện thực hóa những ý tưởng vĩ mô có tầm ảnh hưởng lớn.</p><h4>Lời khuyên:</h4><ul><li>Tránh rơi vào cái bẫy của sự tham vọng quá mức hoặc lười biếng.</li><li>Hãy chịu trách nhiệm lớn lao với sự khiêm tốn.</li><li>Cân bằng năng lượng thể chất và tinh thần.</li></ul>",
-      "33/6": "<h4>Hành trình của Người Thầy Chữa Lành Vĩ Đại (Master 33/6)</h4><p>Bạn mang năng lượng của lòng vị tha thuần khiết, tình yêu thương vô điều kiện và sức mạnh sáng tạo nghệ thuật vượt trội. Bạn truyền cảm hứng và nâng đỡ tinh thần cho nhân loại.</p><h4>Lời khuyên:</h4><ul><li>Tránh hy sinh bản thân đến mức kiệt quệ năng lượng.</li><li>Học cách thiết lập ranh giới lành mạnh.</li><li>Tin tưởng vào con đường nghệ thuật/chữa lành.</li></ul>"
-    }
-  },
-  destiny: {
-    name: "Số Sứ Mệnh (Destiny / Expression Number)",
-    desc: "<h4>Mục tiêu & Hướng đi của cuộc đời</h4><p>Số Sứ Mệnh (tính từ tổng giá trị các chữ cái cấu thành họ và tên) tiết lộ mục tiêu cuối cùng của bạn trên hành trình này, năng lực bạn cần phát triển và cách thức bạn đạt được thành công tối đa.</p><p>Năng lượng của con số này định hướng sự nghiệp, hoạt động xã hội và cách bạn cống hiến cho thế giới xung quanh.</p>"
-  },
-  soul: {
-    name: "Số Linh Hồn (Soul Urge Number)",
-    desc: "<h4>Khát khao sâu thẳm trong nội tâm</h4><p>Số Linh Hồn (tính từ tổng các nguyên âm trong họ tên) đại diện cho tiếng nói nội tâm, những khao khát sâu kín nhất, động lực thực sự khiến bạn cảm thấy hạnh phúc và bình yên trọn vẹn.</p><p>Nó phản ánh những gì bạn cần nuôi dưỡng cho tinh thần của mình, độc lập với những kỳ vọng bên ngoài.</p>"
-  },
-  personality: {
-    name: "Số Nhân Cách (Personality Number)",
-    desc: "<h4>Ấn tượng đầu tiên trong mắt người khác</h4><p>Số Nhân Cách (tính từ tổng các phụ âm trong họ tên) phản ánh vỏ bọc bên ngoài, cách bạn thể hiện bản thân ra thế giới và ấn tượng đầu tiên mà mọi người cảm nhận về bạn.</p><p>Nó giống như chiếc bộ lọc giúp bạn tự bảo vệ nội tâm bên trong đồng thời giao tiếp hiệu quả với xã hội.</p>"
-  },
-  birthday: {
-    name: "Số Ngày Sinh (Birth Day Number)",
-    desc: "<h4>Năng lực tự nhiên & Tài năng bẩm sinh</h4><p>Số Ngày Sinh (rút gọn từ ngày sinh của bạn) đại diện cho những công cụ, món quà đặc biệt và năng khiếu mà vũ trụ ban tặng sẵn cho bạn ngay khi chào đời.</p><p>Nó giúp bạn vượt qua các thử thách đầu đời một cách thuận lợi nếu biết tận dụng đúng cách.</p>"
-  },
-  attitude: {
-    name: "Số Thái Độ (Attitude Number)",
-    desc: "<h4>Cách bạn phản ứng với các tình huống</h4><p>Số Thái Độ (rút gọn từ Ngày + Tháng sinh) phản ánh phản xạ tự nhiên của bạn trước các biến cố, cơ hội hay nghịch cảnh trong đời.</p><p>Thái độ tích cực phù hợp với con số này sẽ giúp bạn xoay chuyển tình thế, biến thách thức thành bàn đạp phát triển.</p>"
-  }
-};
-
-const ARROWS_INFO = {
-  "3-6-9": {
-    name: "Mũi Tên Trí Tuệ",
-    strength: "<h4>Mũi Tên Trí Tuệ (3-6-9 đầy đủ)</h4><p>Bạn sở hữu khả năng tư duy logic xuất sắc, óc sáng tạo phong phú và một trí nhớ đáng kinh ngạc. Bạn học hỏi rất nhanh và thích làm việc với kiến thức học thuật, nghiên cứu hoặc nghệ thuật tư duy.</p>",
-    weakness: "<h4>Mũi Tên Trống Trí Nhớ (3-6-9 trống)</h4><p>Bạn có xu hướng dễ quên hoặc mất tập trung khi học hỏi những điều mới. Cần rèn luyện ghi chép, hệ thống hóa thông tin và tạo thói quen rèn luyện trí nhớ đều đặn hằng ngày.</p>"
-  },
-  "2-5-8": {
-    name: "Mũi Tên Cảm Xúc",
-    strength: "<h4>Mũi Tên Cảm Xúc (2-5-8 đầy đủ)</h4><p>Bạn có trực giác nhạy bén, khả năng tự cân bằng cảm xúc rất tốt và trái tim ấm áp, thấu cảm sâu sắc với mọi người xung quanh. Bạn là chỗ dựa tinh thần tuyệt vời.</p>",
-    weakness: "<h4>Mũi Tên Trống Cảm Xúc (2-5-8 trống)</h4><p>Bạn dễ rơi vào trạng thái nhạy cảm quá mức, khó bộc lộ cảm xúc thật hoặc dễ cảm thấy cô độc, tổn thương. Hãy học cách mở lòng, chia sẻ và yêu thương bản thân nhiều hơn.</p>"
-  },
-  "1-4-7": {
-    name: "Mũi Tên Thực Tế",
-    strength: "<h4>Mũi Tên Thực Tế (1-4-7 đầy đủ)</h4><p>Bạn là người thực tế, thích hành động và có đôi tay khéo léo. Bạn chỉ tin vào những trải nghiệm thực tế và có năng khiếu sắp xếp, quản lý các công việc cụ thể cực tốt.</p>",
-    weakness: "<h4>Mũi Tên Trống Thực Tế (1-4-7 trống)</h4><p>Bạn dễ mơ mộng, thiếu tính thực tiễn trong cuộc sống hoặc ngại va chạm với các công việc tay chân, thực tế. Hãy học cách lập kế hoạch tài chính cụ thể và bắt tay làm việc nhỏ mỗi ngày.</p>"
-  },
-  "1-2-3": {
-    name: "Mũi Tên Kế Hoạch",
-    strength: "<h4>Mũi Tên Kế Hoạch (1-2-3 đầy đủ)</h4><p>Bạn là người có đầu óc tổ chức, lập kế hoạch chi tiết và thực thi mọi việc theo trình tự ngăn nắp. Bạn luôn chuẩn bị kỹ càng trước khi bắt đầu hành trình.</p>",
-    weakness: "<h4>Mũi Tên Trống Kế Hoạch (1-2-3 trống)</h4><p>Bạn dễ làm việc tùy hứng, thiếu ngăn nắp và gặp khó khăn trong việc thiết lập trật tự cuộc sống. Hãy tập thói quen viết To-do list hằng ngày và tuân thủ thời gian biểu.</p>"
-  },
-  "4-5-6": {
-    name: "Mũi Tên Ý Chí",
-    strength: "<h4>Mũi Tên Ý Chí (4-5-6 đầy đủ)</h4><p>Bạn sở hữu ý chí quật cường, lòng kiên định vượt qua nghịch cảnh và tinh thần tự chủ rất cao. Bạn kiên trì bảo vệ lý tưởng và mục tiêu của bản thân.</p>",
-    weakness: "<h4>Mũi Tên Trống Ý Chí (4-5-6 trống)</h4><p>Bạn dễ rơi vào cảm giác bất an, tự ti hoặc hay lo lắng thái quá dẫn đến việc trì hoãn. Hãy tập trung xây dựng niềm tin nội lực và học cách buông bỏ nỗi sợ mơ hồ.</p>"
-  },
-  "7-8-9": {
-    name: "Mũi Tên Hoạt Động",
-    strength: "<h4>Mũi Tên Hoạt Động (7-8-9 đầy đủ)</h4><p>Bạn năng động, thích khám phá thế giới, đam mê trải nghiệm thực tế và du lịch trải nghiệm. Bạn tràn đầy năng lượng khi được tự do vận động và trải nghiệm cuộc sống ngoài trời.</p>",
-    weakness: "<h4>Mũi Tên Trống Hoạt Động (7-8-9 trống)</h4><p>Bạn có xu hướng thụ động, ngại thay đổi và thích trốn trong vùng an toàn quen thuộc của mình. Hãy rèn luyện thể chất năng nổ hơn và can đảm thử những trải nghiệm mới lạ.</p>"
-  },
-  "1-5-9": {
-    name: "Mũi Tên Quyết Tâm",
-    strength: "<h4>Mũi Tên Quyết Tâm (1-5-9 đầy đủ)</h4><p>Mũi tên vàng của sự kiên trì. Bạn cực kỳ kiên định, đã quyết làm việc gì là sẽ theo đuổi đến cùng bất chấp khó khăn thử thách. Sức bền của bạn là vô địch.</p>",
-    weakness: "<h4>Mũi Tên Trì Hoãn (1-5-9 trống)</h4><p>Bạn hay chần chừ, trì hoãn công việc và dễ nản lòng bỏ cuộc giữa chừng. Hãy chia nhỏ mục tiêu lớn thành các việc nhỏ dễ làm để tạo đà chiến thắng mỗi ngày.</p>"
-  },
-  "3-5-7": {
-    name: "Mũi Tên Nhạy Bén / Tâm Linh",
-    strength: "<h4>Mũi Tên Nhạy Bén (3-5-7 đầy đủ)</h4><p>Bạn sở hữu trực giác tâm linh nhạy bén vượt trội, khả năng thấu thị cảm xúc và lòng tin sâu sắc vào thế giới tinh thần. Bạn rất thấu cảm với nỗi đau nhân sinh.</p>",
-    weakness: "<h4>Mũi Tên Hoài Nghi (3-5-7 trống)</h4><p>Bạn có xu hướng đa nghi, chỉ tin vào những thứ chứng minh được bằng logic thuần túy và dễ hoài nghi về lòng tốt của người khác. Hãy rèn luyện lòng biết ơn để mở lòng hơn.</p>"
-  }
-};
+// Interpretation content (NUM_MEANINGS, INDICATOR_NAMES, ARROWS_INFO) lives in js/numerology-data.js
 
 // ==================== CALCULATION HELPERS ====================
 function removeVietnameseAccents(str) {
@@ -128,7 +46,8 @@ function calculateNumerology(fullName, day, month, year) {
   // 1. Số Chủ Đạo (Life Path)
   const dobString = `${day}${month}${year}`.replace(/\D/g, '');
   let lpSum = dobString.split('').reduce((sum, d) => sum + parseInt(d), 0);
-  while (lpSum > 11 && lpSum !== 22 && lpSum !== 33) {
+  // Reduce to a single digit, except the master numbers 11/22/33 which are kept.
+  while (lpSum > 9 && lpSum !== 11 && lpSum !== 22 && lpSum !== 33) {
     lpSum = lpSum.toString().split('').reduce((sum, d) => sum + parseInt(d), 0);
   }
   let lifePathVal = lpSum.toString();
@@ -394,19 +313,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Click indicators to show detail drawer
+  // Click indicators to show detail drawer — per-number meaning for every indicator
   document.querySelectorAll('.indicator-card').forEach(card => {
     card.addEventListener('click', () => {
       const type = card.dataset.type;
-      const info = INDICATORS_INFO[type];
-      if (!info || !currentProfileData) return;
+      if (!currentProfileData) return;
 
-      let val = currentProfileData[type];
-      let body = info.desc;
-      if (type === 'lifepath') {
-        body = info.desc[val] || info.desc["2"]; // fallback
-      }
-      openDrawer(info.name, val, body);
+      const val = currentProfileData[type];
+      const name = INDICATOR_NAMES[type] || type;
+      const meanings = NUM_MEANINGS[type] || {};
+      const body = meanings[val] ||
+        `<p>Số <strong>${val}</strong> — phần luận giải chi tiết cho chỉ số này đang được cập nhật. Hãy hỏi chuyên gia AI bên dưới để được luận giải sâu hơn nhé!</p>`;
+      openDrawer(name, val, body);
     });
   });
 
