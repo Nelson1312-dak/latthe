@@ -908,3 +908,21 @@ body.drinking-theme {
     font-size: 16px !important;
   }
 }
+
+/* ============================================================
+   Reduced motion — respect the OS "Reduce Motion" setting.
+   The site runs many always-on infinite animations (ambient glows,
+   floating/spinning brand icons, pulses, the streaming loader). For
+   users who opt out of motion (vestibular issues, motion sickness, or
+   battery saving) collapse all animations/transitions to near-instant.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
