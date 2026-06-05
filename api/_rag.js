@@ -33,17 +33,17 @@ export async function getEmbedding(ollamaUrl, embedModel, text, breaker) {
   }
 }
 
-export async function retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) {
-  if (!embedding || !sbUrl || breaker.localDown) return [];
+// Shared call to the match_documents RPC. `body` carries the threshold/count/
+// filters (filter_source defaults to 'qa' server-side when omitted).
+async function rpcMatch(sbUrl, sbKey, body, breaker) {
+  if (!sbUrl || breaker.localDown) return [];
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 4000);
   try {
     const isLocal = isLocalUrl(sbUrl);
     const path = isLocal ? '/rpc/match_documents' : '/rest/v1/rpc/match_documents';
-    
-    const headers = {
-      'Content-Type': 'application/json',
-    };
+
+    const headers = { 'Content-Type': 'application/json' };
     if (sbKey) {
       headers['apikey'] = sbKey;
       headers['Authorization'] = `Bearer ${sbKey}`;
@@ -52,12 +52,7 @@ export async function retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) {
     const res = await fetch(`${sbUrl}${path}`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        query_embedding: embedding,
-        match_threshold: 0.78,
-        match_count: 2,
-        filter_type: type,
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     clearTimeout(t);
@@ -68,6 +63,31 @@ export async function retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) {
     if (isInfraDown(err)) breaker.localDown = true;
     return [];
   }
+}
+
+// Tier-2 semantic cache + RAG over PAST Q&As (source = 'qa').
+export function retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) {
+  if (!embedding) return Promise.resolve([]);
+  return rpcMatch(sbUrl, sbKey, {
+    query_embedding: embedding,
+    match_threshold: 0.78,
+    match_count: 2,
+    filter_type: type,
+  }, breaker);
+}
+
+// Knowledge grounding over Thư Viện article chunks (source = 'kb').
+// Lower threshold + a bit more breadth, since we want relevant theory, not an
+// exact answer. Returns [] until the library has been indexed (build-thuvien-index).
+export function retrieveKnowledge(sbUrl, sbKey, embedding, type, breaker) {
+  if (!embedding) return Promise.resolve([]);
+  return rpcMatch(sbUrl, sbKey, {
+    query_embedding: embedding,
+    match_threshold: 0.72,
+    match_count: 3,
+    filter_type: type,
+    filter_source: 'kb',
+  }, breaker);
 }
 
 export async function storeDoc(sbUrl, sbKey, payload) {

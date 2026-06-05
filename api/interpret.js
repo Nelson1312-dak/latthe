@@ -9,7 +9,7 @@
 import { applyCors } from './_cors.js';
 import { getClientIp, checkRateLimit } from './_rateLimit.js';
 import { isInfraDown, callCloudLLM, cleanChineseLeaks } from './_llm.js';
-import { getEmbedding, retrieveSimilar, storeDoc, checkExactMatchCache } from './_rag.js';
+import { getEmbedding, retrieveSimilar, retrieveKnowledge, storeDoc, checkExactMatchCache } from './_rag.js';
 import { SYSTEM_PROMPTS, buildFirstUserContent } from './_prompts.js';
 
 // Prevent uncaught exceptions / unhandled rejections from crashing the dev server
@@ -66,12 +66,13 @@ export default async function handler(req, res) {
   // ~47s wait that previously blew past the client's timeout before DeepSeek could run.
   const breaker = { localDown: false };
 
-  // Tử Vi charts are unique per person, so cache lookups almost never hit and just
-  // burn a local round-trip — skip caching/RAG for tuvi entirely.
+  // Tử Vi charts are unique per person, so the Q&A cache (exact/semantic) and
+  // storeDoc almost never hit for tuvi — keep those gated to non-tuvi.
   const cacheEligible = type !== 'tuvi' && !isFollowUp;
-  // Embedding is only used for semantic cache, RAG retrieval and storeDoc. None of
-  // those apply to tuvi or follow-ups, so don't spend a round-trip computing it.
-  const needEmbedding = type !== 'tuvi' && !isFollowUp;
+  // We still need an embedding for KNOWLEDGE grounding (Thư Viện), which IS useful
+  // for tuvi (the question matches theory regardless of the unique chart). So compute
+  // it for every first-question; follow-ups reuse prior context and skip it.
+  const needEmbedding = !isFollowUp;
 
   // ---- 1. Tier-1 exact-match cache + embedding (run in parallel; both are local) ----
   let exactCached = null;
@@ -97,7 +98,17 @@ export default async function handler(req, res) {
   let fullContext = context || '';
 
   if (needEmbedding && embedding && !breaker.localDown) {
-    const similar = await retrieveSimilar(sbUrl, sbKey, embedding, type, breaker);
+    // Thư Viện knowledge (all types) + Q&A cache (non-tuvi only) in parallel.
+    const [similar, knowledge] = await Promise.all([
+      cacheEligible ? retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) : Promise.resolve([]),
+      retrieveKnowledge(sbUrl, sbKey, embedding, type, breaker),
+    ]);
+
+    // Ground the interpretation in relevant Thư Viện theory (if indexed).
+    if (knowledge && knowledge.length > 0) {
+      const kbBlock = knowledge.map(d => `• ${d.question}: ${d.answer}`).join('\n');
+      fullContext += `\n\n[Kiến thức nền từ Thư Viện — dùng để luận giải cho chính xác, KHÔNG sao chép nguyên văn]\n${kbBlock}`;
+    }
 
     if (similar && similar.length > 0) {
       const bestMatch = similar[0];
@@ -222,9 +233,10 @@ export default async function handler(req, res) {
     if (dup > pos) answer = answer.slice(0, dup).trim();
   }
 
-  // ---- Store Q&A for cache/RAG. Only meaningful when we have an embedding (so tuvi
-  // and follow-ups are naturally skipped) and the DB is reachable. Fire-and-forget. ----
-  if (embedding && !breaker.localDown) {
+  // ---- Store Q&A for the cache. Only for cache-eligible types (non-tuvi, non
+  // follow-up) so tuvi's now-computed embedding doesn't write useless cache rows.
+  // Stored as source='qa' (DB default). Fire-and-forget. ----
+  if (cacheEligible && embedding && !breaker.localDown) {
     storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp });
   }
 

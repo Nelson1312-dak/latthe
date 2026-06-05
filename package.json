@@ -3,7 +3,9 @@
   "scripts": {
     "build:og": "node scripts/build-og.js",
     "build:tarot": "node scripts/build-tarot-webp.js",
-    "build:icons": "node scripts/build-icons.mjs"
+    "build:icons": "node scripts/build-icons.mjs",
+    "index:thuvien": "node scripts/build-thuvien-index.mjs",
+    "eval": "node scripts/eval-rag.mjs"
   },
   "devDependencies": {
     "sharp": "^0.34.5"
