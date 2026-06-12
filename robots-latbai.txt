@@ -5,3 +5,4 @@ Allow: /
 Disallow: /api/
 
 Sitemap: https://latbai.vn/sitemap.xml
+Host: https://latbai.vn

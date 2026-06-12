@@ -4,3 +4,4 @@ Allow: /
 Disallow: /api/
 
 Sitemap: https://gieoque.vn/sitemap.xml
+Host: https://gieoque.vn
