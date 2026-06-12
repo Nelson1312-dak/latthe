@@ -5,6 +5,16 @@
  */
 
 const Chat = (() => {
+  // Escape raw HTML before markdown transforms so AI output can never inject
+  // executable markup (we build all allowed tags ourselves below).
+  function escapeHtml(s) {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   function parseMarkdown(text) {
     if (!text) return '';
     const lines = text.split('\n');
@@ -12,7 +22,7 @@ const Chat = (() => {
     let inList = false;
 
     for (const line of lines) {
-      let t = line.trim().replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      let t = escapeHtml(line.trim()).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
       if (t.startsWith('###')) {
         if (inList) { out.push('</ul>'); inList = false; }

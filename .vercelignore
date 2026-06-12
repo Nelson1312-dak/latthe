@@ -1,0 +1,11 @@
+# Source JPGs — runtime serves only the generated .webp (see scripts/build-tarot-webp.js)
+tarot/images/*.jpg
+
+# Build & dev tooling — never needed at runtime
+scripts/
+local-proxy.js
+run_local.bat
+*.ps1
+
+# Dev-only seed script with hardcoded localhost URLs; must not become an API route
+api/seed-cache.js
