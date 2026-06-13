@@ -35,14 +35,30 @@
 
     <!-- ── SETUP ─────────────────────────────────────────────── -->
     <section id="setup-phase">
-      <h1 class="module-title">🏆 Đua Thú</h1>
-      <p class="module-sub">Chọn 2–6 con · Đặt tên · Xem ai thắng</p>
+      <h1 class="module-title">🏁 Đua Thú</h1>
+      <p class="module-sub">Chọn loại đua · Thêm người chơi · Xem ai thắng</p>
 
-      <p id="sel-count">Chọn ít nhất 2 con</p>
-      <div id="animal-grid"></div>
-      <div id="name-inputs"></div>
+      <div class="mode-row">
+        <button class="mode-btn" data-mode="horse">
+          <span class="mode-emoji">🐴</span>
+          <span class="mode-name">Đua Ngựa</span>
+          <span class="mode-desc">Phi trên đường đua</span>
+        </button>
+        <button class="mode-btn" data-mode="duck">
+          <span class="mode-emoji">🦆</span>
+          <span class="mode-name">Đua Vịt</span>
+          <span class="mode-desc">Bơi trên hồ bơi</span>
+        </button>
+      </div>
 
-      <button id="start-btn" disabled>🏁 Bắt đầu đua!</button>
+      <div id="racer-config" class="hidden">
+        <div class="config-head">
+          <span id="racer-count-label">2 người chơi</span>
+          <button id="add-racer" class="add-btn">+ Thêm</button>
+        </div>
+        <div id="name-inputs"></div>
+        <button id="start-btn">🏁 Bắt đầu đua!</button>
+      </div>
     </section>
 
     <!-- ── RACE ──────────────────────────────────────────────── -->
@@ -51,6 +67,7 @@
         <div class="race-status"><span class="live-dot"></span> ĐANG ĐUA</div>
         <div class="race-timer" id="race-timer">0.00s</div>
       </div>
+      <p class="race-title" id="race-title">🏇 Đường Đua</p>
       <div id="commentary" class="commentary"></div>
       <div id="track"></div>
     </section>
