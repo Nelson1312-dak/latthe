@@ -18,6 +18,7 @@
   --c-tarot: #7c3aed;     /* Purple */
   --c-tuvi: #e8930a;      /* Amber gold */
   --c-thuvien: #2563eb;   /* Deep blue */
+  --c-thansohoc: #6366f1; /* Indigo */
 }
 
 * {
@@ -354,6 +355,7 @@ body {
 .article-body h2.gieoque { border-left-color: var(--c-gieoque); }
 .article-body h2.tarot { border-left-color: var(--c-tarot); }
 .article-body h2.tuvi { border-left-color: var(--c-tuvi); }
+.article-body h2.thansohoc { border-left-color: var(--c-thansohoc); }
 
 .article-body h3 {
   font-size: 18px;
@@ -506,6 +508,7 @@ body {
 .article-cta.gieoque { background-color: var(--c-gieoque); }
 .article-cta.tarot { background-color: var(--c-tarot); }
 .article-cta.tuvi { background-color: var(--c-tuvi); }
+.article-cta.thansohoc { background-color: var(--c-thansohoc); }
 
 /* --- FOOTER --- */
 .footer {
