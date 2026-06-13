@@ -56,9 +56,12 @@ function fileNameFor(num, hex) {
   return `que-${num}-${slugify(hex.vn)}.html`;
 }
 
+// cleanUrls:true serves and canonicalizes the extensionless path (the .html
+// 308-redirects to it), so every URL/link/sitemap entry must drop .html.
+const linkFor = (num, hex) => `/kinh-dich/${fileNameFor(num, hex).replace(/\.html$/, '')}`;
+
 function buildPage(num, hex) {
-  const slugFile = fileNameFor(num, hex);
-  const url = `https://latbai.vn/kinh-dich/${slugFile}`;
+  const url = `https://latbai.vn${linkFor(num, hex)}`;
   const upper = TRIGRAMS[hex.sign[0]];
   const lower = TRIGRAMS[hex.sign[1]];
   const title = `Quẻ ${hex.vn} (Quẻ Số ${num}) — Ý Nghĩa & Lời Khuyên | latbai.vn`;
@@ -198,8 +201,8 @@ ${faq.map((f) => `          <details class="faq-item">
     <div class="related-articles">
       <h3 class="related-title">Quẻ liền kề &amp; bài viết liên quan</h3>
       <div class="related-list">
-        <a href="/kinh-dich/${fileNameFor(prevNum, prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Quẻ ${prevNum}: ${esc(prev.vn)}</a>
-        <a href="/kinh-dich/${fileNameFor(nextNum, next)}" class="related-item"><i class="ti ti-arrow-right"></i> Quẻ ${nextNum}: ${esc(next.vn)}</a>${deepLink}
+        <a href="${linkFor(prevNum, prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Quẻ ${prevNum}: ${esc(prev.vn)}</a>
+        <a href="${linkFor(nextNum, next)}" class="related-item"><i class="ti ti-arrow-right"></i> Quẻ ${nextNum}: ${esc(next.vn)}</a>${deepLink}
         <a href="/thuvien/64-que-kinh-dich.html" class="related-item"><i class="ti ti-article"></i> 64 Quẻ Kinh Dịch: Ý Nghĩa, Cấu Tạo &amp; Cách Tra Cứu</a>
       </div>
     </div>
@@ -236,7 +239,7 @@ function buildHub() {
     return `            <tr>
               <td><strong>${num}</strong></td>
               <td style="font-size:22px;">${h.symbol}</td>
-              <td><a href="/kinh-dich/${fileNameFor(num, h)}">${esc(h.vn)}</a></td>
+              <td><a href="${linkFor(num, h)}">${esc(h.vn)}</a></td>
               <td>${h.sign}</td>
             </tr>`;
   }).join('\n');
@@ -256,7 +259,7 @@ function buildHub() {
         itemListElement: Object.entries(HEXAGRAMS).map(([n, h]) => ({
           '@type': 'ListItem', position: Number(n),
           name: `Quẻ ${h.vn}`,
-          url: `https://latbai.vn/kinh-dich/${fileNameFor(Number(n), h)}`,
+          url: `https://latbai.vn${linkFor(Number(n), h)}`,
         })),
       },
       {
@@ -371,9 +374,8 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 const urls = ['https://latbai.vn/kinh-dich/'];
 for (const [n, hex] of Object.entries(HEXAGRAMS)) {
   const num = Number(n);
-  const file = fileNameFor(num, hex);
-  fs.writeFileSync(path.join(OUT_DIR, file), buildPage(num, hex), 'utf8');
-  urls.push(`https://latbai.vn/kinh-dich/${file}`);
+  fs.writeFileSync(path.join(OUT_DIR, fileNameFor(num, hex)), buildPage(num, hex), 'utf8');
+  urls.push(`https://latbai.vn${linkFor(num, hex)}`);
 }
 fs.writeFileSync(path.join(OUT_DIR, 'index.html'), buildHub(), 'utf8');
 console.log(`Generated ${urls.length} pages in /kinh-dich/`);

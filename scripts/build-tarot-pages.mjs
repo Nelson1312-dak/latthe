@@ -61,10 +61,11 @@ const ALL = [
 ];
 
 const fileFor = (card) => `${slugify(card.name)}.html`;
+// cleanUrls:true canonicalizes the extensionless path; drop .html from URLs/links.
+const linkFor = (card) => `/la-bai-tarot/${slugify(card.name)}`;
 
 function buildPage(card, idx) {
-  const slugFile = fileFor(card);
-  const url = `https://latbai.vn/la-bai-tarot/${slugFile}`;
+  const url = `https://latbai.vn${linkFor(card)}`;
   const title = `Lá Bài ${card.name} (${card.vn}): Ý Nghĩa Xuôi & Ngược | latbai.vn`;
   const desc = `Ý nghĩa lá bài ${card.name} (${card.vn}) trong Tarot: giải nghĩa xuôi, nghĩa ngược, từ khóa và lời khuyên. Rút bài Tarot online miễn phí với AI luận giải tiếng Việt.`;
 
@@ -192,8 +193,8 @@ ${faq.map((f) => `          <details class="faq-item">
     <div class="related-articles">
       <h3 class="related-title">Lá liền kề &amp; bài viết liên quan</h3>
       <div class="related-list">
-        <a href="/la-bai-tarot/${fileFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> ${esc(prev.name)} (${esc(prev.vn)})</a>
-        <a href="/la-bai-tarot/${fileFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> ${esc(next.name)} (${esc(next.vn)})</a>${deepLink}
+        <a href="${linkFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> ${esc(prev.name)} (${esc(prev.vn)})</a>
+        <a href="${linkFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> ${esc(next.name)} (${esc(next.vn)})</a>${deepLink}
         <a href="/thuvien/y-nghia-78-la-bai-tarot.html" class="related-item"><i class="ti ti-article"></i> Ý Nghĩa 78 Lá Bài Tarot — Tổng Quan Major &amp; Minor Arcana</a>
       </div>
     </div>
@@ -236,7 +237,7 @@ function buildHub() {
   const sections = groups.map((g) => {
     const cards = ALL.filter((c) => c.group === g.key);
     const links = cards.map((c) =>
-      `          <a href="/la-bai-tarot/${fileFor(c)}" class="related-item"><i class="ti ti-cards"></i> ${esc(c.name)} (${esc(c.vn)})</a>`
+      `          <a href="${linkFor(c)}" class="related-item"><i class="ti ti-cards"></i> ${esc(c.name)} (${esc(c.vn)})</a>`
     ).join('\n');
     return `      <h2 class="tarot">${esc(g.label)}</h2>
       <div class="related-list" style="margin-bottom:18px;">
@@ -250,7 +251,7 @@ ${links}
       { '@type': 'CollectionPage', name: 'Ý Nghĩa 78 Lá Bài Tarot — Tra cứu từng lá', description: desc, url,
         publisher: { '@type': 'Organization', name: 'latbai.vn', logo: { '@type': 'ImageObject', url: 'https://latbai.vn/images/icon.svg' } } },
       { '@type': 'ItemList',
-        itemListElement: ALL.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, url: `https://latbai.vn/la-bai-tarot/${fileFor(c)}` })) },
+        itemListElement: ALL.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, url: `https://latbai.vn${linkFor(c)}` })) },
       { '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Trang Chủ', item: 'https://latbai.vn/' },
@@ -349,7 +350,7 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 const urls = ['https://latbai.vn/la-bai-tarot/'];
 ALL.forEach((card, idx) => {
   fs.writeFileSync(path.join(OUT_DIR, fileFor(card)), buildPage(card, idx), 'utf8');
-  urls.push(`https://latbai.vn/la-bai-tarot/${fileFor(card)}`);
+  urls.push(`https://latbai.vn${linkFor(card)}`);
 });
 fs.writeFileSync(path.join(OUT_DIR, 'index.html'), buildHub(), 'utf8');
 console.log(`Generated ${urls.length} pages in /la-bai-tarot/`);

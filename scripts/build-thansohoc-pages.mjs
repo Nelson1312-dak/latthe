@@ -39,6 +39,9 @@ const personaOf = (html) => {
   return m ? m[1].trim() : '';
 };
 const fileFor = (num) => `so-${num.n}.html`;
+// cleanUrls:true canonicalizes the extensionless path; drop .html from URLs/links.
+const linkFor = (num) => `/thansohoc/so-${num.n}`;
+const HUB_LINK = '/thansohoc/so-chu-dao';
 
 function buildPage(num, idx) {
   const lp = NUM_MEANINGS.lifepath[num.lp];
@@ -47,8 +50,7 @@ function buildPage(num, idx) {
   const personality = NUM_MEANINGS.personality[num.other];
   const persona = personaOf(lp);
 
-  const slugFile = fileFor(num);
-  const url = `https://latbai.vn/thansohoc/${slugFile}`;
+  const url = `https://latbai.vn${linkFor(num)}`;
   const title = `Thần Số Học Số ${num.n}${persona ? `: ${persona}` : ''} | latbai.vn`;
   const desc = `Ý nghĩa số chủ đạo ${num.n} trong Thần Số Học: tính cách, sứ mệnh, linh hồn, nhân cách và lời khuyên. Tra cứu thần số học online miễn phí hơn 20 chỉ số với AI.`;
 
@@ -114,7 +116,7 @@ function buildPage(num, idx) {
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="/"><i class="ti ti-home"></i> Trang Chủ</a>
       <i class="ti ti-chevron-right"></i>
-      <a href="/thansohoc/so-chu-dao.html">12 Số Chủ Đạo</a>
+      <a href="${HUB_LINK}">12 Số Chủ Đạo</a>
       <i class="ti ti-chevron-right"></i>
       <span>Số ${num.n}</span>
     </nav>
@@ -167,9 +169,9 @@ ${faq.map((f) => `          <details class="faq-item">
     <div class="related-articles">
       <h3 class="related-title">Số liền kề &amp; bài viết liên quan</h3>
       <div class="related-list">
-        <a href="/thansohoc/${fileFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Thần Số Học ${esc(prev.label)}</a>
-        <a href="/thansohoc/${fileFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> Thần Số Học ${esc(next.label)}</a>
-        <a href="/thansohoc/so-chu-dao.html" class="related-item"><i class="ti ti-list-numbers"></i> Tổng Quan 12 Số Chủ Đạo Thần Số Học</a>
+        <a href="${linkFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Thần Số Học ${esc(prev.label)}</a>
+        <a href="${linkFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> Thần Số Học ${esc(next.label)}</a>
+        <a href="${HUB_LINK}" class="related-item"><i class="ti ti-list-numbers"></i> Tổng Quan 12 Số Chủ Đạo Thần Số Học</a>
       </div>
     </div>
 
@@ -196,13 +198,13 @@ ${faq.map((f) => `          <details class="faq-item">
 }
 
 function buildHub() {
-  const url = 'https://latbai.vn/thansohoc/so-chu-dao.html';
+  const url = `https://latbai.vn${HUB_LINK}`;
   const title = '12 Số Chủ Đạo Thần Số Học: Ý Nghĩa Từng Số & Cách Tính | latbai.vn';
   const desc = 'Tổng quan 12 số chủ đạo trong Thần Số Học Pythagoras: số 1-9 và các số Master 11, 22, 33. Ý nghĩa, tính cách từng số và công cụ tra cứu online miễn phí với AI.';
 
   const links = NUMBERS.map((num) => {
     const persona = personaOf(NUM_MEANINGS.lifepath[num.lp]);
-    return `          <a href="/thansohoc/${fileFor(num)}" class="related-item"><i class="ti ti-hash"></i> ${esc(num.label)}${persona ? ` — ${esc(persona)}` : ''}</a>`;
+    return `          <a href="${linkFor(num)}" class="related-item"><i class="ti ti-hash"></i> ${esc(num.label)}${persona ? ` — ${esc(persona)}` : ''}</a>`;
   }).join('\n');
 
   const jsonLd = {
@@ -211,7 +213,7 @@ function buildHub() {
       { '@type': 'CollectionPage', name: '12 Số Chủ Đạo Thần Số Học', description: desc, url,
         publisher: { '@type': 'Organization', name: 'latbai.vn', logo: { '@type': 'ImageObject', url: 'https://latbai.vn/images/icon.svg' } } },
       { '@type': 'ItemList',
-        itemListElement: NUMBERS.map((num, i) => ({ '@type': 'ListItem', position: i + 1, name: `Thần số học ${num.label}`, url: `https://latbai.vn/thansohoc/${fileFor(num)}` })) },
+        itemListElement: NUMBERS.map((num, i) => ({ '@type': 'ListItem', position: i + 1, name: `Thần số học ${num.label}`, url: `https://latbai.vn${linkFor(num)}` })) },
       { '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Trang Chủ', item: 'https://latbai.vn/' },
@@ -300,10 +302,10 @@ ${links}
 }
 
 // ---- Generate ----
-const urls = ['https://latbai.vn/thansohoc/so-chu-dao.html'];
+const urls = [`https://latbai.vn${HUB_LINK}`];
 NUMBERS.forEach((num, idx) => {
   fs.writeFileSync(path.join(OUT_DIR, fileFor(num)), buildPage(num, idx), 'utf8');
-  urls.push(`https://latbai.vn/thansohoc/${fileFor(num)}`);
+  urls.push(`https://latbai.vn${linkFor(num)}`);
 });
 fs.writeFileSync(path.join(OUT_DIR, 'so-chu-dao.html'), buildHub(), 'utf8');
 console.log(`Generated ${urls.length} pages in /thansohoc/`);
@@ -315,7 +317,7 @@ const block = [
     <loc>${u}</loc>
     <lastmod>${TODAY}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>${u.endsWith('so-chu-dao.html') ? '0.8' : '0.6'}</priority>
+    <priority>${u.endsWith('/so-chu-dao') ? '0.8' : '0.6'}</priority>
   </url>`),
   '  <!-- thansohoc:end -->',
 ].join('\n');
