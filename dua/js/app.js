@@ -3,7 +3,7 @@
 /* ── Modes ──────────────────────────────────────────────────────── */
 const MODES = {
   horse: {
-    emoji: '🐴', label: 'Ngựa', verb: 'phi', boostFx: '🚀',
+    emoji: '🏇', label: 'Ngựa', verb: 'phi', boostFx: '🚀',
     title: '🏇 Đường Đua Ngựa',
     lines: {
       boost:  n => `🚀 ${n} phi nước đại bứt phá!`,
@@ -189,27 +189,26 @@ function doCountdown() {
 /* ── Build track ────────────────────────────────────────────────── */
 function buildTrack() {
   track.innerHTML = '';
+
+  // shared finish post spanning every lane
+  const post = document.createElement('div');
+  post.className = 'finish-post';
+  post.innerHTML = '<span class="finish-flag">🏁</span>';
+  track.appendChild(post);
+
   racers.forEach((r, i) => {
     const lane = document.createElement('div');
     lane.className = 'lane';
     lane.style.setProperty('--lc', r.color);
     lane.innerHTML = `
-      <div class="rank-badge" id="rank-${i}">–</div>
-      <div class="lane-body">
-        <div class="lane-meta">
-          <span class="lane-name">${escapeHtml(r.name)}</span>
-          <span class="lane-pct" id="pct-${i}">0%</span>
-        </div>
-        <div class="road" id="road-${i}">
-          <div class="road-tex"></div>
-          <div class="finish-line"></div>
-          <div class="finish-flag">🏁</div>
-          <div class="racer" id="racer-${i}">
-            <span class="racer-trail"></span>
-            <span class="racer-fx" id="fx-${i}"></span>
-            <span class="racer-emoji">${r.emoji}</span>
-          </div>
-        </div>
+      <div class="racer" id="racer-${i}">
+        <span class="name-pill">
+          <b class="rank" id="rank-${i}">–</b>
+          <span class="pill-name">${escapeHtml(r.name)}</span>
+        </span>
+        <span class="racer-trail"></span>
+        <span class="racer-fx" id="fx-${i}"></span>
+        <span class="racer-emoji">${r.emoji}</span>
       </div>`;
     track.appendChild(lane);
   });
