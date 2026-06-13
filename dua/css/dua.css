@@ -222,14 +222,13 @@ body {
               inset 0 9px 16px rgba(0,0,0,.32),
               inset 0 -9px 16px rgba(0,0,0,.32);
 }
-#track.mode-horse::before { /* distance markers across whole course */
+/* faint dirt furrows that rush by while racing (NOT finish-line-like) */
+#track.mode-horse::before {
   content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background: repeating-linear-gradient(90deg,
-    transparent 0 66px, rgba(255,255,255,.08) 66px 69px);
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,.13) 0 2px, transparent 2px 24px);
 }
-/* ground scrolls backward while racing → sense of speed */
-#track.mode-horse.racing::before { animation: groundScroll .45s linear infinite; }
-@keyframes groundScroll { from { background-position: 0 0; } to { background-position: -69px 0; } }
+#track.mode-horse.racing::before { animation: groundScroll .5s linear infinite; }
+@keyframes groundScroll { from { background-position: 0 0; } to { background-position: -24px 0; } }
 
 /* DUCK — pool water with tiled edges */
 #track.mode-duck {
@@ -316,10 +315,12 @@ body {
   background: radial-gradient(ellipse, rgba(0,0,0,.45), transparent 72%);
   transform: translateX(-50%); z-index: 1;
 }
-.racer.running .racer-shadow { animation: shadowPulse .2s ease-in-out infinite alternate; }
+/* shadow shrinks at the top of the bound, biggest on landing — synced to gallop */
+.mode-horse .racer.running .racer-shadow { animation: shadowPulse .42s ease-in-out infinite; }
+.mode-duck  .racer.running .racer-shadow { animation: shadowPulse .42s ease-in-out infinite; }
 @keyframes shadowPulse {
-  from { transform: translateX(-50%) scale(1);   opacity: .45; }
-  to   { transform: translateX(-50%) scale(.65); opacity: .22; }
+  0%,100% { transform: translateX(-50%) scale(1);   opacity: .45; }
+  45%     { transform: translateX(-50%) scale(.55); opacity: .18; }
 }
 .mode-duck .racer-shadow {
   background: radial-gradient(ellipse, rgba(3,55,90,.5), transparent 72%);
@@ -376,20 +377,26 @@ body {
   100% { opacity: 0; transform: translate(-50%, -24px) scale(1); }
 }
 
-/* ── HORSE gallop (faces right via scaleX(-1)) ─────────────────── */
-.mode-horse .racer.running .racer-emoji { animation: gallop .2s ease-in-out infinite alternate; }
+/* ── HORSE gallop — full bounding stride (faces right via scaleX(-1)) ── */
+.mode-horse .racer.running .racer-emoji { animation: gallop .42s ease-in-out infinite; }
 @keyframes gallop {
-  from { transform: scaleX(-1) translateY(0)   rotate(-3deg); }
-  to   { transform: scaleX(-1) translateY(-10px) rotate(3deg); }
+  0%   { transform: scaleX(-1)    translateY(0)    rotate(-3deg); }  /* land, gather */
+  20%  { transform: scaleX(-1.06) translateY(-6px)  rotate(4deg); }  /* push off, stride extends */
+  45%  { transform: scaleX(-1)    translateY(-13px) rotate(-1deg); } /* suspension, airborne */
+  70%  { transform: scaleX(-1.03) translateY(-6px)  rotate(3deg); }  /* descending */
+  100% { transform: scaleX(-1)    translateY(0)    rotate(-3deg); }  /* land */
 }
-.mode-horse .racer.running .racer-trail { animation: trailFlick .2s ease-out infinite; }
+.mode-horse .racer.running .racer-trail { animation: trailFlick .42s ease-out infinite; }
 .mode-horse .racer.boosting .racer-emoji {
-  animation: gallopFast .12s ease-in-out infinite alternate;
+  animation: gallopFast .26s ease-in-out infinite;
   filter: drop-shadow(0 0 8px var(--lc));
 }
 @keyframes gallopFast {
-  from { transform: scaleX(-1) translateY(-3px) rotate(-7deg); }
-  to   { transform: scaleX(-1) translateY(-15px) rotate(7deg); }
+  0%   { transform: scaleX(-1)    translateY(-2px)  rotate(-5deg); }
+  20%  { transform: scaleX(-1.09) translateY(-10px) rotate(6deg); }
+  45%  { transform: scaleX(-1)    translateY(-18px) rotate(-2deg); }
+  70%  { transform: scaleX(-1.05) translateY(-9px)  rotate(5deg); }
+  100% { transform: scaleX(-1)    translateY(-2px)  rotate(-5deg); }
 }
 @keyframes trailFlick { 0% { opacity: .7; width: 28px; } 100% { opacity: 0; width: 12px; } }
 
