@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đua Thú 🏆 — Chọn Con, Đặt Cược, Xem Ai Thắng | latbai.vn</title>
-  <meta name="description" content="Chọn 2–6 con thú, đặt tên, bấm đua và xem con nào về đích đầu tiên! Mini game vui cho nhóm bạn.">
+  <title>Đua Thú 🏆 — Đua Ngựa & Đua Vịt Online | latbai.vn</title>
+  <meta name="description" content="Đua ngựa trên đường đua hoặc đua vịt dưới hồ bơi. Thêm tên bạn bè không giới hạn, chọn thời lượng, xem ai về đích đầu tiên! Mini game vui cho nhóm bạn.">
   <link rel="canonical" href="https://latbai.vn/dua/">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Đua Thú 🏆 — Game đua ngựa, vịt, thỏ... ai thắng ai thua?">
-  <meta property="og:description" content="Chọn con thú, đặt tên, xem ai về đích! Mini game vui miễn phí tại latbai.vn.">
+  <meta property="og:title" content="Đua Thú 🏆 — Đua Ngựa & Đua Vịt Online">
+  <meta property="og:description" content="Đua ngựa hoặc đua vịt, thêm tên bạn bè không giới hạn, xem ai về đích! Mini game vui miễn phí tại latbai.vn.">
   <meta property="og:url" content="https://latbai.vn/dua/">
   <meta property="og:image" content="https://latbai.vn/images/og-default.png">
   <meta property="og:site_name" content="latbai.vn">
@@ -17,7 +17,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="/dua/css/dua.css">
 </head>
 <body>
@@ -57,6 +56,17 @@
           <button id="add-racer" class="add-btn">+ Thêm</button>
         </div>
         <div id="name-inputs"></div>
+
+        <div class="dur-row">
+          <span class="dur-label">⏱️ Thời lượng đua</span>
+          <div class="dur-opts">
+            <button class="dur-btn" data-sec="5">5s</button>
+            <button class="dur-btn chosen" data-sec="10">10s</button>
+            <button class="dur-btn" data-sec="20">20s</button>
+            <button class="dur-btn" data-sec="30">30s</button>
+          </div>
+        </div>
+
         <button id="start-btn">🏁 Bắt đầu đua!</button>
       </div>
     </section>
@@ -89,16 +99,6 @@
 
   <div id="countdown"><span class="cd-text"></span></div>
   <div id="photo-finish">📸 SÁT NÚT!</div>
-
-  <nav class="floating-dock">
-    <a href="/"         class="dock-item" title="Trang chủ"><i class="ti ti-home"></i><span class="dock-label">Trang chủ</span></a>
-    <a href="/gieoque/" class="dock-item" title="Gieo Quẻ"><i class="ti ti-yin-yang"></i><span class="dock-label">Gieo Quẻ</span></a>
-    <a href="/tarot/"   class="dock-item" title="Tarot"><i class="ti ti-wand"></i><span class="dock-label">Tarot</span></a>
-    <a href="/drinking/" class="dock-item" title="Drinking"><i class="ti ti-beer"></i><span class="dock-label">Drinking</span></a>
-    <a href="/dua/"     class="dock-item active" title="Đua Thú"><i class="ti ti-trophy"></i><span class="dock-label">Đua Thú</span></a>
-    <div class="dock-divider"></div>
-    <a href="/ten/"     class="dock-item" title="Giải Mã Tên"><i class="ti ti-sparkles"></i><span class="dock-label">Tên</span></a>
-  </nav>
 
   <script defer src="/_vercel/insights/script.js"></script>
   <script src="/dua/js/app.js" defer></script>

@@ -3,18 +3,19 @@
 /* ── Modes ──────────────────────────────────────────────────────── */
 const MODES = {
   horse: {
-    emoji: '🏇', label: 'Ngựa', verb: 'phi', boostFx: '🚀',
+    emoji: '🏇', label: 'Ngựa', boostFx: '🚀', slowFx: '💫',
     title: '🏇 Đường Đua Ngựa',
     lines: {
       boost:  n => `🚀 ${n} phi nước đại bứt phá!`,
-      stumble:n => `💫 ${n} vấp ngã, mất đà!`,
+      stumble:n => `💫 ${n} chùng chân, mất đà!`,
       lead:   n => `👑 ${n} bứt lên dẫn đầu!`,
       finish: n => `🏁 ${n.toUpperCase()} VỀ ĐÍCH ĐẦU TIÊN! 🎉`,
       start:  '🚦 TIẾNG CÒI VANG LÊN — BẦY NGỰA LAO ĐI!',
+      ready:  '🎙️ Bầy ngựa đã vào vạch xuất phát...',
     },
   },
   duck: {
-    emoji: '🦆', label: 'Vịt', verb: 'bơi', boostFx: '💦',
+    emoji: '🦆', label: 'Vịt', boostFx: '💦', slowFx: '🌀',
     title: '🏊 Hồ Bơi Đua Vịt',
     lines: {
       boost:  n => `💦 ${n} rẽ nước tăng tốc vùn vụt!`,
@@ -22,6 +23,7 @@ const MODES = {
       lead:   n => `👑 ${n} bơi vươn lên dẫn đầu!`,
       finish: n => `🏁 ${n.toUpperCase()} CHẠM THÀNH ĐẦU TIÊN! 🎉`,
       start:  '🌊 CÒI HƠI VANG — ĐÀN VỊT LAO XUỐNG NƯỚC!',
+      ready:  '🎙️ Đàn vịt đã sẵn sàng trên thành hồ...',
     },
   },
 };
@@ -31,17 +33,21 @@ const PALETTE = [
   '#a3e635', '#e879f9', '#fb923c', '#22d3ee', '#c084fc', '#34d399',
 ];
 
-/* ── State ──────────────────────────────────────────────────────── */
-let raceMode  = null;       // 'horse' | 'duck'
-let names     = ['', ''];   // editable player names
-let racers    = [];
-let winnerIdx = -1;
-let timer     = null;
-let phase     = 'setup';
-let raceStart = 0;
-let timerRAF  = null;
+const TICK_MS = 60;
 
-let tickCount   = 0;
+/* ── State ──────────────────────────────────────────────────────── */
+let raceMode    = null;
+let durationSec = 10;
+let names       = ['', ''];
+let racers      = [];
+let winnerIdx   = -1;
+let timer       = null;
+let phase       = 'setup';
+let raceStart   = 0;
+let timerRAF    = null;
+
+let totalTicks  = 0;
+let curTick     = 0;
 let curLeader   = -1;
 let photoShown  = false;
 let finishCount = 0;
@@ -55,6 +61,7 @@ const configEl    = document.getElementById('racer-config');
 const nameWrap    = document.getElementById('name-inputs');
 const addRacerBtn = document.getElementById('add-racer');
 const countLabel  = document.getElementById('racer-count-label');
+const durBtns     = document.querySelectorAll('.dur-btn');
 const startBtn    = document.getElementById('start-btn');
 const track       = document.getElementById('track');
 const raceTitle   = document.getElementById('race-title');
@@ -73,6 +80,14 @@ modeBtns.forEach(btn => {
     modeBtns.forEach(b => b.classList.toggle('chosen', b === btn));
     configEl.classList.remove('hidden');
     renderNameInputs();
+  });
+});
+
+/* ── Duration select ────────────────────────────────────────────── */
+durBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    durationSec = +btn.dataset.sec;
+    durBtns.forEach(b => b.classList.toggle('chosen', b === btn));
   });
 });
 
@@ -96,51 +111,64 @@ function renderNameInputs() {
     nameWrap.appendChild(row);
   });
 
-  // wire inputs
   nameWrap.querySelectorAll('.name-input').forEach(inp => {
-    inp.addEventListener('input', e => {
-      names[+e.target.dataset.idx] = e.target.value;
-    });
+    inp.addEventListener('input', e => { names[+e.target.dataset.idx] = e.target.value; });
   });
   nameWrap.querySelectorAll('.remove-racer').forEach(b => {
-    b.addEventListener('click', () => {
-      names.splice(+b.dataset.idx, 1);
-      renderNameInputs();
-    });
+    b.addEventListener('click', () => { names.splice(+b.dataset.idx, 1); renderNameInputs(); });
   });
 
   countLabel.textContent = `${names.length} ${MODES[raceMode].label}`;
 }
 
 addRacerBtn.addEventListener('click', () => {
-  // capture current values first
-  nameWrap.querySelectorAll('.name-input').forEach(inp => {
-    names[+inp.dataset.idx] = inp.value;
-  });
+  nameWrap.querySelectorAll('.name-input').forEach(inp => { names[+inp.dataset.idx] = inp.value; });
   names.push('');
   renderNameInputs();
   // no auto-focus — avoids popping the mobile keyboard on every add
 });
 
+/* ── Plan builder: per-tick speeds summing to targetEnd ─────────── */
+function buildPlan(ticks, targetEnd) {
+  const seg = 7;
+  const raw = [];
+  let level = 0.6 + Math.random() * 1.4;
+  for (let t = 0; t < ticks; t++) {
+    if (t % seg === 0) {
+      const e = Math.random();
+      if (e < 0.12)      level = 3.0 + Math.random() * 1.6;   // surge
+      else if (e < 0.20) level = 0.12 + Math.random() * 0.18; // stall
+      else               level = 0.6 + Math.random() * 1.4;   // cruise
+    }
+    raw.push(level);
+  }
+  const sum = raw.reduce((a, b) => a + b, 0) || 1;
+  return raw.map(x => (x / sum) * targetEnd);
+}
+
 /* ── Start ──────────────────────────────────────────────────────── */
 startBtn.addEventListener('click', () => {
   if (phase !== 'setup' || !raceMode) return;
-  // sync names from inputs
-  nameWrap.querySelectorAll('.name-input').forEach(inp => {
-    names[+inp.dataset.idx] = inp.value;
-  });
+  nameWrap.querySelectorAll('.name-input').forEach(inp => { names[+inp.dataset.idx] = inp.value; });
 
   const m = MODES[raceMode];
-  racers = names.map((nm, idx) => ({
-    emoji:   m.emoji,
-    color:   PALETTE[idx % PALETTE.length],
-    name:    nm.trim() || `${m.label} ${idx + 1}`,
-    pos: 0, stumble: 0, done: false, finishT: 0, boost: 0,
-  }));
-  winnerIdx = Math.floor(Math.random() * racers.length);
+  winnerIdx  = Math.floor(Math.random() * names.length);
+  totalTicks = Math.max(40, Math.round(durationSec * 1000 / TICK_MS));
+
+  racers = names.map((nm, idx) => {
+    const targetEnd = (idx === winnerIdx) ? 100 : (70 + Math.random() * 23);
+    return {
+      emoji: m.emoji,
+      color: PALETTE[idx % PALETTE.length],
+      name:  nm.trim() || `${m.label} ${idx + 1}`,
+      pos: 0, state: 'run', boost: 0, done: false, ended: false, finishT: 0,
+      plan: buildPlan(totalTicks, targetEnd),
+      avg:  targetEnd / totalTicks,
+    };
+  });
 
   phase = 'countdown';
-  tickCount = 0; curLeader = -1; photoShown = false; finishCount = 0;
+  curTick = 0; curLeader = -1; photoShown = false; finishCount = 0;
   commentary.innerHTML = '';
 
   raceTitle.textContent = m.title;
@@ -150,9 +178,7 @@ startBtn.addEventListener('click', () => {
   show(raceEl);
   buildTrack();
   raceTimer.textContent = '0.00s';
-  pushComment(raceMode === 'duck'
-    ? '🎙️ Đàn vịt đã sẵn sàng trên thành hồ...'
-    : '🎙️ Bầy ngựa đã vào vạch xuất phát...', '#8888aa');
+  pushComment(m.lines.ready, '#8888aa');
   doCountdown();
 });
 
@@ -160,10 +186,8 @@ startBtn.addEventListener('click', () => {
 function doCountdown() {
   countdown.style.display = 'flex';
   const steps = [
-    { t: '3', c: '#ef4444' },
-    { t: '2', c: '#f59e0b' },
-    { t: '1', c: '#4ade80' },
-    { t: 'GO! 🏁', c: '#38bdf8' },
+    { t: '3', c: '#ef4444' }, { t: '2', c: '#f59e0b' },
+    { t: '1', c: '#4ade80' }, { t: 'GO! 🏁', c: '#38bdf8' },
   ];
   let i = 0;
   const tick = () => {
@@ -188,7 +212,6 @@ function doCountdown() {
 function buildTrack() {
   track.innerHTML = '';
 
-  // shared finish post spanning every lane
   const post = document.createElement('div');
   post.className = 'finish-post';
   post.innerHTML = '<span class="finish-flag">🏁</span>';
@@ -204,8 +227,9 @@ function buildTrack() {
           <b class="rank" id="rank-${i}">–</b>
           <span class="pill-name">${escapeHtml(r.name)}</span>
         </span>
-        <span class="racer-trail"></span>
         <span class="racer-fx" id="fx-${i}"></span>
+        <span class="racer-trail"></span>
+        <span class="racer-shadow"></span>
         <span class="racer-emoji">${r.emoji}</span>
       </div>`;
     track.appendChild(lane);
@@ -218,10 +242,15 @@ function updatePositions() {
     const racer = document.getElementById(`racer-${i}`);
     if (!racer) return;
     racer.style.left = `calc(${r.pos / 100} * (100% - 66px))`;
-    racer.classList.remove('running', 'stumbling', 'done', 'boosting');
-    if (r.done)         racer.classList.add('done');
-    else if (r.stumble) racer.classList.add('stumbling');
-    else { racer.classList.add('running'); if (r.boost > 0) racer.classList.add('boosting'); }
+    racer.classList.remove('running', 'stumbling', 'boosting', 'done', 'idle');
+    if (r.ended) {
+      racer.classList.add(i === winnerIdx ? 'done' : 'idle');
+    } else if (r.state === 'slow') {
+      racer.classList.add('stumbling');
+    } else {
+      racer.classList.add('running');
+      if (r.boost > 0) racer.classList.add('boosting');
+    }
   });
 
   liveOrder().forEach((o, rank) => {
@@ -259,63 +288,58 @@ function runTimer() {
 function startRace() {
   phase = 'race';
   raceStart = performance.now();
+  track.classList.add('racing');
   runTimer();
-  timer = setInterval(tick, 60);
+  timer = setInterval(tick, TICK_MS);
 }
 
 function tick() {
-  tickCount++;
+  curTick++;
   const L = MODES[raceMode].lines;
-  let raceOver = false;
+  const last = curTick >= totalTicks;
 
   racers.forEach((r, i) => {
     if (r.boost > 0) r.boost--;
-    if (r.done) return;
-    if (r.stumble > 0) { r.stumble--; return; }
+    const delta = r.plan[curTick - 1] ?? 0;
+    const prev = r.state;
+    r.pos = Math.min(100, r.pos + delta);
+    r.state = delta > r.avg * 1.9 ? 'boost' : (delta < r.avg * 0.45 ? 'slow' : 'run');
 
-    const isWinner = (i === winnerIdx);
-    let speed = 1.2 + Math.random() * 1.8;
-
-    const roll = Math.random();
-    if (roll < 0.035) {
-      speed = 5 + Math.random() * 4;
+    if (r.state === 'boost' && prev !== 'boost') {
       r.boost = 5;
       popFx(i, MODES[raceMode].boostFx, 'fx-boost');
-      maybeComment(L.boost(r.name), r.color, 0.5);
-    } else if (roll < 0.06) {
-      r.stumble = 3 + Math.floor(Math.random() * 4);
-      popFx(i, raceMode === 'duck' ? '🌀' : '💫', 'fx-stumble');
-      maybeComment(L.stumble(r.name), r.color, 0.45);
-      return;
-    }
-
-    if (isWinner) speed *= 1.12;
-    const cap = isWinner ? 100 : (88 + Math.floor(Math.random() * 6));
-    r.pos = Math.min(cap, r.pos + speed);
-
-    if (r.pos >= 100) {
-      r.pos = 100; r.done = true;
-      r.finishT = performance.now() - raceStart;
-      finishCount++;
-      if (finishCount === 1) {
-        popFx(i, '🏆', 'fx-win');
-        pushComment(L.finish(r.name), r.color);
-        shake();
-      }
-      raceOver = true;
+      maybeComment(L.boost(r.name), r.color, 0.45);
+    } else if (r.state === 'slow' && prev !== 'slow') {
+      popFx(i, MODES[raceMode].slowFx, 'fx-stumble');
+      maybeComment(L.stumble(r.name), r.color, 0.4);
     }
   });
 
   detectDrama();
   updatePositions();
 
-  if (raceOver) {
+  if (last) {
     clearInterval(timer);
     cancelAnimationFrame(timerRAF);
-    raceTimer.textContent = `${((performance.now() - raceStart) / 1000).toFixed(2)}s`;
-    racers.forEach(r => { if (!r.done) { r.done = true; r.finishT = 99999 - r.pos; } });
-    setTimeout(() => { updatePositions(); setTimeout(showResult, 600); }, 280);
+    finishRace();
   }
+}
+
+function finishRace() {
+  // winner crosses the line exactly at the chosen duration
+  racers[winnerIdx].pos = 100;
+  raceTimer.textContent = `${durationSec.toFixed(2)}s`;
+
+  // finish order by position
+  const order = [...racers].sort((a, b) => (b === racers[winnerIdx] ? 1 : a === racers[winnerIdx] ? -1 : b.pos - a.pos));
+  order.forEach((r, idx) => { r.done = true; r.ended = true; r.finishT = idx; });
+
+  popFx(winnerIdx, '🏆', 'fx-win');
+  pushComment(MODES[raceMode].lines.finish(racers[winnerIdx].name), racers[winnerIdx].color);
+  shake();
+  track.classList.remove('racing');
+  updatePositions();
+  setTimeout(showResult, 700);
 }
 
 /* ── Drama ──────────────────────────────────────────────────────── */
@@ -325,16 +349,16 @@ function detectDrama() {
   const L = MODES[raceMode].lines;
 
   const newLeader = order[0].i;
-  if (finishCount === 0 && curLeader !== -1 && newLeader !== curLeader && order[0].pos > 12) {
+  if (curLeader !== -1 && newLeader !== curLeader && order[0].pos > 14) {
     const r = racers[newLeader];
-    maybeComment(L.lead(r.name), r.color, 0.85);
+    maybeComment(L.lead(r.name), r.color, 0.8);
     flashLead(newLeader);
   }
   curLeader = newLeader;
 
-  if (!photoShown && finishCount === 0 && order.length >= 2) {
+  if (!photoShown && order.length >= 2) {
     const a = order[0], b = order[1];
-    if (!a.done && a.pos >= 80 && Math.abs(a.pos - b.pos) <= 6) {
+    if (a.pos >= 82 && Math.abs(a.pos - b.pos) <= 5) {
       photoShown = true;
       track.classList.add('photo');
       photoBanner.classList.add('show');
@@ -383,9 +407,7 @@ function pushComment(text, color) {
     el.style.opacity = idx === 0 ? '1' : idx === 1 ? '0.55' : '0.3';
   });
 }
-function maybeComment(text, color, prob) {
-  if (Math.random() < prob) pushComment(text, color);
-}
+function maybeComment(text, color, prob) { if (Math.random() < prob) pushComment(text, color); }
 
 /* ── Result ─────────────────────────────────────────────────────── */
 function showResult() {
@@ -466,11 +488,10 @@ raceAgain.addEventListener('click', () => {
   clearInterval(timer);
   cancelAnimationFrame(timerRAF);
   phase = 'setup'; racers = []; winnerIdx = -1;
-  track.innerHTML = ''; resultMain.innerHTML = ''; commentary.innerHTML = '';
-  track.classList.remove('photo');
+  track.innerHTML = ''; track.classList.remove('racing', 'photo');
+  resultMain.innerHTML = ''; commentary.innerHTML = '';
   photoBanner.classList.remove('show');
   hide(resultEl); hide(raceEl); show(setupEl);
-  // keep mode + names so user can re-race the same crew quickly
   if (raceMode) renderNameInputs();
 });
 
