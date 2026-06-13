@@ -119,9 +119,7 @@ addRacerBtn.addEventListener('click', () => {
   });
   names.push('');
   renderNameInputs();
-  // focus the new field
-  const last = nameWrap.querySelector('.name-row:last-child .name-input');
-  if (last) last.focus();
+  // no auto-focus — avoids popping the mobile keyboard on every add
 });
 
 /* ── Start ──────────────────────────────────────────────────────── */
@@ -218,10 +216,8 @@ function buildTrack() {
 function updatePositions() {
   racers.forEach((r, i) => {
     const racer = document.getElementById(`racer-${i}`);
-    const pct   = document.getElementById(`pct-${i}`);
     if (!racer) return;
-    racer.style.left = `calc(${r.pos / 100} * (100% - 50px))`;
-    if (pct) pct.textContent = `${Math.round(r.pos)}%`;
+    racer.style.left = `calc(${r.pos / 100} * (100% - 66px))`;
     racer.classList.remove('running', 'stumbling', 'done', 'boosting');
     if (r.done)         racer.classList.add('done');
     else if (r.stumble) racer.classList.add('stumbling');
@@ -281,16 +277,15 @@ function tick() {
     let speed = 1.2 + Math.random() * 1.8;
 
     const roll = Math.random();
-    if (roll < 0.045) {
-      speed = 5 + Math.random() * 5;
+    if (roll < 0.035) {
+      speed = 5 + Math.random() * 4;
       r.boost = 5;
       popFx(i, MODES[raceMode].boostFx, 'fx-boost');
-      maybeComment(L.boost(r.name), r.color, 0.7);
-      shake();
-    } else if (roll < 0.075) {
-      r.stumble = 3 + Math.floor(Math.random() * 5);
+      maybeComment(L.boost(r.name), r.color, 0.5);
+    } else if (roll < 0.06) {
+      r.stumble = 3 + Math.floor(Math.random() * 4);
       popFx(i, raceMode === 'duck' ? '🌀' : '💫', 'fx-stumble');
-      maybeComment(L.stumble(r.name), r.color, 0.6);
+      maybeComment(L.stumble(r.name), r.color, 0.45);
       return;
     }
 

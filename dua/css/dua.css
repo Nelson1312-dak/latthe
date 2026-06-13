@@ -181,10 +181,10 @@ body {
 ══════════════════════════════════════════════════════════════════ */
 #track {
   position: relative;
-  border-radius: 16px;
-  padding: 6px 14px;
+  border-radius: 18px;
+  padding: 10px 16px;
   overflow: hidden;
-  box-shadow: 0 8px 28px rgba(0,0,0,.4);
+  box-shadow: 0 10px 34px rgba(0,0,0,.45);
 }
 
 /* HORSE — dirt course with grass borders */
@@ -197,7 +197,7 @@ body {
 #track.mode-horse::before { /* distance markers across whole course */
   content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
   background: repeating-linear-gradient(90deg,
-    transparent 0 54px, rgba(255,255,255,.07) 54px 57px);
+    transparent 0 66px, rgba(255,255,255,.08) 66px 69px);
 }
 
 /* DUCK — pool water with tiled edges */
@@ -221,13 +221,13 @@ body {
 
 /* Shared finish post (checkered) spanning all lanes */
 .finish-post {
-  position: absolute; top: 8px; bottom: 8px; right: 12px; width: 10px; z-index: 4;
-  background: repeating-linear-gradient(0deg, #fff 0 6px, #1a1a1a 6px 12px);
-  border-radius: 2px; box-shadow: 0 0 10px rgba(255,255,255,.4);
+  position: absolute; top: 10px; bottom: 10px; right: 14px; width: 13px; z-index: 4;
+  background: repeating-linear-gradient(0deg, #fff 0 7px, #1a1a1a 7px 14px);
+  border-radius: 2px; box-shadow: 0 0 12px rgba(255,255,255,.45);
 }
 .finish-post .finish-flag {
   position: absolute; top: -4px; left: 50%; transform: translate(-50%,-100%);
-  font-size: 20px; animation: flagWave 1.2s ease-in-out infinite;
+  font-size: 24px; animation: flagWave 1.2s ease-in-out infinite;
 }
 @keyframes flagWave {
   0%,100% { transform: translate(-50%,-100%) rotate(-6deg); }
@@ -236,7 +236,7 @@ body {
 
 /* Lane (a running strip inside the course) */
 .lane {
-  position: relative; height: 56px; z-index: 1;
+  position: relative; height: 74px; z-index: 1;
 }
 .lane + .lane { border-top: 2px dashed rgba(255,255,255,.22); }
 
@@ -244,32 +244,32 @@ body {
 .racer {
   position: absolute; top: 50%; left: 0;
   transform: translateY(-50%); z-index: 3;
-  width: 50px; text-align: center;
+  width: 66px; text-align: center;
   transition: left .06s linear;
 }
 .racer-emoji {
-  font-size: 32px; line-height: 1; display: block;
+  font-size: 46px; line-height: 1; display: block;
   position: relative; z-index: 2;
   transform: scaleX(-1); /* face right toward finish */
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,.4));
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.45));
 }
 
 /* name + live rank pill above racer */
 .name-pill {
-  position: absolute; bottom: calc(100% - 4px); left: 50%;
+  position: absolute; bottom: calc(100% - 6px); left: 50%;
   transform: translateX(-50%);
-  display: inline-flex; align-items: center; gap: 4px;
-  background: rgba(10,10,18,.82);
-  border: 1px solid var(--lc);
-  border-radius: 999px; padding: 1px 7px 1px 3px;
-  font-size: 10.5px; font-weight: 700; white-space: nowrap;
-  max-width: 120px; z-index: 4;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(10,10,18,.85);
+  border: 1.5px solid var(--lc);
+  border-radius: 999px; padding: 2px 9px 2px 3px;
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+  max-width: 150px; z-index: 4;
 }
 .name-pill .rank {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 15px; height: 15px; border-radius: 50%;
+  min-width: 18px; height: 18px; border-radius: 50%;
   background: rgba(255,255,255,.15); color: #fff;
-  font-size: 10px; font-weight: 900; padding: 0 2px;
+  font-size: 11px; font-weight: 900; padding: 0 3px;
 }
 .name-pill .rank.rank-1 { background: linear-gradient(135deg,#fde047,#f59e0b); color: #1a1a00; box-shadow: 0 0 8px rgba(250,204,21,.6); }
 .name-pill .rank.rank-2 { background: linear-gradient(135deg,#e5e7eb,#9ca3af); color: #1a1a1a; }
@@ -280,7 +280,7 @@ body {
 }
 .pill-name {
   color: var(--lc);
-  max-width: 84px; overflow: hidden; text-overflow: ellipsis;
+  max-width: 110px; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* speed trail */
@@ -308,7 +308,7 @@ body {
 .mode-horse .racer.running .racer-emoji { animation: gallop .2s ease-in-out infinite alternate; }
 @keyframes gallop {
   from { transform: scaleX(-1) translateY(0)   rotate(-3deg); }
-  to   { transform: scaleX(-1) translateY(-7px) rotate(3deg); }
+  to   { transform: scaleX(-1) translateY(-10px) rotate(3deg); }
 }
 .mode-horse .racer.running .racer-trail { animation: trailFlick .2s ease-out infinite; }
 .mode-horse .racer.boosting .racer-emoji {
@@ -316,8 +316,8 @@ body {
   filter: drop-shadow(0 0 8px var(--lc));
 }
 @keyframes gallopFast {
-  from { transform: scaleX(-1) translateY(-2px) rotate(-7deg); }
-  to   { transform: scaleX(-1) translateY(-11px) rotate(7deg); }
+  from { transform: scaleX(-1) translateY(-3px) rotate(-7deg); }
+  to   { transform: scaleX(-1) translateY(-15px) rotate(7deg); }
 }
 @keyframes trailFlick { 0% { opacity: .7; width: 28px; } 100% { opacity: 0; width: 12px; } }
 
