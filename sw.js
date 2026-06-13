@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v83-2026-06-13';
+const CACHE_VERSION = 'v84-2026-06-13';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -63,6 +63,11 @@ const SHELL = [
   '/thansohoc/css/thansohoc.css',
   '/thansohoc/js/numerology-data.js',
   '/thansohoc/js/app.js',
+  // Giai Ma Ten module
+  '/ten/',
+  '/ten/index.html',
+  '/ten/css/ten.css',
+  '/ten/js/app.js',
 ];
 
 self.addEventListener('install', (event) => {
