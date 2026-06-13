@@ -138,6 +138,7 @@ body {
 .card-banner.gieoque { background-color: var(--c-gieoque); }
 .card-banner.tarot { background-color: var(--c-tarot); }
 .card-banner.tuvi { background-color: var(--c-tuvi); }
+.card-banner.thansohoc { background-color: var(--c-thansohoc); }
 .card-banner { background-color: var(--c-thuvien); }
 
 .card-content {
@@ -167,6 +168,7 @@ body {
 .badge.gieoque { background: rgba(13, 150, 104, 0.1); color: var(--c-gieoque); }
 .badge.tarot { background: rgba(124, 58, 237, 0.1); color: var(--c-tarot); }
 .badge.tuvi { background: rgba(232, 147, 10, 0.1); color: var(--c-tuvi); }
+.badge.thansohoc { background: rgba(99, 102, 241, 0.1); color: var(--c-thansohoc); }
 
 .card-title {
   font-size: 18px;
