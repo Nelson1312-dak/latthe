@@ -1160,4 +1160,12 @@
     <priority>0.7</priority>
   </url>
   <!-- ten:end -->
+  <!-- dua:start -->
+  <url>
+    <loc>https://latbai.vn/dua/</loc>
+    <lastmod>2026-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- dua:end -->
 </urlset>

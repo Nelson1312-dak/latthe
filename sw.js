@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v84-2026-06-13';
+const CACHE_VERSION = 'v85-2026-06-13';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -68,6 +68,11 @@ const SHELL = [
   '/ten/index.html',
   '/ten/css/ten.css',
   '/ten/js/app.js',
+  // Dua Thu module
+  '/dua/',
+  '/dua/index.html',
+  '/dua/css/dua.css',
+  '/dua/js/app.js',
 ];
 
 self.addEventListener('install', (event) => {
