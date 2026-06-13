@@ -212,6 +212,10 @@ function doCountdown() {
 function buildTrack() {
   track.innerHTML = '';
 
+  const gate = document.createElement('div');
+  gate.className = 'start-gate';
+  track.appendChild(gate);
+
   const post = document.createElement('div');
   post.className = 'finish-post';
   post.innerHTML = '<span class="finish-flag">🏁</span>';
