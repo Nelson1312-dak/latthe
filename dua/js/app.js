@@ -21,6 +21,12 @@ let phase      = 'setup';
 let raceStart  = 0;
 let timerRAF   = null;
 
+// excitement state
+let tickCount    = 0;
+let curLeader    = -1;
+let photoShown   = false;
+let finishCount  = 0;
+
 /* ── DOM refs ───────────────────────────────────────────────────── */
 const setupEl    = document.getElementById('setup-phase');
 const raceEl     = document.getElementById('race-phase');
@@ -34,6 +40,8 @@ const resultMain = document.getElementById('result-main');
 const raceAgain  = document.getElementById('race-again-btn');
 const shareBtn   = document.getElementById('share-btn');
 const raceTimer  = document.getElementById('race-timer');
+const commentary = document.getElementById('commentary');
+const photoBanner = document.getElementById('photo-finish');
 
 /* ── Selection grid ─────────────────────────────────────────────── */
 ROSTER.forEach((a, i) => {
@@ -92,13 +100,19 @@ startBtn.addEventListener('click', () => {
     stumble: 0,
     done:    false,
     finishT: 0,
+    boost:   0,
   }));
   winnerIdx = Math.floor(Math.random() * racers.length);
+
+  // reset excitement state
+  tickCount = 0; curLeader = -1; photoShown = false; finishCount = 0;
+  commentary.innerHTML = '';
 
   hide(setupEl);
   show(raceEl);
   buildTrack();
   raceTimer.textContent = '0.00s';
+  pushComment('🎙️ Các vận động viên đã vào vạch xuất phát...', '#8888aa');
   doCountdown();
 });
 
@@ -121,7 +135,11 @@ function doCountdown() {
     countdown.classList.add('pop');
     i++;
     if (i < steps.length) setTimeout(tick, 750);
-    else setTimeout(() => { countdown.style.display = 'none'; startRace(); }, 650);
+    else setTimeout(() => {
+      countdown.style.display = 'none';
+      pushComment('🚦 VÀ HỌ ĐÃ XUẤT PHÁT!', '#38bdf8');
+      startRace();
+    }, 650);
   };
   tick();
 }
@@ -147,6 +165,7 @@ function buildTrack() {
           <div class="finish-flag">🏁</div>
           <div class="racer" id="racer-${i}">
             <span class="racer-trail"></span>
+            <span class="racer-fx" id="fx-${i}"></span>
             <span class="racer-emoji">${r.emoji}</span>
           </div>
         </div>
@@ -165,14 +184,28 @@ function updatePositions() {
     racer.style.left = `calc(${r.pos / 100} * (100% - 50px))`;
     if (pct) pct.textContent = `${Math.round(r.pos)}%`;
 
-    racer.className = 'racer';
-    if (r.done)         racer.classList.add('done');
-    else if (r.stumble) racer.classList.add('stumbling');
-    else                racer.classList.add('running');
+    racer.classList.remove('running', 'stumbling', 'done', 'boosting');
+    if (r.done)          racer.classList.add('done');
+    else if (r.stumble)  racer.classList.add('stumbling');
+    else {
+      racer.classList.add('running');
+      if (r.boost > 0) racer.classList.add('boosting');
+    }
   });
 
-  // Live ranking
-  const order = racers
+  const order = liveOrder();
+  order.forEach((o, rank) => {
+    const badge = document.getElementById(`rank-${o.i}`);
+    if (!badge) return;
+    badge.textContent = String(rank + 1);
+    badge.classList.toggle('rank-1', rank === 0);
+    badge.classList.toggle('rank-2', rank === 1);
+    badge.classList.toggle('rank-3', rank === 2);
+  });
+}
+
+function liveOrder() {
+  return racers
     .map((r, i) => ({ i, pos: r.pos, done: r.done, finishT: r.finishT }))
     .sort((a, b) => {
       if (a.done && b.done) return a.finishT - b.finishT;
@@ -180,16 +213,6 @@ function updatePositions() {
       if (b.done) return 1;
       return b.pos - a.pos;
     });
-
-  order.forEach((o, rank) => {
-    const badge = document.getElementById(`rank-${o.i}`);
-    if (!badge) return;
-    const labels = ['1', '2', '3', '4', '5', '6'];
-    badge.textContent = labels[rank];
-    badge.classList.toggle('rank-1', rank === 0);
-    badge.classList.toggle('rank-2', rank === 1);
-    badge.classList.toggle('rank-3', rank === 2);
-  });
 }
 
 /* ── Timer ──────────────────────────────────────────────────────── */
@@ -212,18 +235,35 @@ function startRace() {
 }
 
 function tick() {
+  tickCount++;
   let raceOver = false;
 
   racers.forEach((r, i) => {
+    if (r.boost > 0) r.boost--;
     if (r.done) return;
-    if (r.stumble > 0) { r.stumble--; return; }
+    if (r.stumble > 0) {
+      r.stumble--;
+      return;
+    }
 
     const isWinner = (i === winnerIdx);
     let speed = 1.2 + Math.random() * 1.8;
 
     const roll = Math.random();
-    if      (roll < 0.04) speed = 5 + Math.random() * 5;
-    else if (roll < 0.07) { r.stumble = 3 + Math.floor(Math.random() * 5); return; }
+    if (roll < 0.045) {
+      // BURST
+      speed = 5 + Math.random() * 5;
+      r.boost = 5;
+      popFx(i, '🚀', 'fx-boost');
+      maybeComment(`🚀 ${r.name} bứt phá thần tốc!`, r.color, 0.7);
+      shake();
+    } else if (roll < 0.075) {
+      // STUMBLE
+      r.stumble = 3 + Math.floor(Math.random() * 5);
+      popFx(i, '💫', 'fx-stumble');
+      maybeComment(`💫 ${r.name} vấp ngã, khựng lại!`, r.color, 0.6);
+      return;
+    }
 
     if (isWinner) speed *= 1.12;
     const cap = isWinner ? 100 : (88 + Math.floor(Math.random() * 6));
@@ -233,10 +273,17 @@ function tick() {
       r.pos = 100;
       r.done = true;
       r.finishT = performance.now() - raceStart;
+      finishCount++;
+      if (finishCount === 1) {
+        popFx(i, '🏆', 'fx-win');
+        pushComment(`🏁 ${r.name.toUpperCase()} CÁN ĐÍCH ĐẦU TIÊN! 🎉`, r.color);
+        shake();
+      }
       raceOver = true;
     }
   });
 
+  detectDrama();
   updatePositions();
 
   if (raceOver) {
@@ -244,11 +291,89 @@ function tick() {
     cancelAnimationFrame(timerRAF);
     const finalT = (performance.now() - raceStart) / 1000;
     raceTimer.textContent = `${finalT.toFixed(2)}s`;
-    racers.forEach((r, i) => {
-      if (!r.done) { r.done = true; r.finishT = 99999 + r.pos * -1; }
+    racers.forEach((r) => {
+      if (!r.done) { r.done = true; r.finishT = 99999 - r.pos; }
     });
-    setTimeout(() => { updatePositions(); setTimeout(showResult, 550); }, 250);
+    setTimeout(() => { updatePositions(); setTimeout(showResult, 600); }, 280);
   }
+}
+
+/* ── Drama detection: lead change + photo finish ────────────────── */
+function detectDrama() {
+  const order = liveOrder();
+  if (!order.length) return;
+
+  // Lead change (only while nobody finished yet)
+  const newLeader = order[0].i;
+  if (finishCount === 0 && curLeader !== -1 && newLeader !== curLeader && order[0].pos > 12) {
+    const r = racers[newLeader];
+    maybeComment(`👑 ${r.name} vươn lên dẫn đầu!`, r.color, 0.85);
+    flashLead(newLeader);
+  }
+  curLeader = newLeader;
+
+  // Photo finish: top two close & near end
+  if (!photoShown && finishCount === 0 && order.length >= 2) {
+    const a = order[0], b = order[1];
+    if (!a.done && a.pos >= 80 && Math.abs(a.pos - b.pos) <= 6) {
+      photoShown = true;
+      track.classList.add('photo');
+      photoBanner.classList.add('show');
+      pushComment(`📸 SÁT NÚT! ${racers[a.i].name} vs ${racers[b.i].name}!`, '#facc15');
+      setTimeout(() => {
+        track.classList.remove('photo');
+        photoBanner.classList.remove('show');
+      }, 1600);
+    }
+  }
+}
+
+/* ── Floating effect badge above a racer ────────────────────────── */
+function popFx(i, text, cls) {
+  const fx = document.getElementById(`fx-${i}`);
+  if (!fx) return;
+  fx.textContent = text;
+  fx.className = `racer-fx ${cls}`;
+  void fx.offsetWidth;
+  fx.classList.add('pop');
+  setTimeout(() => { fx.classList.remove('pop'); fx.textContent = ''; }, 700);
+}
+
+/* ── Lead-change flash on rank badge ────────────────────────────── */
+function flashLead(i) {
+  const badge = document.getElementById(`rank-${i}`);
+  if (!badge) return;
+  badge.classList.remove('flash');
+  void badge.offsetWidth;
+  badge.classList.add('flash');
+}
+
+/* ── Screen shake ───────────────────────────────────────────────── */
+let shakeT = null;
+function shake() {
+  raceEl.classList.add('shake');
+  clearTimeout(shakeT);
+  shakeT = setTimeout(() => raceEl.classList.remove('shake'), 280);
+}
+
+/* ── Commentary ticker ──────────────────────────────────────────── */
+function pushComment(text, color) {
+  const line = document.createElement('div');
+  line.className = 'comment-line';
+  line.style.setProperty('--cc', color || '#e8e8f0');
+  line.textContent = text;
+  commentary.prepend(line);
+  // keep only the latest 3
+  while (commentary.children.length > 3) {
+    commentary.removeChild(commentary.lastChild);
+  }
+  // fade older lines
+  [...commentary.children].forEach((el, idx) => {
+    el.style.opacity = idx === 0 ? '1' : idx === 1 ? '0.55' : '0.3';
+  });
+}
+function maybeComment(text, color, prob) {
+  if (Math.random() < prob) pushComment(text, color);
 }
 
 /* ── Result ─────────────────────────────────────────────────────── */
@@ -295,7 +420,7 @@ function launchConfetti(color) {
   canvas.style.display = 'block';
 
   const COLORS = [color, '#fff', '#facc15', '#f472b6', '#38bdf8', '#4ade80'];
-  const pieces = Array.from({ length: 120 }, () => ({
+  const pieces = Array.from({ length: 130 }, () => ({
     x: Math.random() * canvas.width,
     y: -20 - Math.random() * 140,
     vx: (Math.random() - 0.5) * 5,
@@ -319,7 +444,7 @@ function launchConfetti(color) {
       ctx.restore();
       p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.rot += p.rv;
     });
-    if (++frame < 150) requestAnimationFrame(draw);
+    if (++frame < 160) requestAnimationFrame(draw);
     else canvas.style.display = 'none';
   })();
 }
@@ -345,6 +470,9 @@ raceAgain.addEventListener('click', () => {
   cancelAnimationFrame(timerRAF);
   phase = 'setup'; selected = []; racers = []; winnerIdx = -1;
   track.innerHTML = ''; resultMain.innerHTML = ''; nameWrap.innerHTML = '';
+  commentary.innerHTML = '';
+  track.classList.remove('photo');
+  photoBanner.classList.remove('show');
   grid.querySelectorAll('.animal-pick').forEach(b => b.classList.remove('chosen'));
   startBtn.disabled = true;
   document.getElementById('sel-count').textContent = 'Chọn ít nhất 2 con';
