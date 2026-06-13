@@ -1,6 +1,6 @@
-/* dua.css */
+/* dua.css — Đua Thú (premium stadium UI) */
 :root {
-  --bg:      #08080f;
+  --bg:      #06060d;
   --surface: #12121e;
   --border:  rgba(255,255,255,0.08);
   --text:    #e8e8f0;
@@ -14,9 +14,7 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: flex; flex-direction: column; align-items: center;
   overflow-x: hidden;
 }
 
@@ -25,6 +23,7 @@ body {
   width: 100%; padding: 14px 20px;
   display: flex; align-items: center; gap: 10px;
   border-bottom: 1px solid var(--border); flex-shrink: 0;
+  position: relative; z-index: 5;
 }
 .logo-link {
   display: flex; align-items: center; gap: 8px;
@@ -33,10 +32,7 @@ body {
 }
 .logo-link img { width: 26px; height: 26px; }
 
-.page-wrap {
-  width: 100%; max-width: 520px;
-  padding: 0 16px 120px; flex: 1;
-}
+.page-wrap { width: 100%; max-width: 540px; padding: 0 16px 120px; flex: 1; }
 .hidden { display: none !important; }
 
 #confetti-canvas {
@@ -48,55 +44,44 @@ body {
    SETUP
 ══════════════════════════════════════════════════════════════════ */
 #setup-phase { padding-top: 28px; }
-
 .module-title {
   font-size: clamp(26px,7vw,34px); font-weight: 900;
   text-align: center; letter-spacing: -1px; margin-bottom: 6px;
 }
-.module-sub {
-  text-align: center; color: var(--muted);
-  font-size: 14px; margin-bottom: 20px;
-}
-#sel-count {
-  text-align: center; font-size: 13px;
-  color: var(--muted); margin-bottom: 14px;
-}
+.module-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+#sel-count  { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 14px; }
 
-/* Animal picker */
 #animal-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 10px; margin-bottom: 20px;
 }
 .animal-pick {
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 12px; padding: 12px 6px;
-  cursor: pointer;
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: 12px; padding: 12px 6px; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  transition: border-color 0.15s, transform 0.1s, background 0.15s;
+  transition: border-color .15s, transform .1s, background .15s;
   font-family: inherit;
 }
 .animal-pick:hover  { border-color: var(--ac, #fff); }
-.animal-pick:active { transform: scale(0.93); }
+.animal-pick:active { transform: scale(.93); }
 .animal-pick.chosen {
   border-color: var(--ac);
   background: color-mix(in srgb, var(--ac) 14%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--ac) 20%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ac) 22%, transparent);
 }
 .pick-emoji  { font-size: 30px; line-height: 1; }
 .pick-label  { font-size: 11px; font-weight: 700; color: var(--muted); }
 .animal-pick.chosen .pick-label { color: var(--ac); }
 
-/* Name inputs */
 #name-inputs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 .name-row {
   display: flex; align-items: center; gap: 10px;
-  background: var(--surface); border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--rc, #fff) 30%, var(--border));
   border-radius: 10px; padding: 10px 14px;
 }
-.name-emoji  { font-size: 22px; }
-.name-input  {
+.name-emoji { font-size: 22px; }
+.name-input {
   flex: 1; background: transparent; border: none; outline: none;
   font-size: 14px; font-family: inherit; color: var(--text);
 }
@@ -107,123 +92,226 @@ body {
   background: linear-gradient(135deg, #f97316, #f59e0b);
   color: #fff; border: none; border-radius: 14px; padding: 16px;
   font-size: 17px; font-weight: 800; cursor: pointer; font-family: inherit;
-  transition: opacity 0.2s, transform 0.1s; letter-spacing: -0.3px;
+  transition: opacity .2s, transform .1s; letter-spacing: -.3px;
+  box-shadow: 0 8px 24px rgba(249,115,22,.3);
 }
-#start-btn:disabled           { opacity: 0.3; cursor: not-allowed; }
-#start-btn:not(:disabled):hover  { opacity: 0.9; }
-#start-btn:not(:disabled):active { transform: scale(0.98); }
+#start-btn:disabled              { opacity: .3; cursor: not-allowed; box-shadow: none; }
+#start-btn:not(:disabled):hover  { opacity: .92; }
+#start-btn:not(:disabled):active { transform: scale(.98); }
 
 /* ══════════════════════════════════════════════════════════════════
-   RACE
+   RACE — stadium
 ══════════════════════════════════════════════════════════════════ */
-#race-phase { padding-top: 20px; }
+#race-phase {
+  padding-top: 20px;
+  position: relative;
+}
+/* stadium spotlight backdrop */
+#race-phase::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(249,115,22,.10), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 15% 30%, rgba(56,189,248,.06), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 60%, rgba(244,114,182,.06), transparent 60%);
+  pointer-events: none;
+}
 
+/* HUD */
+.race-hud {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 12px 16px;
+}
+.race-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 800; letter-spacing: .5px;
+  color: #ef4444;
+}
+.live-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #ef4444; box-shadow: 0 0 0 0 rgba(239,68,68,.6);
+  animation: livePulse 1.2s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+}
+.race-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 18px; font-weight: 900;
+  color: #facc15;
+  text-shadow: 0 0 12px rgba(250,204,21,.4);
+  letter-spacing: -.5px;
+}
+
+/* Countdown overlay */
 #countdown {
   display: none; position: fixed; inset: 0; z-index: 50;
-  align-items: center; justify-content: center;
-  font-size: 90px; font-weight: 900; color: #fff;
-  text-shadow: 0 0 50px rgba(249,115,22,.9), 0 0 20px rgba(0,0,0,.8);
+  align-items: center; justify-content: center; flex-direction: column;
+  background: radial-gradient(circle at center, rgba(6,6,13,.6), rgba(6,6,13,.9));
   pointer-events: none;
 }
-#countdown.pop { animation: popIn .35s cubic-bezier(.34,1.56,.64,1) both; }
-@keyframes popIn {
-  from { transform: scale(.3); opacity: 0; }
-  to   { transform: scale(1);  opacity: 1; }
+.cd-text {
+  font-size: 100px; font-weight: 900;
+  color: var(--cd-color, #fff);
+  text-shadow: 0 0 60px color-mix(in srgb, var(--cd-color, #fff) 70%, transparent),
+               0 4px 20px rgba(0,0,0,.8);
+  line-height: 1;
 }
-
-.race-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; }
+#countdown.pop .cd-text { animation: cdPop .4s cubic-bezier(.34,1.8,.5,1) both; }
+@keyframes cdPop {
+  0%   { transform: scale(.2) rotate(-12deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
 
 /* ── Track ──────────────────────────────────────────────────────── */
-#track { display: flex; flex-direction: column; gap: 10px; }
+#track { display: flex; flex-direction: column; gap: 12px; }
 
 .lane {
-  background: color-mix(in srgb, var(--lc) 6%, var(--surface));
-  border: 1.5px solid color-mix(in srgb, var(--lc) 40%, transparent);
-  border-radius: 12px; padding: 10px 12px;
+  display: flex; align-items: stretch; gap: 10px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--lc) 9%, var(--surface)),
+    var(--surface));
+  border: 1.5px solid color-mix(in srgb, var(--lc) 45%, transparent);
+  border-radius: 14px; padding: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3),
+              inset 0 0 20px color-mix(in srgb, var(--lc) 5%, transparent);
 }
-.lane-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-.lane-name { font-size: 12px; font-weight: 700; color: var(--lc); }
 
-/* Road — where animals actually move */
+/* rank badge */
+.rank-badge {
+  flex-shrink: 0;
+  width: 34px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 900;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  transition: background .3s, color .3s, transform .3s;
+}
+.rank-badge.rank-1 {
+  background: linear-gradient(135deg,#fde047,#f59e0b);
+  color: #1a1a00; border-color: #fbbf24;
+  box-shadow: 0 0 14px rgba(250,204,21,.5);
+  transform: scale(1.05);
+}
+.rank-badge.rank-2 {
+  background: linear-gradient(135deg,#e5e7eb,#9ca3af);
+  color: #1a1a1a; border-color: #d1d5db;
+}
+.rank-badge.rank-3 {
+  background: linear-gradient(135deg,#d97706,#92400e);
+  color: #fff; border-color: #b45309;
+}
+
+.lane-body { flex: 1; min-width: 0; }
+.lane-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.lane-name {
+  font-size: 13px; font-weight: 800; color: var(--lc);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--lc) 40%, transparent);
+}
+.lane-pct {
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  font-variant-numeric: tabular-nums; flex-shrink: 0; margin-left: 8px;
+}
+
+/* Road */
 .road {
-  position: relative;
-  height: 52px;
+  position: relative; height: 54px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.25), transparent 12%),
+    rgba(255,255,255,.025);
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.06);
+}
+/* moving lane lines (track texture) */
+.road-lines {
+  position: absolute; inset: 0;
   background: repeating-linear-gradient(
     90deg,
-    rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 2px,
-    transparent 2px, transparent 30px
-  ),
-  rgba(255,255,255,.02);
-  border-radius: 8px;
-  overflow: hidden;
-  /* subtle left-to-right gradient to imply direction */
-  border: 1px solid rgba(255,255,255,.05);
+    transparent 0, transparent 26px,
+    rgba(255,255,255,.06) 26px, rgba(255,255,255,.06) 30px
+  );
+  opacity: .6;
 }
-
-/* Finish flag stays on far right */
+/* finish zone */
+.finish-line {
+  position: absolute; right: 34px; top: 0; bottom: 0; width: 8px;
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(255,255,255,.5) 0, rgba(255,255,255,.5) 4px,
+      rgba(0,0,0,.4) 4px, rgba(0,0,0,.4) 8px);
+  opacity: .5;
+}
 .finish-flag {
   position: absolute; right: 4px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 22px; line-height: 1;
+  transform: translateY(-50%); font-size: 22px; line-height: 1;
   pointer-events: none;
-  filter: drop-shadow(0 0 6px rgba(255,255,255,.3));
+  filter: drop-shadow(0 0 6px rgba(255,255,255,.4));
+  animation: flagWave 1.2s ease-in-out infinite;
+}
+@keyframes flagWave {
+  0%,100% { transform: translateY(-50%) rotate(-4deg); }
+  50%     { transform: translateY(-50%) rotate(4deg); }
 }
 
-/* ── Racer ──────────────────────────────────────────────────────── */
+/* Racer */
 .racer {
-  position: absolute;
-  top: 50%;
-  left: 0;                          /* JS sets this each tick */
+  position: absolute; top: 50%; left: 0;
+  transform: translateY(-50%); z-index: 3;
+  width: 50px; text-align: center;
+  transition: left .06s linear;
+}
+.racer-emoji {
+  font-size: 32px; line-height: 1; display: block;
+  position: relative; z-index: 2;
+}
+/* speed trail */
+.racer-trail {
+  position: absolute; right: 60%; top: 50%;
   transform: translateY(-50%);
-  z-index: 2;
-  width: 44px;
-  text-align: center;
-  /* smooth position update — fast enough to look fluid at 60ms tick */
-  transition: left 0.06s linear;
+  width: 24px; height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--lc) 60%, transparent));
+  opacity: 0; z-index: 1;
 }
-.racer-emoji { font-size: 30px; line-height: 1; display: block; }
 
-/* ── Running: bounce up/down (the main movement feel) ── */
+/* running: gallop + trail */
 .racer.running .racer-emoji {
-  animation: gallop 0.22s ease-in-out infinite alternate;
+  animation: gallop .2s ease-in-out infinite alternate;
 }
+.racer.running .racer-trail { animation: trailFlick .2s ease-out infinite; }
 @keyframes gallop {
-  from { transform: translateY(0) scaleX(1); }
-  to   { transform: translateY(-7px) scaleX(1.06); }
+  from { transform: translateY(0) scaleX(1) rotate(-2deg); }
+  to   { transform: translateY(-8px) scaleX(1.08) rotate(2deg); }
+}
+@keyframes trailFlick {
+  0%   { opacity: .7; width: 28px; }
+  100% { opacity: 0;  width: 12px; }
 }
 
-/* ── Stumble: wobble ── */
-.racer.stumbling .racer-emoji {
-  animation: wobble 0.12s ease-in-out infinite alternate;
-}
+/* stumble */
+.racer.stumbling .racer-emoji { animation: wobble .12s ease-in-out infinite alternate; }
 @keyframes wobble {
-  from { transform: rotate(-18deg) scale(.9); }
-  to   { transform: rotate(18deg)  scale(.9); }
+  from { transform: rotate(-20deg) scale(.85) translateY(2px); }
+  to   { transform: rotate(20deg)  scale(.85) translateY(2px); }
 }
 
-/* ── Done: winner bounce ── */
+/* done */
 .racer.done .racer-emoji {
-  animation: winBounce 0.4s ease infinite alternate;
-  filter: drop-shadow(0 0 8px currentColor);
+  animation: winBounce .4s ease infinite alternate;
+  filter: drop-shadow(0 0 10px var(--lc));
 }
 @keyframes winBounce {
   from { transform: translateY(0) scale(1); }
-  to   { transform: translateY(-10px) scale(1.2); }
-}
-
-/* dust trail behind racer */
-.racer.running::before {
-  content: '💨';
-  position: absolute;
-  right: calc(100% - 4px);
-  top: 50%; transform: translateY(-50%);
-  font-size: 14px;
-  opacity: 0.5;
-  animation: dustFade .25s ease-out infinite;
-}
-@keyframes dustFade {
-  from { opacity: .6; transform: translateY(-50%) scale(1); }
-  to   { opacity: 0;  transform: translateY(-50%) scale(1.4) translateX(-6px); }
+  to   { transform: translateY(-11px) scale(1.22); }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -232,28 +320,42 @@ body {
 #result-phase { padding-top: 28px; }
 
 .winner-box {
+  position: relative; overflow: hidden;
   background: color-mix(in srgb, var(--wc) 10%, var(--surface));
-  border: 2px solid var(--wc);
-  border-radius: 20px; padding: 28px 20px;
-  text-align: center; margin-bottom: 18px;
-  box-shadow: 0 0 40px color-mix(in srgb, var(--wc) 22%, transparent);
-  animation: winnerIn .5s cubic-bezier(.34,1.56,.64,1) both;
+  border: 2px solid var(--wc); border-radius: 22px;
+  padding: 30px 20px; text-align: center; margin-bottom: 18px;
+  box-shadow: 0 0 50px color-mix(in srgb, var(--wc) 25%, transparent);
+  animation: winnerIn .55s cubic-bezier(.34,1.56,.64,1) both;
 }
 @keyframes winnerIn {
-  from { transform: scale(.75); opacity: 0; }
-  to   { transform: scale(1);   opacity: 1; }
+  from { transform: scale(.7); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
 }
-.winner-emoji { font-size: 68px; line-height: 1; }
+/* rotating light rays behind winner */
+.winner-rays {
+  position: absolute; top: 50%; left: 50%;
+  width: 300%; height: 300%;
+  transform: translate(-50%,-50%);
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--wc) 12%, transparent) 0deg 12deg,
+    transparent 12deg 24deg);
+  animation: raySpin 8s linear infinite;
+  z-index: 0; opacity: .5;
+}
+@keyframes raySpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+.winner-emoji, .winner-crown, .winner-name, .winner-sub { position: relative; z-index: 1; }
+.winner-emoji { font-size: 72px; line-height: 1; }
 .winner-crown {
-  font-size: 28px; margin-top: -12px; margin-bottom: 4px;
+  font-size: 30px; margin-top: -14px; margin-bottom: 4px;
   animation: crownBob 1s ease-in-out infinite alternate;
 }
 @keyframes crownBob {
-  from { transform: rotate(-6deg); }
-  to   { transform: translateY(-4px) rotate(6deg); }
+  from { transform: rotate(-7deg); }
+  to   { transform: translateY(-5px) rotate(7deg); }
 }
-.winner-name { font-size: 26px; font-weight: 900; color: var(--wc); }
-.winner-sub  { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.winner-name { font-size: 28px; font-weight: 900; color: var(--wc); }
+.winner-sub  { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 6px; letter-spacing: .3px; }
 
 .podium-list {
   background: var(--surface); border: 1px solid var(--border);
@@ -261,13 +363,17 @@ body {
 }
 .podium-row {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; border-bottom: 1px solid var(--border);
-  font-size: 15px;
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+  font-size: 15px; position: relative;
+}
+.podium-row::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--pc);
 }
 .podium-row:last-child { border-bottom: none; }
-.podium-row.p-winner   { background: rgba(250,204,21,.07); }
-.p-medal { font-size: 20px; width: 26px; text-align: center; flex-shrink: 0; }
-.p-emoji { font-size: 22px; }
+.podium-row.p-winner   { background: color-mix(in srgb, var(--pc) 8%, transparent); }
+.p-medal { font-size: 20px; width: 30px; text-align: center; flex-shrink: 0; font-weight: 800; }
+.p-emoji { font-size: 24px; }
 .p-name  { font-weight: 700; }
 
 .result-actions { display: flex; flex-direction: column; gap: 10px; }
@@ -276,6 +382,7 @@ body {
   color: #fff; border: none; border-radius: 12px; padding: 15px;
   font-size: 15px; font-weight: 700; cursor: pointer;
   font-family: inherit; width: 100%; transition: opacity .2s;
+  box-shadow: 0 8px 24px rgba(249,115,22,.25);
 }
 .btn-primary:hover { opacity: .9; }
 .btn-secondary {
@@ -289,8 +396,7 @@ body {
 /* ── Footer / Dock ───────────────────────────────────────────────── */
 .footer {
   width: 100%; text-align: center; padding: 20px;
-  font-size: 12px; color: var(--muted);
-  border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--muted); border-top: 1px solid var(--border);
 }
 .footer a { color: var(--muted); text-decoration: none; }
 

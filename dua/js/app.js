@@ -13,11 +13,13 @@ const ROSTER = [
 ];
 
 /* ── State ──────────────────────────────────────────────────────── */
-let selected  = [];   // roster indices user picked
-let racers    = [];   // active racers this race
-let winnerIdx = -1;
-let timer     = null;
-let phase     = 'setup';
+let selected   = [];
+let racers     = [];
+let winnerIdx  = -1;
+let timer      = null;
+let phase      = 'setup';
+let raceStart  = 0;
+let timerRAF   = null;
 
 /* ── DOM refs ───────────────────────────────────────────────────── */
 const setupEl    = document.getElementById('setup-phase');
@@ -31,8 +33,9 @@ const countdown  = document.getElementById('countdown');
 const resultMain = document.getElementById('result-main');
 const raceAgain  = document.getElementById('race-again-btn');
 const shareBtn   = document.getElementById('share-btn');
+const raceTimer  = document.getElementById('race-timer');
 
-/* ── Build selection grid — only selected animals race ─────────── */
+/* ── Selection grid ─────────────────────────────────────────────── */
 ROSTER.forEach((a, i) => {
   const btn = document.createElement('button');
   btn.className = 'animal-pick';
@@ -67,6 +70,7 @@ function renderNameInputs() {
     const a = ROSTER[ri];
     const row = document.createElement('div');
     row.className = 'name-row';
+    row.style.setProperty('--rc', a.color);
     row.innerHTML =
       `<span class="name-emoji">${a.emoji}</span>` +
       `<input type="text" class="name-input" data-si="${si}"` +
@@ -84,36 +88,45 @@ startBtn.addEventListener('click', () => {
   racers = selected.map((ri, si) => ({
     ...ROSTER[ri],
     name:    inputs[si]?.value.trim() || ROSTER[ri].label,
-    pos:     0,   // 0–100
+    pos:     0,
     stumble: 0,
     done:    false,
+    finishT: 0,
   }));
   winnerIdx = Math.floor(Math.random() * racers.length);
 
   hide(setupEl);
   show(raceEl);
   buildTrack();
+  raceTimer.textContent = '0.00s';
   doCountdown();
 });
 
 /* ── Countdown ──────────────────────────────────────────────────── */
 function doCountdown() {
   countdown.style.display = 'flex';
-  const steps = ['3', '2', '1', '🏁 Xuất phát!'];
+  const steps = [
+    { t: '3', c: '#ef4444' },
+    { t: '2', c: '#f59e0b' },
+    { t: '1', c: '#4ade80' },
+    { t: 'GO! 🏁', c: '#38bdf8' },
+  ];
   let i = 0;
   const tick = () => {
-    countdown.textContent = steps[i];
+    const s = steps[i];
+    countdown.style.setProperty('--cd-color', s.c);
+    countdown.querySelector('.cd-text').textContent = s.t;
     countdown.classList.remove('pop');
-    void countdown.offsetWidth; // reflow to restart animation
+    void countdown.offsetWidth;
     countdown.classList.add('pop');
     i++;
-    if (i < steps.length) setTimeout(tick, 800);
-    else setTimeout(() => { countdown.style.display = 'none'; startRace(); }, 700);
+    if (i < steps.length) setTimeout(tick, 750);
+    else setTimeout(() => { countdown.style.display = 'none'; startRace(); }, 650);
   };
   tick();
 }
 
-/* ── Build track — one lane per selected animal ─────────────────── */
+/* ── Build track ────────────────────────────────────────────────── */
 function buildTrack() {
   track.innerHTML = '';
   racers.forEach((r, i) => {
@@ -121,55 +134,80 @@ function buildTrack() {
     lane.className = 'lane';
     lane.style.setProperty('--lc', r.color);
 
-    // Label row
-    const meta = document.createElement('div');
-    meta.className = 'lane-meta';
-    meta.innerHTML = `<span class="lane-name">${r.name}</span>`;
-
-    // Road
-    const road = document.createElement('div');
-    road.className = 'road';
-    road.id = `road-${i}`;
-
-    // Finish flag (static, right side)
-    const flag = document.createElement('div');
-    flag.className = 'finish-flag';
-    flag.textContent = '🏁';
-
-    // Racer element
-    const racer = document.createElement('div');
-    racer.className = 'racer';
-    racer.id = `racer-${i}`;
-    racer.innerHTML = `<span class="racer-emoji">${r.emoji}</span>`;
-
-    road.appendChild(flag);
-    road.appendChild(racer);
-    lane.appendChild(meta);
-    lane.appendChild(road);
+    lane.innerHTML = `
+      <div class="rank-badge" id="rank-${i}">–</div>
+      <div class="lane-body">
+        <div class="lane-meta">
+          <span class="lane-name">${escapeHtml(r.name)}</span>
+          <span class="lane-pct" id="pct-${i}">0%</span>
+        </div>
+        <div class="road" id="road-${i}">
+          <div class="road-lines"></div>
+          <div class="finish-line"></div>
+          <div class="finish-flag">🏁</div>
+          <div class="racer" id="racer-${i}">
+            <span class="racer-trail"></span>
+            <span class="racer-emoji">${r.emoji}</span>
+          </div>
+        </div>
+      </div>`;
     track.appendChild(lane);
   });
 }
 
-/* ── Update positions — key fix: correct CSS calc ───────────────── */
+/* ── Position + live ranking update ─────────────────────────────── */
 function updatePositions() {
   racers.forEach((r, i) => {
     const racer = document.getElementById(`racer-${i}`);
+    const pct   = document.getElementById(`pct-${i}`);
     if (!racer) return;
 
-    // pos 0–100 mapped to 0 → (100% - 48px) so emoji stays in bounds
-    racer.style.left = `calc(${r.pos / 100} * (100% - 48px))`;
+    racer.style.left = `calc(${r.pos / 100} * (100% - 50px))`;
+    if (pct) pct.textContent = `${Math.round(r.pos)}%`;
 
-    // Animation state
     racer.className = 'racer';
     if (r.done)         racer.classList.add('done');
     else if (r.stumble) racer.classList.add('stumbling');
     else                racer.classList.add('running');
   });
+
+  // Live ranking
+  const order = racers
+    .map((r, i) => ({ i, pos: r.pos, done: r.done, finishT: r.finishT }))
+    .sort((a, b) => {
+      if (a.done && b.done) return a.finishT - b.finishT;
+      if (a.done) return -1;
+      if (b.done) return 1;
+      return b.pos - a.pos;
+    });
+
+  order.forEach((o, rank) => {
+    const badge = document.getElementById(`rank-${o.i}`);
+    if (!badge) return;
+    const labels = ['1', '2', '3', '4', '5', '6'];
+    badge.textContent = labels[rank];
+    badge.classList.toggle('rank-1', rank === 0);
+    badge.classList.toggle('rank-2', rank === 1);
+    badge.classList.toggle('rank-3', rank === 2);
+  });
 }
 
-/* ── Race tick ──────────────────────────────────────────────────── */
+/* ── Timer ──────────────────────────────────────────────────────── */
+function runTimer() {
+  const update = () => {
+    if (phase !== 'race') return;
+    const elapsed = (performance.now() - raceStart) / 1000;
+    raceTimer.textContent = `${elapsed.toFixed(2)}s`;
+    timerRAF = requestAnimationFrame(update);
+  };
+  timerRAF = requestAnimationFrame(update);
+}
+
+/* ── Race engine ────────────────────────────────────────────────── */
 function startRace() {
   phase = 'race';
+  raceStart = performance.now();
+  runTimer();
   timer = setInterval(tick, 60);
 }
 
@@ -181,27 +219,35 @@ function tick() {
     if (r.stumble > 0) { r.stumble--; return; }
 
     const isWinner = (i === winnerIdx);
-    let speed = 1.2 + Math.random() * 1.8; // 1.2–3.0% per tick
+    let speed = 1.2 + Math.random() * 1.8;
 
-    // Random events
     const roll = Math.random();
-    if      (roll < 0.04) speed = 5 + Math.random() * 5; // burst!
+    if      (roll < 0.04) speed = 5 + Math.random() * 5;
     else if (roll < 0.07) { r.stumble = 3 + Math.floor(Math.random() * 5); return; }
 
-    // Winner bonus; non-winners capped at 88–93%
     if (isWinner) speed *= 1.12;
     const cap = isWinner ? 100 : (88 + Math.floor(Math.random() * 6));
     r.pos = Math.min(cap, r.pos + speed);
 
-    if (r.pos >= 100) { r.pos = 100; r.done = true; raceOver = true; }
+    if (r.pos >= 100) {
+      r.pos = 100;
+      r.done = true;
+      r.finishT = performance.now() - raceStart;
+      raceOver = true;
+    }
   });
 
   updatePositions();
 
   if (raceOver) {
     clearInterval(timer);
-    racers.forEach(r => { r.done = true; });
-    setTimeout(() => { updatePositions(); setTimeout(showResult, 500); }, 200);
+    cancelAnimationFrame(timerRAF);
+    const finalT = (performance.now() - raceStart) / 1000;
+    raceTimer.textContent = `${finalT.toFixed(2)}s`;
+    racers.forEach((r, i) => {
+      if (!r.done) { r.done = true; r.finishT = 99999 + r.pos * -1; }
+    });
+    setTimeout(() => { updatePositions(); setTimeout(showResult, 550); }, 250);
   }
 }
 
@@ -219,17 +265,18 @@ function showResult() {
   const medals = ['🥇', '🥈', '🥉'];
   resultMain.innerHTML = `
     <div class="winner-box" style="--wc:${winner.color}">
+      <div class="winner-rays"></div>
       <div class="winner-emoji">${winner.emoji}</div>
       <div class="winner-crown">👑</div>
-      <div class="winner-name">${winner.name}</div>
-      <div class="winner-sub">Về đích đầu tiên!</div>
+      <div class="winner-name">${escapeHtml(winner.name)}</div>
+      <div class="winner-sub">🏆 VÔ ĐỊCH · Về đích đầu tiên!</div>
     </div>
     <div class="podium-list">
       ${sorted.map((r, i) => `
-        <div class="podium-row ${r === winner ? 'p-winner' : ''}">
-          <span class="p-medal">${medals[i] ?? '🔸'}</span>
+        <div class="podium-row ${r === winner ? 'p-winner' : ''}" style="--pc:${r.color}">
+          <span class="p-medal">${medals[i] ?? `#${i + 1}`}</span>
           <span class="p-emoji">${r.emoji}</span>
-          <span class="p-name">${r.name}</span>
+          <span class="p-name">${escapeHtml(r.name)}</span>
         </div>`).join('')}
     </div>`;
 
@@ -248,15 +295,15 @@ function launchConfetti(color) {
   canvas.style.display = 'block';
 
   const COLORS = [color, '#fff', '#facc15', '#f472b6', '#38bdf8', '#4ade80'];
-  const pieces = Array.from({ length: 90 }, () => ({
+  const pieces = Array.from({ length: 120 }, () => ({
     x: Math.random() * canvas.width,
-    y: -20 - Math.random() * 120,
+    y: -20 - Math.random() * 140,
     vx: (Math.random() - 0.5) * 5,
     vy: 3 + Math.random() * 4,
-    w: 7 + Math.random() * 8,
-    h: 3 + Math.random() * 4,
+    w: 7 + Math.random() * 9,
+    h: 3 + Math.random() * 5,
     rot: Math.random() * 360,
-    rv: (Math.random() - 0.5) * 10,
+    rv: (Math.random() - 0.5) * 11,
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
   }));
 
@@ -272,7 +319,7 @@ function launchConfetti(color) {
       ctx.restore();
       p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.rot += p.rv;
     });
-    if (++frame < 130) requestAnimationFrame(draw);
+    if (++frame < 150) requestAnimationFrame(draw);
     else canvas.style.display = 'none';
   })();
 }
@@ -280,8 +327,8 @@ function launchConfetti(color) {
 /* ── Share ──────────────────────────────────────────────────────── */
 async function doShare(winner, sorted) {
   const lines = sorted.map((r, i) =>
-    `${['🥇','🥈','🥉'][i] ?? '🔸'} ${r.emoji} ${r.name}`).join('\n');
-  const text = `🏆 Kết quả Đua Thú!\n${lines}\n\nlatbai.vn/dua`;
+    `${['🥇','🥈','🥉'][i] ?? `#${i + 1}`} ${r.emoji} ${r.name}`).join('\n');
+  const text = `🏆 Kết quả Đua Thú!\n${lines}\n\nĐua thử tại latbai.vn/dua`;
   try {
     if (navigator.share) await navigator.share({ text });
     else {
@@ -295,6 +342,7 @@ async function doShare(winner, sorted) {
 /* ── Race again ─────────────────────────────────────────────────── */
 raceAgain.addEventListener('click', () => {
   clearInterval(timer);
+  cancelAnimationFrame(timerRAF);
   phase = 'setup'; selected = []; racers = []; winnerIdx = -1;
   track.innerHTML = ''; resultMain.innerHTML = ''; nameWrap.innerHTML = '';
   grid.querySelectorAll('.animal-pick').forEach(b => b.classList.remove('chosen'));
@@ -306,3 +354,7 @@ raceAgain.addEventListener('click', () => {
 /* ── Utils ──────────────────────────────────────────────────────── */
 function show(el) { el.classList.remove('hidden'); }
 function hide(el) { el.classList.add('hidden'); }
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}

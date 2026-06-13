@@ -47,7 +47,10 @@
 
     <!-- ── RACE ──────────────────────────────────────────────── -->
     <section id="race-phase" class="hidden">
-      <p class="race-title">🏟️ Đường đua</p>
+      <div class="race-hud">
+        <div class="race-status"><span class="live-dot"></span> ĐANG ĐUA</div>
+        <div class="race-timer" id="race-timer">0.00s</div>
+      </div>
       <div id="track"></div>
     </section>
 
@@ -66,7 +69,7 @@
     <p>&copy; 2026 <a href="/">latbai.vn</a></p>
   </footer>
 
-  <div id="countdown"></div>
+  <div id="countdown"><span class="cd-text"></span></div>
 
   <nav class="floating-dock">
     <a href="/"         class="dock-item" title="Trang chủ"><i class="ti ti-home"></i><span class="dock-label">Trang chủ</span></a>
