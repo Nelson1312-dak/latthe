@@ -300,7 +300,8 @@ body {
 /* ── Racer ──────────────────────────────────────────────────────── */
 .racer {
   position: absolute; top: 50%; left: 0; transform: translateY(-50%);
-  z-index: 3; width: 66px; text-align: center; transition: left .06s linear;
+  z-index: 3; width: 66px; text-align: center; /* position set per-frame via rAF */
+  will-change: left;
 }
 .racer-emoji {
   font-size: 46px; line-height: 1; display: block; position: relative; z-index: 2;
@@ -339,31 +340,24 @@ body {
   100% { opacity: 0; transform: translate(-50%, -24px) scale(1); }
 }
 
-/* ── HORSE gallop ───────────────────────────────────────────────── */
-.mode-horse .racer.running .racer-emoji { animation: gallop .42s ease-in-out infinite; }
+/* ── HORSE gallop — clean bounding stride ──────────────────────── */
+.mode-horse .racer.running .racer-emoji { animation: gallop .4s ease-in-out infinite; }
 @keyframes gallop {
-  0%   { transform: scaleX(-1)    translateY(0)    rotate(-3deg); }
-  20%  { transform: scaleX(-1.06) translateY(-6px)  rotate(4deg); }
-  45%  { transform: scaleX(-1)    translateY(-13px) rotate(-1deg); }
-  70%  { transform: scaleX(-1.03) translateY(-6px)  rotate(3deg); }
-  100% { transform: scaleX(-1)    translateY(0)    rotate(-3deg); }
+  0%   { transform: scaleX(-1) translateY(0)    rotate(-2deg); }
+  50%  { transform: scaleX(-1) translateY(-11px) rotate(2deg); }
+  100% { transform: scaleX(-1) translateY(0)    rotate(-2deg); }
 }
-.mode-horse .racer.running .trail { animation: trailFlick .42s ease-out infinite; }
+.mode-horse .racer.running .trail { animation: trailFlick .4s ease-out infinite; }
 .mode-horse .racer.boosting .racer-emoji { animation: gallopFast .26s ease-in-out infinite; filter: drop-shadow(0 0 8px var(--lc)); }
 @keyframes gallopFast {
-  0%   { transform: scaleX(-1)    translateY(-2px)  rotate(-5deg); }
-  20%  { transform: scaleX(-1.09) translateY(-10px) rotate(6deg); }
-  45%  { transform: scaleX(-1)    translateY(-18px) rotate(-2deg); }
-  70%  { transform: scaleX(-1.05) translateY(-9px)  rotate(5deg); }
-  100% { transform: scaleX(-1)    translateY(-2px)  rotate(-5deg); }
+  0%   { transform: scaleX(-1.04) translateY(-2px)  rotate(-4deg); }
+  50%  { transform: scaleX(-1.04) translateY(-17px) rotate(4deg); }
+  100% { transform: scaleX(-1.04) translateY(-2px)  rotate(-4deg); }
 }
-@keyframes trailFlick { 0% { opacity: .7; width: 28px; } 100% { opacity: 0; width: 12px; } }
+@keyframes trailFlick { 0% { opacity: .6; width: 26px; } 100% { opacity: 0; width: 12px; } }
 
-.mode-horse .racer.running::before { content: '💨'; position: absolute; right: 100%; top: 55%; transform: translateY(-50%); font-size: 13px; opacity: .5; animation: dust .25s ease-out infinite; }
-@keyframes dust { from { opacity: .6; transform: translateY(-50%) translateX(0) scale(1); } to { opacity: 0; transform: translateY(-50%) translateX(-8px) scale(1.5); } }
-
-.mode-horse .racer.running .shadow { animation: shPulse .42s ease-in-out infinite; }
-@keyframes shPulse { 0%,100% { transform: translateX(-50%) scale(1); opacity: .45; } 45% { transform: translateX(-50%) scale(.55); opacity: .18; } }
+.mode-horse .racer.running .shadow { animation: shPulse .4s ease-in-out infinite; }
+@keyframes shPulse { 0%,100% { transform: translateX(-50%) scale(1); opacity: .42; } 50% { transform: translateX(-50%) scale(.58); opacity: .18; } }
 
 /* ── DUCK swim ──────────────────────────────────────────────────── */
 .mode-duck .racer.running .racer-emoji { animation: swim .55s ease-in-out infinite; }

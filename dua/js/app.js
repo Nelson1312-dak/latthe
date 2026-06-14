@@ -41,12 +41,11 @@ let durationSec = 10;
 let names       = ['', ''];
 let racers      = [];
 let winnerIdx   = -1;
-let timer       = null;
 let phase       = 'setup';
 let raceStart   = 0;
-let timerRAF    = null;
+let raf         = null;
 let totalTicks  = 0;
-let curTick     = 0;
+let lastTick    = 0;
 let curLeader   = -1;
 let photoShown  = false;
 let finishCount = 0;
@@ -159,13 +158,13 @@ startBtn.addEventListener('click', () => {
     return {
       emoji: m.emoji, color: PALETTE[idx % PALETTE.length],
       name:  nm.trim() || `${m.label} ${idx + 1}`,
-      pos: 0, state: 'run', boost: 0, done: false, ended: false, finishT: 0,
+      pos: 0, state: 'run', evState: 'run', done: false, ended: false, finishT: 0,
       plan: buildPlan(totalTicks, targetEnd), avg: targetEnd / totalTicks,
     };
   });
 
   phase = 'countdown';
-  curTick = 0; curLeader = -1; photoShown = false; finishCount = 0;
+  lastTick = 0; curLeader = -1; photoShown = false; finishCount = 0;
   ticker.innerHTML = '';
   raceTitle.textContent = m.title;
   track.className = `mode-${raceMode}`;
@@ -242,9 +241,10 @@ function updatePositions() {
     if (!el) return;
     el.style.left = `calc(${r.pos / 100} * (100% - 66px))`;
     el.classList.remove('running', 'stumbling', 'boosting', 'done', 'idle');
-    if (r.ended)             el.classList.add(i === winnerIdx ? 'done' : 'idle');
+    if (r.ended)                 el.classList.add(i === winnerIdx ? 'done' : 'idle');
     else if (r.state === 'slow') el.classList.add('stumbling');
-    else { el.classList.add('running'); if (r.boost > 0) el.classList.add('boosting'); }
+    else if (r.state === 'boost')el.classList.add('running', 'boosting');
+    else                         el.classList.add('running');
   });
   liveOrder().forEach((o, rank) => {
     const badge = $(`rank-${o.i}`);
@@ -265,50 +265,64 @@ function liveOrder() {
     });
 }
 
-/* ── Timer ──────────────────────────────────────────────────────── */
-function runTimer() {
-  const update = () => {
-    if (phase !== 'race') return;
-    timerEl.textContent = `${((performance.now() - raceStart) / 1000).toFixed(2)}s`;
-    timerRAF = requestAnimationFrame(update);
-  };
-  timerRAF = requestAnimationFrame(update);
-}
-
-/* ── Engine ─────────────────────────────────────────────────────── */
+/* ── Engine — requestAnimationFrame, smooth 60fps interpolation ──── */
 function startRace() {
   phase = 'race';
   raceStart = performance.now();
   track.classList.add('racing');
-  runTimer();
-  timer = setInterval(tick, TICK_MS);
+  // precompute cumulative position per tick (0 → targetEnd)
+  racers.forEach(r => {
+    const cum = []; let acc = 0;
+    for (let t = 0; t < totalTicks; t++) { acc += r.plan[t]; cum.push(acc); }
+    r.cum = cum;
+  });
+  lastTick = 0;
+  raf = requestAnimationFrame(frame);
 }
 
-function tick() {
-  curTick++;
-  const L = MODES[raceMode].lines;
-  const last = curTick >= totalTicks;
+function frame(now) {
+  if (phase !== 'race') return;
+  const elapsed = (now - raceStart) / 1000;
+  const frac = Math.min(1, elapsed / durationSec);
+  timerEl.textContent = `${(frac * durationSec).toFixed(2)}s`;
 
-  racers.forEach((r, i) => {
-    if (r.boost > 0) r.boost--;
-    const delta = r.plan[curTick - 1] ?? 0;
-    const prev = r.state;
-    r.pos = Math.min(100, r.pos + delta);
+  const fpos = frac * totalTicks;
+  const i0 = Math.min(totalTicks - 1, Math.floor(fpos));
+  const i1 = Math.min(totalTicks - 1, i0 + 1);
+  const lerp = fpos - Math.floor(fpos);
+
+  racers.forEach(r => {
+    const a = r.cum[i0], b = r.cum[i1];
+    r.pos = Math.min(100, a + (b - a) * lerp);
+    const delta = r.plan[i0] ?? 0;
     r.state = delta > r.avg * 1.9 ? 'boost' : (delta < r.avg * 0.45 ? 'slow' : 'run');
-
-    if (r.state === 'boost' && prev !== 'boost') {
-      r.boost = 5;
-      popFx(i, MODES[raceMode].boostFx, 'go');
-      maybeTick(L.boost(r.name), r.color, 0.45);
-    } else if (r.state === 'slow' && prev !== 'slow') {
-      popFx(i, MODES[raceMode].slowFx, 'go');
-      maybeTick(L.stumble(r.name), r.color, 0.4);
-    }
   });
 
-  detectDrama();
+  // events + drama evaluated once per integer tick (not every frame)
+  const curTickIdx = Math.floor(fpos);
+  if (curTickIdx > lastTick) {
+    for (let tk = lastTick; tk < curTickIdx; tk++) evalTickEvents(tk);
+    lastTick = curTickIdx;
+    detectDrama();
+  }
+
   updatePositions();
-  if (last) { clearInterval(timer); cancelAnimationFrame(timerRAF); finishRace(); }
+
+  if (frac >= 1) { cancelAnimationFrame(raf); finishRace(); }
+  else raf = requestAnimationFrame(frame);
+}
+
+function evalTickEvents(tk) {
+  const L = MODES[raceMode].lines;
+  racers.forEach((r, i) => {
+    const delta = r.plan[tk] ?? 0;
+    const st = delta > r.avg * 1.9 ? 'boost' : (delta < r.avg * 0.45 ? 'slow' : 'run');
+    if (st !== r.evState) {
+      if (st === 'boost') { popFx(i, MODES[raceMode].boostFx, 'go'); maybeTick(L.boost(r.name), r.color, 0.4); }
+      else if (st === 'slow') { popFx(i, MODES[raceMode].slowFx, 'go'); maybeTick(L.stumble(r.name), r.color, 0.35); }
+      r.evState = st;
+    }
+  });
 }
 
 function finishRace() {
@@ -449,7 +463,7 @@ async function doShare(w, sorted) {
 
 /* ── Again ──────────────────────────────────────────────────────── */
 againBtn.addEventListener('click', () => {
-  clearInterval(timer); cancelAnimationFrame(timerRAF);
+  cancelAnimationFrame(raf);
   phase = 'setup'; racers = []; winnerIdx = -1;
   track.innerHTML = ''; track.className = ''; ticker.innerHTML = ''; resultBody.innerHTML = '';
   photoEl.classList.remove('show');
