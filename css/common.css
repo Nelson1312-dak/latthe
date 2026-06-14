@@ -589,6 +589,26 @@
   background: rgba(10, 10, 26, 0.82);
 }
 
+/* Brand mark (left) — unified across modules, matches /ten/ & /dua/ topbar */
+.module-header .mh-brand {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none !important;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text) !important;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+.module-header .mh-brand:hover { opacity: 0.7; }
+.module-header .mh-brand img { width: 24px; height: 24px; display: block; }
+.module-header .mh-brand span { line-height: 1; }
+@media (max-width: 400px) {
+  .module-header .mh-brand span { display: none; } /* logo-only on tiny screens */
+}
+
 /* Back Button */
 .module-header .btn-back {
   font-size: 13px;
