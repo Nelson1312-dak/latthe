@@ -18,87 +18,110 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dua/css/dua.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Đua Thú — Đua Ngựa & Đua Vịt",
+    "description": "Mini game đua ngựa và đua vịt online cho nhóm bạn.",
+    "url": "https://latbai.vn/dua/",
+    "applicationCategory": "Game",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "VND" }
+  }
+  </script>
 </head>
 <body>
 
-  <canvas id="confetti-canvas"></canvas>
+  <canvas id="confetti"></canvas>
 
-  <header class="site-header">
-    <a href="/" class="logo-link">
+  <header class="topbar">
+    <a href="/" class="brand">
       <img src="/images/icon.svg" alt="latbai.vn">
-      latbai.vn
+      <span>latbai.vn</span>
     </a>
+    <span class="topbar-tag">🏁 Đua Thú</span>
   </header>
 
-  <div class="page-wrap">
+  <main class="wrap">
 
-    <!-- ── SETUP ─────────────────────────────────────────────── -->
-    <section id="setup-phase">
-      <h1 class="module-title">🏁 Đua Thú</h1>
-      <p class="module-sub">Chọn loại đua · Thêm người chơi · Xem ai thắng</p>
-
-      <div class="mode-row">
-        <button class="mode-btn" data-mode="horse">
-          <span class="mode-emoji">🐴</span>
-          <span class="mode-name">Đua Ngựa</span>
-          <span class="mode-desc">Phi trên đường đua</span>
-        </button>
-        <button class="mode-btn" data-mode="duck">
-          <span class="mode-emoji">🦆</span>
-          <span class="mode-name">Đua Vịt</span>
-          <span class="mode-desc">Bơi trên hồ bơi</span>
-        </button>
+    <!-- ════════ SETUP ════════ -->
+    <section id="setup" class="screen">
+      <div class="hero">
+        <div class="hero-icon">🏁</div>
+        <h1 class="hero-title">Đua Thú</h1>
+        <p class="hero-sub">Đua ngựa hoặc đua vịt — thêm bạn bè, chọn thời lượng, xem ai về nhất!</p>
       </div>
 
-      <div id="racer-config" class="hidden">
-        <div class="config-head">
-          <span id="racer-count-label">2 người chơi</span>
-          <button id="add-racer" class="add-btn">+ Thêm</button>
+      <div class="block">
+        <div class="block-label">1 · Chọn loại đua</div>
+        <div class="mode-grid">
+          <button class="mode-card" data-mode="horse">
+            <span class="mode-card-icon">🐴</span>
+            <span class="mode-card-name">Đua Ngựa</span>
+            <span class="mode-card-desc">Phi trên đường đua</span>
+          </button>
+          <button class="mode-card" data-mode="duck">
+            <span class="mode-card-icon">🦆</span>
+            <span class="mode-card-name">Đua Vịt</span>
+            <span class="mode-card-desc">Bơi trên hồ bơi</span>
+          </button>
         </div>
-        <div id="name-inputs"></div>
+      </div>
 
-        <div class="dur-row">
-          <span class="dur-label">⏱️ Thời lượng đua</span>
-          <div class="dur-opts">
-            <button class="dur-btn" data-sec="5">5s</button>
-            <button class="dur-btn chosen" data-sec="10">10s</button>
-            <button class="dur-btn" data-sec="20">20s</button>
-            <button class="dur-btn" data-sec="30">30s</button>
+      <div id="config" class="hidden">
+        <div class="block">
+          <div class="block-label-row">
+            <span class="block-label" id="players-label">2 · Người chơi</span>
+            <button id="add-racer" class="chip-btn">+ Thêm</button>
+          </div>
+          <div id="racers"></div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">3 · Thời lượng cuộc đua</div>
+          <div class="segment" id="duration">
+            <button type="button" data-sec="5">5s</button>
+            <button type="button" data-sec="10" class="on">10s</button>
+            <button type="button" data-sec="20">20s</button>
+            <button type="button" data-sec="30">30s</button>
           </div>
         </div>
 
-        <button id="start-btn">🏁 Bắt đầu đua!</button>
+        <button id="start" class="btn-go">🏁 Bắt đầu đua!</button>
       </div>
     </section>
 
-    <!-- ── RACE ──────────────────────────────────────────────── -->
-    <section id="race-phase" class="hidden">
-      <div class="race-hud">
-        <div class="race-status"><span class="live-dot"></span> ĐANG ĐUA</div>
-        <div class="race-timer" id="race-timer">0.00s</div>
+    <!-- ════════ RACE ════════ -->
+    <section id="race" class="screen hidden">
+      <div class="hud">
+        <div class="hud-live"><span class="dot"></span> ĐANG ĐUA</div>
+        <div class="hud-title" id="race-title">Đường đua</div>
+        <div class="hud-timer" id="timer">0.00s</div>
       </div>
-      <p class="race-title" id="race-title">🏇 Đường Đua</p>
-      <div id="commentary" class="commentary"></div>
+      <div id="ticker" class="ticker"></div>
       <div id="track"></div>
     </section>
 
-    <!-- ── RESULT ────────────────────────────────────────────── -->
-    <section id="result-phase" class="hidden">
-      <div id="result-main"></div>
-      <div class="result-actions">
-        <button class="btn-secondary" id="share-btn">📤 Chia sẻ kết quả</button>
-        <button class="btn-primary"   id="race-again-btn">🔄 Đua lại</button>
+    <!-- ════════ RESULT ════════ -->
+    <section id="result" class="screen hidden">
+      <div id="result-body"></div>
+      <div class="actions">
+        <button id="again" class="btn-go">🔄 Đua lại</button>
+        <button id="share" class="btn-ghost">📤 Chia sẻ kết quả</button>
       </div>
     </section>
 
-  </div>
+  </main>
 
-  <footer class="footer">
-    <p>&copy; 2026 <a href="/">latbai.vn</a></p>
+  <footer class="foot">
+    <a href="/">Trang chủ</a> · <a href="/gieoque/">Gieo Quẻ</a> · <a href="/tarot/">Tarot</a> · <a href="/drinking/">Drinking</a>
+    <div class="foot-c">&copy; 2026 latbai.vn</div>
   </footer>
 
   <div id="countdown"><span class="cd-text"></span></div>
-  <div id="photo-finish">📸 SÁT NÚT!</div>
+  <div id="photo">📸 SÁT NÚT!</div>
 
   <script defer src="/_vercel/insights/script.js"></script>
   <script src="/dua/js/app.js" defer></script>
