@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Giải Mã Tên — Khám Phá Năng Lượng Ẩn Sau Cái Tên | latbai.vn</title>
-  <meta name="description" content="Nhập tên và khám phá ngay: Ngũ Hành của bạn, linh vật hộ mệnh, lời tiên tri và các con số may mắn. Hoàn toàn miễn phí.">
+  <title>Giải Mã Tên — Khám Phá Năng Lượng & Ghép Đôi Theo Tên | latbai.vn</title>
+  <meta name="description" content="Nhập tên để khám phá Ngũ Hành, linh vật hộ mệnh, điểm vận mệnh và lời tiên tri. Hoặc ghép đôi 2 tên để xem độ hợp. Miễn phí, vui và dễ chia sẻ.">
   <link rel="canonical" href="https://latbai.vn/ten/">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Giải Mã Tên — Khám Phá Năng Lượng Ẩn Sau Cái Tên">
-  <meta property="og:description" content="Nhập tên và khám phá ngay: Ngũ Hành của bạn, linh vật hộ mệnh và lời tiên tri. Miễn phí tại latbai.vn.">
+  <meta property="og:title" content="Giải Mã Tên — Năng Lượng & Độ Hợp Theo Tên">
+  <meta property="og:description" content="Khám phá Ngũ Hành, linh vật, điểm vận mệnh ẩn sau tên bạn — hoặc ghép đôi 2 tên xem hợp bao nhiêu %. Miễn phí tại latbai.vn.">
   <meta property="og:url" content="https://latbai.vn/ten/">
   <meta property="og:image" content="https://latbai.vn/images/og-default.png">
   <meta property="og:site_name" content="latbai.vn">
@@ -17,16 +17,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/common.css">
   <link rel="stylesheet" href="/ten/css/ten.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Giải Mã Tên",
-    "description": "Khám phá Ngũ Hành, linh vật hộ mệnh và lời tiên tri ẩn sau cái tên của bạn.",
+    "description": "Khám phá Ngũ Hành, linh vật hộ mệnh, điểm vận mệnh và độ hợp đôi theo tên.",
     "url": "https://latbai.vn/ten/",
     "applicationCategory": "EntertainmentApplication",
     "operatingSystem": "Any",
@@ -36,142 +34,163 @@
 </head>
 <body>
 
-  <header class="site-header">
-    <a href="/" class="logo-link">
-      <img src="/images/icon.svg" alt="latbai.vn logo">
-      latbai.vn
-    </a>
+  <canvas id="confetti"></canvas>
+
+  <header class="topbar">
+    <a href="/" class="brand"><img src="/images/icon.svg" alt="latbai.vn"><span>latbai.vn</span></a>
+    <span class="topbar-tag">🔮 Giải Mã Tên</span>
   </header>
 
-  <div class="page-wrap">
+  <main class="wrap">
 
-    <!-- ── INPUT PHASE ─────────────────────────────────────────── -->
-    <section id="input-phase">
-      <div class="module-icon">🔮</div>
-      <h1 class="module-title">Giải Mã Tên Của Bạn</h1>
-      <p class="module-sub">Mỗi cái tên mang một năng lượng riêng. Khám phá Ngũ Hành, linh vật hộ mệnh và lời tiên tri ẩn sau tên bạn.</p>
+    <div class="hero">
+      <div class="hero-icon">🔮</div>
+      <h1 class="hero-title">Giải Mã Tên</h1>
+      <p class="hero-sub">Mỗi cái tên mang một năng lượng riêng. Khám phá bản thân — hoặc xem bạn hợp với ai.</p>
+    </div>
 
-      <div class="input-row">
-        <input
-          id="name-input"
-          type="text"
-          placeholder="Nhập tên của bạn..."
-          maxlength="40"
-          autocomplete="off"
-          autocorrect="off"
-          spellcheck="false"
-        >
-        <button id="reveal-btn">✨ Giải Mã</button>
+    <!-- Tabs -->
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="single">🔮 Giải mã tên</button>
+      <button class="tab" data-tab="couple">💞 Ghép đôi</button>
+    </div>
+
+    <!-- ════ SINGLE input ════ -->
+    <section id="panel-single" class="panel">
+      <div class="field">
+        <input id="s-name" class="t-input" type="text" maxlength="40" autocomplete="off"
+               placeholder="Nhập tên của bạn...">
       </div>
-      <p class="input-hint">Thử với tên đơn (ví dụ: Minh, Lan, Tuấn...)</p>
+      <button id="s-go" class="btn-go">✨ Giải mã ngay</button>
+      <p class="hint">Thử với tên thường gọi (Minh, Lan, Tuấn...)</p>
     </section>
 
-    <!-- ── RESULT PHASE ────────────────────────────────────────── -->
-    <section id="result-phase" class="hidden">
+    <!-- ════ COUPLE input ════ -->
+    <section id="panel-couple" class="panel hidden">
+      <div class="field">
+        <input id="c-a" class="t-input" type="text" maxlength="40" autocomplete="off" placeholder="Tên người thứ nhất...">
+      </div>
+      <div class="heart-sep">💞</div>
+      <div class="field">
+        <input id="c-b" class="t-input" type="text" maxlength="40" autocomplete="off" placeholder="Tên người thứ hai...">
+      </div>
+      <button id="c-go" class="btn-go">💞 Xem độ hợp</button>
+      <p class="hint">Thử với crush, người yêu hoặc bạn thân 😉</p>
+    </section>
 
-      <!-- Element Hero -->
-      <div class="element-hero anim">
-        <div class="element-big" id="r-element-emoji"></div>
-        <div class="element-char" id="r-element-char"></div>
-        <div class="element-name" id="r-element-name"></div>
-        <div class="element-tagline" id="r-element-tagline"></div>
-        <div class="name-display">Tên: <strong id="r-name"></strong></div>
+    <!-- ════ Scanning overlay ════ -->
+    <div id="scanning" class="hidden">
+      <div class="scan-orb"></div>
+      <div class="scan-text">Đang giải mã năng lượng...</div>
+      <div class="scan-name" id="scan-name"></div>
+    </div>
+
+    <!-- ════ SINGLE result ════ -->
+    <section id="result-single" class="hidden">
+      <div class="el-hero anim" id="r-el-hero">
+        <div class="el-big" id="r-el-emoji"></div>
+        <div class="el-char" id="r-el-char"></div>
+        <div class="el-name" id="r-el-name"></div>
+        <div class="el-tag" id="r-el-tag"></div>
+        <div class="el-for">Tên: <strong id="r-name"></strong></div>
       </div>
 
-      <!-- Personality -->
-      <div class="card anim">
-        <div class="card-label">Tính Cách</div>
-        <p class="desc-text" id="r-desc"></p>
+      <div class="card score-card anim">
+        <div class="score-ring" id="r-score-ring">
+          <span class="score-num" id="r-score">0</span>
+        </div>
+        <div class="score-meta">
+          <div class="score-label">Điểm Vận Mệnh</div>
+          <div class="score-title" id="r-score-title"></div>
+        </div>
       </div>
 
-      <!-- Traits -->
       <div class="card anim">
-        <div class="card-label">Điểm Mạnh</div>
-        <div class="traits-wrap" id="r-traits"></div>
+        <div class="card-label">Tính cách</div>
+        <p class="body-text" id="r-desc"></p>
       </div>
 
-      <!-- Spirit Animal -->
       <div class="card anim">
-        <div class="card-label">Linh Vật Hộ Mệnh</div>
+        <div class="card-label">Điểm mạnh</div>
+        <div class="traits" id="r-traits"></div>
+      </div>
+
+      <div class="card anim">
+        <div class="card-label">Linh vật hộ mệnh</div>
         <div class="animal-row">
-          <div class="animal-emoji-big" id="r-animal-emoji"></div>
+          <div class="animal-emoji" id="r-animal-emoji"></div>
           <div>
-            <div class="animal-info-name" id="r-animal-name"></div>
-            <div class="animal-info-desc" id="r-animal-desc"></div>
+            <div class="animal-name" id="r-animal-name"></div>
+            <div class="animal-desc" id="r-animal-desc"></div>
           </div>
         </div>
       </div>
 
-      <!-- Prophecy -->
       <div class="card anim">
-        <div class="card-label">Lời Tiên Tri Tháng Này</div>
-        <div class="prophecy-text" id="r-prophecy"></div>
+        <div class="card-label">Lời tiên tri tháng này</div>
+        <div class="prophecy" id="r-prophecy"></div>
       </div>
 
-      <!-- Lucky -->
       <div class="card anim">
-        <div class="card-label">May Mắn</div>
+        <div class="card-label">May mắn</div>
         <div class="lucky-grid">
-          <div class="lucky-item">
-            <div class="lucky-item-label">Màu sắc</div>
-            <div class="lucky-item-value" id="r-lucky-color"></div>
-          </div>
-          <div class="lucky-item">
-            <div class="lucky-item-label">Con số</div>
-            <div class="lucky-item-value" id="r-lucky-num"></div>
-          </div>
-          <div class="lucky-item">
-            <div class="lucky-item-label">Hướng</div>
-            <div class="lucky-item-value" id="r-lucky-dir"></div>
-          </div>
-          <div class="lucky-item">
-            <div class="lucky-item-label">Đá phong thủy</div>
-            <div class="lucky-item-value" id="r-lucky-stone"></div>
-          </div>
+          <div class="lucky"><div class="lucky-k">Màu sắc</div><div class="lucky-v" id="r-color"></div></div>
+          <div class="lucky"><div class="lucky-k">Con số</div><div class="lucky-v" id="r-num"></div></div>
+          <div class="lucky"><div class="lucky-k">Hướng</div><div class="lucky-v" id="r-dir"></div></div>
+          <div class="lucky"><div class="lucky-k">Đá phong thủy</div><div class="lucky-v" id="r-stone"></div></div>
         </div>
       </div>
 
-      <!-- Compatibility -->
-      <div class="card anim">
-        <div class="card-label">Tương Sinh / Tương Khắc</div>
-        <div class="compat-row">
-          <div class="compat-good">✅ <span id="r-compatible"></span></div>
-          <div class="compat-avoid">⚠️ <span id="r-avoid"></span></div>
-        </div>
-      </div>
-
-      <!-- AI CTA -->
       <div class="ai-cta anim">
-        <p>Muốn hỏi sâu hơn về vận mệnh và tên của bạn?</p>
-        <a href="/">
-          <i class="ti ti-sparkles"></i>
-          Hỏi AI Huyền Học ngay
-        </a>
+        <p>Muốn hỏi sâu hơn về vận mệnh của bạn?</p>
+        <a href="/">✨ Hỏi AI Huyền Học</a>
       </div>
 
-      <!-- Actions -->
-      <div class="action-wrap anim">
-        <button class="btn-primary" id="share-btn">📤 Chia sẻ kết quả</button>
-        <button class="btn-secondary" id="try-again-btn">Thử tên khác</button>
+      <div class="actions anim">
+        <button class="btn-go" id="s-share">📤 Chia sẻ kết quả</button>
+        <button class="btn-ghost" id="s-again">Thử tên khác</button>
       </div>
-
     </section>
 
-  </div><!-- /page-wrap -->
+    <!-- ════ COUPLE result ════ -->
+    <section id="result-couple" class="hidden">
+      <div class="couple-hero anim">
+        <div class="couple-names">
+          <span class="cn" id="rc-a"></span>
+          <span class="cn-heart">💞</span>
+          <span class="cn" id="rc-b"></span>
+        </div>
+      </div>
 
-  <footer class="footer">
-    <p>&copy; 2026 <a href="/">latbai.vn</a> · <a href="/thuvien/">Thư Viện</a> · <a href="/gieoque/">Gieo Quẻ</a> · <a href="/tarot/">Tarot</a></p>
+      <div class="match-card anim">
+        <div class="match-ring" id="rc-ring">
+          <span class="match-pct" id="rc-pct">0%</span>
+        </div>
+        <div class="match-verdict" id="rc-verdict"></div>
+      </div>
+
+      <div class="card anim">
+        <div class="card-label">Chi tiết độ hợp</div>
+        <div class="bars" id="rc-bars"></div>
+      </div>
+
+      <div class="card anim">
+        <div class="card-label">Tương quan Ngũ Hành</div>
+        <p class="body-text" id="rc-element"></p>
+      </div>
+
+      <div class="actions anim">
+        <button class="btn-go" id="c-share">📤 Chia sẻ kết quả</button>
+        <button class="btn-ghost" id="c-again">Thử cặp khác</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <a href="/">Trang chủ</a> · <a href="/tuvi/">Tử Vi</a> · <a href="/thansohoc/">Thần Số Học</a> · <a href="/dua/">Đua Thú</a>
+    <div class="foot-c">&copy; 2026 latbai.vn · Chỉ mang tính giải trí 🔮</div>
   </footer>
-
-  <nav class="floating-dock">
-    <a href="/" class="dock-item" title="Trang chủ"><i class="ti ti-home"></i><span class="dock-label">Trang chủ</span></a>
-    <a href="/tuvi/" class="dock-item" title="Tử Vi AI"><i class="ti ti-stars"></i><span class="dock-label">Tử Vi</span></a>
-    <a href="/gieoque/" class="dock-item" title="Gieo Quẻ"><i class="ti ti-yin-yang"></i><span class="dock-label">Gieo Quẻ</span></a>
-    <a href="/tarot/" class="dock-item" title="Bài Tarot"><i class="ti ti-wand"></i><span class="dock-label">Tarot</span></a>
-    <a href="/ten/" class="dock-item active" title="Giải Mã Tên"><i class="ti ti-sparkles"></i><span class="dock-label">Tên</span></a>
-    <div class="dock-divider"></div>
-    <a href="/thuvien/" class="dock-item" title="Thư Viện"><i class="ti ti-books"></i><span class="dock-label">Thư Viện</span></a>
-  </nav>
 
   <script defer src="/_vercel/insights/script.js"></script>
   <script src="/ten/js/app.js" defer></script>
