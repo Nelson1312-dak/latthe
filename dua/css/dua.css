@@ -2,15 +2,18 @@
    dua.css — Đua Thú (Đua Ngựa / Đua Vịt)
    ════════════════════════════════════════════════════════════════ */
 :root {
-  --bg:        #0a0d14;
-  --surface:   #151a24;
-  --surface-2: #1c2330;
-  --border:    rgba(255,255,255,.09);
-  --text:      #eef1f6;
-  --muted:     #8b93a7;
-  --gold:      #fbbf24;
-  --accent:    #f97316;
+  --bg:        #fbf3e4;
+  --bg-2:      #f6e8cf;
+  --surface:   #ffffff;
+  --surface-2: #f7efdf;
+  --border:    rgba(120,80,25,.14);
+  --text:      #2b1d0e;
+  --muted:     #8a7355;
+  --gold:      #c2740a;
+  --accent:    #ea6a17;
   --accent-2:  #f59e0b;
+  --shadow:    0 6px 22px rgba(120,75,25,.10);
+  --shadow-h:  0 16px 44px rgba(120,75,25,.18);
   --radius:    16px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,14 +22,14 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: 'Be Vietnam Pro', system-ui, sans-serif;
   background:
-    radial-gradient(ellipse 90% 60% at 50% -8%, rgba(249,115,22,.08), transparent 60%),
-    radial-gradient(ellipse 70% 50% at 88% 50%, rgba(56,189,248,.05), transparent 60%),
+    radial-gradient(ellipse 90% 60% at 50% -10%, var(--bg-2) 0%, transparent 70%),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100dvh;
   display: flex; flex-direction: column; align-items: center;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 .hidden { display: none !important; }
@@ -38,7 +41,7 @@ body {
   width: 100%; padding: 13px 18px;
   display: flex; align-items: center; justify-content: space-between;
   border-bottom: 1px solid var(--border);
-  background: rgba(10,13,20,.7); backdrop-filter: blur(10px);
+  background: rgba(251,243,228,.82); backdrop-filter: blur(10px);
   position: sticky; top: 0; z-index: 20;
 }
 .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); font-weight: 800; font-size: 15px; }
@@ -70,7 +73,7 @@ body {
   background: var(--surface); border: 2px solid var(--border);
   border-radius: var(--radius); padding: 22px 12px;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
-  cursor: pointer; font-family: inherit;
+  cursor: pointer; font-family: inherit; box-shadow: var(--shadow);
   transition: border-color .2s, transform .12s, background .2s, box-shadow .2s;
 }
 .mode-card:active { transform: scale(.96); }
@@ -99,7 +102,7 @@ body {
   padding: 7px 15px; font-size: 13px; font-weight: 800;
   cursor: pointer; font-family: inherit; transition: background .18s, transform .1s;
 }
-.chip-btn:hover  { background: rgba(255,255,255,.12); }
+.chip-btn:hover  { background: rgba(120,80,25,.10); }
 .chip-btn:active { transform: scale(.94); }
 
 /* racer rows */
@@ -177,14 +180,15 @@ body {
 .hud {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   gap: 8px; margin-bottom: 14px;
-  background: linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
+  background: var(--surface);
   border: 1px solid var(--border); border-radius: 14px; padding: 12px 16px;
+  box-shadow: var(--shadow);
 }
 .hud-live { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 800; letter-spacing: .5px; color: #ef4444; }
 .hud-live .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 0 rgba(239,68,68,.6); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.6); } 70% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
 .hud-title { font-size: 13px; font-weight: 800; text-align: center; white-space: nowrap; }
-.hud-timer { justify-self: end; font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 900; color: var(--gold); text-shadow: 0 0 12px rgba(251,191,36,.4); }
+.hud-timer { justify-self: end; font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 900; color: var(--gold); }
 
 /* commentary ticker */
 .ticker { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; min-height: 28px; }

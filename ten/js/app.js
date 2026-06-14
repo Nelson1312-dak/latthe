@@ -274,7 +274,7 @@ $('c-again').addEventListener('click', () => {
 /* ── Score / match ring (conic) ─────────────────────────────────── */
 function ring(el, pct, color) {
   const deg = Math.round(pct / 100 * 360);
-  el.style.background = `conic-gradient(${color} ${deg}deg, rgba(255,255,255,.08) ${deg}deg)`;
+  el.style.background = `conic-gradient(${color} ${deg}deg, rgba(120,80,25,.13) ${deg}deg)`;
 }
 
 /* ── Share ──────────────────────────────────────────────────────── */

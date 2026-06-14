@@ -2,14 +2,17 @@
    ten.css — Giải Mã Tên
    ════════════════════════════════════════════════════════════════ */
 :root {
-  --bg:        #0b0918;
-  --surface:   #16122a;
-  --surface-2: #1f1a38;
-  --border:    rgba(255,255,255,.09);
-  --text:      #ede9f6;
-  --muted:     #948cae;
-  --accent:    #a78bfa;
-  --glow:      rgba(167,139,250,.25);
+  --bg:        #fbf3e4;
+  --bg-2:      #f6e8cf;
+  --surface:   #ffffff;
+  --surface-2: #f7efdf;
+  --border:    rgba(120,80,25,.14);
+  --text:      #2b1d0e;
+  --muted:     #8a7355;
+  --accent:    #7c3aed;
+  --glow:      rgba(124,58,237,.18);
+  --shadow:    0 6px 22px rgba(120,75,25,.10);
+  --shadow-h:  0 16px 44px rgba(120,75,25,.18);
   --radius:    16px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,14 +21,13 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: 'Be Vietnam Pro', system-ui, sans-serif;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -8%, var(--glow), transparent 60%),
-    radial-gradient(ellipse 70% 50% at 85% 40%, rgba(244,114,182,.06), transparent 60%),
+    radial-gradient(ellipse 90% 55% at 50% -10%, var(--bg-2) 0%, transparent 70%),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100dvh; display: flex; flex-direction: column; align-items: center;
   overflow-x: hidden;
-  transition: --glow .4s;
+  -webkit-font-smoothing: antialiased;
 }
 .hidden { display: none !important; }
 #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 999; display: none; }
@@ -33,7 +35,7 @@ body {
 /* topbar */
 .topbar {
   width: 100%; padding: 13px 18px; display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--border); background: rgba(11,9,24,.7); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border); background: rgba(251,243,228,.82); backdrop-filter: blur(10px);
   position: sticky; top: 0; z-index: 20;
 }
 .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); font-weight: 800; font-size: 15px; }
@@ -113,7 +115,7 @@ body {
 .el-for strong { color: var(--text); }
 
 /* cards */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
 .card-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 11px; }
 .body-text { font-size: 15px; line-height: 1.7; }
 
@@ -122,7 +124,7 @@ body {
 .score-ring, .match-ring {
   flex-shrink: 0; width: 84px; height: 84px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; position: relative;
-  background: conic-gradient(var(--accent) 0deg, rgba(255,255,255,.08) 0deg);
+  background: conic-gradient(var(--accent) 0deg, rgba(120,80,25,.13) 0deg);
 }
 .score-ring::before, .match-ring::before { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: var(--surface); }
 .score-num, .match-pct { position: relative; z-index: 1; font-size: 26px; font-weight: 900; color: var(--text); }
@@ -145,7 +147,7 @@ body {
 
 /* lucky */
 .lucky-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.lucky { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.lucky { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
 .lucky-k { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
 .lucky-v { font-size: 14px; font-weight: 700; }
 
@@ -174,7 +176,7 @@ body {
 .bars { display: flex; flex-direction: column; gap: 14px; }
 .bar-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
 .bar-val { color: var(--accent); }
-.bar-track { height: 9px; background: rgba(255,255,255,.07); border-radius: 6px; overflow: hidden; }
+.bar-track { height: 9px; background: rgba(120,80,25,.12); border-radius: 6px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #f472b6, #a78bfa); transition: width 1s cubic-bezier(.2,.8,.3,1); }
 
 /* toast */
