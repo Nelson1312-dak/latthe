@@ -315,16 +315,21 @@ body {
   background: radial-gradient(ellipse, rgba(0,0,0,.45), transparent 72%);
   transform: translateX(-50%); z-index: 1;
 }
-/* shadow shrinks at the top of the bound, biggest on landing — synced to gallop */
+/* horse: shadow shrinks at top of bound, biggest on landing — synced to gallop */
 .mode-horse .racer.running .racer-shadow { animation: shadowPulse .42s ease-in-out infinite; }
-.mode-duck  .racer.running .racer-shadow { animation: shadowPulse .42s ease-in-out infinite; }
 @keyframes shadowPulse {
   0%,100% { transform: translateX(-50%) scale(1);   opacity: .45; }
   45%     { transform: translateX(-50%) scale(.55); opacity: .18; }
 }
+/* duck: water displacement gently widens — duck stays on the surface */
+.mode-duck .racer.running .racer-shadow { animation: waterBob .55s ease-in-out infinite; }
+@keyframes waterBob {
+  0%,100% { transform: translateX(-50%) scaleX(1)    scaleY(1);  opacity: .4; }
+  50%     { transform: translateX(-50%) scaleX(1.28) scaleY(.78); opacity: .26; }
+}
 .mode-duck .racer-shadow {
-  background: radial-gradient(ellipse, rgba(3,55,90,.5), transparent 72%);
-  bottom: 8px;
+  width: 48px; height: 10px; bottom: 7px;
+  background: radial-gradient(ellipse, rgba(255,255,255,.32), rgba(3,55,90,.35) 55%, transparent 75%);
 }
 
 /* name + live rank pill above racer */
@@ -411,24 +416,37 @@ body {
   to   { opacity: 0;  transform: translateY(-50%) translateX(-8px) scale(1.5); }
 }
 
-/* ── DUCK swim (gentle bob, faces right) ───────────────────────── */
-.mode-duck .racer.running .racer-emoji { animation: swim .42s ease-in-out infinite alternate; }
+/* ── DUCK swim — glides ON the water, paddle rhythm (faces right) ── */
+.mode-duck .racer.running .racer-emoji { animation: swim .55s ease-in-out infinite; }
 @keyframes swim {
-  from { transform: scaleX(-1) translateY(1px)  rotate(-5deg); }
-  to   { transform: scaleX(-1) translateY(-4px) rotate(5deg); }
+  0%   { transform: scaleX(-1)    translateY(0)    rotate(-3deg); }
+  25%  { transform: scaleX(-1.06) translateY(-1px) rotate(2deg); }  /* paddle push, body surges forward */
+  50%  { transform: scaleX(-1)    translateY(0)    rotate(3deg); }
+  75%  { transform: scaleX(-0.97) translateY(1px)  rotate(-1deg); } /* glide, settle back into water */
+  100% { transform: scaleX(-1)    translateY(0)    rotate(-3deg); }
 }
 .mode-duck .racer.boosting .racer-emoji {
-  animation: swimFast .24s ease-in-out infinite alternate;
+  animation: swimFast .32s ease-in-out infinite;
   filter: drop-shadow(0 0 8px var(--lc));
 }
 @keyframes swimFast {
-  from { transform: scaleX(-1) translateY(0)   rotate(-9deg) scale(1.05); }
-  to   { transform: scaleX(-1) translateY(-5px) rotate(9deg) scale(1.1); }
+  0%   { transform: scaleX(-1)   translateY(0)    rotate(-4deg); }
+  30%  { transform: scaleX(-1.12) translateY(-2px) rotate(4deg); }  /* strong forward lunge */
+  60%  { transform: scaleX(-1)   translateY(0)    rotate(3deg); }
+  100% { transform: scaleX(-1)   translateY(0)    rotate(-4deg); }
 }
-.mode-duck .racer-trail { height: 4px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.75)); }
-.mode-duck .racer.running .racer-trail { animation: wake .42s ease-out infinite; }
-@keyframes wake { 0% { opacity: .85; width: 30px; height: 4px; } 100% { opacity: 0; width: 10px; height: 9px; } }
-.mode-duck .racer.boosting .racer-trail { background: linear-gradient(90deg, transparent, #e0f2fe, #fff); box-shadow: 0 0 10px rgba(224,242,254,.8); }
+/* water wake streaming behind the swimming duck */
+.mode-duck .racer-trail {
+  height: 5px; right: 58%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.8));
+  border-radius: 3px;
+}
+.mode-duck .racer.running .racer-trail { animation: wake .55s ease-out infinite; }
+@keyframes wake {
+  0%   { opacity: .9; width: 34px; height: 5px; }
+  100% { opacity: 0;  width: 12px; height: 11px; }
+}
+.mode-duck .racer.boosting .racer-trail { background: linear-gradient(90deg, transparent, #e0f2fe, #fff); box-shadow: 0 0 10px rgba(224,242,254,.85); }
 
 /* ── Stumble (both) ────────────────────────────────────────────── */
 .racer.stumbling .racer-emoji { animation: wobble .12s ease-in-out infinite alternate; }
