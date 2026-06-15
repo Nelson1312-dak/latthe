@@ -1,342 +1,51 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Trải nghiệm bộ bài uống rượu drinking game online cực vui cho các buổi tiệc tùng, tụ họp nhóm bạn. Hàng trăm thẻ bài Sự thật, Thử thách (Truth or Dare), Bình chọn độc đáo và hài hước.">
-  <meta name="keywords" content="drinking game, bộ bài uống rượu, trò chơi uống rượu, game nhậu, truth or dare việt hóa, sự thật hay thử thách, chưa từng làm, bình chọn nhóm">
-  <meta name="robots" content="index, follow">
-  <meta name="author" content="Lật Bài">
-  <meta name="theme-color" content="#0a0a1a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="canonical" href="https://latbai.vn/drinking/">
-  <title>🍻 Drinking Game Online — Bộ Bài Uống Rượu Cho Hội Bạn</title>
+  <head>
+    <link rel="stylesheet" href="/css/common.css">
 
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://latbai.vn/drinking/">
-  <meta property="og:site_name" content="Lật Bài">
-  <meta property="og:locale" content="vi_VN">
-  <meta property="og:title" content="🍻 Drinking Game Online — Bộ Bài Uống Rượu Cho Hội Bạn">
-  <meta property="og:description" content="Trải nghiệm các trò chơi bộ bài uống rượu drinking game online cực nhiệt cùng hội bạn bè. Các thử thách độc đáo, vui vẻ có trách nhiệm.">
-  <meta property="og:image" content="https://latbai.vn/images/og-drinking.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="🍻 Drinking Game Online — Bộ Bài Uống Rượu Cho Hội Bạn">
-  <meta name="twitter:description" content="Sự thật · Thử thách · Bình chọn · Tôi chưa bao giờ. Trải nghiệm bộ bài uống rượu drinking game cực vui cùng bạn bè.">
-  <meta name="twitter:image" content="https://latbai.vn/images/og-drinking.png">
-  <link rel="manifest" href="/manifest.webmanifest">
-      <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="apple-touch-icon" href="/images/icon.svg">
-  
-  
-  <meta name="apple-mobile-web-app-title" content="Drinking">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap&subset=vietnamese" rel="stylesheet">
-  <link rel="stylesheet" href="../css/common.css">
-  <link rel="stylesheet" href="css/style.css">
-  
-
-  <!-- Shared shell: floating dock, service worker, Vercel analytics -->
-  <script src="/js/shell.js" defer></script>
-  <style>
-    .ti { line-height: 1; vertical-align: -0.125em; display: inline-block; }
-    .splash-back-link {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      z-index: 10;
-      font-size: 12px;
-      color: rgba(255,255,255,0.45);
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      padding: 5px 10px;
-      text-decoration: none;
-      backdrop-filter: blur(8px);
-      transition: color 0.2s, background 0.2s;
-    }
-    .splash-back-link:hover { color: #fff; background: rgba(255,255,255,0.14); }
-  </style>
-
-  <!-- JSON-LD Structured Data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Drinking Game Online - Bộ Bài Uống Rượu Tiệc Tùng",
-    "operatingSystem": "All",
-    "applicationCategory": "GameApplication",
-    "description": "Trò chơi bộ bài uống rượu drinking game online cực vui cho nhóm bạn khi nhậu với nhiều chế độ Sự thật hay Thử thách, Tôi chưa bao giờ.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "VND"
-    }
-  }
-  </script>
-</head>
-<body class="dark-theme drinking-theme">
-  <div id="app">
-
-    <!-- ========== SPLASH SCREEN ========== -->
-    <div id="screen-splash" class="screen active">
-      <a href="/" class="splash-back-link"><i class="ti ti-arrow-left"></i> Trang Chủ</a>
-      <div class="splash-content">
-        <div class="splash-hero">
-          <div class="l-brand-icon" aria-hidden="true">
-            <img src="/images/logo.svg" alt="Lật Bài Logo">
-          </div>
-          <h1 class="game-title">Drinking Games</h1>
-          <p class="game-subtitle">Lật bài • Thử thách • Vui vẻ</p>
-        </div>
-
-        <div class="splash-card-preview">
-          <div class="mini-card mc-truth"><i class="ti ti-message-question"></i> Sự Thật</div>
-          <div class="mini-card mc-dare"><i class="ti ti-flame"></i> Thử Thách</div>
-          <div class="mini-card mc-never"><i class="ti ti-eye-off"></i> Chưa Từng</div>
-        </div>
-
-        <div class="splash-action">
-          <p class="splash-action-title">Chọn Chế Độ Chơi <i class="ti ti-device-gamepad-2"></i></p>
-          <div class="splash-mode-buttons">
-            <button class="btn btn-secondary splash-mode-btn splash-mode-featured" data-mode="solo">
-              <span class="mode-icon"><i class="ti ti-device-mobile"></i></span>
-              <span class="mode-info">
-                <span class="mode-title">Chơi Chung 1 Máy</span>
-                <span class="mode-desc">Chơi ngay lập tức, không cần nhập tên phức tạp</span>
-              </span>
-              <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
-            </button>
-            <button class="btn btn-secondary splash-mode-btn" data-mode="party">
-              <span class="mode-icon"><i class="ti ti-users"></i></span>
-              <span class="mode-info">
-                <span class="mode-title">Chơi Hội Nhóm</span>
-                <span class="mode-desc">Nhập tên từng người chơi và luân phiên lật bài</span>
-              </span>
-              <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
-            </button>
-            <button class="btn btn-secondary splash-mode-btn" data-mode="duo">
-              <span class="mode-icon"><i class="ti ti-swords"></i></span>
-              <span class="mode-info">
-                <span class="mode-title">Đấu Đôi (2 Người)</span>
-                <span class="mode-desc">Chế độ thách đấu đối kháng xoay vòng cho 2 người</span>
-              </span>
-              <span class="mode-arrow"><i class="ti ti-arrow-right"></i></span>
-            </button>
-          </div>
-          <p class="splash-footer">Hỗ trợ 1 - 12 người chơi</p>
-        </div>
-      </div>
-      <div class="particles" id="particles-container"></div>
-    </div>
-
-    <!-- ========== PLAYER SETUP SCREEN ========== -->
-    <div id="screen-setup" class="screen">
-      <div class="setup-container">
-        <div class="setup-header">
-          <button id="btn-back-splash" class="btn-icon" aria-label="Quay lại"><i class="ti ti-arrow-left"></i></button>
-          <h2 class="setup-title">Thiết Lập</h2>
-          <span id="player-count" class="player-count-badge">0/12</span>
-        </div>
-
-        <div class="game-mode-selector">
-          <button class="mode-tab-btn" data-mode="solo"><i class="ti ti-device-mobile"></i> 1 Máy</button>
-          <button class="mode-tab-btn active" data-mode="party"><i class="ti ti-users"></i> Hội nhóm</button>
-          <button class="mode-tab-btn" data-mode="duo"><i class="ti ti-swords"></i> Đấu đôi</button>
-        </div>
-
-        <div id="setup-player-section" style="display:none">
-          <div id="player-list" class="player-list"></div>
-          <div class="add-player-form">
-            <input id="player-name-input" type="text" placeholder="Nhập tên người chơi..." maxlength="15" autocomplete="off" enterkeyhint="done">
-            <button id="btn-add-player" class="btn btn-secondary btn-add-text">Thêm</button>
-          </div>
-          <button id="btn-quick-fill" class="btn btn-secondary btn-full btn-quick-fill">
-            <i class="ti ti-wand"></i> Tạo nhanh 5 người chơi
-          </button>
-        </div>
-
-        <div class="intensity-selector">
-          <h3 class="intensity-title"><i class="ti ti-sparkles"></i> Vibe Tối Nay</h3>
-          <div class="intensity-options">
-            <button class="intensity-btn active" data-intensity="Nhap_Tiec">
-              <span class="intensity-emoji"><i class="ti ti-beer"></i></span>
-              <span class="intensity-label">Nhập Tiệc</span>
-              <span class="intensity-desc">Ice-breaking</span>
-            </button>
-            <button class="intensity-btn" data-intensity="Noi_That">
-              <span class="intensity-emoji"><i class="ti ti-message-question"></i></span>
-              <span class="intensity-label">Nói Thật</span>
-              <span class="intensity-desc">Bóc phốt</span>
-            </button>
-            <button class="intensity-btn" data-intensity="Chay_Pho">
-              <span class="intensity-emoji"><i class="ti ti-bolt"></i></span>
-              <span class="intensity-label">Cháy Phố</span>
-              <span class="intensity-desc">Tới bến</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="pack-selector">
-          <h3 class="selector-title"><i class="ti ti-cards"></i> Chọn Bộ Bài</h3>
-          <div class="pack-options">
-            <label class="pack-checkbox-label">
-              <input type="checkbox" class="pack-checkbox" value="truth" checked>
-              <span class="pack-custom-checkbox truth"><i class="ti ti-message-question"></i> Sự Thật</span>
-            </label>
-            <label class="pack-checkbox-label">
-              <input type="checkbox" class="pack-checkbox" value="dare" checked>
-              <span class="pack-custom-checkbox dare"><i class="ti ti-flame"></i> Thử Thách</span>
-            </label>
-            <label class="pack-checkbox-label">
-              <input type="checkbox" class="pack-checkbox" value="group" checked>
-              <span class="pack-custom-checkbox group"><i class="ti ti-users"></i> Cả Nhóm</span>
-            </label>
-            <label class="pack-checkbox-label">
-              <input type="checkbox" class="pack-checkbox" value="never_have_i_ever" checked>
-              <span class="pack-custom-checkbox never"><i class="ti ti-eye-off"></i> Chưa Từng</span>
-            </label>
-            <label class="pack-checkbox-label">
-              <input type="checkbox" class="pack-checkbox" value="vote" checked>
-              <span class="pack-custom-checkbox vote"><i class="ti ti-checkbox"></i> Bình Chọn</span>
-            </label>
-          </div>
-        </div>
-
-        <button id="btn-play" class="btn btn-primary btn-glow btn-large" disabled>Chơi Thôi! <i class="ti ti-dice-3"></i></button>
-        <div class="setup-bottom-space"></div>
-      </div>
-    </div>
-
-    <!-- ========== GAME SCREEN ========== -->
-    <div id="screen-game" class="screen">
-      <div class="game-header">
-        <div class="current-player-info">
-          <div id="current-avatar" class="player-avatar-sm"></div>
-          <span id="current-player-name" class="current-name">---</span>
-        </div>
-        <div class="deck-info">
-          <span class="deck-icon"><i class="ti ti-cards"></i></span>
-          <span id="cards-remaining">0</span>
-        </div>
-        <button id="btn-scoreboard" class="btn-icon" aria-label="Bảng xếp hạng"><i class="ti ti-trophy"></i></button>
-      </div>
-
-      <div class="card-area">
-        <div id="card-container" class="card-container">
-          <div class="card" id="game-card">
-            <div class="card-face card-front">
-              <div class="card-front-inner">
-                <div class="card-pattern"></div>
-                <div class="card-turn-info">
-                  <span class="card-turn-label">Lượt Của</span>
-                  <div class="card-turn-avatar" id="card-turn-avatar"></div>
-                  <span class="card-turn-name" id="card-turn-name">---</span>
-                </div>
-                <span class="card-logo">🍻</span>
-                <span class="card-tap-hint">Nhấn để lật</span>
-              </div>
-            </div>
-            <div class="card-face card-back" id="card-back">
-              <div class="card-back-inner">
-                <div class="card-type-badge" id="card-type-badge">
-                  <span class="badge-emoji"></span>
-                  <span class="badge-text"></span>
-                </div>
-                <div class="card-content" id="card-content">Nội dung thẻ bài</div>
-                <div class="card-penalty" id="card-penalty">🥃 × 1</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="game-actions">
-        <button id="btn-flip" class="btn btn-primary btn-glow btn-large">👆 Lật Bài</button>
-        <div id="post-flip-actions" class="post-flip-actions hidden">
-          <button id="btn-done" class="btn btn-success">✅ Hoàn thành</button>
-          <button id="btn-drink" class="btn btn-danger">🍺 Uống phạt!</button>
-        </div>
-        <button id="btn-next" class="btn btn-primary btn-large hidden">Tiếp theo ➡️</button>
-      </div>
-
-      <div id="player-carousel" class="player-carousel"></div>
-    </div>
-
-    <!-- ========== SCOREBOARD MODAL ========== -->
-    <div id="modal-scoreboard" class="modal hidden">
-      <div class="modal-overlay"></div>
-      <div class="modal-content glass">
-        <h2 class="modal-title">🏆 Bảng Xếp Hạng</h2>
-        <div id="scoreboard-list" class="scoreboard-list"></div>
-        <button id="btn-close-scoreboard" class="btn btn-secondary btn-full">Đóng</button>
-      </div>
-    </div>
-
-    <!-- ========== NEVER HAVE I EVER MODAL ========== -->
-    <div id="modal-nhie" class="modal hidden">
-      <div class="modal-overlay"></div>
-      <div class="modal-content glass">
-        <h2 class="modal-title">🙈 Ai Đã Từng?</h2>
-        <p class="modal-subtitle" id="nhie-content"></p>
-        <p class="nhie-instruction">Ai đã từng làm điều này → Uống!</p>
-        <div id="nhie-player-grid" class="nhie-player-grid"></div>
-        <button id="btn-nhie-done" class="btn btn-primary btn-full">Xong! Tiếp tục ➡️</button>
-      </div>
-    </div>
-
-    <!-- ========== VOTE MODAL ========== -->
-    <div id="modal-vote" class="modal hidden">
-      <div class="modal-overlay"></div>
-      <div class="modal-content glass">
-        <h2 class="modal-title">🗳️ Bình Chọn</h2>
-        <p class="modal-subtitle" id="vote-content"></p>
-        <p class="vote-instruction">Chỉ vào người bạn chọn!</p>
-        <div id="vote-player-grid" class="vote-player-grid"></div>
-        <button id="btn-vote-done" class="btn btn-primary btn-full">Xong! Tiếp tục ➡️</button>
-      </div>
-    </div>
-
-    <!-- ========== GAME OVER SCREEN ========== -->
-    <div id="screen-gameover" class="screen">
-      <div class="gameover-content">
-        <div class="gameover-emoji">🎊</div>
-        <h1 class="gameover-title">Hết Bài Rồi!</h1>
-        <p class="gameover-subtitle">Xem ai uống nhiều nhất nào 😂</p>
-        <div id="final-scoreboard" class="final-scoreboard"></div>
-        <div class="gameover-actions">
-          <button id="btn-replay" class="btn btn-primary btn-glow btn-large">Chơi Lại 🔄</button>
-          <button id="btn-home" class="btn btn-secondary">Về Trang Chủ 🏠</button>
-        </div>
-      </div>
-      <div class="confetti-container" id="confetti-container"></div>
-    </div>
-
-    <!-- ========== EDIT PLAYER NAME POPUP ========== -->
-    <div id="popup-edit-player" class="popup-overlay hidden">
-      <div class="popup-box glass">
-        <p class="popup-title">✏️ Sửa Tên</p>
-        <input id="popup-name-input" type="text" class="popup-input" maxlength="15" autocomplete="off" enterkeyhint="done">
-        <div class="popup-actions">
-          <button id="popup-cancel" class="btn btn-secondary">Hủy</button>
-          <button id="popup-save" class="btn btn-primary">Lưu ✓</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <script src="js/cards.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/touch.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/settings.js"></script>
-</body>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0a0a1a" />
+    <title>🍻 Drinking Game Online — Bộ Bài Uống Rượu Cho Hội Bạn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="/drinking/assets/index-CGFBwO_t.js"></script>
+    <link rel="stylesheet" crossorigin href="/drinking/assets/index-J_egDtll.css">
+    <meta name="description" content="Trải nghiệm bộ bài uống rượu drinking game online cực vui cho các buổi tiệc tùng, tụ họp nhóm bạn. Hàng trăm thẻ bài Sự thật, Thử thách (Truth or Dare), Bình chọn độc đáo và hài hước.">
+    <meta name="keywords" content="drinking game, bộ bài uống rượu, trò chơi uống rượu, game nhậu, truth or dare việt hóa, sự thật hay thử thách, chưa từng làm, bình chọn nhóm">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Lật Bài">
+    <link rel="canonical" href="https://latbai.vn/drinking/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://latbai.vn/drinking/">
+    <meta property="og:site_name" content="Lật Bài">
+    <meta property="og:locale" content="vi_VN">
+    <meta property="og:title" content="🍻 Drinking Game Online — Bộ Bài Uống Rượu Cho Hội Bạn">
+    <meta property="og:description" content="Trải nghiệm bộ bài uống rượu drinking game online cực vui cho các buổi tiệc tùng, tụ họp nhóm bạn. Hàng trăm thẻ bài Sự thật, Thử thách (Truth or Dare), Bình chọn độc đáo và hài hước.">
+    <meta property="og:image" content="https://latbai.vn/images/og-drinking.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="🍻 Drinking Game Online — Bộ Bài Uống Rượu Cho Hội Bạn">
+    <meta name="twitter:description" content="Trải nghiệm bộ bài uống rượu drinking game online cực vui cho các buổi tiệc tùng, tụ họp nhóm bạn. Hàng trăm thẻ bài Sự thật, Thử thách (Truth or Dare), Bình chọn độc đáo và hài hước.">
+    <meta name="twitter:image" content="https://latbai.vn/images/og-drinking.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+    <link rel="apple-touch-icon" href="/images/icon.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Drinking">
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Drinking Game Online - Bộ Bài Uống Rượu Tiệc Tùng","operatingSystem":"All","applicationCategory":"GameApplication","description":"Trò chơi bộ bài uống rượu drinking game online cực vui cho nhóm bạn khi nhậu với nhiều chế độ Sự thật hay Thử thách, Tôi chưa bao giờ.","offers":{"@type":"Offer","price":"0","priceCurrency":"VND"}}</script>
+  </head>
+  <body class="dark-theme drinking-theme">
+    <div id="root"></div>
+    <script src="/js/shell.js" defer></script>
+  </body>
 </html>
