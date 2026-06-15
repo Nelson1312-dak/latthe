@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v101-2026-06-14';
+const CACHE_VERSION = 'v102-2026-06-15';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -42,16 +42,9 @@ const SHELL = [
   '/tarot/css/tarot.css',
   '/tarot/js/cards.js',
   '/tarot/js/app.js',
-  // Drinking module
+  // Drinking module (React SPA — hashed JS/CSS cached at runtime, not precached)
   '/drinking/',
   '/drinking/index.html',
-  '/drinking/css/style.css',
-  '/drinking/js/settings.js',
-  '/drinking/js/cards.js',
-  '/drinking/js/ui.js',
-  '/drinking/js/game.js',
-  '/drinking/js/touch.js',
-  '/drinking/js/app.js',
   // Tu Vi module
   '/tuvi/',
   '/tuvi/index.html',
