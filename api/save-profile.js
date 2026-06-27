@@ -22,6 +22,21 @@ export default async function handler(req, res) {
   if (birth_hour === undefined) return res.status(400).json({ error: 'Thiếu giờ sinh' });
   if (gender === undefined) return res.status(400).json({ error: 'Thiếu giới tính' });
 
+  // Validate types/sizes before hitting the DB (prevents storage abuse & junk rows).
+  if (typeof name !== 'string' || name.trim().length > 120) {
+    return res.status(400).json({ error: 'Họ tên không hợp lệ' });
+  }
+  if (typeof birth_date !== 'string' || birth_date.length > 40) {
+    return res.status(400).json({ error: 'Ngày sinh không hợp lệ' });
+  }
+  const hourNum = Number(birth_hour);
+  if (!Number.isInteger(hourNum) || hourNum < 0 || hourNum > 23) {
+    return res.status(400).json({ error: 'Giờ sinh không hợp lệ' });
+  }
+  if (chart_json && JSON.stringify(chart_json).length > 100000) {
+    return res.status(400).json({ error: 'Dữ liệu lá số quá lớn' });
+  }
+
   const isLocal = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') || sbUrl.includes('postgrest') || sbUrl.includes(':3001');
   const path = isLocal ? '/tuvi_profiles' : '/rest/v1/tuvi_profiles';
 
@@ -51,13 +66,16 @@ export default async function handler(req, res) {
 
     if (!dbRes.ok) {
       const errText = await dbRes.text();
-      return res.status(dbRes.status).json({ error: `Database error: ${errText.slice(0, 200)}` });
+      // Keep DB schema/constraint details in server logs, not in the client response.
+      console.error(`[save-profile] DB error ${dbRes.status}: ${errText.slice(0, 300)}`);
+      return res.status(502).json({ error: 'Không lưu được hồ sơ. Vui lòng thử lại sau.' });
     }
 
     const data = await dbRes.json();
     const insertedRow = Array.isArray(data) ? data[0] : data;
     return res.status(200).json({ success: true, id: insertedRow?.id });
   } catch (err) {
-    return res.status(500).json({ error: `Internal server error: ${err.message}` });
+    console.error(`[save-profile] Internal error: ${err.message}`);
+    return res.status(500).json({ error: 'Lỗi máy chủ nội bộ. Vui lòng thử lại sau.' });
   }
 }

@@ -54,8 +54,18 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL hoặc DEEPSEEK_API_KEY)' });
   }
 
-  const { question, context, type, history = [] } = req.body || {};
+  let { question, context, type, history = [] } = req.body || {};
   if (!question?.trim()) return res.status(400).json({ error: 'Thiếu câu hỏi' });
+
+  // Validate & clamp inputs: stop oversized prompts and cache/DB pollution from
+  // arbitrary `type` values. Caps sit far above any legitimate client payload
+  // (questions are short; tuvi context is a text summary; client history ≤ 8).
+  const VALID_TYPES = ['gieoque', 'tarot', 'tuvi', 'thansohoc'];
+  if (!VALID_TYPES.includes(type)) type = 'gieoque';
+  if (question.length > 4000) question = question.slice(0, 4000);
+  if (typeof context === 'string' && context.length > 30000) context = context.slice(0, 30000);
+  if (!Array.isArray(history)) history = [];
+  if (history.length > 20) history = history.slice(-20);
 
   const isFollowUp = history.length > 0;
 
@@ -205,17 +215,16 @@ export default async function handler(req, res) {
     console.warn(`[interpret] Ollama unavailable (${ollamaErr || 'n/a'}) — falling back to DeepSeek (${dsModel})`);
     const dsRes = await callCloudLLM({ url: dsUrl, apiKey: dsKey, model: dsModel, messages: ollamaMessages, temperature, maxTokens, timeoutMs: dsTimeoutMs, label: 'DeepSeek' });
     if (!dsRes.ok) {
-      console.error(`[interpret] DeepSeek fallback failed: ${dsRes.error}`);
-      return res.status(502).json({ error: `AI không phản hồi (Ollama: ${ollamaErr || 'n/a'}; DeepSeek: ${dsRes.error})` });
+      // Detailed cause (ngrok URLs, model names, timeouts) stays in server logs only.
+      console.error(`[interpret] AI failed — Ollama: ${ollamaErr || 'n/a'}; DeepSeek: ${dsRes.error}`);
+      return res.status(502).json({ error: 'AI đang quá tải hoặc mất kết nối. Vui lòng thử lại sau ít phút.' });
     }
     answer = dsRes.content;
   }
 
   if (!answer) {
-    if (!dsKey) {
-      console.error('[interpret] Ollama produced no answer and DEEPSEEK_API_KEY is not set — no fallback available.');
-    }
-    return res.status(502).json({ error: `AI không phản hồi: ${ollamaErr || 'không có nội dung trả về'}` });
+    console.error(`[interpret] No answer — Ollama: ${ollamaErr || 'không có nội dung trả về'}; DeepSeek configured: ${!!dsKey}`);
+    return res.status(502).json({ error: 'AI đang quá tải hoặc mất kết nối. Vui lòng thử lại sau ít phút.' });
   }
 
   // Strip <think>...</think> blocks that qwen3 emits even when think:false is set
