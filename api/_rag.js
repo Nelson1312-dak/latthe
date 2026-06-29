@@ -90,11 +90,11 @@ export function retrieveKnowledge(sbUrl, sbKey, embedding, type, breaker) {
   }, breaker);
 }
 
-export async function storeDoc(sbUrl, sbKey, payload) {
+export async function storeDoc(sbUrl, sbKey, payload, breaker) {
   if (!sbUrl || !payload.embedding) return;
   const isLocal = isLocalUrl(sbUrl);
   const path = isLocal ? '/documents' : '/rest/v1/documents';
-  
+
   const headers = {
     'Content-Type': 'application/json',
     'Prefer': 'return=minimal',
@@ -104,13 +104,21 @@ export async function storeDoc(sbUrl, sbKey, payload) {
     headers['Authorization'] = `Bearer ${sbKey}`;
   }
 
+  // Bounded like every other DB call — without this, a hung tunnel keeps the
+  // serverless function alive past its useful life (storeDoc is fire-and-forget).
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 5000);
   try {
     await fetch(`${sbUrl}${path}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(t);
   } catch (err) {
+    clearTimeout(t);
+    if (breaker && isInfraDown(err)) breaker.localDown = true;
     console.error("Failed to store document in cache database:", err);
   }
 }

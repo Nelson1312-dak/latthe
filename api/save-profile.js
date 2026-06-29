@@ -4,9 +4,19 @@
  */
 
 import { applyCors } from './_cors.js';
+import { getClientIp, checkRateLimit } from './_rateLimit.js';
 
 export default async function handler(req, res) {
   if (!applyCors(req, res)) return;
+
+  // Rate limit per IP on its own bucket so it doesn't share the interpret quota.
+  const rl = await checkRateLimit(getClientIp(req), 'save-profile');
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfter));
+    return res.status(429).json({
+      error: `Bạn đang lưu hơi nhanh 🙏 Vui lòng đợi ${rl.retryAfter} giây rồi thử lại.`,
+    });
+  }
 
   const sbUrl = (process.env.SUPABASE_URL || '').trim();
   const sbKey = (process.env.SUPABASE_ANON_KEY || '').trim();

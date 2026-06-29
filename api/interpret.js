@@ -246,7 +246,7 @@ export default async function handler(req, res) {
   // follow-up) so tuvi's now-computed embedding doesn't write useless cache rows.
   // Stored as source='qa' (DB default). Fire-and-forget. ----
   if (cacheEligible && embedding && !breaker.localDown) {
-    storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp });
+    storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp }, breaker);
   }
 
   res.setHeader('X-AI-Source', source);

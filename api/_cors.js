@@ -3,13 +3,16 @@
  * Underscore prefix => Vercel does NOT expose this as a route; import only.
  */
 
+// Vercel sets NODE_ENV=production on deployed functions; localhost origins are
+// only allowed when running locally (vercel dev), never in production.
+const IS_PROD = process.env.NODE_ENV === 'production';
+
 export const ALLOWED_ORIGINS = new Set([
   'https://latbai.vn',
   'https://www.latbai.vn',
   'https://gieoque.vn',
   'https://www.gieoque.vn',
-  'http://localhost:5005',
-  'http://localhost:3000',
+  ...(IS_PROD ? [] : ['http://localhost:5005', 'http://localhost:3000']),
 ]);
 
 /**

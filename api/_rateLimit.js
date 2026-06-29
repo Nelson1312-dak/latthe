@@ -34,16 +34,17 @@ export function getClientIp(req) {
 
 // In-memory limiter — per-instance only. Used as a fallback when Upstash is not
 // configured or unreachable, so a misconfig never takes the whole endpoint down.
-function checkRateLimitLocal(ip) {
+// `key` namespaces the bucket+IP so different endpoints don't share a counter.
+function checkRateLimitLocal(key) {
   const now = Date.now();
   if (rateLimitStore.size > 500) {
     for (const [k, v] of rateLimitStore) {
       if (now - v.windowStart > RATE_LIMIT_WINDOW_MS) rateLimitStore.delete(k);
     }
   }
-  const record = rateLimitStore.get(ip);
+  const record = rateLimitStore.get(key);
   if (!record || now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
-    rateLimitStore.set(ip, { count: 1, windowStart: now });
+    rateLimitStore.set(key, { count: 1, windowStart: now });
     return { allowed: true };
   }
   if (record.count >= RATE_LIMIT_MAX) {
@@ -58,10 +59,11 @@ function checkRateLimitLocal(ip) {
 // instances, unlike the in-memory Map). Fixed-window counter: INCR the per-IP
 // key, and set a TTL on the first hit of each window so it auto-expires. Done in
 // one pipelined REST call. Any failure falls back to the in-memory limiter.
-export async function checkRateLimit(ip) {
-  if (!upstashEnabled) return { ...checkRateLimitLocal(ip), backend: 'memory-noenv' };
+export async function checkRateLimit(ip, bucket = 'interpret') {
+  const localKey = `${bucket}:${ip}`;
+  if (!upstashEnabled) return { ...checkRateLimitLocal(localKey), backend: 'memory-noenv' };
 
-  const key = `rl:interpret:${ip}`;
+  const key = `rl:${bucket}:${ip}`;
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 2000);
   try {
@@ -80,11 +82,11 @@ export async function checkRateLimit(ip) {
       signal: controller.signal,
     });
     clearTimeout(t);
-    if (!res.ok) return { ...checkRateLimitLocal(ip), backend: `memory-http${res.status}` };
+    if (!res.ok) return { ...checkRateLimitLocal(localKey), backend: `memory-http${res.status}` };
 
     const data = await res.json();
     const count = Array.isArray(data) ? Number(data[0]?.result) : NaN;
-    if (!Number.isFinite(count)) return { ...checkRateLimitLocal(ip), backend: 'memory-badresp' };
+    if (!Number.isFinite(count)) return { ...checkRateLimitLocal(localKey), backend: 'memory-badresp' };
 
     if (count > RATE_LIMIT_MAX) {
       // Read remaining TTL to give the client an accurate Retry-After.
@@ -103,7 +105,7 @@ export async function checkRateLimit(ip) {
     return { allowed: true, backend: 'upstash' };
   } catch (err) {
     clearTimeout(t);
-    return { ...checkRateLimitLocal(ip), backend: `memory-err:${err.name || 'unknown'}` };
+    return { ...checkRateLimitLocal(localKey), backend: `memory-err:${err.name || 'unknown'}` };
   }
 }
 
