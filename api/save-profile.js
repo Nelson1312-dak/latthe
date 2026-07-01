@@ -43,6 +43,11 @@ export default async function handler(req, res) {
   if (!Number.isInteger(hourNum) || hourNum < 0 || hourNum > 23) {
     return res.status(400).json({ error: 'Giờ sinh không hợp lệ' });
   }
+  // DB column is integer (0 = nữ, 1 = nam per tuvi/index.html select options).
+  const genderNum = Number(gender);
+  if (![0, 1].includes(genderNum)) {
+    return res.status(400).json({ error: 'Giới tính không hợp lệ' });
+  }
   if (chart_json && JSON.stringify(chart_json).length > 100000) {
     return res.status(400).json({ error: 'Dữ liệu lá số quá lớn' });
   }
@@ -66,8 +71,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         name: name.trim(),
         birth_date,
-        birth_hour,
-        gender,
+        birth_hour: hourNum,
+        gender: genderNum,
         lunar_date,
         lunar_hour,
         chart_json,
