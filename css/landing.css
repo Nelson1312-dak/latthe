@@ -516,3 +516,240 @@ a { text-decoration: none; color: inherit; }
   .l-about-lead { font-size: 15px; }
   .l-divider--gap { margin-top: 56px; margin-bottom: 56px; }
 }
+
+/* ============================================================
+   3D Mystic FX — dùng cùng /js/landing-fx.js
+   (canvas bụi vàng, halo thiên văn, tilt 3D, scroll reveal)
+   ============================================================ */
+
+/* ---- Canvas bụi huyền học nền ---- */
+#fx-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ---- Halo thiên văn 3D quanh logo ---- */
+.l-brand-icon { position: relative; }
+
+.fx-halo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  perspective: 700px;
+  transition: transform 0.35s ease-out;
+}
+
+.fx-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 138, 10, 0.5);
+  box-shadow: 0 0 14px rgba(232, 147, 10, 0.18);
+  transform-style: preserve-3d;
+}
+.fx-ring-1 {
+  width: 164px; height: 164px;
+  margin: -82px 0 0 -82px;
+  border-style: dashed;
+  animation: fx-ring-spin-1 16s linear infinite;
+}
+.fx-ring-2 {
+  width: 208px; height: 208px;
+  margin: -104px 0 0 -104px;
+  border-color: rgba(217, 138, 10, 0.32);
+  animation: fx-ring-spin-2 22s linear infinite;
+}
+.fx-ring-3 {
+  width: 132px; height: 132px;
+  margin: -66px 0 0 -66px;
+  border-color: rgba(232, 147, 10, 0.6);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  animation: fx-ring-spin-3 10s linear infinite;
+}
+
+@keyframes fx-ring-spin-1 {
+  from { transform: rotateX(72deg) rotateZ(0deg); }
+  to   { transform: rotateX(72deg) rotateZ(360deg); }
+}
+@keyframes fx-ring-spin-2 {
+  from { transform: rotateZ(60deg) rotateX(75deg) rotateZ(0deg); }
+  to   { transform: rotateZ(60deg) rotateX(75deg) rotateZ(-360deg); }
+}
+@keyframes fx-ring-spin-3 {
+  from { transform: rotateZ(-45deg) rotateX(66deg) rotateZ(0deg); }
+  to   { transform: rotateZ(-45deg) rotateX(66deg) rotateZ(360deg); }
+}
+
+.fx-orb {
+  position: absolute;
+  font-style: normal;
+  font-weight: 400;
+  color: #d98a0a;
+  text-shadow: 0 0 10px rgba(232, 147, 10, 0.55);
+  animation: fx-orb-float 5s ease-in-out infinite alternate;
+}
+.fx-orb-1 { font-size: 15px; left: -46px; top: 8px; }
+.fx-orb-2 { font-size: 17px; right: -50px; top: -14px; animation-delay: -1.8s; animation-duration: 6s; }
+
+@keyframes fx-orb-float {
+  from { transform: translateY(0) scale(1); opacity: 0.65; }
+  to   { transform: translateY(-10px) scale(1.15); opacity: 1; }
+}
+
+/* ---- Lá bài mini bay quỹ đạo quanh logo ---- */
+.fx-mcard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 32px;
+  margin: -16px 0 0 -11px;
+  border-radius: 5px;
+  background: linear-gradient(150deg, #ffffff 0%, #fdf2dc 100%);
+  border: 1px solid rgba(217, 138, 10, 0.65);
+  box-shadow: 0 4px 10px rgba(120, 75, 25, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-style: normal;
+  color: #d98a0a;
+  animation: fx-mcard-orbit-1 10s linear infinite;
+}
+.fx-mcard-2 {
+  width: 18px;
+  height: 27px;
+  margin: -13px 0 0 -9px;
+  font-size: 9px;
+  animation: fx-mcard-orbit-2 14s linear infinite;
+}
+
+/* quỹ đạo elip pseudo-3D: trước to & rõ, sau nhỏ & mờ */
+@keyframes fx-mcard-orbit-1 {
+  0%   { transform: translate(84px, 8px)   rotate(10deg)  scale(1);    opacity: 1;    z-index: 3; }
+  25%  { transform: translate(0px, 40px)   rotate(-8deg)  scale(1.12); opacity: 1;    z-index: 3; }
+  50%  { transform: translate(-84px, 8px)  rotate(-14deg) scale(1);    opacity: 1;    z-index: 3; }
+  62%  { opacity: 0.55; z-index: -1; }
+  75%  { transform: translate(0px, -34px)  rotate(6deg)   scale(0.72); opacity: 0.45; z-index: -1; }
+  88%  { opacity: 0.55; z-index: -1; }
+  100% { transform: translate(84px, 8px)   rotate(10deg)  scale(1);    opacity: 1;    z-index: 3; }
+}
+@keyframes fx-mcard-orbit-2 {
+  0%   { transform: translate(-100px, -4px) rotate(-12deg) scale(0.95); opacity: 1;    z-index: 3; }
+  25%  { transform: translate(0px, -44px)   rotate(4deg)   scale(0.66); opacity: 0.45; z-index: -1; }
+  50%  { transform: translate(100px, -4px)  rotate(14deg)  scale(0.95); opacity: 1;    z-index: 3; }
+  75%  { transform: translate(0px, 48px)    rotate(-6deg)  scale(1.15); opacity: 1;    z-index: 3; }
+  100% { transform: translate(-100px, -4px) rotate(-12deg) scale(0.95); opacity: 1;    z-index: 3; }
+}
+
+/* ---- Tiêu đề "lật bài" lật 3D từng ký tự ---- */
+.fx-js .l-brand-name { perspective: 600px; }
+.l-brand-name .fx-ch {
+  display: inline-block;
+  background: linear-gradient(135deg, #1a0a00 25%, #7a3800 60%, #e8930a 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transform-origin: 50% 60%;
+  animation: fx-ch-flip 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 75ms + 150ms);
+}
+@keyframes fx-ch-flip {
+  0%   { transform: rotateY(95deg) translateZ(30px); opacity: 0; }
+  60%  { transform: rotateY(-16deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+/* hover: sóng chữ nhấp nhô */
+.l-brand-name:hover .fx-ch {
+  animation: fx-ch-wave 0.65s ease calc(var(--i) * 45ms);
+}
+@keyframes fx-ch-wave {
+  0%   { transform: none; }
+  40%  { transform: translateY(-12px) rotateX(24deg) scale(1.07); }
+  100% { transform: none; }
+}
+
+/* ---- Tilt 3D card + glare ---- */
+.fx-tilt {
+  transform-style: preserve-3d;
+  /* KHÔNG đặt overflow:hidden — nó ép transform-style về flat, mất hiệu ứng nổi 3D.
+     Glare tự bo góc bằng border-radius: inherit. */
+}
+.fx-tilt .l-card-body { transform-style: preserve-3d; }
+
+.fx-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  z-index: 2;
+}
+
+.fx-tilting { box-shadow: var(--shadow-h); }
+.fx-tilting .l-card-icon {
+  transform: translateZ(32px) scale(1.06) rotate(-3deg);
+}
+.fx-tilting .l-card-name { transform: translateZ(20px); }
+.fx-tilting .l-lookup-big {
+  transform: translateZ(28px);
+  display: inline-block;
+}
+.l-card-name, .l-lookup-big { transition: transform 0.28s ease; }
+
+/* ---- Divider tự vẽ + ✦ xoay ở giữa ---- */
+.fx-js .l-divider { position: relative; overflow: visible; }
+.fx-js .l-divider::after {
+  content: '✦';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 11px;
+  line-height: 1;
+  color: #d98a0a;
+  background: var(--bg);
+  padding: 0 8px;
+  animation: fx-divider-spin 12s linear infinite;
+}
+@keyframes fx-divider-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ---- Scroll reveal 3D ---- */
+.fx-reveal {
+  opacity: 0;
+  transform: perspective(900px) translateY(26px) rotateX(7deg);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fx-reveal.fx-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* divider reveal: tự vẽ giãn ra từ giữa thay vì trồi lên */
+.l-divider.fx-reveal { transform: scaleX(0.1); }
+.l-divider.fx-reveal.fx-in { transform: none; }
+
+/* Số lớn (64 / 78 / 12) lật 3D khi hiện ra */
+.fx-in .l-lookup-big {
+  animation: fx-num-flip 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes fx-num-flip {
+  0%   { transform: perspective(500px) rotateX(90deg); opacity: 0; }
+  60%  { transform: perspective(500px) rotateX(-12deg); opacity: 1; }
+  100% { transform: perspective(500px) rotateX(0deg); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-ring, .fx-orb, .fx-mcard, .fx-ch, .fx-in .l-lookup-big,
+  .fx-js .l-divider::after { animation: none !important; }
+  .l-brand-name .fx-ch { opacity: 1; transform: none; }
+  .fx-reveal { opacity: 1; transform: none; transition: none; }
+  #fx-field { display: none; }
+}
