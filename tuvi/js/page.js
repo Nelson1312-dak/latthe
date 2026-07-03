@@ -279,11 +279,11 @@
         const branchColorClass = `color-${CHI_ELEMENTS[idx]}`;
         const chiLabel = canAbbr ? `<span class="${branchColorClass}">${canAbbr}.${CUNG_CHI[idx]}</span>` : CUNG_CHI[idx];
 
-        const chinhHTML = p.chinh_tinh.map(s => {
+        const chinhHTML = p.chinh_tinh.map((s, si) => {
           const ratingAbbr = STAR_RATINGS[s] ? STAR_RATINGS[s][idx] : "";
           const ratingFull = RATING_FULL[ratingAbbr] || ratingAbbr;
           const el = STAR_ELEMENTS[s] || "neutral";
-          return `<span class="star-main color-${el}">${s} (${ratingFull})</span>`;
+          return `<span class="star-main color-${el}" style="--si:${si}">${s} (${ratingFull})</span>`;
         }).join('');
 
         const phuTinh = [...p.phu_tinh];
@@ -325,10 +325,11 @@
           </div>`;
       });
 
-      // Show sections
+      // Show sections: timeline đại hạn + nghi thức an sao (AI panel hiện khi nghi thức xong)
       chartWrapper.style.display = 'block';
-      aiPanel.style.display = 'block';
+      buildDaihanTimeline();
       chartWrapper.scrollIntoView({ behavior: 'smooth' });
+      playReveal();
 
       // Save to DB (silent)
       saveProfile(name, `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`, hour, gender, chart);
@@ -573,3 +574,223 @@
         clearOverlay();
       });
     })();
+
+    // ==================== NGHI THỨC AN SAO (reveal sequence) ====================
+    let revealTimers = [];
+
+    function clearRevealTimers() {
+      revealTimers.forEach(clearTimeout);
+      revealTimers = [];
+    }
+
+    function finishReveal(outer) {
+      clearRevealTimers();
+      outer.classList.remove('is-revealing');
+      outer.classList.add('reveal-done');
+      CUNG_KEYS.forEach(k => document.getElementById(`cung-${k}`).classList.remove('pc-in'));
+      aiPanel.style.display = 'block';
+    }
+
+    function playReveal() {
+      const outer = document.querySelector('.chart-outer');
+      outer.classList.remove('reveal-done');
+      clearRevealTimers();
+
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        finishReveal(outer);
+        return;
+      }
+
+      aiPanel.style.display = 'none';
+      outer.classList.add('is-revealing');
+
+      // Thứ tự an cung: đi trọn vòng địa bàn, kết thúc tại cung Mệnh
+      let menhIdx = CUNG_KEYS.findIndex(k => currentChart.la_so[k].ten_cung === 'Mệnh');
+      if (menhIdx < 0) menhIdx = 0;
+      const order = [];
+      for (let s = 1; s <= 12; s++) order.push((menhIdx + s) % 12);
+
+      const START = 900;  // chờ địa bàn trung tâm xoay vào vị trí
+      const STEP  = 190;
+
+      order.forEach((idx, i) => {
+        revealTimers.push(setTimeout(() => {
+          document.getElementById(`cung-${CUNG_KEYS[idx]}`).classList.add('pc-in');
+        }, START + i * STEP));
+      });
+
+      // Mệnh bùng sáng khép lại nghi thức
+      revealTimers.push(setTimeout(() => {
+        const menhCard = document.getElementById(`cung-${CUNG_KEYS[menhIdx]}`);
+        menhCard.classList.add('pc-menh-flash');
+        setTimeout(() => menhCard.classList.remove('pc-menh-flash'), 1300);
+      }, START + 12 * STEP + 150));
+
+      revealTimers.push(setTimeout(() => finishReveal(outer), START + 12 * STEP + 800));
+
+      // Chạm/click bất kỳ đâu trên lá số để bỏ qua nghi thức
+      outer.addEventListener('click', function skip() {
+        if (outer.classList.contains('is-revealing')) finishReveal(outer);
+      }, { once: true });
+    }
+
+    // ==================== SHEET CHI TIẾT CUNG + AI THEO CUNG ====================
+    const PALACE_MEANINGS = {
+      'Mệnh':      'Cung quan trọng nhất của lá số — phản ánh tính cách bẩm sinh, tư chất, ngoại hình và cách bạn tiếp cận cuộc sống.',
+      'Phụ Mẫu':   'Nói về cha mẹ, mối quan hệ với đấng sinh thành và phúc ấm mà gia đình truyền lại cho bạn.',
+      'Phúc Đức':  'Phúc phần của dòng họ, đời sống tinh thần và nguồn may mắn tiềm ẩn theo bạn cả đời.',
+      'Điền Trạch':'Nhà cửa, đất đai, tài sản cố định và khả năng tích lũy bất động sản của bạn.',
+      'Quan Lộc':  'Sự nghiệp, công danh, con đường thăng tiến và phong cách làm việc của bạn.',
+      'Nô Bộc':    'Bạn bè, đồng nghiệp, cấp dưới và quý nhân — những người trợ lực hoặc kéo lùi bạn.',
+      'Thiên Di':  'Môi trường bên ngoài, chuyện xuất hành, cơ hội nơi xa và cách người đời nhìn nhận bạn.',
+      'Tật Ách':   'Sức khỏe, bệnh tật tiềm ẩn và những tai ách cần phòng bị trong đời.',
+      'Tài Bạch':  'Tiền bạc, cách kiếm tiền, cách giữ tiền và duyên của bạn với tài lộc.',
+      'Tử Tức':    'Con cái, đường con và mối duyên giữa bạn với thế hệ sau.',
+      'Phu Thê':   'Hôn nhân, người bạn đời và chất lượng đời sống tình cảm của bạn.',
+      'Huynh Đệ':  'Anh chị em ruột và sự hỗ trợ lẫn nhau giữa các anh em trong nhà.'
+    };
+
+    let openPalaceSheet = null; // gán trong initPalaceSheet, timeline dùng chung
+
+    (function initPalaceSheet() {
+      const sheet = document.createElement('div');
+      sheet.id = 'palace-sheet';
+      sheet.hidden = true;
+      sheet.innerHTML = `
+        <div class="ps-backdrop"></div>
+        <div class="ps-panel" role="dialog" aria-modal="true" aria-labelledby="ps-cung">
+          <div class="ps-handle"></div>
+          <div class="ps-head">
+            <div>
+              <div class="ps-cung" id="ps-cung">—</div>
+              <div class="ps-sub" id="ps-sub">—</div>
+            </div>
+            <button type="button" class="ps-close" aria-label="Đóng">✕</button>
+          </div>
+          <p class="ps-desc" id="ps-desc"></p>
+          <div class="ps-stars-title">Chính tinh</div>
+          <div class="ps-stars" id="ps-chinh"></div>
+          <div class="ps-stars-title">Phụ tinh</div>
+          <div class="ps-stars" id="ps-phu"></div>
+          <div class="ps-actions">
+            <button type="button" class="ps-ask"><i class="ti ti-wand"></i> Hỏi AI về cung này</button>
+            <button type="button" class="ps-ask-dh">Hỏi về đại hạn</button>
+          </div>
+        </div>`;
+      document.body.appendChild(sheet);
+
+      const elCung  = sheet.querySelector('#ps-cung');
+      const elSub   = sheet.querySelector('#ps-sub');
+      const elDesc  = sheet.querySelector('#ps-desc');
+      const elChinh = sheet.querySelector('#ps-chinh');
+      const elPhu   = sheet.querySelector('#ps-phu');
+      let curIdx = -1;
+
+      function close() { sheet.hidden = true; }
+      sheet.querySelector('.ps-backdrop').addEventListener('click', close);
+      sheet.querySelector('.ps-close').addEventListener('click', close);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+
+      openPalaceSheet = function (idx) {
+        if (!currentChart) return;
+        curIdx = idx;
+        const key = CUNG_KEYS[idx];
+        const p = currentChart.la_so[key];
+
+        const yearCanStr = currentChart.thong_tin_goc.am_lich.nam.split(' ')[0];
+        const yearCanIdx = CAN_NAMES.indexOf(yearCanStr);
+        const canAbbr = yearCanIdx >= 0 ? getPalaceCanAbbr(idx, yearCanIdx) : '';
+
+        elCung.innerHTML = `Cung ${p.ten_cung}` +
+          (p.ten_cung === 'Mệnh' ? '<span class="ps-menh-tag">MỆNH</span>' : '') +
+          (p.is_than ? '<span class="ps-menh-tag">THÂN</span>' : '');
+        elSub.textContent = `${canAbbr ? canAbbr + '.' : ''}${CUNG_CHI[idx]} · Đại hạn ${p.dai_han}–${p.dai_han + 9} tuổi` +
+          (p.trang_sinh ? ` · ${p.trang_sinh}` : '');
+        elDesc.textContent = PALACE_MEANINGS[p.ten_cung] || '';
+
+        if (p.chinh_tinh.length) {
+          elChinh.innerHTML = p.chinh_tinh.map(s => {
+            const abbr = STAR_RATINGS[s] ? STAR_RATINGS[s][idx] : '';
+            const full = RATING_FULL[abbr] || abbr;
+            const el = STAR_ELEMENTS[s] || 'neutral';
+            return `<span class="ps-star ps-star-main color-${el}">${s}${full ? ' · ' + full : ''}</span>`;
+          }).join('');
+        } else {
+          elChinh.innerHTML = '<span class="ps-empty">Vô chính diệu — cung mượn sao tam phương tứ chính để luận.</span>';
+        }
+
+        const phuTinh = [...p.phu_tinh];
+        if (idx === 4)  phuTinh.push('Thiên La');
+        if (idx === 10) phuTinh.push('Địa Võng');
+        const sorted = [
+          ...phuTinh.filter(s => GOOD_STARS.has(s)),
+          ...phuTinh.filter(s => !GOOD_STARS.has(s) && !BAD_STARS.has(s)),
+          ...phuTinh.filter(s => BAD_STARS.has(s))
+        ];
+        elPhu.innerHTML = sorted.length
+          ? sorted.map(s => `<span class="ps-star color-${ALL_STARS_ELEMENTS[s] || 'neutral'}">${s}</span>`).join('')
+          : '<span class="ps-empty">Không có phụ tinh.</span>';
+
+        sheet.hidden = false;
+      };
+
+      sheet.querySelector('.ps-ask').addEventListener('click', () => {
+        if (curIdx < 0 || !currentChart) return;
+        const p = currentChart.la_so[CUNG_KEYS[curIdx]];
+        const chinh = p.chinh_tinh.join(', ') || 'Vô chính diệu';
+        close();
+        aiPanel.scrollIntoView({ behavior: 'smooth' });
+        handleAskAI(`Luận giải chi tiết cung ${p.ten_cung} (${chinh}) trong lá số của tôi: các sao ở cung này ảnh hưởng thế nào, điểm mạnh, điểm yếu và lời khuyên cụ thể?`);
+      });
+
+      sheet.querySelector('.ps-ask-dh').addEventListener('click', () => {
+        if (curIdx < 0 || !currentChart) return;
+        const p = currentChart.la_so[CUNG_KEYS[curIdx]];
+        close();
+        aiPanel.scrollIntoView({ behavior: 'smooth' });
+        handleAskAI(`Luận giải vận trình đại hạn ${p.dai_han}–${p.dai_han + 9} tuổi tại cung ${p.ten_cung} trong lá số của tôi: giai đoạn này thuận lợi hay khó khăn, cần lưu ý và tận dụng điều gì?`);
+      });
+
+      // Click cung → mở sheet (không mở khi đang chạy nghi thức an sao)
+      CUNG_KEYS.forEach((key, idx) => {
+        document.getElementById(`cung-${key}`).addEventListener('click', () => {
+          if (!currentChart) return;
+          if (document.querySelector('.chart-outer').classList.contains('is-revealing')) return;
+          openPalaceSheet(idx);
+        });
+      });
+    })();
+
+    // ==================== TIMELINE ĐẠI HẠN ====================
+    function buildDaihanTimeline() {
+      const holder = document.getElementById('dh-holder');
+      const wrap = document.getElementById('dh-timeline');
+      if (!holder || !wrap || !currentChart) return;
+
+      const items = CUNG_KEYS
+        .map((key, idx) => ({ idx, p: currentChart.la_so[key] }))
+        .sort((a, b) => a.p.dai_han - b.p.dai_han);
+
+      const age = currentNamXem - currentBirthYear + 1; // tuổi mụ
+
+      wrap.innerHTML = '';
+      let currentBtn = null;
+      items.forEach(({ idx, p }) => {
+        const isCur = age >= p.dai_han && age < p.dai_han + 10;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dh-seg' + (isCur ? ' dh-current' : '');
+        btn.innerHTML =
+          `<span class="dh-age">${p.dai_han}–${p.dai_han + 9}</span>` +
+          `<span class="dh-cung">${p.ten_cung}</span>` +
+          (isCur ? '<span class="dh-now">HIỆN TẠI</span>' : '');
+        btn.addEventListener('click', () => openPalaceSheet && openPalaceSheet(idx));
+        wrap.appendChild(btn);
+        if (isCur) currentBtn = btn;
+      });
+
+      holder.style.display = 'block';
+      if (currentBtn) {
+        wrap.scrollLeft = currentBtn.offsetLeft - wrap.clientWidth / 2 + currentBtn.clientWidth / 2;
+      }
+    }

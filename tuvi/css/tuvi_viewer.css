@@ -920,3 +920,354 @@ body {
   padding-top: 12px;
 }
 
+
+
+/* ============================================================
+   TỬ VI REVAMP FX — skin lá số cổ, nghi thức an sao,
+   sheet chi tiết cung + AI, timeline đại hạn
+   ============================================================ */
+
+/* ---------- D. Skin lá số cổ ---------- */
+
+/* Khung vàng kim mảnh bên trong viền nâu */
+.chart-outer::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(232, 147, 10, 0.5);
+  pointer-events: none;
+  z-index: 5;
+}
+.chart-outer {
+  box-shadow: 0 14px 44px rgba(120, 75, 25, 0.16);
+}
+
+/* Giấy dó: gradient ấm thay nền phẳng */
+.palace-card {
+  background: linear-gradient(155deg, #fffef8 0%, #fbf3e0 100%);
+  transition: outline-color 0.2s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+.palace-card:hover {
+  outline: 1.5px solid rgba(232, 147, 10, 0.75);
+  outline-offset: -2px;
+  box-shadow: inset 0 0 20px rgba(232, 147, 10, 0.08);
+  z-index: 2;
+}
+
+/* Cung Mệnh thở ánh vàng */
+.palace-card.is-menh {
+  background: linear-gradient(160deg, #fffbe9 0%, #fdf2d0 100%);
+  animation: menh-breathe 4.5s ease-in-out infinite;
+}
+@keyframes menh-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(232, 147, 10, 0.45), inset 0 0 12px rgba(232, 147, 10, 0.08); }
+  50%      { box-shadow: inset 0 0 0 1.5px rgba(232, 147, 10, 0.85), inset 0 0 26px rgba(232, 147, 10, 0.2); }
+}
+
+/* Địa bàn giữa xoay chậm như la bàn sống */
+.drum-watermark {
+  animation: drum-idle 120s linear infinite;
+}
+@keyframes drum-idle {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ---------- A. Nghi thức an sao ---------- */
+
+.is-revealing .palace-card,
+.is-revealing .chart-legends-wrapper {
+  opacity: 0;
+  pointer-events: none;
+}
+.is-revealing .palace-card.pc-in {
+  opacity: 1;
+  animation: pc-pop 0.55s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+}
+@keyframes pc-pop {
+  0%   { opacity: 0; transform: perspective(700px) rotateX(30deg) scale(0.85); filter: brightness(1.4) saturate(0.6); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+.is-revealing .center-panel {
+  animation: cp-in 0.9s ease both;
+}
+@keyframes cp-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: none; }
+}
+.is-revealing .drum-watermark {
+  animation: drum-spin 3s cubic-bezier(0.22, 0.7, 0.25, 1) both;
+}
+@keyframes drum-spin {
+  from { transform: translate(-50%, -50%) rotate(-560deg) scale(1.55); color: rgba(200, 130, 20, 0.35); }
+  to   { transform: translate(-50%, -50%) rotate(0deg) scale(1); color: rgba(139, 96, 32, 0.05); }
+}
+
+/* chính tinh bay vào cung, lấp lánh rồi đậu lại */
+.is-revealing .pc-in .star-main {
+  animation: star-fly 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--si, 0) * 130ms + 200ms);
+}
+@keyframes star-fly {
+  0%   { opacity: 0; transform: translateY(-16px) scale(1.45); text-shadow: 0 0 14px rgba(232, 147, 10, 0.9); }
+  100% { opacity: 1; transform: none; text-shadow: none; }
+}
+
+/* Mệnh bùng sáng khép lại nghi thức */
+.palace-card.pc-menh-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  animation: menh-flash 1.2s ease-out both;
+}
+@keyframes menh-flash {
+  0%   { box-shadow: inset 0 0 0 3px rgba(232, 147, 10, 0.95), inset 0 0 60px rgba(232, 147, 10, 0.5); opacity: 1; }
+  100% { box-shadow: inset 0 0 0 1px rgba(232, 147, 10, 0), inset 0 0 8px rgba(232, 147, 10, 0); opacity: 0; }
+}
+
+/* Kết thúc / bỏ qua nghi thức: mọi thứ hiện đủ ngay */
+.reveal-done .palace-card,
+.reveal-done .chart-legends-wrapper {
+  opacity: 1 !important;
+  pointer-events: auto;
+}
+
+.chart-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-soft);
+  margin: 8px 0 0;
+}
+.chart-hint i { color: var(--amber); }
+
+@media (prefers-reduced-motion: reduce) {
+  .palace-card.is-menh, .drum-watermark,
+  .is-revealing .palace-card.pc-in,
+  .is-revealing .pc-in .star-main,
+  .is-revealing .center-panel,
+  .palace-card.pc-menh-flash::after { animation: none !important; }
+  .is-revealing .palace-card, .is-revealing .chart-legends-wrapper { opacity: 1; pointer-events: auto; }
+}
+
+/* ---------- B. Sheet chi tiết cung + AI ---------- */
+
+/* z-index trên cả floating-dock (z 1000) để dock không che nút hỏi AI */
+#palace-sheet { position: fixed; inset: 0; z-index: 1200; }
+#palace-sheet[hidden] { display: none; }
+
+.ps-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 22, 4, 0.38);
+  animation: ps-fade 0.22s ease;
+}
+@keyframes ps-fade { from { opacity: 0; } }
+
+.ps-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 560px;
+  max-height: 78dvh;
+  overflow-y: auto;
+  background: linear-gradient(172deg, #fffdf6 0%, #faf1dc 100%);
+  border: 1px solid rgba(200, 150, 50, 0.4);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -14px 44px rgba(80, 50, 10, 0.28);
+  animation: ps-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes ps-up { from { transform: translate(-50%, 48px); opacity: 0; } }
+
+.ps-handle {
+  width: 42px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(160, 112, 48, 0.35);
+  margin: 0 auto 12px;
+}
+.ps-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.ps-cung {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+}
+.ps-cung .ps-menh-tag {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #f5ab2e, #d97706);
+  border-radius: 6px;
+  padding: 2px 7px;
+  vertical-align: middle;
+  margin-left: 6px;
+  letter-spacing: 0.5px;
+}
+.ps-sub {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 600;
+  margin-top: 3px;
+}
+.ps-close {
+  background: none;
+  border: none;
+  font-size: 17px;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+}
+.ps-desc {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-mid);
+  margin: 8px 0 12px;
+}
+.ps-stars-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-soft);
+  margin: 10px 0 6px;
+}
+.ps-stars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ps-star {
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.ps-star.ps-star-main {
+  font-weight: 800;
+  font-size: 12.5px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(120, 75, 25, 0.1);
+}
+.ps-empty {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-style: italic;
+}
+.ps-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ps-ask {
+  flex: 1.3;
+  background: linear-gradient(135deg, #f5ab2e, #d97706);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 800;
+  font-size: 13.5px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.3);
+}
+.ps-ask:active { transform: scale(0.98); }
+.ps-ask-dh {
+  flex: 1;
+  background: #fff;
+  border: 1.5px solid var(--amber);
+  color: var(--amber-dark);
+  border-radius: 12px;
+  padding: 12px 10px;
+  font-weight: 800;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ---------- C. Timeline Đại Hạn ---------- */
+
+.dh-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin: 18px 0 0;
+}
+.dh-timeline {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 10px 2px 8px;
+}
+.dh-timeline::-webkit-scrollbar { height: 0; }
+.dh-seg {
+  flex: 0 0 auto;
+  min-width: 76px;
+  background: #fffdf5;
+  border: 1px solid var(--border-cell);
+  border-radius: 11px;
+  padding: 8px 9px 7px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.dh-seg:hover {
+  border-color: var(--amber);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(120, 75, 25, 0.14);
+}
+.dh-age {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.dh-cung {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+.dh-seg.dh-current {
+  background: linear-gradient(150deg, #f5ab2e, #d97706);
+  border-color: #c97808;
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
+}
+.dh-current .dh-age, .dh-current .dh-cung { color: #fff; }
+.dh-now {
+  display: inline-block;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 99px;
+  padding: 1px 6px;
+  margin-top: 3px;
+  letter-spacing: 0.5px;
+}
