@@ -1085,3 +1085,174 @@ a { text-decoration: none; color: inherit; }
   font-weight: 700;
   margin-bottom: 8px;
 }
+
+
+/* ============================================================
+   GIEO QUẺ REVAMP FX — nghi thức gieo xu, reveal quẻ,
+   hào động tương tác + chips hỏi AI
+   ============================================================ */
+
+/* ---------- Bát quái xoay sau đồng xu ---------- */
+.coins-display { position: relative; }
+.coins-display .coin-slot { z-index: 1; }
+.gq-bagua {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 250px;
+  height: 250px;
+  color: var(--jade);
+  opacity: 0.32;
+  z-index: 0;
+  pointer-events: none;
+  animation: bagua-spin 28s linear infinite;
+}
+@keyframes bagua-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ---------- Đồng xu đáp xuống: vòng sáng lan ra ---------- */
+.coin-slot.yang, .coin-slot.yin {
+  animation: coin-settle 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+             coin-flash 0.85s ease-out;
+}
+@keyframes coin-flash {
+  0%   { outline: 3px solid rgba(217, 138, 10, 0.75); outline-offset: 2px; }
+  100% { outline: 3px solid rgba(217, 138, 10, 0);    outline-offset: 22px; }
+}
+
+/* ---------- Kết quả từng hào: badge nảy lên ---------- */
+.line-result.pop { animation: gq-pop-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes gq-pop-in {
+  from { opacity: 0; transform: scale(0.85) translateY(8px); }
+}
+
+/* ---------- Hào vẽ vào quẻ preview: lóe sáng rồi đậu lại ---------- */
+.preview-line { animation: prev-line-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes prev-line-in {
+  from { opacity: 0; transform: scaleX(0.15); filter: brightness(1.8); }
+}
+/* hào động: lão dương vàng, lão âm xanh — nhấp nháy chờ biến */
+.preview-line-seg.old-yang {
+  background: var(--gold);
+  box-shadow: 0 0 10px rgba(217, 138, 10, 0.55);
+  animation: seg-pulse 1.6s ease-in-out infinite;
+}
+.preview-line-seg.old-yin {
+  background: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  width: 44%;
+  animation: seg-pulse 1.6s ease-in-out infinite;
+}
+@keyframes seg-pulse {
+  50% { filter: brightness(1.35); }
+}
+
+/* ---------- Reveal quẻ kết quả ---------- */
+.hex-result-card.reveal {
+  animation: hex-card-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes hex-card-in {
+  from { opacity: 0; transform: perspective(700px) translateY(26px) rotateX(7deg); }
+}
+.hex-result-card.reveal .hex-symbol {
+  display: inline-block;
+  animation: hex-sym-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.15s;
+}
+@keyframes hex-sym-in {
+  0%   { opacity: 0; transform: rotate(-180deg) scale(0.3); }
+  60%  { opacity: 1; transform: rotate(10deg) scale(1.18); }
+  100% { opacity: 1; transform: none; }
+}
+/* 6 hào vẽ lần lượt từ dưới lên */
+.hex-result-card.reveal .result-line {
+  animation: result-line-draw 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--li, 0) * 110ms + 0.35s);
+}
+@keyframes result-line-draw {
+  from { opacity: 0; transform: scaleX(0); filter: brightness(1.6); }
+}
+/* quẻ biến vào trễ hơn quẻ chính */
+.hex-changed-card.reveal { animation-delay: 0.45s; }
+.hex-changed-card.reveal .result-line {
+  animation-delay: calc(var(--li, 0) * 110ms + 0.75s);
+}
+
+/* ---------- Hào động trong quẻ kết quả: vàng/xanh + click hỏi AI ---------- */
+.result-line.moving .result-line-seg {
+  background: var(--gold);
+  box-shadow: 0 0 10px rgba(217, 138, 10, 0.5);
+  animation: seg-pulse 1.6s ease-in-out infinite;
+}
+.result-line.moving-yin .result-line-seg {
+  background: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.45);
+}
+#hex-primary-lines .result-line.moving {
+  cursor: pointer;
+  border-radius: 6px;
+}
+#hex-primary-lines .result-line.moving:hover .result-line-seg {
+  filter: brightness(1.4);
+  transform: scaleY(1.35);
+}
+.hao-click-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin: -8px 0 10px;
+}
+.hao-click-hint i { color: var(--gold); }
+
+/* ---------- Chips hỏi nhanh AI ---------- */
+.gq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.gq-chips:empty { display: none; }
+.gq-chip {
+  border: 1px solid rgba(13, 150, 104, 0.35);
+  background: var(--bg-glass);
+  color: var(--jade);
+  border-radius: 99px;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.gq-chip:hover { background: var(--jade); color: #fff; transform: translateY(-1px); }
+.gq-chip:disabled { opacity: 0.45; cursor: default; transform: none; }
+.gq-chip.gq-chip-hao {
+  border-color: rgba(217, 138, 10, 0.5);
+  color: var(--gold);
+  background: var(--gold-dim);
+}
+.gq-chip.gq-chip-hao:hover { background: var(--gold); color: #fff; }
+
+/* ---------- Skin: khung vàng kim cho thẻ quẻ ---------- */
+.hex-result-card {
+  position: relative;
+  background: linear-gradient(165deg, #fffef8 0%, #fbf4e2 100%);
+}
+.hex-result-card::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(217, 138, 10, 0.28);
+  border-radius: calc(var(--radius) - 5px);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gq-bagua,
+  .preview-line, .preview-line-seg.old-yang, .preview-line-seg.old-yin,
+  .line-result.pop,
+  .hex-result-card.reveal, .hex-result-card.reveal .hex-symbol,
+  .hex-result-card.reveal .result-line,
+  .result-line.moving .result-line-seg { animation: none !important; }
+}

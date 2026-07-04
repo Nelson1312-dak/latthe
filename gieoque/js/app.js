@@ -92,13 +92,22 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderHexLines(containerId, linesArr) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    linesArr.forEach(val => {
+    linesArr.forEach((val, idx) => {
       const info = LINE_INFO[val] || LINE_INFO[7];
       const row  = document.createElement('div');
       let cls = 'result-line';
       if (val === 9) cls += ' moving';
       if (val === 6) cls += ' moving moving-yin';
       row.className = cls;
+      row.style.setProperty('--li', idx); // stagger vẽ hào từ dưới lên
+      // hào động ở quẻ chính: chạm để hỏi AI riêng về hào đó
+      if ((val === 6 || val === 9) && containerId === 'hex-primary-lines') {
+        row.title = `Hỏi AI về Hào ${idx + 1} động`;
+        row.setAttribute('role', 'button');
+        row.addEventListener('click', () => {
+          sendMessage(`Hào ${idx + 1} động trong quẻ này có ý nghĩa gì đối với câu hỏi của tôi? Tôi cần hành động thế nào?`);
+        });
+      }
       if (info.yang) {
         const seg = document.createElement('div');
         seg.className = 'result-line-seg r-yang';
@@ -144,7 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const t = setTimeout(() => {
         lineSymbolEl.textContent = sum === 9 ? '🔴' : sum === 6 ? '🔵' : '⬜';
         lineTextEl.textContent   = info.label + (info.moving ? ' ✦' : '');
-        lineResultEl.classList.remove('hidden');
+        lineResultEl.classList.remove('hidden', 'pop');
+        void lineResultEl.offsetWidth; // retrigger animation cho từng hào
+        lineResultEl.classList.add('pop');
         lines.push(sum);
         addPreviewLine(sum);
 
@@ -194,6 +205,27 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       changedSection.classList.add('hidden');
     }
+
+    // Reveal: quẻ chính trồi lên, symbol xoay hiện, 6 hào vẽ từ dưới lên;
+    // quẻ biến (nếu có) vào trễ hơn một nhịp
+    const primCard = document.getElementById('hex-primary');
+    const chgCard  = document.getElementById('hex-changed');
+    primCard.classList.remove('reveal');
+    chgCard.classList.remove('reveal');
+    void primCard.offsetWidth;
+    primCard.classList.add('reveal');
+    if (hasMoving && changed) chgCard.classList.add('reveal');
+
+    // Gợi ý chạm hào động
+    let haoHint = document.getElementById('hao-hint');
+    if (!haoHint) {
+      haoHint = document.createElement('p');
+      haoHint.id = 'hao-hint';
+      haoHint.className = 'hao-click-hint';
+      haoHint.innerHTML = '<i class="ti ti-hand-click"></i> Chạm vào hào đang nhấp nháy để hỏi AI riêng về hào động đó';
+    }
+    document.getElementById('hex-primary-lines').after(haoHint);
+    haoHint.style.display = hasMoving ? '' : 'none';
 
     showAISection(primary, hasMoving, changed);
     showScreen('result');
@@ -262,10 +294,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ---- Chips hỏi nhanh theo quẻ ----
+  const chipsEl = document.getElementById('gq-chips');
+
+  function buildChips(hasMoving) {
+    if (!chipsEl) return;
+    chipsEl.innerHTML = '';
+    const defs = [
+      { icon: 'ti-scale',          label: 'Nên hay không nên?',  q: 'Dựa trên quẻ này, tôi nên hay không nên làm điều tôi đang hỏi? Vì sao?' },
+      { icon: 'ti-clock',          label: 'Thời điểm thuận lợi', q: 'Theo quẻ này, thời điểm nào thuận lợi nhất để tôi hành động?' },
+      { icon: 'ti-alert-triangle', label: 'Cần tránh điều gì?',  q: 'Quẻ này cảnh báo tôi cần tránh hoặc đề phòng điều gì?' },
+    ];
+    if (hasMoving) {
+      lines.forEach((val, idx) => {
+        if (val === 6 || val === 9) {
+          defs.push({
+            icon: 'ti-bolt', hao: true,
+            label: `Hào ${idx + 1} động`,
+            q: `Hào ${idx + 1} động trong quẻ này có ý nghĩa gì đối với câu hỏi của tôi?`
+          });
+        }
+      });
+    }
+    defs.forEach(d => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gq-chip' + (d.hao ? ' gq-chip-hao' : '');
+      b.innerHTML = `<i class="ti ${d.icon}"></i> ${d.label}`;
+      b.addEventListener('click', () => sendMessage(d.q));
+      chipsEl.appendChild(b);
+    });
+  }
+
   function showAISection(primary, hasMoving, changed) {
     const q = gqQuestion.value.trim();
     if (!q) return;
     currentContext = buildGQContext(primary, hasMoving, changed);
+    buildChips(hasMoving);
     aiSection.classList.remove('hidden');
     aiQuestionDisp.textContent = `"${q}"`;
     aiChatMessages.innerHTML = '';
@@ -338,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
     aiChatMessages.innerHTML = '';
+    if (chipsEl) chipsEl.innerHTML = '';
     showScreen('intro');
   }
 

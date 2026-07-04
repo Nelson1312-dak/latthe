@@ -181,6 +181,22 @@
         <p class="throw-sublabel">(từ dưới lên trên)</p>
 
         <div id="coins-display" class="coins-display">
+          <!-- Bát quái xoay phía sau đồng xu -->
+          <svg class="gq-bagua" viewBox="0 0 200 200" aria-hidden="true">
+            <circle cx="100" cy="100" r="96" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="currentColor" stroke-width="0.7" stroke-dasharray="3 3" opacity="0.5"/>
+            <g font-size="15" fill="currentColor" text-anchor="middle" opacity="0.85">
+              <text x="100" y="17"    dy="0.35em">☰</text>
+              <text x="158.7" y="41.3" dy="0.35em">☱</text>
+              <text x="183" y="100"   dy="0.35em">☲</text>
+              <text x="158.7" y="158.7" dy="0.35em">☳</text>
+              <text x="100" y="183"   dy="0.35em">☴</text>
+              <text x="41.3" y="158.7" dy="0.35em">☵</text>
+              <text x="17" y="100"    dy="0.35em">☶</text>
+              <text x="41.3" y="41.3" dy="0.35em">☷</text>
+            </g>
+            <text x="100" y="100" dy="0.35em" font-size="20" fill="currentColor" text-anchor="middle" opacity="0.7">☯</text>
+          </svg>
           <div class="coin-slot" id="coin-0"></div>
           <div class="coin-slot" id="coin-1"></div>
           <div class="coin-slot" id="coin-2"></div>
@@ -258,6 +274,7 @@
             <span class="ai-loading-text">Cổ Dịch Đại Sư đang luận quẻ...</span>
           </div>
           <p id="ai-error" class="ai-error hidden"></p>
+          <div class="gq-chips" id="gq-chips"></div>
           <div class="ai-chat-row">
             <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về quẻ..." maxlength="300" aria-label="Hỏi thêm về quẻ">
             <button id="btn-ask-ai" class="btn-chat-send"><i class="ti ti-send"></i></button>
