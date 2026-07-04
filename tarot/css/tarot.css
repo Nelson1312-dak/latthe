@@ -1221,3 +1221,116 @@ a { text-decoration: none; color: inherit; }
   font-weight: 700;
   margin-bottom: 8px;
 }
+
+
+/* ============================================================
+   TAROT REVAMP FX — xáo bài quay đuổi, chia bài bay vào vị trí,
+   lật bài bùng hào quang, chips hỏi AI theo từng lá
+   ============================================================ */
+
+/* ---------- Xáo bài: 3 lá quay đuổi nhau quanh tâm ---------- */
+.deck-visual.holding .deck-card {
+  animation: deck-orbit 0.9s ease-in-out infinite;
+}
+.deck-visual.holding .dc-2 { animation-delay: -0.3s; }
+.deck-visual.holding .dc-3 { animation-delay: -0.6s; }
+@keyframes deck-orbit {
+  0%   { transform: translate(-50%, -50%) rotate(0deg)   translateX(0)     translateY(0); }
+  25%  { transform: translate(-50%, -50%) rotate(-14deg) translateX(-36px) translateY(-10px); }
+  50%  { transform: translate(-50%, -50%) rotate(0deg)   translateX(0)     translateY(-20px); }
+  75%  { transform: translate(-50%, -50%) rotate(14deg)  translateX(36px)  translateY(-10px); }
+  100% { transform: translate(-50%, -50%) rotate(0deg)   translateX(0)     translateY(0); }
+}
+
+/* ---------- Chia bài: lá bay từ trên xuống vị trí, stagger ---------- */
+.cards-layout.dealing .drawn-card {
+  animation: card-deal-in 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--di, 0) * 180ms);
+}
+@keyframes card-deal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-80px) rotate(var(--dr, -8deg)) scale(0.45);
+    filter: brightness(1.6);
+  }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+/* nhãn vị trí (Quá khứ/Hiện tại/Tương lai) hiện sau khi lá đáp xuống */
+.cards-layout.dealing .dc-position-label {
+  animation: label-fade-in 0.4s ease both;
+  animation-delay: calc(var(--di, 0) * 180ms + 0.5s);
+}
+@keyframes label-fade-in { from { opacity: 0; } }
+
+/* ---------- Lật bài: bùng hào quang khi mặt bài lộ ra ---------- */
+.drawn-card.revealed .dc-card-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: flip-flash 1s ease-out 0.35s both;
+}
+@keyframes flip-flash {
+  0%   { box-shadow: inset 0 0 44px rgba(212, 166, 66, 0.75), 0 0 34px rgba(192, 132, 252, 0.65); opacity: 1; }
+  100% { box-shadow: inset 0 0 8px rgba(212, 166, 66, 0), 0 0 6px rgba(192, 132, 252, 0); opacity: 0; }
+}
+/* lá ngược: hào quang ánh đỏ cảnh báo */
+.drawn-card.revealed .dc-card-front.reversed::after {
+  animation-name: flip-flash-reversed;
+}
+@keyframes flip-flash-reversed {
+  0%   { box-shadow: inset 0 0 44px rgba(244, 63, 94, 0.6), 0 0 34px rgba(244, 63, 94, 0.5); opacity: 1; }
+  100% { box-shadow: inset 0 0 8px rgba(244, 63, 94, 0), 0 0 6px rgba(244, 63, 94, 0); opacity: 0; }
+}
+
+/* ---------- Panel chi tiết lá: trồi lên mỗi lần mở ---------- */
+.reading-detail {
+  animation: detail-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes detail-in {
+  from { opacity: 0; transform: perspective(700px) translateY(20px) rotateX(5deg); }
+}
+
+/* ---------- Chips hỏi nhanh AI theo lá ---------- */
+.t-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.t-chips:empty { display: none; }
+.t-chip {
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  background: rgba(124, 58, 237, 0.07);
+  color: #7c3aed;
+  border-radius: 99px;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.t-chip:hover { background: #7c3aed; color: #fff; transform: translateY(-1px); }
+.t-chip.t-chip-card {
+  border-color: rgba(212, 166, 66, 0.55);
+  background: rgba(212, 166, 66, 0.1);
+  color: #b07d0a;
+}
+.t-chip.t-chip-card:hover { background: #d4a642; color: #fff; }
+.t-chip.t-chip-card.is-reversed {
+  border-color: rgba(244, 63, 94, 0.45);
+  background: rgba(244, 63, 94, 0.08);
+  color: #e11d48;
+}
+.t-chip.t-chip-card.is-reversed:hover { background: #e11d48; color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-visual.holding .deck-card,
+  .cards-layout.dealing .drawn-card,
+  .cards-layout.dealing .dc-position-label,
+  .drawn-card.revealed .dc-card-front::after,
+  .reading-detail { animation: none !important; }
+}

@@ -144,6 +144,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const wrapper = document.createElement('div');
       wrapper.className = 'drawn-card';
       wrapper.dataset.index = index;
+      // chia bài: mỗi lá bay vào theo thứ tự, nghiêng ngẫu nhiên
+      wrapper.style.setProperty('--di', index);
+      wrapper.style.setProperty('--dr', ((Math.random() * 16) - 8).toFixed(1) + 'deg');
 
       wrapper.innerHTML = `
         <div class="dc-card-inner">
@@ -187,6 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.addEventListener('click', () => handleCardClick(index));
       cardsLayout.appendChild(wrapper);
     });
+
+    // chạy animation chia bài rồi gỡ class để hover hoạt động lại
+    cardsLayout.classList.add('dealing');
+    setTimeout(() => cardsLayout.classList.remove('dealing'),
+      drawnCards.length * 180 + 850);
   }
 
   function handleCardClick(index) {
@@ -273,9 +281,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ---- Chips hỏi nhanh: 3 câu chung + chip riêng từng lá đã rút ----
+  const chipsEl = document.getElementById('t-chips');
+
+  function buildChips() {
+    if (!chipsEl) return;
+    chipsEl.innerHTML = '';
+    const spread = TAROT_SPREADS[selectedSpread];
+    const defs = [
+      { icon: 'ti-scale',          label: 'Nên hay không nên?', q: 'Dựa trên trải bài này, tôi nên hay không nên làm điều tôi đang hỏi? Vì sao?' },
+      { icon: 'ti-bulb',           label: 'Tôi cần làm gì?',    q: 'Dựa trên các lá bài đã rút, tôi cần hành động cụ thể như thế nào?' },
+      { icon: 'ti-alert-triangle', label: 'Cần lưu ý điều gì?', q: 'Trải bài này cảnh báo tôi cần lưu ý hoặc tránh điều gì?' },
+    ];
+    drawnCards.forEach(({ card, reversed }, i) => {
+      defs.push({
+        isCard: true, reversed,
+        label: `${card.vn}${reversed ? ' ↓' : ''}`,
+        q: `Lá ${card.vn} (${card.name}) ${reversed ? 'ngược' : 'xuôi'} ở vị trí "${spread.positions[i]}" nói lên điều gì về câu hỏi của tôi?`
+      });
+    });
+    defs.forEach(d => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 't-chip' + (d.isCard ? ' t-chip-card' + (d.reversed ? ' is-reversed' : '') : '');
+      b.innerHTML = d.icon ? `<i class="ti ${d.icon}"></i> ${d.label}` : d.label;
+      b.addEventListener('click', () => sendMessage(d.q));
+      chipsEl.appendChild(b);
+    });
+  }
+
   function showAISection() {
     const q = tarotQuestion.value.trim();
     if (!q) return;
+    buildChips();
     aiSection.classList.remove('hidden');
     aiQuestionDisp.textContent = `"${q}"`;
     aiChatMessages.innerHTML = '';
@@ -331,6 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
     aiChatMessages.innerHTML = '';
+    if (chipsEl) chipsEl.innerHTML = '';
     showScreen('spread');
   }
 
