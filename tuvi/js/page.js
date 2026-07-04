@@ -174,9 +174,25 @@
       document.getElementById('f-cal').value   = randomCal;
       document.getElementById('f-hour').value  = String(randomHour);
       document.getElementById('f-gender').value= randomGender;
-      
+
+      demoFill = true;
       document.getElementById('tuvi-form').requestSubmit();
     });
+
+    // ==================== HỒ SƠ HUYỀN HỌC (dùng chung toàn site) ====================
+    (function prefillFromProfile() {
+      if (!window.LatbaiProfile) return;
+      const p = window.LatbaiProfile.get();
+      if (!p) return;
+      const nameEl = document.getElementById('f-name');
+      if (nameEl && !nameEl.value) nameEl.value = p.name;
+      if (p.day)   document.getElementById('f-day').value   = String(p.day);
+      if (p.month) document.getElementById('f-month').value = String(p.month);
+      if (p.year)  document.getElementById('f-year').value  = String(p.year);
+      if (p.hour !== undefined && p.hour !== null)     document.getElementById('f-hour').value   = String(p.hour);
+      if (p.gender !== undefined && p.gender !== null) document.getElementById('f-gender').value = String(p.gender);
+      if (p.cal) document.getElementById('f-cal').value = p.cal;
+    })();
 
     // ==================== STATE ====================
     let currentChart     = null;
@@ -184,6 +200,7 @@
     let currentNamXem    = null;
     let chatHistory      = [];
     let questionsAsked   = 0;
+    let demoFill         = false; // đang submit dữ liệu demo → không ghi đè hồ sơ
 
     const form        = document.getElementById('tuvi-form');
     const chartWrapper= document.getElementById('chart-wrapper');
@@ -225,6 +242,12 @@
       currentChart     = chart;
       currentBirthYear = year;
       currentNamXem    = namXem;
+
+      // Lưu hồ sơ dùng chung (bỏ qua khi là dữ liệu demo ngẫu nhiên)
+      if (!demoFill && window.LatbaiProfile) {
+        window.LatbaiProfile.save({ name, day, month, year, hour, gender, cal });
+      }
+      demoFill = false;
 
       // Reset chat state
       chatHistory = []; questionsAsked = 0;

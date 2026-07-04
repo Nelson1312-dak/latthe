@@ -753,3 +753,187 @@ a { text-decoration: none; color: inherit; }
   .fx-reveal { opacity: 1; transform: none; transition: none; }
   #fx-field { display: none; }
 }
+
+/* ============================================================
+   HUB — Hồ Sơ Huyền Học + Vận Hôm Nay (render bởi /js/home-hub.js)
+   ============================================================ */
+
+.l-hub { width: 100%; max-width: 520px; }
+.l-hub:empty { display: none; }
+#hub-profile { margin-bottom: 16px; }
+#hub-daily { margin-bottom: 36px; }
+
+.hub-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.hub-card::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(217, 138, 10, 0.18);
+  border-radius: 19px;
+  pointer-events: none;
+}
+
+.hub-title { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.3; }
+.hub-sub { font-size: 12.5px; color: var(--sub); line-height: 1.6; margin-top: 3px; }
+
+/* ---- form tạo hồ sơ ---- */
+.hub-create-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+.hub-create-icon {
+  width: 44px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: #fff; border-radius: 14px;
+  background: linear-gradient(150deg, #f5ab2e, #d97706);
+  box-shadow: 0 8px 18px rgba(217, 119, 6, 0.3);
+}
+.hub-form { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; }
+.hub-input, .hub-select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+}
+.hub-input:focus, .hub-select:focus { outline: none; border-color: var(--c-tuvi); }
+.hub-date-row { display: flex; gap: 8px; }
+.hub-btn {
+  background: linear-gradient(135deg, #f5ab2e, #d97706);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 13px;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.hub-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(217, 119, 6, 0.4); }
+.hub-btn:active { transform: scale(0.98); }
+
+/* ---- thẻ hồ sơ đã kích hoạt ---- */
+.hub-me-head { display: flex; align-items: center; gap: 12px; }
+.hub-avatar {
+  width: 46px; height: 46px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: #fff;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #f5ab2e, #d97706);
+  box-shadow: 0 6px 14px rgba(217, 119, 6, 0.3);
+}
+.hub-me-info { flex: 1; min-width: 0; }
+.hub-me-actions { display: flex; gap: 4px; }
+.hub-icon-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 15px; color: var(--muted);
+  padding: 6px; border-radius: 8px;
+  position: relative; z-index: 1;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.hub-icon-btn:hover { color: var(--c-tuvi); background: rgba(232, 147, 10, 0.08); }
+
+.hub-stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 12px; }
+.hub-stat {
+  font-size: 11px; font-weight: 700; color: var(--sub);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 5px 12px;
+}
+.hub-stat b { color: var(--c-tuvi); font-size: 13px; margin-right: 3px; }
+
+.hub-links { display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }
+.hub-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--c-tuvi);
+  border: 1px solid rgba(232, 147, 10, 0.4);
+  background: rgba(232, 147, 10, 0.06);
+  border-radius: 99px;
+  padding: 7px 13px;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.hub-link:hover { background: var(--c-tuvi); color: #fff; transform: translateY(-1px); }
+
+/* ---- Vận Hôm Nay ---- */
+.hub-daily-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.hub-daily-title {
+  font-size: 13px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: var(--sub);
+}
+.hub-daily-title i { color: var(--c-tuvi); }
+.hub-daily-date { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+.hub-daily-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+.hub-daily-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+a.hub-daily-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-h);
+  border-color: rgba(217, 138, 10, 0.4);
+}
+.hd-label {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.hd-big { font-size: 44px; line-height: 1.1; font-weight: 900; color: var(--c-tuvi); }
+.hd-hexsym { color: var(--c-gieoque); font-weight: 400; }
+.hub-vibe .hd-big { color: var(--c-thansohoc); }
+.hd-card-img {
+  width: 72px; height: auto; border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(120, 75, 25, 0.25);
+  margin: 2px 0;
+}
+.hd-name { font-size: 15px; font-weight: 800; color: var(--text); margin-top: 2px; }
+.hd-desc { font-size: 12px; color: var(--sub); line-height: 1.55; margin-top: 4px; }
+.hd-lucky { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+.hd-lucky b { color: var(--text); }
+.hd-more {
+  font-size: 11px; font-weight: 700; color: var(--c-tuvi);
+  margin-top: 8px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.hub-vibe-empty .hd-big { color: var(--muted); }
+
+@media (min-width: 768px) {
+  .l-hub { max-width: 800px; }
+  .hub-daily-grid { grid-template-columns: repeat(3, 1fr); }
+  .hub-form { flex-direction: row; }
+  .hub-form .hub-input { flex: 1.4; }
+  .hub-form .hub-date-row { flex: 1.6; }
+  .hub-form .hub-btn { flex: 0 0 auto; }
+}
+@media (min-width: 1024px) {
+  .l-hub { max-width: 980px; }
+}

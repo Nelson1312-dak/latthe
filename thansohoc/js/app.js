@@ -298,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentProfileData = null;
   let chatHistory        = [];
   let questionsAsked     = 0;
+  let demoFill           = false; // submit demo → không ghi đè hồ sơ chung
 
   // Initialize Select dropdowns
   for (let i = 1; i <= 31; i++) {
@@ -332,8 +333,21 @@ document.addEventListener('DOMContentLoaded', () => {
       monthSelect.value = String(Math.floor(Math.random() * 12) + 1);
       yearSelect.value  = String(Math.floor(Math.random() * (2005 - 1960 + 1)) + 1960);
 
+      demoFill = true;
       form.requestSubmit();
     });
+  }
+
+  // Hồ Sơ Huyền Học dùng chung: tự điền nếu đã có
+  if (window.LatbaiProfile) {
+    const p = window.LatbaiProfile.get();
+    if (p) {
+      const nameEl = document.getElementById('f-name');
+      if (nameEl && !nameEl.value) nameEl.value = p.name;
+      daySelect.value   = String(p.day);
+      monthSelect.value = String(p.month);
+      yearSelect.value  = String(p.year);
+    }
   }
 
   // Drawers trigger
@@ -372,6 +386,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const data = calculateNumerology(name, day, month, year);
     currentProfileData = data;
+
+    // Lưu hồ sơ dùng chung toàn site (bỏ qua dữ liệu demo)
+    if (!demoFill && window.LatbaiProfile) {
+      window.LatbaiProfile.save({ name, day: parseInt(day), month: parseInt(month), year: parseInt(year) });
+    }
+    demoFill = false;
 
     // Save profile to history
     saveToHistory(data);

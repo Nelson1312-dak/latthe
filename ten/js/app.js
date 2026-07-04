@@ -313,3 +313,20 @@ function confetti(color) {
 /* ── Utils ──────────────────────────────────────────────────────── */
 function wiggle(el) { el.classList.add('wiggle'); setTimeout(() => el.classList.remove('wiggle'), 450); }
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+
+// Hồ Sơ Huyền Học dùng chung: gợi ý sẵn tên nếu đã có hồ sơ
+(function () {
+  function prefill() {
+    if (!window.LatbaiProfile) return;
+    var p = window.LatbaiProfile.get();
+    if (!p) return;
+    var el = document.getElementById('s-name');
+    if (el && !el.value) el.value = p.name;
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', prefill);
+  } else {
+    prefill();
+  }
+})();
