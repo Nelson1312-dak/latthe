@@ -247,3 +247,93 @@ const LAYER_NAMES = {
   pinnacle:    "Đỉnh Cuộc Đời",
   challenge:   "Thử Thách",
 };
+
+
+// ==================== TẦNG GIẢI MÃ MỞ RỘNG (2026-07) ====================
+// Nợ nghiệp, bài học nghiệp quả, đam mê tiềm ẩn, số tiềm thức, số cân bằng,
+// tháng cá nhân, 3 chu kỳ đường đời, ghi chú 3 loại biểu đồ.
+
+const HIDDEN_PASSION_MEANINGS = {
+  "1": "<h4>Đam Mê Tiềm Ẩn số 1 — Khát Khao Dẫn Đầu</h4><p>Số 1 lặp lại nhiều nhất trong tên cho thấy bên trong bạn luôn <strong>khao khát được tự quyết, tiên phong và chứng tỏ bản thân</strong>. Bạn khó chịu khi phải làm nền cho người khác. Năng lượng này là động cơ mạnh nhưng cần tránh biến thành hiếu thắng, độc đoán.</p>",
+  "2": "<h4>Đam Mê Tiềm Ẩn số 2 — Khát Khao Kết Nối</h4><p>Bạn thầm <strong>khao khát sự hòa hợp, được thấu hiểu và đồng hành</strong>. Bạn nhạy bén với cảm xúc người khác và giỏi vun đắp quan hệ. Hãy cẩn thận với xu hướng phụ thuộc cảm xúc hoặc né tránh xung đột bằng mọi giá.</p>",
+  "3": "<h4>Đam Mê Tiềm Ẩn số 3 — Khát Khao Biểu Đạt</h4><p>Trong bạn luôn có <strong>nguồn sáng tạo và nhu cầu được thể hiện</strong> — qua lời nói, chữ viết hay nghệ thuật. Bạn hạnh phúc nhất khi được kể chuyện, trình diễn, tạo ra cái đẹp. Nếu bị kìm nén, năng lượng này dễ chuyển thành tán gẫu, phóng đại.</p>",
+  "4": "<h4>Đam Mê Tiềm Ẩn số 4 — Khát Khao Trật Tự</h4><p>Bạn có nhu cầu sâu xa về <strong>sự ổn định, hệ thống và thành quả hữu hình</strong>. Xây dựng thứ gì đó bền vững khiến bạn thấy cuộc đời có ý nghĩa. Mặt trái là dễ cầu toàn, cứng nhắc và tự tạo áp lực bằng công việc.</p>",
+  "5": "<h4>Đam Mê Tiềm Ẩn số 5 — Khát Khao Tự Do</h4><p>Bên trong bạn là <strong>tinh thần phiêu lưu không chịu đứng yên</strong>: thèm trải nghiệm mới, chuyển động, gặp gỡ. Sự gò bó là 'thuốc độc' với bạn. Bài học là tự do có kỷ luật — tự do để phát triển chứ không phải để trốn chạy.</p>",
+  "6": "<h4>Đam Mê Tiềm Ẩn số 6 — Khát Khao Chăm Sóc</h4><p>Bạn tìm thấy ý nghĩa khi <strong>được yêu thương, chăm lo và chịu trách nhiệm cho người khác</strong>. Gia đình và cộng đồng là trung tâm thế giới của bạn. Cẩn thận với việc ôm đồm quá mức rồi âm thầm oán trách vì hy sinh không được ghi nhận.</p>",
+  "7": "<h4>Đam Mê Tiềm Ẩn số 7 — Khát Khao Thấu Hiểu</h4><p>Bạn bị cuốn hút bởi <strong>tri thức, bí ẩn và chiều sâu của mọi thứ</strong>. Bạn cần thời gian một mình để suy ngẫm và 'sạc pin'. Đam mê này cho bạn trí tuệ khác biệt, nhưng đừng để nó biến thành sự xa cách, hoài nghi.</p>",
+  "8": "<h4>Đam Mê Tiềm Ẩn số 8 — Khát Khao Thành Tựu</h4><p>Trong bạn có <strong>tham vọng mạnh mẽ về thành công, tài chính và vị thế</strong>. Bạn nhạy bén với quyền lực và cách vận hành của tiền bạc. Được dùng đúng, đây là năng lượng của doanh nhân lớn; dùng sai, nó thành sự ám ảnh vật chất.</p>",
+  "9": "<h4>Đam Mê Tiềm Ẩn số 9 — Khát Khao Cống Hiến</h4><p>Bạn thầm mong cuộc đời mình <strong>có ý nghĩa vượt khỏi bản thân</strong> — giúp người, truyền cảm hứng, để lại dấu ấn nhân văn. Lòng trắc ẩn là tài sản lớn nhất của bạn; bài học là cho đi mà không kiệt sức hay lý tưởng hóa quá mức.</p>"
+};
+
+const KARMIC_LESSON_MEANINGS = {
+  "1": "<h4>Thiếu số 1 — Bài học về Chính Kiến</h4><p>Tên bạn không có chữ cái mang số 1: kiếp này bạn cần học <strong>sự tự tin, dám quyết định và tự chịu trách nhiệm</strong>. Bạn dễ dựa dẫm ý kiến người khác. Hãy tập nói 'tôi chọn', bắt đầu từ những quyết định nhỏ.</p>",
+  "2": "<h4>Thiếu số 2 — Bài học về Kiên Nhẫn & Hợp Tác</h4><p>Bạn cần học <strong>sự tinh tế, biết lắng nghe và làm việc cùng người khác</strong>. Cuộc sống sẽ liên tục đưa bạn vào tình huống buộc phải phối hợp, chờ đợi và để ý cảm xúc của người xung quanh.</p>",
+  "3": "<h4>Thiếu số 3 — Bài học về Biểu Đạt</h4><p>Bạn cần học cách <strong>thể hiện cảm xúc và ý tưởng một cách cởi mở</strong>. Bạn có thể ngại nói trước đám đông hoặc khó diễn đạt điều mình nghĩ. Viết, kể chuyện, tham gia nhóm — mọi cơ hội biểu đạt đều là lớp học của bạn.</p>",
+  "4": "<h4>Thiếu số 4 — Bài học về Kỷ Luật</h4><p>Bài học kiếp này là <strong>sự bền bỉ, ngăn nắp và tôn trọng quy trình</strong>. Bạn dễ chán việc lặp lại và muốn đi đường tắt. Cuộc sống sẽ dạy bạn rằng nền móng vững mới đỡ được thành công lớn.</p>",
+  "5": "<h4>Thiếu số 5 — Bài học về Thích Nghi</h4><p>Bạn cần học cách <strong>đón nhận thay đổi và bước ra khỏi vùng an toàn</strong>. Bạn có xu hướng bám vào sự quen thuộc. Những biến động bất ngờ trong đời chính là lời mời bạn linh hoạt hơn.</p>",
+  "6": "<h4>Thiếu số 6 — Bài học về Trách Nhiệm Yêu Thương</h4><p>Bài học là <strong>cam kết, chăm sóc và gánh vác trong gia đình</strong>. Bạn có thể né tránh ràng buộc tình cảm hoặc trách nhiệm tổ ấm. Học cách hiện diện trọn vẹn với người thân là chìa khóa trưởng thành của bạn.</p>",
+  "7": "<h4>Thiếu số 7 — Bài học về Chiều Sâu</h4><p>Bạn cần học <strong>sự chiêm nghiệm, đặt câu hỏi và tin vào trí tuệ nội tâm</strong>. Bạn dễ sống vội, tin vào bề nổi. Cuộc sống sẽ tạo ra những khoảng lặng buộc bạn nhìn vào bên trong — đừng sợ chúng.</p>",
+  "8": "<h4>Thiếu số 8 — Bài học về Quản Trị</h4><p>Bài học kiếp này liên quan đến <strong>tiền bạc, quyền hạn và cách quản lý nguồn lực</strong>. Bạn có thể vụng về với tài chính hoặc e ngại quyền lực. Học cách định giá bản thân và quản lý tiền là nhiệm vụ quan trọng.</p>",
+  "9": "<h4>Thiếu số 9 — Bài học về Bao Dung</h4><p>Bạn cần học <strong>lòng trắc ẩn, sự tha thứ và nhìn xa hơn lợi ích cá nhân</strong>. Cuộc sống sẽ đưa đến những tình huống đòi hỏi bạn đặt mình vào vị trí người khác và cho đi không điều kiện.</p>"
+};
+
+const KARMIC_DEBT_MEANINGS = {
+  "13": "<h4>Nợ Nghiệp 13/4 — Nợ của sự Lười Biếng</h4><p>Con số 13 xuất hiện trong các phép tính lõi cho thấy kiếp trước bạn có thể đã <strong>trốn tránh lao động, đùn đẩy gánh nặng cho người khác</strong>. Kiếp này thành công chỉ đến qua <strong>làm việc chăm chỉ gấp đôi người thường</strong> — không có đường tắt. Tin tốt: khi chấp nhận kỷ luật, số 13/4 xây được những thành tựu cực kỳ bền vững. Hãy tập trung một mục tiêu, hoàn thành từng việc, tránh trì hoãn.</p>",
+  "14": "<h4>Nợ Nghiệp 14/5 — Nợ của sự Buông Thả</h4><p>Số 14 gợi ý kiếp trước bạn có thể đã <strong>lạm dụng tự do, sa đà hưởng thụ</strong>. Kiếp này bạn liên tục bị thử thách bởi <strong>cám dỗ, thay đổi đột ngột và sự bất ổn</strong>. Chìa khóa hóa giải là <strong>điều độ và cam kết</strong>: giữ thói quen lành mạnh, tránh nghiện ngập (rượu, cờ bạc, mua sắm), học cách hoàn thành điều đã hứa. Khi tiết chế được, bạn trở thành người cực kỳ linh hoạt và lôi cuốn.</p>",
+  "16": "<h4>Nợ Nghiệp 16/7 — Nợ của Cái Tôi</h4><p>Số 16 mang bài học về <strong>sự sụp đổ của cái tôi để tái sinh</strong>. Kiếp trước có thể liên quan đến những mối quan hệ tổn thương do kiêu ngạo hoặc ích kỷ. Kiếp này bạn có thể trải qua những lần <strong>đổ vỡ bất ngờ (tình cảm, danh tiếng, kế hoạch)</strong> — mỗi lần như vậy là một lời nhắc buông cái tôi xuống. Hãy sống khiêm nhường, chân thật; sau mỗi lần 'lột xác', bạn mạnh mẽ và sâu sắc hơn hẳn.</p>",
+  "19": "<h4>Nợ Nghiệp 19/1 — Nợ của sự Lạm Quyền</h4><p>Số 19 gợi ý kiếp trước bạn có thể đã <strong>dùng quyền lực vì lợi ích riêng, phớt lờ người khác</strong>. Kiếp này bạn buộc phải học <strong>tự lập trong cô độc</strong>: thường phải tự xoay xở mà khó nhận trợ giúp, dù xung quanh không thiếu người. Bài học kép là <strong>tự đứng vững VÀ biết khiêm tốn nhờ giúp đỡ</strong>. Khi cân bằng được, bạn trở thành thủ lĩnh thực sự — mạnh mẽ nhưng biết nâng người khác lên.</p>"
+};
+
+const BALANCE_MEANINGS = {
+  "1": "<h4>Số Cân Bằng 1</h4><p>Khi khủng hoảng, bạn có xu hướng <strong>tự xử lý một mình và hành động ngay</strong>. Sức mạnh của bạn là sự quyết đoán; điểm mù là cô lập bản thân. Hãy dám chia sẻ vấn đề — nhờ giúp đỡ không làm bạn yếu đi.</p>",
+  "2": "<h4>Số Cân Bằng 2</h4><p>Dưới áp lực, bạn <strong>nhạy cảm hơn bình thường và dễ lo lắng về cách người khác nghĩ</strong>. Cách lấy lại thăng bằng tốt nhất là nói chuyện với người bạn tin tưởng và tách cảm xúc khỏi sự việc. Đừng ôm nỗi lo một mình.</p>",
+  "3": "<h4>Số Cân Bằng 3</h4><p>Khi căng thẳng, bạn dễ <strong>dùng sự hài hước để né vấn đề</strong> hoặc phóng đại cảm xúc. Sức mạnh thật của bạn là nhìn ra góc sáng của tình huống — hãy dùng óc lạc quan để giải quyết, không phải để trốn tránh.</p>",
+  "4": "<h4>Số Cân Bằng 4</h4><p>Gặp khó khăn, bạn <strong>bám vào lý trí, quy trình và cố kiểm soát mọi thứ</strong>. Điều này giúp bạn ổn định nhưng dễ khiến bạn cứng nhắc, giận dữ khi mọi việc chệch kế hoạch. Hãy tập chấp nhận điều không kiểm soát được.</p>",
+  "5": "<h4>Số Cân Bằng 5</h4><p>Khi khủng hoảng, phản xạ của bạn là <strong>tránh né hoặc 'đổi cảnh' — đi đâu đó, làm việc khác</strong>. Khoảng nghỉ ngắn giúp bạn tỉnh táo, nhưng vấn đề chưa giải quyết sẽ chờ bạn quay lại. Hãy quay về đúng hạn và đối diện.</p>",
+  "6": "<h4>Số Cân Bằng 6</h4><p>Dưới áp lực, bạn <strong>gánh trách nhiệm về mình và lo cho mọi người trước</strong>, kể cả khi chính bạn đang tổn thương. Sự tận tâm là sức mạnh của bạn, nhưng hãy nhớ: bạn không thể rót nước từ chiếc bình rỗng.</p>",
+  "7": "<h4>Số Cân Bằng 7</h4><p>Khi khó khăn ập đến, bạn <strong>rút vào thế giới nội tâm để phân tích</strong>. Khoảng lặng giúp bạn nhìn thấu vấn đề, nhưng ở trong đó quá lâu sẽ thành cô lập. Hãy đặt giới hạn thời gian suy ngẫm rồi hành động.</p>",
+  "8": "<h4>Số Cân Bằng 8</h4><p>Bạn phản ứng với khủng hoảng bằng cách <strong>nắm quyền kiểm soát và giải quyết như một bài toán quản trị</strong>. Hiệu quả cao, nhưng dễ bỏ quên cảm xúc của mình và người khác. Cân bằng lý trí với sự thấu cảm là chìa khóa.</p>",
+  "9": "<h4>Số Cân Bằng 9</h4><p>Khi biến cố xảy ra, bạn có xu hướng <strong>nhìn bức tranh lớn và tìm ý nghĩa của sự việc</strong>. Góc nhìn rộng giúp bạn tha thứ và buông bỏ nhanh, nhưng đừng dùng 'mọi chuyện đều có lý do' để né nỗi buồn thật của mình.</p>"
+};
+
+const SUBCONSCIOUS_MEANINGS = {
+  "3": "<h4>Số Tiềm Thức 3</h4><p>Trước tình huống bất ngờ, bạn dễ <strong>phản ứng theo cảm xúc</strong> — hoảng hốt, cười trừ hoặc nói nhiều hơn bình thường. Bạn còn nhiều bài học nghiệp cần bổ sung; khi lấp dần các con số thiếu, khả năng ứng biến sẽ vững hơn hẳn.</p>",
+  "4": "<h4>Số Tiềm Thức 4</h4><p>Khi có biến, bạn <strong>cần thời gian định thần và muốn có quy trình rõ ràng</strong> trước khi hành động. Bạn xử lý tốt nếu được chuẩn bị, nhưng dễ lúng túng với điều hoàn toàn bất ngờ. Rèn luyện tính linh hoạt sẽ giúp nhiều.</p>",
+  "5": "<h4>Số Tiềm Thức 5</h4><p>Phản xạ của bạn trước khủng hoảng là <strong>hành động ngay — đôi khi hơi bốc đồng</strong>. Bạn không đứng yên chịu trận, nhưng quyết định vội có thể tạo rắc rối mới. Hít thở sâu 10 giây trước khi làm gì đó là 'bùa hộ mệnh' của bạn.</p>",
+  "6": "<h4>Số Tiềm Thức 6</h4><p>Trong tình huống khẩn cấp, bạn <strong>nghĩ đến người thân trước tiên</strong> và hành động để bảo vệ những người mình yêu. Đây là phản xạ của người có trách nhiệm; chỉ cần nhớ chính bạn cũng nằm trong danh sách cần được bảo vệ.</p>",
+  "7": "<h4>Số Tiềm Thức 7</h4><p>Bạn phản ứng với biến cố bằng <strong>sự bình tĩnh và phân tích</strong> — lùi một bước, quan sát, rồi mới hành động. Người xung quanh thấy bạn 'lạnh' nhưng thực ra bạn đang xử lý thông tin. Đây là phản xạ rất đáng tin cậy.</p>",
+  "8": "<h4>Số Tiềm Thức 8</h4><p>Trước khủng hoảng, bạn <strong>tự động nắm quyền chỉ huy</strong>: đánh giá thiệt hại, phân công, giải quyết. Bạn là người mà mọi người tìm đến khi có chuyện. Chỉ cần tránh ôm hết mọi thứ về mình.</p>",
+  "9": "<h4>Số Tiềm Thức 9</h4><p>Bạn phản ứng với tình huống bất ngờ bằng <strong>sự điềm tĩnh gần như toàn diện</strong> — hiếm khi mất bình tĩnh, nhìn được toàn cảnh và trấn an được người khác. Đây là mức phản xạ trưởng thành nhất trong thần số học.</p>"
+};
+
+const PERSONAL_MONTH_MEANINGS = {
+  "1": "<h4>Tháng Cá Nhân 1 — Khởi Động</h4><p>Tháng này thích hợp để <strong>bắt đầu việc mới, đưa ra quyết định và hành động độc lập</strong>. Năng lượng khởi đầu đang ủng hộ bạn — đừng chần chừ.</p>",
+  "2": "<h4>Tháng Cá Nhân 2 — Kết Nối</h4><p>Tháng của <strong>kiên nhẫn và quan hệ</strong>. Ưu tiên lắng nghe, đàm phán, vun đắp tình cảm. Việc lớn nên chờ chín muồi thay vì ép tiến độ.</p>",
+  "3": "<h4>Tháng Cá Nhân 3 — Tỏa Sáng</h4><p>Tháng thuận lợi cho <strong>giao tiếp, sáng tạo và gặp gỡ</strong>. Hãy thể hiện bản thân, ra mắt ý tưởng, mở rộng vòng quan hệ. Tránh hứa nhiều hơn khả năng thực hiện.</p>",
+  "4": "<h4>Tháng Cá Nhân 4 — Củng Cố</h4><p>Tháng để <strong>dọn dẹp, tổ chức lại và làm việc chăm chỉ</strong>. Xử lý giấy tờ, hoàn thiện hệ thống, chăm sóc sức khỏe theo kỷ luật. Nền móng đặt tháng này sẽ đỡ cả năm.</p>",
+  "5": "<h4>Tháng Cá Nhân 5 — Chuyển Động</h4><p>Tháng nhiều <strong>thay đổi và cơ hội bất ngờ</strong>: chuyến đi, lời mời, tin mới. Hãy linh hoạt và nắm bắt, nhưng đọc kỹ mọi thứ trước khi ký.</p>",
+  "6": "<h4>Tháng Cá Nhân 6 — Vun Vén</h4><p>Tháng hướng về <strong>gia đình, tình cảm và trách nhiệm</strong>. Thích hợp sửa sang nhà cửa, hàn gắn quan hệ, chăm sóc người thân. Sự hiện diện của bạn là món quà lớn nhất.</p>",
+  "7": "<h4>Tháng Cá Nhân 7 — Lắng Đọng</h4><p>Tháng để <strong>đi chậm lại, học hỏi và chiêm nghiệm</strong>. Tốt cho nghiên cứu, khóa học, kỳ nghỉ yên tĩnh. Đừng ép bản thân phải 'ra số' tháng này.</p>",
+  "8": "<h4>Tháng Cá Nhân 8 — Bứt Phá</h4><p>Tháng của <strong>tiền bạc, công việc và các quyết định lớn</strong>. Đàm phán lương, chốt hợp đồng, đẩy mạnh kinh doanh đều được ủng hộ. Hành động dứt khoát và chuyên nghiệp.</p>",
+  "9": "<h4>Tháng Cá Nhân 9 — Khép Lại</h4><p>Tháng để <strong>hoàn tất và buông bỏ</strong>: kết thúc dự án dang dở, thanh lý đồ không dùng, tha thứ và cho đi. Dọn chỗ trống để chu kỳ mới bắt đầu vào tháng sau.</p>"
+};
+
+const LIFE_CYCLE_MEANINGS = {
+  "1": "<h4>Chu kỳ số 1 — Giai đoạn Tự Lập</h4><p>Giai đoạn này cuộc sống thúc đẩy bạn <strong>tự đứng vững, xây dựng bản sắc và dám khác biệt</strong>. Nhiều quyết định phải tự mình đưa ra — đó chính là bài tập rèn bản lĩnh.</p>",
+  "2": "<h4>Chu kỳ số 2 — Giai đoạn Vun Đắp</h4><p>Giai đoạn của <strong>quan hệ, hợp tác và sự nhạy cảm</strong>. Thành công đến từ khả năng kết nối và kiên nhẫn chờ thời điểm, không phải từ sự đơn độc bứt phá.</p>",
+  "3": "<h4>Chu kỳ số 3 — Giai đoạn Nở Hoa</h4><p>Giai đoạn <strong>sáng tạo và mở rộng xã hội</strong>. Tài năng biểu đạt của bạn được khai mở, cuộc sống nhiều màu sắc, bạn bè và cơ hội thể hiện.</p>",
+  "4": "<h4>Chu kỳ số 4 — Giai đoạn Xây Móng</h4><p>Giai đoạn đòi hỏi <strong>lao động bền bỉ và tính hệ thống</strong>. Có thể cảm giác chậm và nặng, nhưng mọi viên gạch đặt lúc này đều là tài sản lâu dài của bạn.</p>",
+  "5": "<h4>Chu kỳ số 5 — Giai đoạn Biến Chuyển</h4><p>Giai đoạn <strong>nhiều thay đổi, dịch chuyển và trải nghiệm</strong>: đổi chỗ ở, đổi nghề, những rẽ hướng bất ngờ. Sự linh hoạt là kỹ năng sống còn của thời kỳ này.</p>",
+  "6": "<h4>Chu kỳ số 6 — Giai đoạn Tổ Ấm</h4><p>Giai đoạn cuộc sống xoay quanh <strong>gia đình, hôn nhân và trách nhiệm yêu thương</strong>. Bạn học cách cam kết, chăm sóc và tạo ra sự hài hòa cho những người thuộc về mình.</p>",
+  "7": "<h4>Chu kỳ số 7 — Giai đoạn Thức Tỉnh</h4><p>Giai đoạn hướng vào <strong>tri thức, chuyên môn sâu và đời sống nội tâm</strong>. Thích hợp để học lên cao, nghiên cứu, phát triển tâm linh. Vật chất không phải trọng tâm của thời kỳ này.</p>",
+  "8": "<h4>Chu kỳ số 8 — Giai đoạn Gặt Hái</h4><p>Giai đoạn của <strong>sự nghiệp, tài chính và vị thế</strong>. Năng lực quản trị được thử thách và đền đáp. Hãy chơi lớn nhưng giữ sự chính trực.</p>",
+  "9": "<h4>Chu kỳ số 9 — Giai đoạn Viên Mãn</h4><p>Giai đoạn của <strong>cho đi, ảnh hưởng rộng và hoàn thiện</strong>. Bạn sống với bức tranh lớn: cống hiến, truyền lại kinh nghiệm, buông những gì không còn phục vụ mình.</p>",
+  "11": "<h4>Chu kỳ số 11 — Giai đoạn Trực Giác</h4><p>Giai đoạn đặc biệt với <strong>độ nhạy tinh thần rất cao</strong>. Trực giác dẫn đường cho bạn, nhưng cảm xúc cũng dao động mạnh — thiền định, nghệ thuật và đời sống tinh thần là điểm tựa.</p>",
+  "22": "<h4>Chu kỳ số 22 — Giai đoạn Kiến Tạo Lớn</h4><p>Giai đoạn hiếm có mang tiềm năng <strong>xây dựng công trình ảnh hưởng đến nhiều người</strong>. Áp lực đi kèm rất lớn; hãy nghĩ lớn nhưng triển khai từng bước thực tế.</p>"
+};
+
+const CHART_TAB_NOTES = {
+  birth: "Ma trận từ <strong>ngày–tháng–năm sinh</strong>: nét tính cách bẩm sinh trời cho, không đổi suốt đời.",
+  name: "Ma trận từ <strong>các chữ cái trong họ tên</strong> (quy đổi Pythagoras): năng lượng mà cái tên bồi đắp thêm cho bạn.",
+  combined: "Ma trận <strong>tổng hợp ngày sinh + họ tên</strong>: bức tranh năng lượng đầy đủ nhất — ô nào càng dày số, năng lượng đó càng mạnh."
+};

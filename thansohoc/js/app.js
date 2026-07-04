@@ -54,6 +54,7 @@ function calculateNumerology(fullName, day, month, year) {
   // 1. Số Chủ Đạo (Life Path)
   const dobString = `${day}${month}${year}`.replace(/\D/g, '');
   let lpSum = dobString.split('').reduce((sum, d) => sum + parseInt(d), 0);
+  const lpRawSum = lpSum; // giữ tổng gốc để soi nợ nghiệp 13/14/16/19
   // Reduce to a single digit, except the master numbers 11/22/33 which are kept.
   while (lpSum > 9 && lpSum !== 11 && lpSum !== 22 && lpSum !== 33) {
     lpSum = lpSum.toString().split('').reduce((sum, d) => sum + parseInt(d), 0);
@@ -72,11 +73,13 @@ function calculateNumerology(fullName, day, month, year) {
   let destinySum = 0;
   let soulSum = 0;
   let personalitySum = 0;
+  const nameCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
 
   for (let i = 0; i < cleanName.length; i++) {
     const char = cleanName[i];
     const val = PYTHAGOREAN_MAP[char] || 0;
     destinySum += val;
+    if (val) nameCounts[val]++; // biểu đồ tên + đam mê tiềm ẩn + bài học nghiệp
     if (VOWELS.has(char)) {
       soulSum += val;
     } else {
@@ -161,6 +164,60 @@ function calculateNumerology(fullName, day, month, year) {
     { num: c4.toString(), label: "Thử thách cuối đời" },
   ];
 
+  // ==================== TẦNG GIẢI MÃ MỞ RỘNG ====================
+  // 10. Biểu đồ tên & biểu đồ tổng hợp
+  const combinedCounts = {};
+  for (let i = 1; i <= 9; i++) combinedCounts[i] = cellCounts[i] + nameCounts[i];
+
+  // 11. Đam mê tiềm ẩn: số xuất hiện nhiều nhất trong tên
+  const maxNameCount = Math.max(...Object.values(nameCounts));
+  const hiddenPassions = maxNameCount > 0
+    ? Object.keys(nameCounts).filter(k => nameCounts[k] === maxNameCount)
+    : [];
+
+  // 12. Bài học nghiệp quả: các số vắng mặt trong tên
+  const karmicLessons = Object.keys(nameCounts).filter(k => nameCounts[k] === 0);
+
+  // 13. Số tiềm thức = 9 − số bài học còn thiếu
+  const subconsciousVal = (9 - karmicLessons.length).toString();
+
+  // 14. Số cân bằng: tổng chữ cái đầu của mỗi từ trong họ tên
+  const nameWords = removeVietnameseAccents(fullName).split(/[^A-Z]+/).filter(Boolean);
+  let balanceSum = 0;
+  nameWords.forEach(w => { balanceSum += PYTHAGOREAN_MAP[w[0]] || 0; });
+  const balanceVal = reduceToSingle(balanceSum).toString();
+
+  // 15. Nợ nghiệp: soi 13/14/16/19 xuất hiện ở bước trung gian các phép tính lõi
+  const debtsIn = (num) => {
+    const found = [];
+    let n = num;
+    while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
+      if (n === 13 || n === 14 || n === 16 || n === 19) found.push(n);
+      n = n.toString().split('').reduce((s, ch) => s + parseInt(ch), 0);
+    }
+    return found;
+  };
+  const karmicDebts = [];
+  [[lpRawSum, 'Số Chủ Đạo'], [destinySum, 'Số Sứ Mệnh'], [soulSum, 'Số Linh Hồn'],
+   [personalitySum, 'Số Nhân Cách'], [parseInt(day), 'Số Ngày Sinh']].forEach(([n, src]) => {
+    debtsIn(n).forEach(dNum => {
+      const exist = karmicDebts.find(x => x.num === dNum);
+      if (exist) { if (!exist.sources.includes(src)) exist.sources.push(src); }
+      else karmicDebts.push({ num: dNum, sources: [src] });
+    });
+  });
+
+  // 16. Tháng cá nhân hiện tại = năm cá nhân + tháng hiện tại
+  const nowMonth = new Date().getMonth() + 1;
+  const personalMonthVal = reduceToSingle(parseInt(personalYearVal) + nowMonth).toString();
+
+  // 17. Ba chu kỳ đường đời (gieo trồng – kết trái – thu hoạch), mốc chung với đỉnh 1
+  const lifeCycles = [
+    { num: reduceNumber(m, true).toString(), label: 'Chu kỳ Gieo Trồng', age: `0 – ${end1} tuổi` },
+    { num: reduceNumber(d, true).toString(), label: 'Chu kỳ Kết Trái',  age: `${end1 + 1} – ${end1 + 27} tuổi` },
+    { num: reduceNumber(y, true).toString(), label: 'Chu kỳ Thu Hoạch', age: `${end1 + 28} tuổi trở đi` },
+  ];
+
   return {
     fullName,
     birthDate: `${day}/${month}/${year}`,
@@ -175,7 +232,17 @@ function calculateNumerology(fullName, day, month, year) {
     pinnacles,
     challenges,
     cellCounts,
-    arrows: detectedArrows
+    arrows: detectedArrows,
+    // tầng mở rộng
+    nameCounts,
+    combinedCounts,
+    hiddenPassions,
+    karmicLessons,
+    subconscious: subconsciousVal,
+    balance: balanceVal,
+    karmicDebts,
+    personalMonth: personalMonthVal,
+    lifeCycles
   };
 }
 
@@ -335,16 +402,20 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPinnacles(data.pinnacles || []);
     renderChallenges(data.challenges || []);
 
-    // Render 3x3 birth chart grid
-    for (let i = 1; i <= 9; i++) {
-      const cell = document.getElementById(`cell-cnt-${i}`);
-      const count = data.cellCounts[i];
-      if (count > 0) {
-        cell.textContent = i.toString().repeat(count);
-      } else {
-        cell.textContent = '';
-      }
-    }
+    // Tầng mở rộng: tháng cá nhân, đam mê tiềm ẩn, tiềm thức, cân bằng, nghiệp số, chu kỳ
+    const indPersonalMonth = document.getElementById('ind-personalmonth');
+    if (indPersonalMonth) indPersonalMonth.textContent = data.personalMonth || '-';
+    const indHP  = document.getElementById('ind-hiddenpassion');
+    if (indHP)  indHP.textContent  = (data.hiddenPassions && data.hiddenPassions.length) ? data.hiddenPassions.join(' & ') : '-';
+    const indSub = document.getElementById('ind-subconscious');
+    if (indSub) indSub.textContent = data.subconscious || '-';
+    const indBal = document.getElementById('ind-balance');
+    if (indBal) indBal.textContent = data.balance || '-';
+    renderKarmic(data);
+    renderCycles(data.lifeCycles || []);
+
+    // Render ma trận 3x3 theo tab đang chọn (mặc định: ngày sinh)
+    setChartTab('birth');
 
     // Render Arrows List
     arrowsList.innerHTML = '';
@@ -374,6 +445,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Draw the detected arrows as lines over the 3x3 grid
     drawArrowsOnChart(data.arrows);
+
+    // Nghi thức reveal: section trồi dần + các chỉ số đếm lên
+    playRevealFX();
   }
 
   // Connect the cells of each detected arrow with an SVG line over the chart.
@@ -399,7 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
         line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
         line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
         line.setAttribute('class', arr.type === 'strength' ? 'arrow-strong' : 'arrow-weak');
-        line.style.animationDelay = (i * 0.08) + 's';
+        // mũi tên thế mạnh: vẽ nét chạy bằng stroke-dash (pathLength chuẩn hóa = 1);
+        // mũi tên trống giữ nét đứt nên chỉ fade như cũ
+        if (arr.type === 'strength') line.setAttribute('pathLength', '1');
+        line.style.animationDelay = (0.5 + i * 0.18) + 's';
         svg.appendChild(line);
       });
     });
@@ -412,6 +489,163 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => drawArrowsOnChart(currentProfileData.arrows), 150);
   });
+
+  // ==================== BA LỚP BIỂU ĐỒ: NGÀY SINH / TÊN / TỔNG HỢP ====================
+  function renderChartCounts(counts) {
+    for (let i = 1; i <= 9; i++) {
+      const cell = document.getElementById(`cell-cnt-${i}`);
+      const count = (counts && counts[i]) || 0;
+      const digits = i.toString().repeat(count);
+      // mỗi chữ số là 1 span để nảy vào lần lượt
+      cell.innerHTML = digits.split('').map((ch, k) =>
+        `<span class="cd" style="--ci:${k}">${ch}</span>`).join('');
+    }
+  }
+
+  function setChartTab(tab) {
+    if (!currentProfileData) return;
+    document.querySelectorAll('.chart-tab').forEach(b =>
+      b.classList.toggle('active', b.dataset.tab === tab));
+    const note = document.getElementById('chart-tab-note');
+    if (note && typeof CHART_TAB_NOTES !== 'undefined') {
+      note.innerHTML = CHART_TAB_NOTES[tab] || '';
+    }
+    const counts = tab === 'name'     ? currentProfileData.nameCounts
+                 : tab === 'combined' ? currentProfileData.combinedCounts
+                 :                      currentProfileData.cellCounts;
+    renderChartCounts(counts);
+    // Mũi tên cá tính chỉ có ý nghĩa trên biểu đồ ngày sinh
+    const svg = document.getElementById('chart-arrows-svg');
+    if (svg) svg.style.display = tab === 'birth' ? '' : 'none';
+  }
+
+  document.querySelectorAll('.chart-tab').forEach(btn => {
+    btn.addEventListener('click', () => setChartTab(btn.dataset.tab));
+  });
+
+  // ==================== GIẢI MÃ TÊN & NGHIỆP SỐ ====================
+  function renderKarmic(data) {
+    const lessonsEl = document.getElementById('karmic-lessons-list');
+    if (lessonsEl) {
+      lessonsEl.innerHTML = '';
+      const lessons = data.karmicLessons || [];
+      if (!lessons.length) {
+        lessonsEl.innerHTML = '<p class="karmic-none"><i class="ti ti-confetti"></i> Tên bạn có đủ cả 9 con số — trường hợp rất hiếm gặp, không thiếu bài học nào!</p>';
+      } else {
+        lessons.forEach(n => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'karmic-chip';
+          chip.innerHTML = `<span class="kc-num">${n}</span> Bài học số ${n}`;
+          chip.addEventListener('click', () => {
+            const body = (typeof KARMIC_LESSON_MEANINGS !== 'undefined' && KARMIC_LESSON_MEANINGS[n]) ||
+              `<p>Bài học số <strong>${n}</strong> — đang cập nhật.</p>`;
+            openDrawer(`Bài Học Nghiệp Quả — thiếu số ${n}`, n, body);
+          });
+          lessonsEl.appendChild(chip);
+        });
+      }
+    }
+
+    const debtsEl = document.getElementById('karmic-debts-list');
+    if (debtsEl) {
+      debtsEl.innerHTML = '';
+      const debts = data.karmicDebts || [];
+      if (!debts.length) {
+        debtsEl.innerHTML = '<p class="karmic-none"><i class="ti ti-shield-check"></i> Không phát hiện nợ nghiệp 13 · 14 · 16 · 19 nào trong các chỉ số cốt lõi của bạn.</p>';
+      } else {
+        debts.forEach(dt => {
+          const reduced = dt.num % 9 === 0 ? 9 : dt.num % 9;
+          const item = document.createElement('div');
+          item.className = 'layer-item karmic-debt-item';
+          item.innerHTML =
+            `<span class="layer-num debt-num">${dt.num}</span>` +
+            `<div class="layer-info"><span class="layer-item-title">Nợ nghiệp ${dt.num}/${reduced}</span>` +
+            `<span class="layer-item-meta">Xuất hiện ở: ${dt.sources.join(', ')}</span></div>` +
+            `<i class="ti ti-chevron-right layer-arrow"></i>`;
+          item.addEventListener('click', () => {
+            const body = (typeof KARMIC_DEBT_MEANINGS !== 'undefined' && KARMIC_DEBT_MEANINGS[dt.num]) ||
+              `<p>Nợ nghiệp <strong>${dt.num}</strong> — đang cập nhật.</p>`;
+            openDrawer(`Nợ Nghiệp ${dt.num}`, dt.num, body);
+          });
+          debtsEl.appendChild(item);
+        });
+      }
+    }
+  }
+
+  // 3 thẻ chỉ số nghiệp số mở drawer riêng
+  document.querySelectorAll('.karmic-card').forEach(card => {
+    card.addEventListener('click', () => {
+      if (!currentProfileData) return;
+      const kind = card.dataset.karmic;
+      if (kind === 'hiddenPassion') {
+        const hp = currentProfileData.hiddenPassions || [];
+        const body = hp.length
+          ? hp.map(n => (typeof HIDDEN_PASSION_MEANINGS !== 'undefined' && HIDDEN_PASSION_MEANINGS[n]) || '')
+              .join('<hr style="border:none;border-top:1px dashed rgba(99,102,241,.3);margin:14px 0;">')
+          : '<p>Chưa xác định được đam mê tiềm ẩn từ tên này.</p>';
+        openDrawer('Đam Mê Tiềm Ẩn', hp.join(' & ') || '-', body);
+      } else if (kind === 'subconscious') {
+        const v = currentProfileData.subconscious;
+        if (v === undefined) return;
+        const body = (typeof SUBCONSCIOUS_MEANINGS !== 'undefined' && SUBCONSCIOUS_MEANINGS[v]) ||
+          `<p>Số tiềm thức <strong>${v}</strong>: bạn còn ${9 - parseInt(v)} bài học nghiệp cần bổ sung — càng lấp đủ các con số thiếu, phản xạ trước biến cố của bạn càng vững vàng.</p>`;
+        openDrawer('Số Tiềm Thức', v, body);
+      } else if (kind === 'balance') {
+        const v = currentProfileData.balance;
+        if (v === undefined) return;
+        const body = (typeof BALANCE_MEANINGS !== 'undefined' && BALANCE_MEANINGS[v]) ||
+          `<p>Số cân bằng <strong>${v}</strong> — đang cập nhật.</p>`;
+        openDrawer('Số Cân Bằng', v, body);
+      }
+    });
+  });
+
+  // ==================== 3 CHU KỲ ĐƯỜNG ĐỜI ====================
+  function renderCycles(cycles) {
+    const el = document.getElementById('cycles-list');
+    if (!el) return;
+    el.innerHTML = '';
+    cycles.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'layer-item';
+      item.innerHTML =
+        `<span class="layer-num">${c.num}</span>` +
+        `<div class="layer-info"><span class="layer-item-title">${c.label}</span>` +
+        `<span class="layer-item-meta">${c.age}</span></div>` +
+        `<i class="ti ti-chevron-right layer-arrow"></i>`;
+      item.addEventListener('click', () => {
+        const body = (typeof LIFE_CYCLE_MEANINGS !== 'undefined' && LIFE_CYCLE_MEANINGS[c.num]) ||
+          `<p>Chu kỳ số <strong>${c.num}</strong> — đang cập nhật.</p>`;
+        openDrawer(`${c.label} · ${c.age}`, c.num, body);
+      });
+      el.appendChild(item);
+    });
+  }
+
+  // ==================== REVEAL FX: SỐ ĐẾM LÊN + SECTION TRỒI DẦN ====================
+  function playRevealFX() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    screenResult.classList.remove('tsh-reveal');
+    void screenResult.offsetWidth;
+    screenResult.classList.add('tsh-reveal');
+
+    document.querySelectorAll('#screen-result .ind-val').forEach((el, i) => {
+      const finalText = el.textContent;
+      const target = parseInt(finalText);
+      if (isNaN(target) || target <= 0) return;
+      const dur = 800;
+      const startAt = performance.now() + i * 90;
+      function tick(now) {
+        const t = Math.min(1, Math.max(0, (now - startAt) / dur));
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = t >= 1 ? finalText : Math.max(1, Math.round(target * eased)).toString();
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
 
   // ---- Deeper layers: Pinnacles & Challenges ----
   function renderPinnacles(pins) {
@@ -454,14 +688,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Maturity & Personal Year cards open their own detail drawer
+  // Maturity / Personal Year / Personal Month cards open their own detail drawer
   document.querySelectorAll('.layer-card').forEach(card => {
     card.addEventListener('click', () => {
       if (!currentProfileData) return;
-      const layer = card.dataset.layer; // 'maturity' | 'personalYear'
+      const layer = card.dataset.layer; // 'maturity' | 'personalYear' | 'personalMonth'
       const val = currentProfileData[layer];
-      const meanings = layer === 'maturity' ? MATURITY_MEANINGS : PERSONAL_YEAR_MEANINGS;
-      const name = (typeof LAYER_NAMES !== 'undefined' && LAYER_NAMES[layer]) || layer;
+      if (val === undefined) return; // hồ sơ cũ trong lịch sử chưa có chỉ số mới
+      const MEANINGS_BY_LAYER = {
+        maturity: MATURITY_MEANINGS,
+        personalYear: PERSONAL_YEAR_MEANINGS,
+        personalMonth: (typeof PERSONAL_MONTH_MEANINGS !== 'undefined' ? PERSONAL_MONTH_MEANINGS : {})
+      };
+      const TITLES = { maturity: 'Số Trưởng Thành', personalYear: 'Năm Cá Nhân', personalMonth: 'Tháng Cá Nhân Hiện Tại' };
+      const meanings = MEANINGS_BY_LAYER[layer] || {};
+      const name = TITLES[layer] || (typeof LAYER_NAMES !== 'undefined' && LAYER_NAMES[layer]) || layer;
       const body = meanings[val] ||
         `<p>Số <strong>${val}</strong> — đang cập nhật luận giải.</p>`;
       openDrawer(name, val, body);
@@ -493,6 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     aiChatInput.value = '';
     aiChatInput.disabled = false;
     btnAskAI.disabled = false;
+    if (chipsEl) chipsEl.innerHTML = '';
 
     screenResult.classList.remove('active');
     screenInput.classList.add('active');
@@ -562,6 +804,47 @@ document.addEventListener('DOMContentLoaded', () => {
       pinnacles: (currentProfileData.pinnacles || []).map((p, i) => `Đỉnh ${i + 1} (${p.age}): ${p.num}`).join('; '),
       challenges: (currentProfileData.challenges || []).map(c => `${c.label}: ${c.num}`).join('; '),
       arrows: currentProfileData.arrows.map(a => a.name).join(', '),
+      // tầng mở rộng
+      personalMonth: currentProfileData.personalMonth || '',
+      hiddenPassions: (currentProfileData.hiddenPassions || []).join(' & '),
+      subconscious: currentProfileData.subconscious || '',
+      balance: currentProfileData.balance || '',
+      karmicLessons: (currentProfileData.karmicLessons || []).join(', ') || 'Không thiếu số nào',
+      karmicDebts: (currentProfileData.karmicDebts || []).map(dt => `${dt.num} (từ ${dt.sources.join('/')})`).join('; ') || 'Không có',
+      lifeCycles: (currentProfileData.lifeCycles || []).map(c => `${c.label} (${c.age}): ${c.num}`).join('; '),
+    });
+  }
+
+  // ---- Chips hỏi nhanh theo hồ sơ ----
+  const chipsEl = document.getElementById('tsh-chips');
+
+  function buildChips() {
+    if (!chipsEl || !currentProfileData) return;
+    chipsEl.innerHTML = '';
+    const d = currentProfileData;
+    const defs = [
+      { icon: 'ti-briefcase', label: 'Nghề nghiệp phù hợp',
+        q: `Với số chủ đạo ${d.lifePath} và số sứ mệnh ${d.destiny}, tôi phù hợp với những nghề nghiệp và môi trường làm việc nào?` },
+      { icon: 'ti-heart', label: 'Tình duyên của tôi',
+        q: 'Các chỉ số thần số học của tôi nói gì về tình duyên và kiểu người phù hợp với tôi?' },
+      { icon: 'ti-calendar', label: `Năm cá nhân ${d.personalYear} nên làm gì?`,
+        q: `Năm cá nhân số ${d.personalYear} này tôi nên tập trung làm gì và tránh điều gì?` },
+    ];
+    (d.karmicDebts || []).forEach(dt => defs.push({
+      karmic: true, icon: 'ti-scale', label: `Hóa giải nợ nghiệp ${dt.num}`,
+      q: `Nợ nghiệp ${dt.num} trong biểu đồ của tôi ảnh hưởng thế nào đến cuộc sống và làm sao để hóa giải?`
+    }));
+    (d.arrows || []).filter(a => a.type === 'weakness').slice(0, 2).forEach(a => defs.push({
+      karmic: true, icon: 'ti-vector', label: a.name,
+      q: `${a.name} trong biểu đồ ngày sinh của tôi cần khắc phục như thế nào trong thực tế?`
+    }));
+    defs.forEach(def => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tsh-chip' + (def.karmic ? ' tsh-chip-karmic' : '');
+      b.innerHTML = `<i class="ti ${def.icon}"></i> ${def.label}`;
+      b.addEventListener('click', () => askQuestion(def.q));
+      chipsEl.appendChild(b);
     });
   }
 
@@ -572,6 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
     aiChatMessages.innerHTML = '';
     aiChatInput.value = '';
     aiError.classList.add('hidden');
+    buildChips();
     aiQuestionDisplay.textContent = `Luận giải biểu đồ Thần Số Học: ${currentProfileData.fullName}`;
 
     chat.sendWithUI({
@@ -588,7 +872,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleAskFollowUp() {
-    const q = aiChatInput.value.trim();
+    askQuestion(aiChatInput.value.trim());
+  }
+
+  function askQuestion(q) {
     if (!q || !currentProfileData || questionsAsked >= 5) return;
     questionsAsked++;
     aiChatInput.value = '';

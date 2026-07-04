@@ -229,9 +229,16 @@
 
         <!-- Birth Chart Grid Section -->
         <div class="chart-section-wrapper">
-          <h3 class="section-title"><i class="ti ti-grid-dots"></i> Biểu đồ Ngày Sinh</h3>
-          <p class="section-subtitle">Sự phân bổ các số trong ngày sinh của bạn trên ma trận Pythagoras 3x3</p>
-          
+          <h3 class="section-title"><i class="ti ti-grid-dots"></i> Biểu đồ Pythagoras</h3>
+          <p class="section-subtitle">Ba lớp ma trận 3x3: ngày sinh (bẩm sinh), họ tên (bồi đắp) và tổng hợp</p>
+
+          <div class="chart-tabs" id="chart-tabs" role="tablist">
+            <button type="button" class="chart-tab active" data-tab="birth">Ngày Sinh</button>
+            <button type="button" class="chart-tab" data-tab="name">Họ Tên</button>
+            <button type="button" class="chart-tab" data-tab="combined">Tổng Hợp</button>
+          </div>
+          <p id="chart-tab-note" class="chart-tab-note"></p>
+
           <div class="birth-chart-container">
             <div class="chart-grid">
               <svg id="chart-arrows-svg" class="chart-arrows-svg" aria-hidden="true"></svg>
@@ -297,6 +304,38 @@
           </div>
         </div>
 
+        <!-- Karmic & Name Decode Section -->
+        <div class="karmic-section-wrapper">
+          <h3 class="section-title"><i class="ti ti-key"></i> Giải Mã Tên &amp; Nghiệp Số</h3>
+          <p class="section-subtitle">Đam mê tiềm ẩn, phản xạ tiềm thức, số cân bằng, bài học còn thiếu và nợ nghiệp trong tên bạn</p>
+
+          <div class="layer-mini-grid karmic-grid">
+            <div class="indicator-card karmic-card" data-karmic="hiddenPassion">
+              <span class="ind-label">Đam Mê Tiềm Ẩn <i class="ti ti-help"></i></span>
+              <span id="ind-hiddenpassion" class="ind-val">-</span>
+              <span class="ind-sub">Khao khát ẩn trong tên</span>
+            </div>
+            <div class="indicator-card karmic-card" data-karmic="subconscious">
+              <span class="ind-label">Số Tiềm Thức <i class="ti ti-help"></i></span>
+              <span id="ind-subconscious" class="ind-val">-</span>
+              <span class="ind-sub">Phản xạ khi biến cố</span>
+            </div>
+            <div class="indicator-card karmic-card" data-karmic="balance">
+              <span class="ind-label">Số Cân Bằng <i class="ti ti-help"></i></span>
+              <span id="ind-balance" class="ind-val">-</span>
+              <span class="ind-sub">Cách lấy lại thăng bằng</span>
+            </div>
+          </div>
+
+          <h4 class="layer-subhead"><i class="ti ti-school"></i> Bài Học Nghiệp Quả</h4>
+          <p class="layer-note">Những con số vắng mặt trong tên — kỹ năng mà cuộc đời sẽ liên tục yêu cầu bạn học</p>
+          <div id="karmic-lessons-list" class="karmic-chips"></div>
+
+          <h4 class="layer-subhead"><i class="ti ti-scale"></i> Nợ Nghiệp</h4>
+          <p class="layer-note">Các con số 13 · 14 · 16 · 19 ẩn trong bước tính của những chỉ số cốt lõi</p>
+          <div id="karmic-debts-list" class="layer-list"></div>
+        </div>
+
         <!-- Deeper Layers Section -->
         <div class="layers-section-wrapper">
           <h3 class="section-title"><i class="ti ti-stars"></i> Các Tầng Sâu Hơn</h3>
@@ -313,7 +352,16 @@
               <span id="ind-personalyear" class="ind-val">-</span>
               <span class="ind-sub">Năng lượng năm nay</span>
             </div>
+            <div class="indicator-card layer-card" data-layer="personalMonth">
+              <span class="ind-label">Tháng Cá Nhân <i class="ti ti-help"></i></span>
+              <span id="ind-personalmonth" class="ind-val">-</span>
+              <span class="ind-sub">Năng lượng tháng này</span>
+            </div>
           </div>
+
+          <h4 class="layer-subhead"><i class="ti ti-route"></i> 3 Chu Kỳ Đường Đời</h4>
+          <p class="layer-note">Ba mùa lớn của cuộc đời: gieo trồng — kết trái — thu hoạch</p>
+          <div id="cycles-list" class="layer-list"></div>
 
           <h4 class="layer-subhead"><i class="ti ti-trophy"></i> Đỉnh Cuộc Đời</h4>
           <p class="layer-note">4 giai đoạn lớn, mỗi giai đoạn mang một bài học chủ đạo</p>
@@ -344,6 +392,8 @@
           </div>
 
           <p id="ai-error" class="ai-error hidden"></p>
+
+          <div class="tsh-chips" id="tsh-chips"></div>
 
           <div class="ai-chat-row">
             <input id="ai-chat-input" type="text" class="ai-chat-input" placeholder="Hỏi thêm về biểu đồ thần số học của bạn..." maxlength="300" aria-label="Câu hỏi cho AI">

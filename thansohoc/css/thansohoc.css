@@ -1014,3 +1014,188 @@ body {
   transform: scale(1.05); 
 }
 
+
+
+/* ============================================================
+   THẦN SỐ HỌC REVAMP FX — tabs 3 lớp biểu đồ, nghiệp số,
+   reveal số đếm lên, chips hỏi AI
+   ============================================================ */
+
+/* ---------- Tabs 3 lớp biểu đồ ---------- */
+.chart-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 14px 0 10px;
+}
+.chart-tab {
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--muted);
+  border-radius: 99px;
+  padding: 7px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.chart-tab:hover { border-color: var(--indigo); color: var(--indigo); transform: translateY(-1px); }
+.chart-tab.active {
+  background: linear-gradient(135deg, #818cf8, #4f46e5);
+  border-color: #4f46e5;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.3);
+}
+.chart-tab-note {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin-bottom: 14px;
+  min-height: 18px;
+}
+
+/* ---------- Chữ số nảy vào ô ma trận ---------- */
+.cell-count .cd {
+  display: inline-block;
+  animation: cd-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--ci, 0) * 90ms + 250ms);
+}
+@keyframes cd-pop {
+  0%   { opacity: 0; transform: translateY(-14px) scale(1.6); }
+  60%  { opacity: 1; transform: translateY(2px) scale(0.95); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* ---------- Mũi tên thế mạnh: vẽ nét chạy ---------- */
+.chart-arrows-svg .arrow-strong {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: arrowDrawLine 0.7s ease forwards;
+}
+@keyframes arrowDrawLine {
+  0%   { opacity: 1; stroke-dashoffset: 1; }
+  100% { opacity: 1; stroke-dashoffset: 0; }
+}
+
+/* ---------- Section Giải Mã Tên & Nghiệp Số ---------- */
+.karmic-section-wrapper {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 22px 18px;
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  position: relative;
+}
+.karmic-section-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(99, 102, 241, 0.14);
+  border-radius: 19px;
+  pointer-events: none;
+}
+.karmic-grid { margin-bottom: 6px; }
+
+.karmic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.karmic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.06);
+  color: var(--indigo-dark);
+  border-radius: 12px;
+  padding: 7px 12px 7px 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.karmic-chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--indigo);
+  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.2);
+}
+.kc-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #818cf8, #4f46e5);
+  color: #fff;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.karmic-none {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  padding: 4px 0 8px;
+}
+.karmic-none i { color: var(--indigo); }
+
+.karmic-debt-item .debt-num {
+  background: linear-gradient(135deg, #fb7185, #e11d48);
+  color: #fff;
+}
+
+/* ---------- Reveal: các section trồi dần lên ---------- */
+.tsh-reveal .profile-summary        { animation: tsh-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.tsh-reveal .indicators-grid        { animation: tsh-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.08s both; }
+.tsh-reveal .chart-section-wrapper  { animation: tsh-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s both; }
+.tsh-reveal .arrows-section-wrapper { animation: tsh-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.28s both; }
+.tsh-reveal .karmic-section-wrapper { animation: tsh-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.38s both; }
+.tsh-reveal .layers-section-wrapper { animation: tsh-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.48s both; }
+.tsh-reveal .ai-section             { animation: tsh-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.58s both; }
+@keyframes tsh-rise {
+  from { opacity: 0; transform: perspective(800px) translateY(26px) rotateX(5deg); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Chips hỏi nhanh AI ---------- */
+.tsh-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.tsh-chips:empty { display: none; }
+.tsh-chip {
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.06);
+  color: var(--indigo-dark);
+  border-radius: 99px;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.tsh-chip:hover { background: var(--indigo); color: #fff; transform: translateY(-1px); }
+.tsh-chip-karmic {
+  border-color: rgba(225, 29, 72, 0.4);
+  background: rgba(225, 29, 72, 0.06);
+  color: #be123c;
+}
+.tsh-chip-karmic:hover { background: #e11d48; color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-count .cd,
+  .chart-arrows-svg .arrow-strong,
+  .tsh-reveal .profile-summary, .tsh-reveal .indicators-grid,
+  .tsh-reveal .chart-section-wrapper, .tsh-reveal .arrows-section-wrapper,
+  .tsh-reveal .karmic-section-wrapper, .tsh-reveal .layers-section-wrapper,
+  .tsh-reveal .ai-section { animation: none !important; opacity: 1; }
+}
