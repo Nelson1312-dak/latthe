@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Xem ngày tốt xấu theo lịch vạn niên: chọn ngày cưới hỏi, khai trương, động thổ, nhập trạch, xuất hành theo 12 Trực, sao Hoàng đạo và giờ hoàng đạo. Lọc ngày xung tuổi theo năm sinh. Miễn phí.">
+  <meta name="keywords" content="xem ngày tốt, ngày tốt xấu, ngày hoàng đạo, xem ngày cưới, ngày khai trương, ngày động thổ, ngày nhập trạch, giờ hoàng đạo, lịch vạn niên, ngày tam nương, xem ngày theo tuổi">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Lật Bài">
+  <meta name="theme-color" content="#fbf3e4">
+  <link rel="canonical" href="https://latbai.vn/ngay-tot/">
+  <title>Xem Ngày Tốt — Chọn Ngày Cưới, Khai Trương, Động Thổ Theo Tuổi | Lật Bài</title>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://latbai.vn/ngay-tot/">
+  <meta property="og:site_name" content="Lật Bài">
+  <meta property="og:locale" content="vi_VN">
+  <meta property="og:title" content="Xem Ngày Tốt — Chọn Ngày Cưới, Khai Trương, Động Thổ Theo Tuổi">
+  <meta property="og:description" content="Lịch ngày tốt xấu theo 12 Trực, sao Hoàng đạo, giờ hoàng đạo và tuổi của bạn. Miễn phí, không quảng cáo.">
+  <meta property="og:image" content="https://latbai.vn/images/og-main.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Xem Ngày Tốt — Chọn Ngày Cưới, Khai Trương, Động Thổ Theo Tuổi">
+  <meta name="twitter:description" content="Lịch ngày tốt xấu theo 12 Trực, sao Hoàng đạo, giờ hoàng đạo và tuổi của bạn.">
+  <meta name="twitter:image" content="https://latbai.vn/images/og-main.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+  <link rel="apple-touch-icon" href="/images/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Ngày Tốt">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap&subset=vietnamese" rel="stylesheet">
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/ngay-tot/css/ngaytot.css">
+
+  <!-- Shared shell: floating dock, service worker, Vercel analytics -->
+  <script src="/js/shell.js" defer></script>
+  <script src="/js/profile.js" defer></script>
+  <!-- Mystic FX: hat huyen hoc nen theo chu de module -->
+  <script src="/js/mystic-fx.js" defer data-color="220,38,38" data-glyphs="✦✧☾" data-count="46"></script>
+  <script src="/ngay-tot/js/amlich.js" defer></script>
+  <script src="/ngay-tot/js/app.js" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [{
+      "@type": "Question",
+      "name": "Ngày hoàng đạo là gì?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ngày hoàng đạo là ngày có các sao tốt (Thanh Long, Minh Đường, Kim Quỹ, Kim Đường, Ngọc Đường, Tư Mệnh) chiếu theo lịch cổ truyền — được xem là thuận lợi cho các việc trọng đại như cưới hỏi, khai trương, động thổ. Ngược lại, ngày hắc đạo có sao xấu chiếu nên hạn chế khởi sự."
+      }
+    }, {
+      "@type": "Question",
+      "name": "12 Trực trong lịch vạn niên nghĩa là gì?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "12 Trực (Kiến, Trừ, Mãn, Bình, Định, Chấp, Phá, Nguy, Thành, Thu, Khai, Bế) là chu kỳ 12 ngày lặp lại theo chi của ngày và tháng âm lịch. Mỗi Trực hợp và kỵ những loại việc khác nhau — ví dụ Trực Thành, Trực Khai rất tốt cho cưới hỏi khai trương, còn Trực Phá kỵ mọi việc trọng đại."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Ngày Tam Nương, Nguyệt Kỵ là những ngày nào?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Theo dân gian, ngày Tam Nương là các ngày 3, 7, 13, 18, 22, 27 âm lịch; ngày Nguyệt Kỵ là mùng 5, 14, 23 âm lịch ('mùng năm, mười bốn, hai ba — đi chơi cũng lỗ nữa là đi buôn'). Đây là các ngày nên tránh khởi sự việc lớn."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Xem ngày tốt theo tuổi như thế nào?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ngoài trực và sao, cần tránh ngày có địa chi xung với tuổi của bạn (lục xung: Tý–Ngọ, Sửu–Mùi, Dần–Thân, Mão–Dậu, Thìn–Tuất, Tỵ–Hợi). Công cụ của Lật Bài tự động trừ điểm các ngày xung tuổi khi bạn đã tạo Hồ Sơ Huyền Học."
+      }
+    }]
+  }
+  </script>
+</head>
+<body class="light-theme ngaytot-theme">
+
+  <header class="module-header ngaytot-theme">
+    <a href="/" class="mh-brand"><img src="/images/icon.svg" alt="latbai.vn"><span>latbai.vn</span></a>
+    <span class="header-title"><i class="ti ti-calendar-star"></i> Xem Ngày Tốt</span>
+    <div class="header-actions" style="width: 38px;"></div>
+  </header>
+
+  <h1 class="sr-only">Xem Ngày Tốt Xấu — Chọn Ngày Cưới Hỏi, Khai Trương, Động Thổ Theo Tuổi</h1>
+
+  <div class="nt-wrapper">
+    <div class="nt-hero">
+      <div class="l-brand-icon" aria-hidden="true">
+        <img src="/images/logo.svg" alt="Lật Bài Logo">
+      </div>
+      <h2 class="nt-title">Xem Ngày Tốt</h2>
+      <p class="nt-subtitle">12 Trực • Sao Hoàng Đạo • Giờ hoàng đạo • Lọc theo tuổi</p>
+      <div class="seo-app-intro">
+        Chọn loại việc và tháng cần xem — lịch sẽ chấm điểm từng ngày theo Trực, sao Hoàng đạo, ngày kỵ dân gian và tuổi của bạn.
+      </div>
+    </div>
+
+    <p id="nt-profile-note" class="nt-profile-note"></p>
+
+    <div class="nt-events" id="nt-events"></div>
+
+    <div class="nt-cal-card">
+      <div class="nt-month-nav">
+        <button type="button" id="nt-prev" class="nt-nav-btn" aria-label="Tháng trước"><i class="ti ti-chevron-left"></i></button>
+        <span id="nt-month-label" class="nt-month-label">Tháng —</span>
+        <button type="button" id="nt-next" class="nt-nav-btn" aria-label="Tháng sau"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <div class="nt-grid" id="nt-grid"></div>
+      <div class="nt-legend">
+        <span><i class="nt-dot-demo r-good"></i> Tốt</span>
+        <span><i class="nt-dot-demo r-ok"></i> Khá</span>
+        <span><i class="nt-dot-demo r-mid"></i> Bình</span>
+        <span><i class="nt-dot-demo r-bad"></i> Xấu</span>
+      </div>
+    </div>
+
+    <div class="nt-best" id="nt-best"></div>
+
+    <a href="/thuvien/" class="seo-library-link ngaytot-page-cta">
+      <i class="ti ti-books"></i> Xem thêm kiến thức về Kinh Dịch &amp; cổ học phương Đông
+      <i class="ti ti-arrow-right" style="margin-left:auto;opacity:0.5;"></i>
+    </a>
+
+    <div class="faq-section">
+      <h3 class="faq-title">Câu hỏi thường gặp về xem ngày tốt (FAQ)</h3>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary class="faq-question">Ngày hoàng đạo là gì?</summary>
+          <p class="faq-answer">Ngày hoàng đạo là ngày có các sao tốt (<strong>Thanh Long, Minh Đường, Kim Quỹ, Kim Đường, Ngọc Đường, Tư Mệnh</strong>) chiếu theo lịch cổ truyền — thuận lợi cho việc trọng đại như cưới hỏi, khai trương, động thổ. Ngày hắc đạo có sao xấu chiếu nên hạn chế khởi sự.</p>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-question">12 Trực nghĩa là gì?</summary>
+          <p class="faq-answer">12 Trực (<strong>Kiến, Trừ, Mãn, Bình, Định, Chấp, Phá, Nguy, Thành, Thu, Khai, Bế</strong>) là chu kỳ 12 ngày lặp theo chi ngày và tháng âm. Mỗi Trực hợp/kỵ việc khác nhau — Trực Thành, Khai rất tốt cho cưới hỏi khai trương; Trực Phá kỵ mọi việc lớn.</p>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-question">Ngày Tam Nương, Nguyệt Kỵ là ngày nào?</summary>
+          <p class="faq-answer">Tam Nương: ngày <strong>3, 7, 13, 18, 22, 27</strong> âm lịch. Nguyệt Kỵ: <strong>mùng 5, 14, 23</strong> âm lịch — "mùng năm, mười bốn, hai ba; đi chơi cũng lỗ nữa là đi buôn". Nên tránh khởi sự việc lớn vào các ngày này.</p>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-question">Xem ngày theo tuổi hoạt động ra sao?</summary>
+          <p class="faq-answer">Công cụ tự trừ điểm những ngày có địa chi <strong>lục xung</strong> với tuổi bạn (Tý–Ngọ, Sửu–Mùi, Dần–Thân, Mão–Dậu, Thìn–Tuất, Tỵ–Hợi). Chỉ cần tạo <a href="/">Hồ Sơ Huyền Học</a> một lần ở trang chủ.</p>
+        </details>
+      </div>
+    </div>
+
+    <p class="nt-disclaimer">Kết quả dựa trên lịch pháp cổ truyền, mang tính tham khảo — quyết định cuối cùng luôn thuộc về bạn.</p>
+  </div>
+
+  <!-- Sheet chi tiết ngày -->
+  <div id="nt-sheet" hidden>
+    <div class="nts-backdrop"></div>
+    <div class="nts-panel" role="dialog" aria-modal="true">
+      <div class="nts-handle"></div>
+      <div class="nts-head">
+        <div>
+          <div class="nts-title" id="nts-title">—</div>
+          <div class="nts-rating" id="nts-rating">—</div>
+        </div>
+        <button type="button" class="nts-close" aria-label="Đóng">✕</button>
+      </div>
+      <div id="nts-body"></div>
+    </div>
+  </div>
+
+</body>
+</html>

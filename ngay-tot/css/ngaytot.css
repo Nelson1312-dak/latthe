@@ -1,0 +1,275 @@
+/* ============================================================
+   ngaytot.css — Xem Ngày Tốt (theme đỏ son, nền kem chung)
+   ============================================================ */
+:root {
+  --font-heading: 'Be Vietnam Pro', sans-serif;
+  --font-body:    'Be Vietnam Pro', sans-serif;
+
+  --bg:        #fbf3e4;
+  --bg-2:      #f6e8cf;
+  --bg-surface:#ffffff;
+  --text:      #2b1408;
+  --text-mid:  #6b4030;
+  --muted:     #a7887a;
+  --border:    rgba(160, 60, 30, 0.14);
+  --shadow:    0 6px 22px rgba(150, 60, 25, 0.09);
+  --shadow-h:  0 16px 44px rgba(150, 60, 25, 0.16);
+
+  --son:       #dc2626; /* đỏ son chủ đạo */
+  --son-dark:  #b91c1c;
+  --son-dim:   rgba(220, 38, 38, 0.1);
+  --good:      #0d9668;
+  --ok:        #d98a0a;
+  --mid:       #a7887a;
+
+  /* tương thích common.css */
+  --bg-glass:  rgba(220, 38, 38, 0.05);
+  --text-secondary: #6b4030;
+  --gold:      #d98a0a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button, input, select, a { touch-action: manipulation; }
+html { font-size: 16px; }
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse 90% 60% at 50% -10%, var(--bg-2) 0%, transparent 70%);
+  color: var(--text);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 110px;
+}
+a { color: var(--son-dark); }
+
+.gemini-glow-1, .gemini-glow-2, .gemini-glow-3 { display: none !important; }
+
+.nt-wrapper { max-width: 560px; margin: 0 auto; padding: 0 16px 32px; }
+
+/* ---- Hero ---- */
+.nt-hero { text-align: center; padding: 26px 0 10px; }
+.nt-hero .l-brand-icon {
+  width: 74px; height: 74px; margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #ffffff, #fbf3e4);
+  border: 1.5px solid rgba(220, 38, 38, 0.35);
+  box-shadow: 0 10px 28px rgba(150, 60, 25, 0.1);
+}
+.nt-hero .l-brand-icon img { width: 46px; }
+.nt-title {
+  font-family: var(--font-heading);
+  font-size: clamp(34px, 9vw, 46px);
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--text) 20%, var(--son) 65%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 6px 0 8px;
+}
+.nt-subtitle { font-size: 13px; color: var(--muted); letter-spacing: 0.3px; }
+.seo-app-intro {
+  font-size: 13.5px; color: var(--text-mid); max-width: 460px;
+  margin: 12px auto 0; line-height: 1.6; text-align: center;
+  border-top: 1px dashed var(--border); padding-top: 12px;
+}
+
+.nt-profile-note {
+  font-size: 12px; color: var(--text-mid); text-align: center;
+  margin: 14px 0 4px; line-height: 1.6;
+}
+.nt-profile-note i { color: var(--son); }
+
+/* ---- Event chips ---- */
+.nt-events {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin: 14px 0 16px;
+}
+.nt-chip {
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-mid);
+  border-radius: 99px;
+  padding: 8px 14px;
+  font-size: 12.5px; font-weight: 700; font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.nt-chip:hover { border-color: var(--son); color: var(--son); transform: translateY(-1px); }
+.nt-chip.active {
+  background: linear-gradient(135deg, #ef4444, var(--son-dark));
+  border-color: var(--son-dark);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.3);
+}
+
+/* ---- Calendar ---- */
+.nt-cal-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.nt-cal-card::after {
+  content: '';
+  position: absolute; inset: 5px;
+  border: 1px solid rgba(220, 38, 38, 0.12);
+  border-radius: 19px;
+  pointer-events: none;
+}
+.nt-month-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.nt-month-label { font-size: 16px; font-weight: 800; color: var(--text); }
+.nt-nav-btn {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border); background: var(--bg);
+  border-radius: 12px; font-size: 16px; color: var(--text-mid);
+  cursor: pointer; position: relative; z-index: 1;
+  transition: all 0.18s ease;
+}
+.nt-nav-btn:hover { border-color: var(--son); color: var(--son); }
+
+.nt-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+.nt-dow {
+  text-align: center; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); padding: 4px 0;
+}
+.nt-day {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1px; padding: 6px 2px 8px;
+  background: var(--bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-family: inherit; cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.nt-day:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.nt-solar { font-size: 14.5px; font-weight: 800; color: var(--text); line-height: 1.2; }
+.nt-lunar { font-size: 8.5px; color: var(--muted); font-weight: 600; }
+.nt-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 3px; }
+
+.nt-day.r-good { background: rgba(13, 150, 104, 0.08); }
+.nt-day.r-good .nt-dot { background: var(--good); box-shadow: 0 0 6px rgba(13, 150, 104, 0.5); }
+.nt-day.r-ok .nt-dot { background: var(--ok); }
+.nt-day.r-mid .nt-dot { background: #d8c9b8; }
+.nt-day.r-bad { opacity: 0.72; }
+.nt-day.r-bad .nt-dot { background: var(--son); }
+.nt-day.nt-today { border-color: var(--son); }
+.nt-day.nt-today .nt-solar { color: var(--son); }
+
+.nt-legend {
+  display: flex; gap: 14px; justify-content: center;
+  margin-top: 12px; font-size: 11px; color: var(--muted); font-weight: 600;
+}
+.nt-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.nt-dot-demo { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.nt-dot-demo.r-good { background: var(--good); }
+.nt-dot-demo.r-ok { background: var(--ok); }
+.nt-dot-demo.r-mid { background: #d8c9b8; }
+.nt-dot-demo.r-bad { background: var(--son); }
+
+/* ---- Best days ---- */
+.nt-best {
+  margin: 16px 0 4px;
+  font-size: 12.5px; color: var(--text-mid); line-height: 1.7;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  justify-content: center;
+}
+.nt-best-label { font-weight: 700; }
+.nt-best-label i { color: var(--gold); }
+.nt-best-day {
+  border: 1px solid rgba(13, 150, 104, 0.4);
+  background: rgba(13, 150, 104, 0.07);
+  color: var(--good);
+  border-radius: 99px; padding: 6px 12px;
+  font-size: 12px; font-weight: 800; font-family: inherit;
+  cursor: pointer; transition: all 0.18s ease;
+}
+.nt-best-day:hover { background: var(--good); color: #fff; }
+
+/* ---- Sheet chi tiết ---- */
+#nt-sheet { position: fixed; inset: 0; z-index: 1200; }
+#nt-sheet[hidden] { display: none; }
+.nts-backdrop { position: absolute; inset: 0; background: rgba(40, 12, 4, 0.4); animation: nts-fade 0.22s ease; }
+@keyframes nts-fade { from { opacity: 0; } }
+.nts-panel {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 100%; max-width: 560px; max-height: 80dvh; overflow-y: auto;
+  background: linear-gradient(172deg, #fffdf6, #faf1dc);
+  border: 1px solid rgba(200, 100, 50, 0.35); border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -14px 44px rgba(90, 30, 10, 0.3);
+  animation: nts-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes nts-up { from { transform: translate(-50%, 48px); opacity: 0; } }
+.nts-handle { width: 42px; height: 4px; border-radius: 99px; background: rgba(160, 80, 48, 0.3); margin: 0 auto 12px; }
+.nts-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.nts-title { font-size: 19px; font-weight: 800; color: var(--text); }
+.nts-rating {
+  display: inline-block; margin-top: 5px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.4px;
+  border-radius: 8px; padding: 3px 9px; color: #fff;
+}
+.nts-rating.r-good { background: var(--good); }
+.nts-rating.r-ok { background: var(--ok); }
+.nts-rating.r-mid { background: #b0a090; }
+.nts-rating.r-bad { background: var(--son); }
+.nts-close { background: none; border: none; font-size: 17px; color: var(--muted); cursor: pointer; padding: 4px 6px; }
+.nts-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 13px; padding: 6px 0;
+  border-bottom: 1px dashed rgba(160, 80, 48, 0.15);
+}
+.nts-row span { color: var(--muted); }
+.nts-row b { color: var(--text); text-align: right; }
+.nts-good { color: var(--good) !important; }
+.nts-bad { color: var(--son) !important; }
+.nts-desc { font-size: 13px; color: var(--text-mid); line-height: 1.65; margin: 12px 0; }
+.nts-block { font-size: 13px; color: var(--text-mid); margin: 6px 0; line-height: 1.6; }
+.nts-label {
+  display: inline-block; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--good); border: 1px solid currentColor;
+  border-radius: 6px; padding: 1px 7px; margin-right: 6px;
+}
+.nts-label-bad { color: var(--son); }
+.nts-notes {
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 12px; padding: 10px 12px; margin: 12px 0;
+}
+.nts-notes p { font-size: 12.5px; color: var(--son-dark); line-height: 1.6; }
+.nts-notes i { margin-right: 4px; }
+.nts-hours { margin-top: 12px; }
+.nts-hour-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.nts-hour-chips span {
+  font-size: 11.5px; font-weight: 700; color: var(--gold);
+  border: 1px solid rgba(217, 138, 10, 0.4);
+  background: rgba(217, 138, 10, 0.07);
+  border-radius: 8px; padding: 4px 9px;
+}
+
+.nt-disclaimer {
+  text-align: center; font-size: 11px; color: var(--muted);
+  margin-top: 22px; line-height: 1.6;
+}
+
+/* ---- Desktop ---- */
+@media (min-width: 768px) {
+  .nt-wrapper { max-width: 720px; }
+  .nt-grid { gap: 8px; }
+  .nt-day { padding: 10px 4px 12px; border-radius: 14px; }
+  .nt-solar { font-size: 17px; }
+  .nt-lunar { font-size: 10px; }
+}

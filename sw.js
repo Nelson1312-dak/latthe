@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v112-2026-07-04';
+const CACHE_VERSION = 'v113-2026-07-04';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -30,6 +30,17 @@ const SHELL = [
   '/js/profile.js',
   '/js/daily-data.js',
   '/js/home-hub.js',
+  // Ngày Tốt module
+  '/ngay-tot/',
+  '/ngay-tot/index.html',
+  '/ngay-tot/css/ngaytot.css',
+  '/ngay-tot/js/amlich.js',
+  '/ngay-tot/js/app.js',
+  // Phong Thủy Sim module
+  '/sim/',
+  '/sim/index.html',
+  '/sim/css/sim.css',
+  '/sim/js/app.js',
   // Thư Viện module
   '/thuvien/',
   '/thuvien/index.html',
