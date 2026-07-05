@@ -358,15 +358,31 @@
       saveProfile(name, `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`, hour, gender, chart);
     });
     // ==================== IMAGE EXPORT ====================
+    // html2canvas (~200KB) chỉ nạp khi thật sự bấm xuất ảnh — không đè lên first load
+    let html2canvasPromise = null;
+    function ensureHtml2canvas() {
+      if (window.html2canvas) return Promise.resolve(window.html2canvas);
+      if (!html2canvasPromise) {
+        html2canvasPromise = new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          s.onload = () => resolve(window.html2canvas);
+          s.onerror = () => { html2canvasPromise = null; reject(new Error('Không tải được html2canvas')); };
+          document.head.appendChild(s);
+        });
+      }
+      return html2canvasPromise;
+    }
+
     document.getElementById('btn-export-img').addEventListener('click', () => {
       const target = document.querySelector('.chart-outer');
       const nameVal = document.getElementById('f-name').value.trim() || 'vo-danh';
       const exportBtn = document.getElementById('btn-export-img');
-      
+
       exportBtn.disabled = true;
       exportBtn.textContent = 'Đang xuất... ⏳';
-      
-      setTimeout(() => {
+
+      ensureHtml2canvas().then((html2canvas) => {
         html2canvas(target, {
           scale: 2,
           useCORS: true,
@@ -385,7 +401,12 @@
           exportBtn.disabled = false;
           exportBtn.innerHTML = '<i class="ti ti-camera"></i> Xuất ảnh lá số';
         });
-      }, 100);
+      }).catch(err => {
+        console.error('html2canvas load error:', err);
+        alert('Không tải được công cụ xuất ảnh. Kiểm tra kết nối mạng rồi thử lại.');
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = '<i class="ti ti-camera"></i> Xuất ảnh lá số';
+      });
     });
     // ==================== SAVE PROFILE ====================
     let isSaving = false;

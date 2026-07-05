@@ -181,7 +181,7 @@
         </a>
         <a class="hub-daily-card hub-tarot" href="/la-bai-tarot/${card.slug}">
           <span class="hd-label">Lá bài hộ mệnh</span>
-          <img class="hd-card-img" src="/tarot/images/${card.img}.webp" alt="${card.vn}" loading="lazy" width="72" height="121">
+          <img class="hd-card-img" src="/tarot/images/thumbs/${card.img}.webp" alt="${card.vn}" loading="lazy" width="72" height="121">
           <span class="hd-name">${card.vn}</span>
           <p class="hd-desc">${card.m}</p>
           <span class="hd-more">Xem ý nghĩa lá bài <i class="ti ti-arrow-right"></i></span>
