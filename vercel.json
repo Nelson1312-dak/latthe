@@ -1,6 +1,9 @@
 {
   "regions": ["sin1"],
   "cleanUrls": true,
+  "crons": [
+    { "path": "/api/push-send", "schedule": "0 0 * * *" }
+  ],
   "redirects": [],
   "rewrites": [
     {

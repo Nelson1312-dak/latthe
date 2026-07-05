@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v116-2026-07-05';
+const CACHE_VERSION = 'v117-2026-07-05';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -30,6 +30,7 @@ const SHELL = [
   '/js/profile.js',
   '/js/daily-data.js',
   '/js/home-hub.js',
+  '/js/push.js',
   // Ngày Tốt module
   '/ngay-tot/',
   '/ngay-tot/index.html',
@@ -108,6 +109,35 @@ self.addEventListener('activate', (event) => {
           .map((k) => caches.delete(k))
       )
     ).then(() => self.clients.claim())
+  );
+});
+
+// ---- Web Push: hiển thị "Vận Hôm Nay" ----
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+  const title = data.title || 'Lật Bài — Vận Hôm Nay';
+  const options = {
+    body: data.body || 'Quẻ dẫn đường hôm nay của bạn đã sẵn sàng.',
+    icon: '/images/icon-maskable.svg',
+    badge: '/images/icon.svg',
+    tag: data.tag || 'van-hom-nay',
+    renotify: true,
+    data: { url: data.url || '/' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) { c.navigate(target); return c.focus(); }
+      }
+      return self.clients.openWindow(target);
+    })
   );
 });
 

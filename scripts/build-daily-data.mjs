@@ -65,3 +65,11 @@ const DAILY_TAROT = ${JSON.stringify(tarot)};
 `;
 writeFileSync(join(ROOT, 'js/daily-data.js'), out);
 console.log(`daily-data.js: ${hex.length} quẻ + ${tarot.length} lá, ${out.length} bytes`);
+
+// Bản ES module cho serverless (api/_push.js) import — CÙNG thứ tự mảng để
+// seed "quẻ hôm nay" trùng khớp giữa client và server. Dùng .js (không phải
+// JSON import) để tương thích mọi phiên bản Node trên Vercel + được bundler trace.
+const mod = `// FILE SINH TỰ ĐỘNG bởi scripts/build-daily-data.mjs — ĐỪNG SỬA TAY.\n` +
+  `export default ${JSON.stringify({ hex, tarot })};\n`;
+writeFileSync(join(ROOT, 'api/_daily.js'), mod);
+console.log(`api/_daily.js: ${mod.length} bytes`);

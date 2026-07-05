@@ -5,7 +5,12 @@
     "build:tarot": "node scripts/build-tarot-webp.js",
     "build:icons": "node scripts/build-icons.mjs",
     "index:thuvien": "node scripts/build-thuvien-index.mjs",
+    "build:daily": "node scripts/build-daily-data.mjs",
+    "gen:vapid": "node scripts/gen-vapid.mjs",
     "eval": "node scripts/eval-rag.mjs"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "sharp": "^0.34.5"

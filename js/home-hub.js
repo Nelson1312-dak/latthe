@@ -109,6 +109,7 @@
           <a class="hub-link" href="/thansohoc/"><i class="ti ti-hash"></i> Bản đồ Thần Số</a>
           <a class="hub-link" href="/gieoque/"><i class="ti ti-yin-yang"></i> Gieo quẻ đầu ngày</a>
         </div>
+        <div class="hub-push" id="hub-push" hidden></div>
       </div>`;
 
     document.getElementById('hub-clear').addEventListener('click', () => {
@@ -130,6 +131,63 @@
       const ySel = document.getElementById('hub-year');
       if (ySel) ySel.value = String(p.year);
     });
+
+    renderPush();
+  }
+
+  // ---------- Bật/tắt thông báo Vận Hôm Nay ----------
+  async function renderPush() {
+    const box = document.getElementById('hub-push');
+    const Push = window.LatbaiPush;
+    if (!box || !Push || !Push.isSupported()) return;
+
+    // Hiện nút ngay khi biết trình duyệt hỗ trợ (không đợi SW/subscription —
+    // tránh treo UI ở lần tải đầu khi SW còn đang activate).
+    box.hidden = false;
+    paint('off');
+    const state = await Push.getState();
+
+    function paint(s, msg) {
+      if (s === 'on') {
+        box.innerHTML = `<button type="button" class="hub-push-btn is-on" id="hub-push-toggle">
+            <i class="ti ti-bell-ringing"></i> Đang nhắc Vận Hôm Nay mỗi sáng — tắt</button>` +
+          (msg ? `<span class="hub-push-msg">${msg}</span>` : '');
+      } else if (s === 'blocked') {
+        box.innerHTML = `<span class="hub-push-msg"><i class="ti ti-bell-off"></i> Bạn đã chặn thông báo cho latbai.vn. Hãy bật lại trong cài đặt trình duyệt để nhận Vận Hôm Nay.</span>`;
+        return;
+      } else {
+        box.innerHTML = `<button type="button" class="hub-push-btn" id="hub-push-toggle">
+            <i class="ti ti-bell"></i> Nhắc tôi xem Vận Hôm Nay mỗi sáng</button>` +
+          (msg ? `<span class="hub-push-msg">${msg}</span>` : '');
+      }
+      const btn = document.getElementById('hub-push-toggle');
+      if (btn) btn.addEventListener('click', onToggle);
+    }
+
+    async function onToggle() {
+      const btn = document.getElementById('hub-push-toggle');
+      const cur = await Push.getState();
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+      if (cur === 'on') {
+        await Push.disable();
+        paint('off', 'Đã tắt nhắc hằng ngày.');
+      } else {
+        const r = await Push.enable();
+        if (r.ok) {
+          paint('on', 'Tuyệt! Sáng mai bạn sẽ nhận quẻ dẫn đường đầu tiên 🔮');
+        } else {
+          const reasons = {
+            blocked: 'Bạn đã từ chối quyền thông báo — bật lại trong cài đặt trình duyệt.',
+            dismissed: 'Bạn chưa cấp quyền thông báo. Thử lại khi sẵn sàng nhé.',
+            notconfigured: 'Tính năng đang được kích hoạt, vui lòng quay lại sau.',
+            network: 'Lỗi kết nối, thử lại sau ít phút.',
+          };
+          paint(r.reason === 'blocked' ? 'blocked' : 'off', reasons[r.reason] || 'Chưa bật được, thử lại sau.');
+        }
+      }
+    }
+
+    paint(state);
   }
 
   // ---------- Vận Hôm Nay ----------

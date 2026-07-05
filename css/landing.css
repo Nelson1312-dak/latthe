@@ -864,6 +864,35 @@ a { text-decoration: none; color: inherit; }
 }
 .hub-link:hover { background: var(--c-tuvi); color: #fff; transform: translateY(-1px); }
 
+/* ---- Nút bật nhắc Vận Hôm Nay ---- */
+.hub-push { margin-top: 12px; position: relative; z-index: 1; }
+.hub-push[hidden] { display: none; }
+.hub-push-btn {
+  width: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1.5px dashed rgba(232, 147, 10, 0.5);
+  background: rgba(232, 147, 10, 0.05);
+  color: var(--c-tuvi);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 12.5px; font-weight: 800; font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.hub-push-btn:hover { background: rgba(232, 147, 10, 0.12); }
+.hub-push-btn.is-on {
+  border-style: solid;
+  border-color: var(--c-gieoque);
+  background: rgba(13, 150, 104, 0.08);
+  color: var(--c-gieoque);
+}
+.hub-push-msg {
+  display: block;
+  font-size: 11.5px; color: var(--sub); line-height: 1.55;
+  margin-top: 8px; text-align: center;
+}
+.hub-push-msg i { color: var(--c-tuvi); }
+
 /* ---- Vận Hôm Nay ---- */
 .hub-daily-head {
   display: flex;
