@@ -1,0 +1,238 @@
+/* ============================================================
+   ghepdoi.css — Ghép Đôi Thần Số (theme hồng rose, nền kem chung)
+   ============================================================ */
+:root {
+  --font-heading: 'Be Vietnam Pro', sans-serif;
+  --font-body:    'Be Vietnam Pro', sans-serif;
+
+  --bg:        #fbf3e4;
+  --bg-2:      #f6e8cf;
+  --bg-surface:#ffffff;
+  --text:      #2b0f14;
+  --text-mid:  #6b3540;
+  --muted:     #a7828a;
+  --border:    rgba(225, 29, 72, 0.14);
+  --shadow:    0 6px 22px rgba(150, 30, 55, 0.09);
+  --shadow-h:  0 16px 44px rgba(150, 30, 55, 0.16);
+
+  --rose:      #e11d48;
+  --rose-dark: #be123c;
+  --rose-dim:  rgba(225, 29, 72, 0.08);
+  --gold:      #d98a0a;
+
+  /* tương thích common.css */
+  --bg-glass:  rgba(225, 29, 72, 0.05);
+  --text-secondary: #6b3540;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button, input, select, a { touch-action: manipulation; }
+html { font-size: 16px; }
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse 90% 60% at 50% -10%, var(--bg-2) 0%, transparent 70%);
+  color: var(--text);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 110px;
+}
+a { color: var(--rose-dark); }
+
+.gemini-glow-1, .gemini-glow-2, .gemini-glow-3 { display: none !important; }
+
+.gd-wrapper { max-width: 520px; margin: 0 auto; padding: 0 16px 32px; }
+
+/* ---- Hero ---- */
+.gd-hero { text-align: center; padding: 26px 0 14px; }
+.gd-hero .l-brand-icon {
+  width: 74px; height: 74px; margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #ffffff, #fbf3e4);
+  border: 1.5px solid rgba(225, 29, 72, 0.35);
+  box-shadow: 0 10px 28px rgba(150, 30, 55, 0.1);
+}
+.gd-hero .l-brand-icon img { width: 46px; }
+.gd-title {
+  font-family: var(--font-heading);
+  font-size: clamp(32px, 8.5vw, 44px);
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--text) 20%, var(--rose) 65%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 6px 0 8px;
+}
+.gd-subtitle { font-size: 13px; color: var(--muted); letter-spacing: 0.3px; }
+.seo-app-intro {
+  font-size: 13.5px; color: var(--text-mid); max-width: 460px;
+  margin: 12px auto 0; line-height: 1.6; text-align: center;
+  border-top: 1px dashed var(--border); padding-top: 12px;
+}
+
+/* ---- Form 2 người ---- */
+.gd-form {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 22px 20px;
+  box-shadow: var(--shadow);
+  margin-top: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative;
+}
+.gd-person { display: flex; flex-direction: column; gap: 9px; }
+.gd-person-tag {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1.2px;
+  border-radius: 99px; padding: 4px 11px;
+}
+.gd-tag-a { color: var(--rose); background: var(--rose-dim); border: 1px solid rgba(225, 29, 72, 0.3); }
+.gd-tag-b { color: #7c3aed; background: rgba(124, 58, 237, 0.07); border: 1px solid rgba(124, 58, 237, 0.3); }
+.gd-input, .gd-select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  font-family: inherit;
+  color: var(--text);
+}
+.gd-input:focus, .gd-select:focus { outline: none; border-color: var(--rose); }
+.gd-date-row { display: flex; gap: 8px; }
+.gd-heart {
+  text-align: center;
+  font-size: 26px;
+  color: var(--rose);
+  margin: 2px 0;
+  animation: gd-heartbeat 1.6s ease-in-out infinite;
+}
+@keyframes gd-heartbeat {
+  0%, 100% { transform: scale(1); }
+  12% { transform: scale(1.25); }
+  24% { transform: scale(1); }
+  36% { transform: scale(1.18); }
+  48% { transform: scale(1); }
+}
+
+.gd-btn-main {
+  background: linear-gradient(135deg, #fb7185, var(--rose-dark));
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 14.5px; font-weight: 800; font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.gd-btn-main:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(225, 29, 72, 0.45); }
+.gd-btn-main:active { transform: scale(0.98); }
+.gd-submit { margin-top: 8px; }
+
+/* ---- Result ---- */
+.gd-result { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }
+.gd-result[hidden] { display: none; }
+
+.gd-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.gd-card::after {
+  content: '';
+  position: absolute; inset: 5px;
+  border: 1px solid rgba(225, 29, 72, 0.1);
+  border-radius: 15px;
+  pointer-events: none;
+}
+
+.gd-scorecard { text-align: center; padding: 24px 18px; }
+.gd-names {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 10px; font-size: 17px; font-weight: 800; color: var(--text);
+}
+.gd-amp { color: var(--rose); font-size: 20px; animation: gd-heartbeat 1.6s ease-in-out infinite; }
+.gd-total {
+  display: flex; align-items: baseline; justify-content: center; gap: 3px;
+  margin: 8px 0 4px;
+}
+#gd-total-val {
+  font-size: 76px; font-weight: 900; line-height: 1.05;
+  background: linear-gradient(135deg, #fb7185, var(--rose-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gd-pct { font-size: 28px; font-weight: 900; color: var(--rose); }
+.gd-level { font-size: 15.5px; font-weight: 800; color: var(--text-mid); }
+
+.gd-part { animation: gd-part-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--gi, 0) * 130ms + 0.3s); }
+@keyframes gd-part-in {
+  from { opacity: 0; transform: perspective(700px) translateY(22px) rotateX(6deg); }
+}
+.gd-part-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px;
+}
+.gd-part-label {
+  font-size: 12px; font-weight: 800; color: var(--text-mid);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.gd-part-label i { color: var(--rose); font-size: 15px; }
+.gd-part-label b { color: var(--text); font-size: 13px; letter-spacing: 0; }
+.gd-part-score { font-size: 15px; font-weight: 900; color: var(--rose); }
+.gd-bar {
+  height: 9px; border-radius: 99px;
+  background: rgba(160, 80, 90, 0.12);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.gd-bar span {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, #fb7185, var(--rose-dark));
+  border-radius: 99px;
+  transition: width 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s;
+}
+.gd-part-text { font-size: 13px; color: var(--text-mid); line-height: 1.65; }
+
+.gd-actions { display: flex; gap: 10px; margin-top: 4px; }
+.gd-actions .gd-btn-main { flex: 1.3; }
+.gd-btn-sub {
+  flex: 1;
+  background: #fff;
+  border: 1.5px solid var(--rose);
+  color: var(--rose-dark);
+  border-radius: 14px;
+  padding: 13px 10px;
+  font-size: 13.5px; font-weight: 800; font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.gd-btn-sub:hover { background: var(--rose-dim); }
+
+.gd-disclaimer {
+  text-align: center; font-size: 11px; color: var(--muted);
+  margin-top: 8px; line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gd-heart, .gd-amp, .gd-part { animation: none !important; opacity: 1; }
+  .gd-bar span { transition: none; }
+}
+
+/* ---- Desktop: 2 người nằm ngang ---- */
+@media (min-width: 768px) {
+  .gd-wrapper { max-width: 680px; }
+  .gd-form { display: grid; grid-template-columns: 1fr 44px 1fr; align-items: start; gap: 12px; }
+  .gd-heart { align-self: center; margin-top: 40px; }
+  .gd-submit { grid-column: 1 / -1; }
+}
