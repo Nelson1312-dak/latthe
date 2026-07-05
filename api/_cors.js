@@ -38,6 +38,11 @@ export function applyCors(req, res, { methods = 'POST, OPTIONS' } = {}) {
   res.setHeader('Access-Control-Allow-Methods', methods);
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(204).end(); return false; }
-  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return false; }
+  // Guard theo đúng danh sách methods truyền vào (mặc định chỉ POST).
+  const allowed = methods.split(',').map((m) => m.trim().toUpperCase());
+  if (!allowed.includes((req.method || '').toUpperCase())) {
+    res.status(405).json({ error: 'Method not allowed' });
+    return false;
+  }
   return true;
 }

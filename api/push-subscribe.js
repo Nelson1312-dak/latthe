@@ -10,7 +10,7 @@ import { getClientIp, checkRateLimit } from './_rateLimit.js';
 import { saveSubscription, removeSubscription, upstashEnabled } from './_push.js';
 
 export default async function handler(req, res) {
-  if (!applyCors(req, res)) return;
+  if (!applyCors(req, res, { methods: 'GET, POST, OPTIONS' })) return;
 
   const publicKey = (process.env.VAPID_PUBLIC_KEY || '').trim();
 
