@@ -353,9 +353,6 @@
       buildDaihanTimeline();
       chartWrapper.scrollIntoView({ behavior: 'smooth' });
       playReveal();
-
-      // Save to DB (silent)
-      saveProfile(name, `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`, hour, gender, chart);
     });
     // ==================== IMAGE EXPORT ====================
     // html2canvas (~200KB) chỉ nạp khi thật sự bấm xuất ảnh — không đè lên first load
@@ -408,26 +405,6 @@
         exportBtn.innerHTML = '<i class="ti ti-camera"></i> Xuất ảnh lá số';
       });
     });
-    // ==================== SAVE PROFILE ====================
-    let isSaving = false;
-    async function saveProfile(name, dateVal, hour, gender, chart) {
-      if (isSaving) return;
-      isSaving = true;
-      try {
-        const al = chart.thong_tin_goc.am_lich;
-        await fetch('/api/save-profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name, birth_date: dateVal, birth_hour: hour, gender,
-            lunar_date: `${al.ngay} (${al.thang}) năm ${al.nam}`,
-            lunar_hour: al.gio, chart_json: chart
-          })
-        });
-      } catch (_) { /* silent */ }
-      finally { isSaving = false; }
-    }
-
     // ==================== AI CONSULTATION ====================
     askBtn.addEventListener('click', () => {
       const q = qInput.value.trim();

@@ -51,21 +51,14 @@ CREATE POLICY "anon_select" ON documents FOR SELECT TO anon USING (true);
 CREATE POLICY "anon_insert" ON documents FOR INSERT TO anon WITH CHECK (true);
 
 -- ============================================================
--- Tử Vi birth profiles (written by api/save-profile.js)
+-- Tử Vi birth profiles — GỠ BỎ (2026-07)
+-- Trước đây api/save-profile.js ghi họ tên + ngày sinh + lá số vào đây.
+-- Đã bỏ để không thu thập dữ liệu cá nhân định danh (họ tên + ngày sinh):
+-- lá số tính lại được từ ngày sinh, cache AI ẩn danh nằm ở bảng `documents`.
+-- Hồ sơ người dùng giờ chỉ lưu localStorage trên máy họ (js/profile.js).
+-- Nếu DB cũ còn bảng này, dọn bằng:
+--   DROP TABLE IF EXISTS tuvi_profiles;
 -- ============================================================
-CREATE TABLE IF NOT EXISTS tuvi_profiles (
-  id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
-  name        text        NOT NULL,
-  birth_date  date        NOT NULL,
-  birth_hour  integer     NOT NULL,        -- chi-hour index (0–11) or hour
-  gender      integer     NOT NULL,        -- 0 / 1
-  lunar_date  text,
-  lunar_hour  text,
-  chart_json  jsonb,                        -- full computed chart
-  created_at  timestamptz DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS tuvi_profiles_created_idx ON tuvi_profiles (created_at DESC);
 
 -- ============================================================
 -- RPC function: vector similarity search
