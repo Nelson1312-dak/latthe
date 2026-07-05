@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v117-2026-07-05';
+const CACHE_VERSION = 'v118-2026-07-05';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -90,6 +90,12 @@ const SHELL = [
   '/dua/index.html',
   '/dua/css/dua.css',
   '/dua/js/app.js',
+  // Bao Cao Van Menh module
+  '/bao-cao/',
+  '/bao-cao/index.html',
+  '/bao-cao/css/baocao.css',
+  '/bao-cao/js/report-data.js',
+  '/bao-cao/js/app.js',
 ];
 
 self.addEventListener('install', (event) => {

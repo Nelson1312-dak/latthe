@@ -105,6 +105,7 @@
           <span class="hub-stat"><b>${cc.giap}</b> Con giáp</span>
         </div>
         <div class="hub-links">
+          <a class="hub-link" href="/bao-cao/"><i class="ti ti-file-star"></i> Báo cáo vận mệnh tổng hợp</a>
           <a class="hub-link" href="/tuvi/"><i class="ti ti-stars"></i> Lá số Tử Vi của bạn</a>
           <a class="hub-link" href="/thansohoc/"><i class="ti ti-hash"></i> Bản đồ Thần Số</a>
           <a class="hub-link" href="/gieoque/"><i class="ti ti-yin-yang"></i> Gieo quẻ đầu ngày</a>
