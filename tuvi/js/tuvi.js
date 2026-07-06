@@ -604,28 +604,28 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
   
   let khôiPos = 0, việtPos = 0;
   switch (tc1) {
-    case 1:
-    case 5:
+    case 1: // Giáp
+    case 5: // Mậu
+    case 7: // Canh — "Giáp Mậu Canh ngưu dương" → Khôi Sửu, Việt Mùi
       khôiPos = 2;
       việtPos = 8;
       break;
-    case 2:
-    case 6:
+    case 2: // Ất
+    case 6: // Kỷ — "Ất Kỷ thử hầu hương" → Khôi Tý, Việt Thân
       khôiPos = 1;
       việtPos = 9;
       break;
-    case 7:
-    case 8:
+    case 8: // Tân — "Tân phùng mã hổ" → Khôi Ngọ, Việt Dần
       khôiPos = 7;
       việtPos = 3;
       break;
-    case 3:
-    case 4:
+    case 3: // Bính
+    case 4: // Đinh — "Bính Đinh trư kê vị" → Khôi Hợi, Việt Dậu
       khôiPos = 12;
       việtPos = 10;
       break;
-    case 9:
-    case 10:
+    case 9:  // Nhâm
+    case 10: // Quý — "Nhâm Quý thỏ xà tàng" → Khôi Mão, Việt Tỵ
       khôiPos = 4;
       việtPos = 6;
       break;
@@ -682,9 +682,8 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
     coThanPos = 12; quaTuPos = 8; // Hợi, Mùi
   }
 
-  // Song Hao (Đại Hao & Tiểu Hao) - from year Chi
-  const daiHaoPos = xetSo(yChi + 3);
-  const tieuHaoPos = xetSo(daiHaoPos + 6);
+  // Song Hao (Đại Hao & Tiểu Hao) an theo vòng Bác Sĩ (Lộc Tồn) ở dưới —
+  // KHÔNG an riêng theo Chi năm để tránh đặt trùng 2 cung.
 
   const phuTinhList = [
     { name: "Lộc Tồn", pos: locTonPos },
@@ -709,9 +708,7 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
     { name: "Hồng Loan", pos: hongLoanPos },
     { name: "Thiên Hỷ", pos: thienHyPos },
     { name: "Cô Thần", pos: coThanPos },
-    { name: "Quả Tú", pos: quaTuPos },
-    { name: "Đại Hao", pos: daiHaoPos },
-    { name: "Tiểu Hao", pos: tieuHaoPos }
+    { name: "Quả Tú", pos: quaTuPos }
   ];
 
   // 1. Vòng Bác Sĩ
