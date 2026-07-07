@@ -60,7 +60,7 @@ export default async function handler(req, res) {
   // Validate & clamp inputs: stop oversized prompts and cache/DB pollution from
   // arbitrary `type` values. Caps sit far above any legitimate client payload
   // (questions are short; tuvi context is a text summary; client history ≤ 8).
-  const VALID_TYPES = ['gieoque', 'tarot', 'tuvi', 'thansohoc'];
+  const VALID_TYPES = ['gieoque', 'tarot', 'tuvi', 'thansohoc', 'hoangdao'];
   if (!VALID_TYPES.includes(type)) type = 'gieoque';
   if (question.length > 4000) question = question.slice(0, 4000);
   if (typeof context === 'string' && context.length > 30000) context = context.slice(0, 30000);

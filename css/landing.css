@@ -26,6 +26,7 @@
   --c-thansohoc: #6366f1; /* Indigo */
   --c-ten:  #c026d3; /* Fuchsia */
   --c-dua:  #d97706; /* Amber */
+  --c-hoangdao: #7c3aed; /* Violet */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -229,6 +230,7 @@ a { text-decoration: none; color: inherit; }
 .l-thansohoc:hover { border-color: rgba(99, 102, 241, 0.4); }
 .l-ten:hover  { border-color: rgba(192, 38, 211, 0.4); }
 .l-dua:hover  { border-color: rgba(217, 119, 6, 0.4); }
+.l-hoangdao:hover { border-color: rgba(124, 58, 237, 0.4); }
 
 /* App-icon-style colored tile */
 .l-card-icon {
@@ -252,6 +254,7 @@ a { text-decoration: none; color: inherit; }
 .l-thansohoc .l-card-icon { background: linear-gradient(150deg, #818cf8, #4f46e5); box-shadow: 0 8px 18px rgba(79,70,229,0.3); }
 .l-ten  .l-card-icon { background: linear-gradient(150deg, #e879f9, #c026d3); box-shadow: 0 8px 18px rgba(192,38,211,0.3); }
 .l-dua  .l-card-icon { background: linear-gradient(150deg, #fbbf24, #d97706); box-shadow: 0 8px 18px rgba(217,119,6,0.3); }
+.l-hoangdao .l-card-icon { background: linear-gradient(150deg, #9560f0, #7c3aed); box-shadow: 0 8px 18px rgba(124,58,237,0.3); }
 .l-card:hover .l-card-icon { transform: scale(1.06) rotate(-3deg); }
 
 .l-card-body { flex: 1; min-width: 0; }
@@ -271,6 +274,7 @@ a { text-decoration: none; color: inherit; }
 .l-thansohoc .l-card-label { color: var(--c-thansohoc); }
 .l-ten  .l-card-label { color: var(--c-ten); }
 .l-dua  .l-card-label { color: var(--c-dua); }
+.l-hoangdao .l-card-label { color: var(--c-hoangdao); }
 
 .l-card-name {
   font-size: 20px;
