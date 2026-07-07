@@ -22,7 +22,9 @@
   const isMobile = window.matchMedia('(max-width: 767px)').matches;
 
   const COLOR = (script.dataset.color || '232,147,10').trim();
-  const GLYPHS = [...(script.dataset.glyphs || '✦✧☾')];
+  // U+FE0E ép text presentation: iOS mặc định vẽ ♈-♓, ❤... thành emoji màu
+  // trên canvas, bỏ qua fillStyle alpha → thành cục màu đậm đè lên nội dung.
+  const GLYPHS = [...(script.dataset.glyphs || '✦✧☾')].map((g) => g + '\uFE0E');
   const BASE_COUNT = parseInt(script.dataset.count || '60', 10);
   const COUNT = isMobile ? Math.round(BASE_COUNT / 2) : BASE_COUNT;
   const LINES = script.dataset.lines !== '0';
@@ -135,7 +137,10 @@
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillStyle = rgba(a);
+          // globalAlpha: emoji màu (nếu vẫn render) bỏ qua fillStyle alpha
+          ctx.globalAlpha = a;
           ctx.fillText(p.glyph, dx, dy);
+          ctx.globalAlpha = 1;
         } else {
           const rad = p.r * (0.6 + p.d);
           const a = (0.15 + p.d * 0.32) * twinkle;
