@@ -1,14 +1,20 @@
 /**
  * js/profile.js — Hồ Sơ Huyền Học dùng chung toàn site.
- * Lưu localStorage 'latbai_profile': nhập tên + ngày sinh MỘT LẦN,
- * mọi module (tử vi, thần số học, giải mã tên...) tự điền lại.
+ * Lưu localStorage 'latbai_profiles': nhiều hồ sơ trên 1 thiết bị
+ * (bản thân + người nhà), mỗi lúc 1 hồ sơ "đang chọn" (active).
+ * API cũ get()/save()/clear() vẫn hoạt động trên hồ sơ đang chọn,
+ * nên các module (tử vi, thần số học, giải mã tên...) không cần sửa.
+ * save() với TÊN KHÁC hồ sơ đang chọn sẽ tự tách thành hồ sơ mới —
+ * người nhà xem tử vi không làm mất hồ sơ của chủ máy.
  * Kèm các phép tính thần số học nhẹ cho dashboard/widget trang chủ.
  * Global: window.LatbaiProfile
  */
 (function () {
   'use strict';
 
-  const KEY = 'latbai_profile';
+  const KEY = 'latbai_profiles';
+  const LEGACY_KEY = 'latbai_profile';
+  const MAX_PROFILES = 10;
 
   function reduceToSingle(num) {
     while (num > 9) {
@@ -58,22 +64,110 @@
     return h >>> 0;
   }
 
-  window.LatbaiProfile = {
-    get() {
+  function isValid(p) {
+    return !!(p && p.name && p.day && p.month && p.year);
+  }
+
+  function newId() {
+    return 'pf_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function sameName(a, b) {
+    return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  }
+
+  function readStore() {
+    let store = null;
+    try { store = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
+    if (!store || !Array.isArray(store.list)) {
+      store = { active: null, list: [] };
+      // migrate hồ sơ đơn từ bản cũ
       try {
-        const p = JSON.parse(localStorage.getItem(KEY) || 'null');
-        if (!p || !p.name || !p.day || !p.month || !p.year) return null;
-        return p;
-      } catch (_) { return null; }
+        const old = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null');
+        if (isValid(old)) {
+          old.id = newId();
+          store.list.push(old);
+          store.active = old.id;
+          writeStore(store);
+          localStorage.removeItem(LEGACY_KEY);
+        }
+      } catch (_) {}
+    }
+    return store;
+  }
+
+  function writeStore(store) {
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (_) {}
+  }
+
+  function activeOf(store) {
+    return store.list.find((p) => p.id === store.active) || store.list[0] || null;
+  }
+
+  window.LatbaiProfile = {
+    /** Hồ sơ đang chọn (giữ tương thích API cũ). */
+    get() {
+      const p = activeOf(readStore());
+      return isValid(p) ? p : null;
     },
+    /** Tất cả hồ sơ trên thiết bị. */
+    list() {
+      return readStore().list.filter(isValid);
+    },
+    /** Đổi hồ sơ đang chọn. */
+    setActive(id) {
+      const store = readStore();
+      if (store.list.some((p) => p.id === id)) {
+        store.active = id;
+        writeStore(store);
+      }
+      return activeOf(store);
+    },
+    /**
+     * Cập nhật hồ sơ đang chọn. Nếu patch mang TÊN KHÁC → tách hồ sơ mới
+     * (trừ khi truyền id để chỉ định sửa đúng hồ sơ đó).
+     */
     save(patch) {
-      const cur = this.get() || {};
-      const next = Object.assign({}, cur, patch, { updatedAt: new Date().toISOString() });
-      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch (_) {}
-      return next;
+      const store = readStore();
+      let target = patch.id
+        ? store.list.find((p) => p.id === patch.id)
+        : activeOf(store);
+
+      if (!patch.id && target && patch.name && !sameName(patch.name, target.name)) {
+        // tên mới → hồ sơ mới; nếu trùng tên hồ sơ khác trong danh sách thì cập nhật hồ sơ đó
+        target = store.list.find((p) => sameName(p.name, patch.name)) || null;
+      }
+
+      if (!target) {
+        if (store.list.length >= MAX_PROFILES) {
+          // đầy: ghi đè hồ sơ cũ nhất theo updatedAt
+          store.list.sort((a, b) => String(a.updatedAt || '').localeCompare(String(b.updatedAt || '')));
+          target = store.list[0];
+        } else {
+          target = { id: newId() };
+          store.list.push(target);
+        }
+      }
+
+      Object.assign(target, patch, { id: target.id, updatedAt: new Date().toISOString() });
+      store.active = target.id;
+      writeStore(store);
+      return target;
     },
+    /** Xóa 1 hồ sơ (mặc định: hồ sơ đang chọn). */
+    remove(id) {
+      const store = readStore();
+      const cur = activeOf(store);
+      const targetId = id || (cur && cur.id);
+      store.list = store.list.filter((p) => p.id !== targetId);
+      if (store.active === targetId) {
+        store.active = store.list.length ? store.list[0].id : null;
+      }
+      writeStore(store);
+    },
+    /** Xóa hồ sơ đang chọn (giữ tương thích API cũ). */
     clear() {
-      try { localStorage.removeItem(KEY); } catch (_) {}
+      this.remove();
     },
     // các phép tính nhẹ dùng cho dashboard
     reduceToSingle,

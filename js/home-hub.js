@@ -39,59 +39,101 @@
   ];
 
   // ---------- Hồ Sơ ----------
-  function renderProfile() {
-    const p = P.get();
-    if (!p) {
-      profileEl.innerHTML = `
-        <div class="hub-card hub-create">
-          <div class="hub-create-head">
-            <span class="hub-create-icon"><i class="ti ti-user-star"></i></span>
-            <div>
-              <h2 class="hub-title">Tạo Hồ Sơ Huyền Học</h2>
-              <p class="hub-sub">Nhập một lần — Tử Vi, Thần Số Học tự điền, nhận Vận Hôm Nay riêng của bạn. Lưu trên máy bạn, không gửi đi đâu.</p>
-            </div>
+  // Hỗ trợ nhiều hồ sơ / 1 thiết bị: bản thân + người nhà.
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function shortName(name) {
+    return escHtml(String(name).trim().split(/\s+/).pop());
+  }
+
+  // form tạo/sửa hồ sơ; editing = hồ sơ đang sửa (null = thêm mới),
+  // cancelable = có nút quay lại (khi đã có hồ sơ khác)
+  function renderForm(editing, cancelable) {
+    const isEdit = !!editing;
+    profileEl.innerHTML = `
+      <div class="hub-card hub-create">
+        <div class="hub-create-head">
+          <span class="hub-create-icon"><i class="ti ti-user-star"></i></span>
+          <div>
+            <h2 class="hub-title">${isEdit ? 'Sửa hồ sơ' : 'Tạo Hồ Sơ Huyền Học'}</h2>
+            <p class="hub-sub">${isEdit
+              ? 'Cập nhật tên hoặc ngày sinh cho hồ sơ này.'
+              : 'Nhập một lần — Tử Vi, Thần Số Học tự điền, nhận Vận Hôm Nay riêng. Lập được nhiều hồ sơ cho cả nhà, lưu trên máy bạn, không gửi đi đâu.'}</p>
           </div>
-          <form id="hub-form" class="hub-form">
-            <input type="text" id="hub-name" class="hub-input" placeholder="Họ và tên đầy đủ" required aria-label="Họ và tên">
-            <div class="hub-date-row">
-              <select id="hub-day" class="hub-select" required aria-label="Ngày sinh"><option value="">Ngày</option></select>
-              <select id="hub-month" class="hub-select" required aria-label="Tháng sinh"><option value="">Tháng</option></select>
-              <select id="hub-year" class="hub-select" required aria-label="Năm sinh"><option value="">Năm</option></select>
-            </div>
-            <button type="submit" class="hub-btn"><i class="ti ti-sparkles"></i> Kích hoạt hồ sơ</button>
-          </form>
-        </div>`;
+        </div>
+        <form id="hub-form" class="hub-form">
+          <input type="text" id="hub-name" class="hub-input" placeholder="Họ và tên đầy đủ" required aria-label="Họ và tên">
+          <div class="hub-date-row">
+            <select id="hub-day" class="hub-select" required aria-label="Ngày sinh"><option value="">Ngày</option></select>
+            <select id="hub-month" class="hub-select" required aria-label="Tháng sinh"><option value="">Tháng</option></select>
+            <select id="hub-year" class="hub-select" required aria-label="Năm sinh"><option value="">Năm</option></select>
+          </div>
+          <button type="submit" class="hub-btn"><i class="ti ti-sparkles"></i> ${isEdit ? 'Lưu thay đổi' : 'Kích hoạt hồ sơ'}</button>
+          ${cancelable ? '<button type="button" id="hub-cancel" class="hub-btn-ghost"><i class="ti ti-arrow-left"></i> Quay lại</button>' : ''}
+        </form>
+      </div>`;
 
-      const dSel = document.getElementById('hub-day');
-      const mSel = document.getElementById('hub-month');
-      const ySel = document.getElementById('hub-year');
-      for (let i = 1; i <= 31; i++) dSel.innerHTML += `<option value="${i}">${i}</option>`;
-      for (let i = 1; i <= 12; i++) mSel.innerHTML += `<option value="${i}">${i}</option>`;
-      const nowY = new Date().getFullYear();
-      for (let i = nowY; i >= 1930; i--) ySel.innerHTML += `<option value="${i}">${i}</option>`;
+    const dSel = document.getElementById('hub-day');
+    const mSel = document.getElementById('hub-month');
+    const ySel = document.getElementById('hub-year');
+    for (let i = 1; i <= 31; i++) dSel.innerHTML += `<option value="${i}">${i}</option>`;
+    for (let i = 1; i <= 12; i++) mSel.innerHTML += `<option value="${i}">${i}</option>`;
+    const nowY = new Date().getFullYear();
+    for (let i = nowY; i >= 1930; i--) ySel.innerHTML += `<option value="${i}">${i}</option>`;
 
-      document.getElementById('hub-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('hub-name').value.trim();
-        const day = parseInt(dSel.value), month = parseInt(mSel.value), year = parseInt(ySel.value);
-        if (!name || !day || !month || !year) return;
-        P.save({ name, day, month, year });
-        renderProfile();
-        renderDaily();
-      });
-      return;
+    if (isEdit) {
+      document.getElementById('hub-name').value = editing.name;
+      dSel.value = String(editing.day);
+      mSel.value = String(editing.month);
+      ySel.value = String(editing.year);
     }
 
+    document.getElementById('hub-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('hub-name').value.trim();
+      const day = parseInt(dSel.value), month = parseInt(mSel.value), year = parseInt(ySel.value);
+      if (!name || !day || !month || !year) return;
+      P.save(isEdit ? { id: editing.id, name, day, month, year } : { name, day, month, year });
+      renderProfile();
+      renderDaily();
+    });
+
+    const cancelBtn = document.getElementById('hub-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', renderProfile);
+  }
+
+  function renderProfile() {
+    const p = P.get();
+    if (!p) { renderForm(null, false); return; }
+
+    const all = P.list();
     const lp = P.lifePath(p.day, p.month, p.year);
     const cc = P.canChi(p.year);
     const py = P.personalYear(p.day, p.month, new Date().getFullYear());
 
+    // thanh chuyển hồ sơ: hiện khi có >1 hồ sơ, kèm nút thêm người nhà
+    const switcher = `
+      <div class="hub-people" role="tablist" aria-label="Chọn hồ sơ">
+        ${all.map((q) => `
+          <button type="button" class="hub-person ${q.id === p.id ? 'is-active' : ''}" data-pid="${q.id}" role="tab" aria-selected="${q.id === p.id}" title="${escHtml(q.name)}">
+            <span class="hub-person-av">${escHtml(q.name.trim().charAt(0).toUpperCase())}</span>
+            <span class="hub-person-nm">${shortName(q.name)}</span>
+          </button>`).join('')}
+        <button type="button" class="hub-person hub-person-add" id="hub-add" title="Thêm hồ sơ người nhà">
+          <span class="hub-person-av">＋</span>
+          <span class="hub-person-nm">Thêm</span>
+        </button>
+      </div>`;
+
     profileEl.innerHTML = `
       <div class="hub-card hub-me">
+        ${switcher}
         <div class="hub-me-head">
-          <span class="hub-avatar">${p.name.trim().charAt(0).toUpperCase()}</span>
+          <span class="hub-avatar">${escHtml(p.name.trim().charAt(0).toUpperCase())}</span>
           <div class="hub-me-info">
-            <h2 class="hub-title">${p.name}</h2>
+            <h2 class="hub-title">${escHtml(p.name)}</h2>
             <p class="hub-sub">${p.day}/${p.month}/${p.year} · Tuổi ${cc.text} (${cc.giap})</p>
           </div>
           <div class="hub-me-actions">
@@ -113,24 +155,21 @@
         <div class="hub-push" id="hub-push" hidden></div>
       </div>`;
 
+    profileEl.querySelectorAll('.hub-person[data-pid]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        P.setActive(btn.dataset.pid);
+        renderProfile();
+        renderDaily();
+      });
+    });
+    document.getElementById('hub-add').addEventListener('click', () => renderForm(null, true));
+    document.getElementById('hub-edit').addEventListener('click', () => renderForm(p, true));
     document.getElementById('hub-clear').addEventListener('click', () => {
-      if (confirm('Xóa hồ sơ huyền học trên thiết bị này?')) {
-        P.clear();
+      if (confirm(`Xóa hồ sơ của ${p.name}?`)) {
+        P.remove(p.id);
         renderProfile();
         renderDaily();
       }
-    });
-    document.getElementById('hub-edit').addEventListener('click', () => {
-      P.clear();
-      renderProfile();
-      const nameInput = document.getElementById('hub-name');
-      if (nameInput) { nameInput.value = p.name; nameInput.focus(); }
-      const dSel = document.getElementById('hub-day');
-      if (dSel) dSel.value = String(p.day);
-      const mSel = document.getElementById('hub-month');
-      if (mSel) mSel.value = String(p.month);
-      const ySel = document.getElementById('hub-year');
-      if (ySel) ySel.value = String(p.year);
     });
 
     renderPush();
