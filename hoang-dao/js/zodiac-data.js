@@ -7,7 +7,7 @@
 // Thứ tự chuẩn Bạch Dương → Song Ngư. range = [thángBắtĐầu, ngàyBắtĐầu] (ngày đầu cung).
 const ZODIAC = [
   {
-    ten: 'Bạch Dương', en: 'Aries', sym: '♈', bieuTuong: 'Con Cừu',
+    ten: 'Bạch Dương', en: 'Aries', sym: '♈\uFE0E', bieuTuong: 'Con Cừu',
     range: '21/3 – 19/4', nguyeTo: 'Hỏa', tinhChat: 'Thống Lĩnh (Cardinal)',
     sao: 'Sao Hỏa (Mars)', mau: 'Đỏ', so: '9', ngay: 'Thứ Ba', da: 'Kim cương',
     tongQuan: 'Bạch Dương là cung mở đầu hoàng đạo — biểu tượng của sự khởi đầu, nhiệt huyết và lòng dũng cảm. Bạn hành động theo bản năng của người tiên phong, dám nghĩ dám làm, ghét trì hoãn và luôn muốn là người đầu tiên.',
@@ -19,7 +19,7 @@ const ZODIAC = [
     hop: ['Sư Tử', 'Nhân Mã', 'Song Tử', 'Bảo Bình'], khac: ['Cự Giải', 'Ma Kết'],
   },
   {
-    ten: 'Kim Ngưu', en: 'Taurus', sym: '♉', bieuTuong: 'Con Bò',
+    ten: 'Kim Ngưu', en: 'Taurus', sym: '♉\uFE0E', bieuTuong: 'Con Bò',
     range: '20/4 – 20/5', nguyeTo: 'Thổ', tinhChat: 'Kiên Định (Fixed)',
     sao: 'Sao Kim (Venus)', mau: 'Xanh lá', so: '6', ngay: 'Thứ Sáu', da: 'Ngọc lục bảo',
     tongQuan: 'Kim Ngưu vững vàng, kiên nhẫn và yêu cái đẹp, sự ổn định. Bạn xây dựng cuộc sống chậm mà chắc, trung thành và đáng tin — nhưng cũng khá bảo thủ và ngại thay đổi.',
@@ -31,7 +31,7 @@ const ZODIAC = [
     hop: ['Xử Nữ', 'Ma Kết', 'Cự Giải', 'Song Ngư'], khac: ['Sư Tử', 'Bảo Bình'],
   },
   {
-    ten: 'Song Tử', en: 'Gemini', sym: '♊', bieuTuong: 'Cặp Song Sinh',
+    ten: 'Song Tử', en: 'Gemini', sym: '♊\uFE0E', bieuTuong: 'Cặp Song Sinh',
     range: '21/5 – 20/6', nguyeTo: 'Khí', tinhChat: 'Linh Hoạt (Mutable)',
     sao: 'Sao Thủy (Mercury)', mau: 'Vàng', so: '5', ngay: 'Thứ Tư', da: 'Mã não',
     tongQuan: 'Song Tử linh hoạt, tò mò và giỏi ngôn từ. Trí óc bạn chạy nhanh, thích giao tiếp và khám phá cái mới — nhưng dễ phân tán và thiếu kiên định.',
@@ -43,7 +43,7 @@ const ZODIAC = [
     hop: ['Thiên Bình', 'Bảo Bình', 'Bạch Dương', 'Sư Tử'], khac: ['Xử Nữ', 'Song Ngư'],
   },
   {
-    ten: 'Cự Giải', en: 'Cancer', sym: '♋', bieuTuong: 'Con Cua',
+    ten: 'Cự Giải', en: 'Cancer', sym: '♋\uFE0E', bieuTuong: 'Con Cua',
     range: '21/6 – 22/7', nguyeTo: 'Thủy', tinhChat: 'Thống Lĩnh (Cardinal)',
     sao: 'Mặt Trăng (Moon)', mau: 'Bạc / Trắng', so: '2', ngay: 'Thứ Hai', da: 'Ngọc trai',
     tongQuan: 'Cự Giải nhạy cảm, giàu tình cảm và gắn bó gia đình sâu sắc. Bạn chăm sóc người khác bằng cả trái tim, trực giác mạnh — nhưng dễ tổn thương và hay thu mình.',
@@ -55,7 +55,7 @@ const ZODIAC = [
     hop: ['Bọ Cạp', 'Song Ngư', 'Kim Ngưu', 'Xử Nữ'], khac: ['Bạch Dương', 'Thiên Bình'],
   },
   {
-    ten: 'Sư Tử', en: 'Leo', sym: '♌', bieuTuong: 'Con Sư Tử',
+    ten: 'Sư Tử', en: 'Leo', sym: '♌\uFE0E', bieuTuong: 'Con Sư Tử',
     range: '23/7 – 22/8', nguyeTo: 'Hỏa', tinhChat: 'Kiên Định (Fixed)',
     sao: 'Mặt Trời (Sun)', mau: 'Vàng kim / Cam', so: '1', ngay: 'Chủ Nhật', da: 'Hồng ngọc',
     tongQuan: 'Sư Tử tự tin, hào phóng và có sức hút thủ lĩnh. Bạn sinh ra để tỏa sáng, truyền cảm hứng và dẫn dắt — nhưng cần giữ khiêm nhường để không sa vào kiêu ngạo.',
@@ -67,7 +67,7 @@ const ZODIAC = [
     hop: ['Bạch Dương', 'Nhân Mã', 'Song Tử', 'Thiên Bình'], khac: ['Kim Ngưu', 'Bọ Cạp'],
   },
   {
-    ten: 'Xử Nữ', en: 'Virgo', sym: '♍', bieuTuong: 'Trinh Nữ',
+    ten: 'Xử Nữ', en: 'Virgo', sym: '♍\uFE0E', bieuTuong: 'Trinh Nữ',
     range: '23/8 – 22/9', nguyeTo: 'Thổ', tinhChat: 'Linh Hoạt (Mutable)',
     sao: 'Sao Thủy (Mercury)', mau: 'Nâu / Xanh navy', so: '5', ngay: 'Thứ Tư', da: 'Ngọc bích',
     tongQuan: 'Xử Nữ tỉ mỉ, thực tế và cầu toàn. Bạn nhìn ra điều người khác bỏ sót, làm việc tận tâm và có tổ chức — nhưng dễ khắt khe với bản thân và người khác.',
@@ -79,7 +79,7 @@ const ZODIAC = [
     hop: ['Kim Ngưu', 'Ma Kết', 'Cự Giải', 'Bọ Cạp'], khac: ['Song Tử', 'Nhân Mã'],
   },
   {
-    ten: 'Thiên Bình', en: 'Libra', sym: '♎', bieuTuong: 'Cái Cân',
+    ten: 'Thiên Bình', en: 'Libra', sym: '♎\uFE0E', bieuTuong: 'Cái Cân',
     range: '23/9 – 22/10', nguyeTo: 'Khí', tinhChat: 'Thống Lĩnh (Cardinal)',
     sao: 'Sao Kim (Venus)', mau: 'Hồng / Xanh pastel', so: '6', ngay: 'Thứ Sáu', da: 'Sapphire',
     tongQuan: 'Thiên Bình hài hòa, công bằng và duyên dáng trong quan hệ. Bạn là người kiến tạo sự cân bằng, yêu cái đẹp và sự thanh lịch — nhưng hay do dự và ngại xung đột.',
@@ -91,7 +91,7 @@ const ZODIAC = [
     hop: ['Song Tử', 'Bảo Bình', 'Sư Tử', 'Nhân Mã'], khac: ['Cự Giải', 'Ma Kết'],
   },
   {
-    ten: 'Bọ Cạp', en: 'Scorpio', sym: '♏', bieuTuong: 'Con Bọ Cạp',
+    ten: 'Bọ Cạp', en: 'Scorpio', sym: '♏\uFE0E', bieuTuong: 'Con Bọ Cạp',
     range: '23/10 – 21/11', nguyeTo: 'Thủy', tinhChat: 'Kiên Định (Fixed)',
     sao: 'Sao Diêm Vương (Pluto)', mau: 'Đỏ đô / Đen', so: '9', ngay: 'Thứ Ba', da: 'Topaz',
     tongQuan: 'Bọ Cạp sâu sắc, mãnh liệt và ý chí sắt đá. Bạn nhìn thấu bản chất mọi việc, không ngại chiều sâu và bí ẩn — nhưng dễ chiếm hữu và khó buông bỏ.',
@@ -103,7 +103,7 @@ const ZODIAC = [
     hop: ['Cự Giải', 'Song Ngư', 'Xử Nữ', 'Ma Kết'], khac: ['Sư Tử', 'Bảo Bình'],
   },
   {
-    ten: 'Nhân Mã', en: 'Sagittarius', sym: '♐', bieuTuong: 'Cung Thủ / Nhân Mã',
+    ten: 'Nhân Mã', en: 'Sagittarius', sym: '♐\uFE0E', bieuTuong: 'Cung Thủ / Nhân Mã',
     range: '22/11 – 21/12', nguyeTo: 'Hỏa', tinhChat: 'Linh Hoạt (Mutable)',
     sao: 'Sao Mộc (Jupiter)', mau: 'Tím / Xanh dương', so: '3', ngay: 'Thứ Năm', da: 'Lam ngọc (Turquoise)',
     tongQuan: 'Nhân Mã phóng khoáng, lạc quan và khát khao tự do, tri thức. Bạn là nhà thám hiểm của cuộc đời, yêu du lịch và triết lý — nhưng dễ thiếu kiên nhẫn và thẳng thắn đến vô ý.',
@@ -115,7 +115,7 @@ const ZODIAC = [
     hop: ['Bạch Dương', 'Sư Tử', 'Thiên Bình', 'Bảo Bình'], khac: ['Xử Nữ', 'Song Ngư'],
   },
   {
-    ten: 'Ma Kết', en: 'Capricorn', sym: '♑', bieuTuong: 'Con Dê Biển',
+    ten: 'Ma Kết', en: 'Capricorn', sym: '♑\uFE0E', bieuTuong: 'Con Dê Biển',
     range: '22/12 – 19/1', nguyeTo: 'Thổ', tinhChat: 'Thống Lĩnh (Cardinal)',
     sao: 'Sao Thổ (Saturn)', mau: 'Nâu đất / Đen', so: '8', ngay: 'Thứ Bảy', da: 'Mã não đen',
     tongQuan: 'Ma Kết kỷ luật, tham vọng và bền bỉ. Bạn leo đến đỉnh bằng sự kiên trì và trách nhiệm, thực tế và đáng tin — nhưng dễ quá nghiêm khắc và ôm đồm áp lực.',
@@ -127,7 +127,7 @@ const ZODIAC = [
     hop: ['Kim Ngưu', 'Xử Nữ', 'Bọ Cạp', 'Song Ngư'], khac: ['Bạch Dương', 'Thiên Bình'],
   },
   {
-    ten: 'Bảo Bình', en: 'Aquarius', sym: '♒', bieuTuong: 'Người Mang Nước',
+    ten: 'Bảo Bình', en: 'Aquarius', sym: '♒\uFE0E', bieuTuong: 'Người Mang Nước',
     range: '20/1 – 18/2', nguyeTo: 'Khí', tinhChat: 'Kiên Định (Fixed)',
     sao: 'Sao Thiên Vương (Uranus)', mau: 'Xanh điện / Bạc', so: '4', ngay: 'Thứ Bảy', da: 'Thạch anh tím',
     tongQuan: 'Bảo Bình độc lập, sáng tạo và tư duy khác biệt, nhân văn. Bạn đi trước thời đại, yêu tự do và lý tưởng cộng đồng — nhưng đôi khi xa cách và bướng bỉnh.',
@@ -139,7 +139,7 @@ const ZODIAC = [
     hop: ['Song Tử', 'Thiên Bình', 'Bạch Dương', 'Nhân Mã'], khac: ['Kim Ngưu', 'Bọ Cạp'],
   },
   {
-    ten: 'Song Ngư', en: 'Pisces', sym: '♓', bieuTuong: 'Đôi Cá',
+    ten: 'Song Ngư', en: 'Pisces', sym: '♓\uFE0E', bieuTuong: 'Đôi Cá',
     range: '19/2 – 20/3', nguyeTo: 'Thủy', tinhChat: 'Linh Hoạt (Mutable)',
     sao: 'Sao Hải Vương (Neptune)', mau: 'Xanh biển / Tím nhạt', so: '7', ngay: 'Thứ Năm', da: 'Ngọc mắt mèo',
     tongQuan: 'Song Ngư mơ mộng, trực giác và giàu lòng trắc ẩn, nghệ thuật. Bạn cảm nhận thế giới bằng tâm hồn, đồng cảm sâu sắc — nhưng cần ranh giới rõ để không chìm trong cảm xúc người khác.',

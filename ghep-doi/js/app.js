@@ -6,6 +6,21 @@
 (function () {
   'use strict';
 
+  // vẽ tim bằng path canvas — tránh phụ thuộc glyph font ('❤' bị iOS ép
+  // thành emoji màu trên canvas, bỏ qua ctx.fillStyle).
+  function drawHeart(ctx, cx, cy, size) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 0.3);
+    ctx.bezierCurveTo(cx, cy - size * 0.1, cx - size * 0.5, cy - size * 0.5, cx - size * 0.5, cy - size * 0.1);
+    ctx.bezierCurveTo(cx - size * 0.5, cy + size * 0.25, cx - size * 0.15, cy + size * 0.5, cx, cy + size * 0.7);
+    ctx.bezierCurveTo(cx + size * 0.15, cy + size * 0.5, cx + size * 0.5, cy + size * 0.25, cx + size * 0.5, cy - size * 0.1);
+    ctx.bezierCurveTo(cx + size * 0.5, cy - size * 0.5, cx, cy - size * 0.1, cx, cy + size * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
   // ==================== THẦN SỐ CƠ BẢN ====================
   function stripAccents(str) {
     return str.normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -190,7 +205,7 @@
   function render(r, a, b) {
     resultEl.innerHTML = `
       <div class="gd-card gd-scorecard">
-        <div class="gd-names"><span>${a.name}</span><span class="gd-amp">❤</span><span>${b.name}</span></div>
+        <div class="gd-names"><span>${a.name}</span><span class="gd-amp">❤︎</span><span>${b.name}</span></div>
         <div class="gd-total"><span id="gd-total-val">0</span><span class="gd-pct">%</span></div>
         <p class="gd-level">${r.levelIcon} ${r.level}</p>
       </div>
@@ -271,9 +286,10 @@
     const nameA = lastNames.a.length > 22 ? lastNames.a.slice(0, 21) + '…' : lastNames.a;
     const nameB = lastNames.b.length > 22 ? lastNames.b.slice(0, 21) + '…' : lastNames.b;
     ctx.fillText(nameA, W / 2, 212);
+    // vẽ tim bằng path thay vì glyph font — iOS ép '❤' thành emoji màu
+    // trên canvas và bỏ qua fillStyle (glyph còn có nguy cơ méo giữa font)
     ctx.fillStyle = '#e11d48';
-    ctx.font = F(46, 900);
-    ctx.fillText('❤', W / 2, 278);
+    drawHeart(ctx, W / 2, 278, 26);
     ctx.fillStyle = '#2b1408';
     ctx.font = F(52, 900);
     ctx.fillText(nameB, W / 2, 348);

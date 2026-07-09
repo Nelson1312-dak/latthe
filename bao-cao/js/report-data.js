@@ -6,18 +6,18 @@
 
 // 12 cung hoàng đạo phương Tây — [tên, biểu tượng, nguyên tố, blurb]
 const RP_ZODIAC = {
-  'Bạch Dương':  { sym: '♈', el: 'Hỏa', d: 'Tiên phong, nhiệt huyết, dám nghĩ dám làm. Bạn lao về phía trước bằng bản năng của người mở đường — mạnh ở khởi đầu, cần rèn sự kiên nhẫn khi về đích.' },
-  'Kim Ngưu':    { sym: '♉', el: 'Thổ', d: 'Vững vàng, kiên định, yêu cái đẹp và sự ổn định. Bạn xây dựng chậm mà chắc, trung thành và đáng tin — chỉ cần đề phòng tính bảo thủ, ngại thay đổi.' },
-  'Song Tử':     { sym: '♊', el: 'Khí', d: 'Linh hoạt, tò mò, giỏi ngôn từ và kết nối. Trí óc bạn chạy nhanh, hợp mọi việc cần giao tiếp — bài học là tập trung để không phân tán năng lượng.' },
-  'Cự Giải':     { sym: '♋', el: 'Thủy', d: 'Nhạy cảm, giàu tình cảm, gắn bó gia đình. Bạn chăm sóc người khác bằng cả trái tim — hãy học cách bảo vệ năng lượng của mình khỏi việc ôm đồm cảm xúc.' },
-  'Sư Tử':       { sym: '♌', el: 'Hỏa', d: 'Tự tin, hào phóng, có sức hút thủ lĩnh. Bạn sinh ra để tỏa sáng và truyền cảm hứng — giữ được sự khiêm nhường thì ánh sáng ấy càng bền.' },
-  'Xử Nữ':       { sym: '♍', el: 'Thổ', d: 'Tỉ mỉ, thực tế, cầu toàn và tận tâm. Bạn nhìn ra điều người khác bỏ sót — nhớ rằng "đủ tốt" đôi khi quý hơn "hoàn hảo".' },
-  'Thiên Bình':  { sym: '♎', el: 'Khí', d: 'Hài hòa, công bằng, duyên dáng trong quan hệ. Bạn là người kiến tạo sự cân bằng — bài học là dám ra quyết định thay vì mãi phân vân.' },
-  'Bọ Cạp':      { sym: '♏', el: 'Thủy', d: 'Sâu sắc, mãnh liệt, ý chí sắt đá. Bạn nhìn thấu bản chất và không ngại chiều sâu — sức mạnh lớn nhất là biết buông và tha thứ.' },
-  'Nhân Mã':     { sym: '♐', el: 'Hỏa', d: 'Phóng khoáng, lạc quan, khát khao tự do và tri thức. Bạn là nhà thám hiểm của cuộc đời — giữ lời hứa và sự tập trung sẽ đưa bạn đi xa hơn.' },
-  'Ma Kết':      { sym: '♑', el: 'Thổ', d: 'Kỷ luật, tham vọng, bền bỉ leo đến đỉnh. Bạn xây sự nghiệp như xây núi — nhớ dành chỗ cho niềm vui và người thân trên hành trình.' },
-  'Bảo Bình':    { sym: '♒', el: 'Khí', d: 'Độc lập, sáng tạo, tư duy khác biệt và nhân văn. Bạn đi trước thời đại — sức mạnh nằm ở việc kết nối tầm nhìn lớn với con người thật.' },
-  'Song Ngư':    { sym: '♓', el: 'Thủy', d: 'Mơ mộng, trực giác, giàu lòng trắc ẩn và nghệ thuật. Bạn cảm nhận thế giới bằng tâm hồn — cần ranh giới rõ để không chìm trong cảm xúc người khác.' },
+  'Bạch Dương':  { sym: '♈\uFE0E', el: 'Hỏa', d: 'Tiên phong, nhiệt huyết, dám nghĩ dám làm. Bạn lao về phía trước bằng bản năng của người mở đường — mạnh ở khởi đầu, cần rèn sự kiên nhẫn khi về đích.' },
+  'Kim Ngưu':    { sym: '♉\uFE0E', el: 'Thổ', d: 'Vững vàng, kiên định, yêu cái đẹp và sự ổn định. Bạn xây dựng chậm mà chắc, trung thành và đáng tin — chỉ cần đề phòng tính bảo thủ, ngại thay đổi.' },
+  'Song Tử':     { sym: '♊\uFE0E', el: 'Khí', d: 'Linh hoạt, tò mò, giỏi ngôn từ và kết nối. Trí óc bạn chạy nhanh, hợp mọi việc cần giao tiếp — bài học là tập trung để không phân tán năng lượng.' },
+  'Cự Giải':     { sym: '♋\uFE0E', el: 'Thủy', d: 'Nhạy cảm, giàu tình cảm, gắn bó gia đình. Bạn chăm sóc người khác bằng cả trái tim — hãy học cách bảo vệ năng lượng của mình khỏi việc ôm đồm cảm xúc.' },
+  'Sư Tử':       { sym: '♌\uFE0E', el: 'Hỏa', d: 'Tự tin, hào phóng, có sức hút thủ lĩnh. Bạn sinh ra để tỏa sáng và truyền cảm hứng — giữ được sự khiêm nhường thì ánh sáng ấy càng bền.' },
+  'Xử Nữ':       { sym: '♍\uFE0E', el: 'Thổ', d: 'Tỉ mỉ, thực tế, cầu toàn và tận tâm. Bạn nhìn ra điều người khác bỏ sót — nhớ rằng "đủ tốt" đôi khi quý hơn "hoàn hảo".' },
+  'Thiên Bình':  { sym: '♎\uFE0E', el: 'Khí', d: 'Hài hòa, công bằng, duyên dáng trong quan hệ. Bạn là người kiến tạo sự cân bằng — bài học là dám ra quyết định thay vì mãi phân vân.' },
+  'Bọ Cạp':      { sym: '♏\uFE0E', el: 'Thủy', d: 'Sâu sắc, mãnh liệt, ý chí sắt đá. Bạn nhìn thấu bản chất và không ngại chiều sâu — sức mạnh lớn nhất là biết buông và tha thứ.' },
+  'Nhân Mã':     { sym: '♐\uFE0E', el: 'Hỏa', d: 'Phóng khoáng, lạc quan, khát khao tự do và tri thức. Bạn là nhà thám hiểm của cuộc đời — giữ lời hứa và sự tập trung sẽ đưa bạn đi xa hơn.' },
+  'Ma Kết':      { sym: '♑\uFE0E', el: 'Thổ', d: 'Kỷ luật, tham vọng, bền bỉ leo đến đỉnh. Bạn xây sự nghiệp như xây núi — nhớ dành chỗ cho niềm vui và người thân trên hành trình.' },
+  'Bảo Bình':    { sym: '♒\uFE0E', el: 'Khí', d: 'Độc lập, sáng tạo, tư duy khác biệt và nhân văn. Bạn đi trước thời đại — sức mạnh nằm ở việc kết nối tầm nhìn lớn với con người thật.' },
+  'Song Ngư':    { sym: '♓\uFE0E', el: 'Thủy', d: 'Mơ mộng, trực giác, giàu lòng trắc ẩn và nghệ thuật. Bạn cảm nhận thế giới bằng tâm hồn — cần ranh giới rõ để không chìm trong cảm xúc người khác.' },
 };
 
 // Ngày bắt đầu mỗi cung (tháng, ngày) — dùng để xác định cung từ ngày sinh
