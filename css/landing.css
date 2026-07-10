@@ -851,6 +851,7 @@ a { text-decoration: none; color: inherit; }
 }
 .hub-person {
   display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px;
   background: var(--bg);
   border: 1.5px solid var(--border);
   border-radius: 99px;
@@ -895,7 +896,8 @@ a { text-decoration: none; color: inherit; }
 .hub-icon-btn {
   background: none; border: none; cursor: pointer;
   font-size: 15px; color: var(--muted);
-  padding: 6px; border-radius: 8px;
+  width: 40px; height: 40px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
   position: relative; z-index: 1;
   transition: color 0.18s ease, background 0.18s ease;
 }
