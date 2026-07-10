@@ -44,6 +44,11 @@ body {
 
 .wrap { width: 100%; max-width: 480px; padding: 0 16px 50px; flex: 1; }
 
+/* Dock nổi che 50px đáy trên mobile — chừa thêm chỗ. */
+@media (max-width: 767px) {
+  .wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+
 /* hero */
 .hero { text-align: center; padding: 26px 0 18px; }
 .hero-icon { font-size: 54px; line-height: 1; filter: drop-shadow(0 0 22px var(--accent)); animation: float 4s ease-in-out infinite; }

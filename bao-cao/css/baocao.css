@@ -28,7 +28,7 @@ body {
   color: var(--text);
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: 110px;
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
 }
 a { color: var(--gold-d); }
 .gemini-glow-1, .gemini-glow-2, .gemini-glow-3 { display: none !important; }

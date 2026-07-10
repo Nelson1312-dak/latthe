@@ -539,7 +539,7 @@ body {
 /* --- FLOATING DOCK SAFE-AREAS --- */
 /* Mobile: bottom bar — keep footer clear of it */
 @media (max-width: 767px) {
-  body.thuvien-theme { padding-bottom: 84px; }
+  body.thuvien-theme { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 /* Desktop: left sidebar rail — give content a left gutter so it never overlaps */
 @media (min-width: 768px) {

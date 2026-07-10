@@ -260,8 +260,9 @@
   align-items: center;
   justify-content: space-around;
   
-  /* Mobile default: bottom floating bar */
-  bottom: 16px;
+  /* Mobile default: bottom floating bar. Cộng safe-area-inset-bottom vì PWA
+     "standalone" che thanh home-indicator của iPhone lên đúng vùng này. */
+  bottom: calc(16px + env(safe-area-inset-bottom));
   left: 16px;
   right: 16px;
   height: 56px;
@@ -782,7 +783,7 @@
   body.tuvi-theme,
   body.thansohoc-theme,
   body.drinking-theme {
-    padding-bottom: 96px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 }
 

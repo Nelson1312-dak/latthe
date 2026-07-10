@@ -77,6 +77,11 @@ a { text-decoration: none; color: inherit; }
   z-index: 1;
 }
 
+/* Dock nổi che vùng đáy trên mobile — chừa thêm chỗ. */
+@media (max-width: 767px) {
+  .l-page { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+
 /* ---- Hero ---- */
 .l-hero {
   width: 100%;
