@@ -3,12 +3,11 @@
  * Strategy:
  *   - Cache-first for static shell (HTML, CSS, JS, icons, fonts)
  *   - Network-first for /api/* (always try server, fall back to error)
- *   - Stale-while-revalidate for fonts.gstatic.com woff2
  *
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v122-2026-07-07';
+const CACHE_VERSION = 'v123-2026-07-10';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -21,6 +20,11 @@ const SHELL = [
   '/css/landing.css',
   '/css/common.css',
   '/fonts/tabler-icons-subset.woff2',
+  '/css/fonts.css',
+  '/fonts/be-vietnam-pro-vietnamese-400.woff2',
+  '/fonts/be-vietnam-pro-latin-400.woff2',
+  '/fonts/be-vietnam-pro-vietnamese-700.woff2',
+  '/fonts/be-vietnam-pro-vietnamese-800.woff2',
   '/js/ai.js',
   '/js/chat.js',
   '/js/history.js',
@@ -175,21 +179,6 @@ self.addEventListener('fetch', (event) => {
           return res;
         })
         .catch(() => caches.match(req).then((cached) => cached || caches.match('/')))
-    );
-    return;
-  }
-
-  // Stale-while-revalidate for Google Fonts woff2
-  if (url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com') {
-    event.respondWith(
-      caches.open(RUNTIME_CACHE).then(async (cache) => {
-        const cached = await cache.match(req);
-        const fetchPromise = fetch(req).then((res) => {
-          if (res.ok) cache.put(req, res.clone());
-          return res;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
     );
     return;
   }

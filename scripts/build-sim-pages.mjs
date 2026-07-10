@@ -76,9 +76,7 @@ function buildPage(n) {
   <meta property="og:site_name" content="latbai.vn">
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
   <link rel="apple-touch-icon" href="/images/icon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/fonts.css">
   <link rel="stylesheet" href="/thuvien/css/thuvien.css">
   <script src="/js/mystic-fx.js" defer data-color="13,148,136" data-glyphs="0123456789" data-count="30"></script>
 
@@ -200,9 +198,7 @@ function buildHub() {
   <meta property="og:site_name" content="latbai.vn">
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
   <link rel="apple-touch-icon" href="/images/icon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/fonts.css">
   <link rel="stylesheet" href="/thuvien/css/thuvien.css">
   <style>
     .sim-tag-good{color:#0d9668;font-weight:800;font-size:11px;}

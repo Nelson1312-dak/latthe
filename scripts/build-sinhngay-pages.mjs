@@ -98,9 +98,7 @@ function buildPage({ d, m }, idx) {
   <meta property="og:site_name" content="latbai.vn">
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
   <link rel="apple-touch-icon" href="/images/icon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/fonts.css">
   <link rel="stylesheet" href="/thuvien/css/thuvien.css">
   <script src="/js/mystic-fx.js" defer data-color="217,138,10" data-glyphs="✦✧☾" data-count="28"></script>
   <script type="application/ld+json">
@@ -229,9 +227,7 @@ function buildHub() {
   <meta property="og:site_name" content="latbai.vn">
   <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
   <link rel="apple-touch-icon" href="/images/icon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/fonts.css">
   <link rel="stylesheet" href="/thuvien/css/thuvien.css">
   <style>
     .sn-days{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0;}
