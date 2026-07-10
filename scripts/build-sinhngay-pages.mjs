@@ -86,7 +86,7 @@ function buildPage({ d, m }, idx) {
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(desc)}">
   <link rel="canonical" href="${url}">
@@ -130,12 +130,14 @@ function buildPage({ d, m }, idx) {
 
       <h2 class="thansohoc">1. Cung hoàng đạo ${esc(zName)}</h2>
       <p>${esc(z.d)}</p>
+      <p>Xem tính cách chi tiết, tử vi hôm nay và độ hợp của cung ${esc(zName)} tại <a href="/hoang-dao/">trang Cung Hoàng Đạo</a>.</p>
 
       <h2 class="thansohoc">2. Số ngày sinh ${bnum}${persona ? ` — ${esc(persona)}` : ''}</h2>
       ${bMean || `<p>Số ngày sinh ${bnum} phản ánh năng lực tự nhiên bạn mang theo từ khi sinh ra.</p>`}
+      <p>Đọc thêm <a href="/thansohoc/so-${bnum}">ý nghĩa đầy đủ của số ${bnum}</a> khi nó xuất hiện ở vị trí Số Chủ Đạo.</p>
 
       <h2 class="thansohoc">3. Muốn hiểu sâu hơn về chính mình?</h2>
-      <p>Cung hoàng đạo và số ngày sinh mới là hai lát cắt. Bản đồ đầy đủ của bạn còn gồm Số Chủ Đạo, con giáp, mệnh ngũ hành và năm cá nhân — tất cả tính từ họ tên và ngày sinh.</p>
+      <p>Cung hoàng đạo và số ngày sinh mới là hai lát cắt. Bản đồ đầy đủ của bạn còn gồm <a href="/thansohoc/so-chu-dao">Số Chủ Đạo</a>, con giáp, mệnh ngũ hành và <a href="/thuvien/than-so-hoc-2026">năm cá nhân</a> — tất cả tính từ họ tên và ngày sinh.</p>
 
       <a href="/bao-cao/" class="article-cta thansohoc">
         <i class="ti ti-file-star"></i> Xem Báo Cáo Vận Mệnh tổng hợp của bạn — miễn phí
@@ -161,6 +163,8 @@ ${faq.map((f) => `          <details class="faq-item">
       <div class="related-list">
         <a href="${linkFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Sinh ngày ${prev.d}/${prev.m}</a>
         <a href="${linkFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> Sinh ngày ${next.d}/${next.m}</a>
+        <a href="/thansohoc/so-${bnum}" class="related-item"><i class="ti ti-hash"></i> Ý nghĩa số chủ đạo ${bnum}</a>
+        <a href="/hoang-dao/" class="related-item"><i class="ti ti-stars"></i> Cung ${esc(zName)} — hồ sơ đầy đủ</a>
         <a href="/sinh-ngay/" class="related-item"><i class="ti ti-calendar"></i> Tra cứu theo ngày sinh khác</a>
       </div>
     </div>
@@ -215,7 +219,7 @@ function buildHub() {
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(desc)}">
   <link rel="canonical" href="${url}">

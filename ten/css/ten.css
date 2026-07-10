@@ -197,3 +197,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ── SEO content + FAQ (nội dung tĩnh dưới app) ────────────────── */
+.seo-content { margin: 34px 0 8px; font-size: 14px; line-height: 1.75; color: var(--muted); }
+.seo-content h2 { font-size: 19px; color: var(--text); margin: 0 0 10px; letter-spacing: -.3px; }
+.seo-content h3 { font-size: 15px; color: var(--text); margin: 20px 0 8px; }
+.seo-content p { margin: 0 0 11px; }
+.seo-content ul { margin: 0 0 11px; padding-left: 20px; }
+.seo-content li { margin-bottom: 6px; }
+.seo-content a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.faq-section { margin: 26px 0 10px; }
+.faq-title { font-size: 17px; font-weight: 800; text-align: center; margin-bottom: 14px; }
+.faq-item { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; margin-bottom: 8px; overflow: hidden; }
+.faq-question { padding: 13px 15px; font-size: 14px; font-weight: 700; cursor: pointer; list-style: none; }
+.faq-question::-webkit-details-marker { display: none; }
+.faq-answer { padding: 0 15px 13px; font-size: 13.5px; line-height: 1.7; color: var(--muted); margin: 0; }

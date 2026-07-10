@@ -510,6 +510,37 @@
 }
 
 /* ============================================================
+   Khối nội dung SEO tĩnh trên landing module (dưới app, trên FAQ)
+   ============================================================ */
+.seo-content {
+  width: 100%;
+  max-width: 600px;
+  margin: 40px auto 8px;
+  padding: 0 20px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.75;
+}
+.seo-content h2 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin: 0 0 12px;
+}
+.seo-content h3 { font-size: 15px; font-weight: 800; margin: 22px 0 8px; }
+.seo-content p { margin: 0 0 12px; }
+.seo-content ul { margin: 0 0 12px; padding-left: 20px; }
+.seo-content li { margin-bottom: 6px; }
+.seo-content a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.seo-content a:hover { opacity: 0.8; }
+.light-theme .seo-content { color: #5c3d1e; }
+.light-theme .seo-content h2,
+.light-theme .seo-content h3 { color: #1a0800; }
+.dark-theme .seo-content { color: rgba(255, 255, 255, 0.7); }
+.dark-theme .seo-content h2,
+.dark-theme .seo-content h3 { color: #ffffff; }
+
+/* ============================================================
    Unified FAQ Accordion (đồng nhất với trang chủ)
    ============================================================ */
 .faq-section {
