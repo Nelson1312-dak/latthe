@@ -64,6 +64,16 @@
     return h >>> 0;
   }
 
+  // Escape HTML cho chuỗi người dùng nhập trước khi đưa vào innerHTML.
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function isValid(p) {
     return !!(p && p.name && p.day && p.month && p.year);
   }
@@ -169,7 +179,8 @@
     clear() {
       this.remove();
     },
-    // các phép tính nhẹ dùng cho dashboard
+    // tiện ích + các phép tính nhẹ dùng cho dashboard
+    esc,
     reduceToSingle,
     lifePath,
     personalYear,

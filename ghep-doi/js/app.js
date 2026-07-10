@@ -203,9 +203,10 @@
   });
 
   function render(r, a, b) {
+    const esc = window.LatbaiProfile.esc;
     resultEl.innerHTML = `
       <div class="gd-card gd-scorecard">
-        <div class="gd-names"><span>${a.name}</span><span class="gd-amp">❤︎</span><span>${b.name}</span></div>
+        <div class="gd-names"><span>${esc(a.name)}</span><span class="gd-amp">❤︎</span><span>${esc(b.name)}</span></div>
         <div class="gd-total"><span id="gd-total-val">0</span><span class="gd-pct">%</span></div>
         <p class="gd-level">${r.levelIcon} ${r.level}</p>
       </div>

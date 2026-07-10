@@ -7,7 +7,7 @@
  */
 
 import { applyCors } from './_cors.js';
-import { getClientIp, checkRateLimit } from './_rateLimit.js';
+import { getClientIp, checkRateLimit, checkDailyBudget } from './_rateLimit.js';
 import { isInfraDown, callCloudLLM, cleanChineseLeaks } from './_llm.js';
 import { getEmbedding, retrieveSimilar, retrieveKnowledge, storeDoc, checkExactMatchCache } from './_rag.js';
 import { SYSTEM_PROMPTS, buildFirstUserContent } from './_prompts.js';
@@ -211,6 +211,12 @@ export default async function handler(req, res) {
   }
 
   if (!answer && dsKey) {
+    // Cap tổng lượt fallback cloud/ngày — Ollama chết cả ngày cũng không đốt hết quota.
+    const budget = await checkDailyBudget('cloudllm');
+    if (!budget.allowed) {
+      console.error(`[interpret] Cloud budget exhausted (${budget.count}/${budget.cap}) — Ollama: ${ollamaErr || 'n/a'}`);
+      return res.status(503).json({ error: 'AI đang quá tải. Vui lòng thử lại sau ít phút.' });
+    }
     source = 'deepseek';
     console.warn(`[interpret] Ollama unavailable (${ollamaErr || 'n/a'}) — falling back to DeepSeek (${dsModel})`);
     const dsRes = await callCloudLLM({ url: dsUrl, apiKey: dsKey, model: dsModel, messages: ollamaMessages, temperature, maxTokens, timeoutMs: dsTimeoutMs, label: 'DeepSeek' });

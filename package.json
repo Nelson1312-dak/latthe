@@ -7,7 +7,9 @@
     "index:thuvien": "node scripts/build-thuvien-index.mjs",
     "build:daily": "node scripts/build-daily-data.mjs",
     "gen:vapid": "node scripts/gen-vapid.mjs",
-    "eval": "node scripts/eval-rag.mjs"
+    "eval": "node scripts/eval-rag.mjs",
+    "seo:lastmod": "node scripts/update-sitemap-lastmod.mjs",
+    "seo:indexnow": "node scripts/submit-indexnow.mjs"
   },
   "dependencies": {
     "web-push": "^3.6.7"

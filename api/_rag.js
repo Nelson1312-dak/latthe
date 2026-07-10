@@ -90,6 +90,9 @@ export function retrieveKnowledge(sbUrl, sbKey, embedding, type, breaker) {
   }, breaker);
 }
 
+// Trần số dòng bảng documents — chặn spam câu hỏi lạ làm phình DB vô hạn.
+const STORE_MAX_ROWS = parseInt(process.env.RAG_STORE_MAX_ROWS || '', 10) || 20000;
+
 export async function storeDoc(sbUrl, sbKey, payload, breaker) {
   if (!sbUrl || !payload.embedding) return;
   const isLocal = isLocalUrl(sbUrl);
@@ -103,6 +106,24 @@ export async function storeDoc(sbUrl, sbKey, payload, breaker) {
     headers['apikey'] = sbKey;
     headers['Authorization'] = `Bearer ${sbKey}`;
   }
+
+  // Đếm nhanh qua content-range trước khi ghi; đếm lỗi thì vẫn cho ghi
+  // (cap là lớp phòng thủ chi phí, không phải logic chính).
+  try {
+    const cc = new AbortController();
+    const ct = setTimeout(() => cc.abort(), 3000);
+    const countRes = await fetch(`${sbUrl}${path}?select=id&limit=1`, {
+      headers: { ...headers, 'Prefer': 'count=estimated' },
+      signal: cc.signal,
+    });
+    clearTimeout(ct);
+    const range = countRes.headers.get('content-range') || '';
+    const total = parseInt(range.split('/')[1], 10);
+    if (Number.isFinite(total) && total >= STORE_MAX_ROWS) {
+      console.warn(`[rag] documents table at cap (${total}/${STORE_MAX_ROWS}) — skip store`);
+      return;
+    }
+  } catch (_) { /* đếm fail → vẫn ghi */ }
 
   // Bounded like every other DB call — without this, a hung tunnel keeps the
   // serverless function alive past its useful life (storeDoc is fire-and-forget).

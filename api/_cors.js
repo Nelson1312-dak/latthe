@@ -34,6 +34,15 @@ export function applyCors(req, res, { methods = 'POST, OPTIONS' } = {}) {
   } else if (origin) {
     res.status(403).json({ error: 'Truy cập bị từ chối: nguồn gọi không hợp lệ.' });
     return false;
+  } else if (IS_PROD) {
+    // Không có Origin = gọi thẳng bằng curl/bot, không phải trình duyệt của site.
+    // Chấp nhận Referer hợp lệ làm phương án dự phòng (một số WebView bỏ Origin).
+    const referer = req.headers.referer || '';
+    const refOk = [...ALLOWED_ORIGINS].some((o) => referer.startsWith(o + '/'));
+    if (!refOk) {
+      res.status(403).json({ error: 'Truy cập bị từ chối: nguồn gọi không hợp lệ.' });
+      return false;
+    }
   }
   res.setHeader('Access-Control-Allow-Methods', methods);
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

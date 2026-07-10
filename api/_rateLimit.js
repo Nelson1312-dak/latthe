@@ -27,9 +27,47 @@ const upstashEnabled = !!(UPSTASH_URL && UPSTASH_TOKEN);
 const rateLimitStore = new Map(); // ip -> { count, windowStart } — in-memory fallback
 
 export function getClientIp(req) {
+  // x-real-ip do Vercel đặt, không thể giả từ client; ưu tiên nó trước XFF.
+  const real = req.headers['x-real-ip'];
+  if (real) return real;
   const xff = req.headers['x-forwarded-for'];
   if (xff) return xff.split(',')[0].trim();
-  return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+// ---- Ngân sách gọi cloud-LLM theo ngày (chống đốt quota DeepSeek) ----
+// Đếm tổng toàn site (không theo IP) qua Upstash. Không có Upstash thì cho qua —
+// cap này là lớp phòng thủ chi phí, không phải rate-limit chính.
+export async function checkDailyBudget(bucket = 'cloudllm') {
+  const cap = parseInt(process.env.CLOUD_LLM_DAILY_CAP || '', 10) || 300;
+  if (!upstashEnabled) return { allowed: true, backend: 'noenv' };
+  const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const key = `budget:${bucket}:${day}`;
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 2000);
+  try {
+    const res = await fetch(`${UPSTASH_URL}/pipeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${UPSTASH_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify([
+        ['INCR', key],
+        ['EXPIRE', key, String(172800), 'NX'], // 2 ngày rồi tự dọn
+      ]),
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return { allowed: true, backend: `err-http${res.status}` };
+    const data = await res.json();
+    const count = Array.isArray(data) ? Number(data[0]?.result) : NaN;
+    if (!Number.isFinite(count)) return { allowed: true, backend: 'badresp' };
+    return { allowed: count <= cap, count, cap, backend: 'upstash' };
+  } catch (err) {
+    clearTimeout(t);
+    return { allowed: true, backend: `err:${err.name || 'unknown'}` };
+  }
 }
 
 // In-memory limiter — per-instance only. Used as a fallback when Upstash is not

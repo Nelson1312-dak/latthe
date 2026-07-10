@@ -18,6 +18,10 @@
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (prefersReduced) return;
 
+  // Máy yếu / tiết kiệm dữ liệu: bỏ hẳn hiệu ứng — trang vẫn đẹp, pin đỡ tốn.
+  if ((navigator.deviceMemory && navigator.deviceMemory <= 2) ||
+      (navigator.connection && navigator.connection.saveData)) return;
+
   const finePointer = window.matchMedia('(pointer: fine)').matches;
   const isMobile = window.matchMedia('(max-width: 767px)').matches;
 
