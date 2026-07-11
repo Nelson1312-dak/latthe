@@ -33,6 +33,15 @@ function reduceMaster(n) {
 function reduceSingle(n) { while (n > 9) n = String(n).split('').reduce((s, d) => s + +d, 0); return n; }
 const birthdayMeaning = (num) => NUM_MEANINGS.birthday?.[String(num)] || NUM_MEANINGS.birthday?.[String(reduceSingle(num))] || '';
 
+// slug trang cung tĩnh (/hoang-dao/cung-{slug} — build-hoangdao-pages.mjs)
+const Z_SLUG = {
+  'Bạch Dương': 'bach-duong', 'Kim Ngưu': 'kim-nguu', 'Song Tử': 'song-tu',
+  'Cự Giải': 'cu-giai', 'Sư Tử': 'su-tu', 'Xử Nữ': 'xu-nu',
+  'Thiên Bình': 'thien-binh', 'Bọ Cạp': 'bo-cap', 'Nhân Mã': 'nhan-ma',
+  'Ma Kết': 'ma-ket', 'Bảo Bình': 'bao-binh', 'Song Ngư': 'song-ngu',
+};
+const cungUrl = (zName) => `/hoang-dao/cung-${Z_SLUG[zName] || ''}`;
+
 const MONTHS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const MONTH_VN = ['', 'Một', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy', 'Tám', 'Chín', 'Mười', 'Mười Một', 'Mười Hai'];
 
@@ -130,7 +139,7 @@ function buildPage({ d, m }, idx) {
 
       <h2 class="thansohoc">1. Cung hoàng đạo ${esc(zName)}</h2>
       <p>${esc(z.d)}</p>
-      <p>Xem tính cách chi tiết, tử vi hôm nay và độ hợp của cung ${esc(zName)} tại <a href="/hoang-dao/">trang Cung Hoàng Đạo</a>.</p>
+      <p>Xem tính cách chi tiết, tử vi hôm nay và độ hợp của cung ${esc(zName)} tại <a href="${cungUrl(zName)}">trang cung ${esc(zName)}</a>.</p>
 
       <h2 class="thansohoc">2. Số ngày sinh ${bnum}${persona ? ` — ${esc(persona)}` : ''}</h2>
       ${bMean || `<p>Số ngày sinh ${bnum} phản ánh năng lực tự nhiên bạn mang theo từ khi sinh ra.</p>`}
@@ -164,7 +173,7 @@ ${faq.map((f) => `          <details class="faq-item">
         <a href="${linkFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Sinh ngày ${prev.d}/${prev.m}</a>
         <a href="${linkFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> Sinh ngày ${next.d}/${next.m}</a>
         <a href="/thansohoc/so-${bnum}" class="related-item"><i class="ti ti-hash"></i> Ý nghĩa số chủ đạo ${bnum}</a>
-        <a href="/hoang-dao/" class="related-item"><i class="ti ti-stars"></i> Cung ${esc(zName)} — hồ sơ đầy đủ</a>
+        <a href="${cungUrl(zName)}" class="related-item"><i class="ti ti-stars"></i> Cung ${esc(zName)} — hồ sơ đầy đủ</a>
         <a href="/sinh-ngay/" class="related-item"><i class="ti ti-calendar"></i> Tra cứu theo ngày sinh khác</a>
       </div>
     </div>
