@@ -1,0 +1,49 @@
+# Tự động nối trang "ngày tốt tháng mới" vào ngày 25 hằng tháng.
+# Chạy trên server GitHub — không cần PC bật. Push xong Vercel tự deploy,
+# đợi deploy rồi bắn IndexNow cho Bing/Cốc Cốc.
+# Chạy tay: tab Actions trên GitHub → "Ngay tot thang moi" → Run workflow.
+name: Ngay tot thang moi
+
+on:
+  schedule:
+    - cron: '0 1 25 * *' # 01:00 UTC ngày 25 = 08:00 sáng giờ VN
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sinh trang thang moi + lastmod
+        run: |
+          node scripts/build-ngaytot-pages.mjs
+          node scripts/update-sitemap-lastmod.mjs
+
+      - name: Commit & push
+        id: push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Không có gì thay đổi — bỏ qua."
+          else
+            git commit -m "chore(ngay-tot): regen trang thang moi (auto ngay 25)"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Doi Vercel deploy roi ban IndexNow
+        if: steps.push.outputs.changed == 'true'
+        run: |
+          sleep 150
+          node scripts/submit-indexnow.mjs
