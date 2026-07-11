@@ -60,6 +60,25 @@ function fileNameFor(num, hex) {
 // 308-redirects to it), so every URL/link/sitemap entry must drop .html.
 const linkFor = (num, hex) => `/kinh-dich/${fileNameFor(num, hex).replace(/\.html$/, '')}`;
 
+// ---- Quẻ liên quan theo cấu trúc ----
+// signKey → số quẻ, để tra quẻ tống (lật 180°) và quẻ giao hoán thượng–hạ.
+const SIGN_TO_NUM = {};
+for (const [n, h] of Object.entries(HEXAGRAMS)) SIGN_TO_NUM[h.sign] = Number(n);
+// Lật ngược 1 quái 180°: Càn/Khôn/Khảm/Ly đối xứng; Chấn↔Cấn, Tốn↔Đoài.
+const FLIP = { '☰': '☰', '☷': '☷', '☵': '☵', '☲': '☲', '☳': '☶', '☶': '☳', '☴': '☱', '☱': '☴' };
+function relatedHexes(num, hex) {
+  const out = [];
+  // Quẻ tống (tống quái): lật cả quẻ 180° — lật từng quái rồi đổi chỗ trên/dưới
+  const tongSign = FLIP[hex.sign[1]] + FLIP[hex.sign[0]];
+  const tongNum = SIGN_TO_NUM[tongSign];
+  if (tongNum && tongNum !== num) out.push({ n: tongNum, h: HEXAGRAMS[tongNum], label: 'Quẻ tống (lật ngược)' });
+  // Quẻ giao hoán: đổi chỗ thượng quái và hạ quái
+  const swapSign = hex.sign[1] + hex.sign[0];
+  const swapNum = SIGN_TO_NUM[swapSign];
+  if (swapNum && swapNum !== num && swapNum !== tongNum) out.push({ n: swapNum, h: HEXAGRAMS[swapNum], label: 'Quẻ giao hoán thượng–hạ' });
+  return out;
+}
+
 function buildPage(num, hex) {
   const url = `https://latbai.vn${linkFor(num, hex)}`;
   const upper = TRIGRAMS[hex.sign[0]];
@@ -200,7 +219,8 @@ ${faq.map((f) => `          <details class="faq-item">
       <h3 class="related-title">Quẻ liền kề &amp; bài viết liên quan</h3>
       <div class="related-list">
         <a href="${linkFor(prevNum, prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Quẻ ${prevNum}: ${esc(prev.vn)}</a>
-        <a href="${linkFor(nextNum, next)}" class="related-item"><i class="ti ti-arrow-right"></i> Quẻ ${nextNum}: ${esc(next.vn)}</a>${deepLink}
+        <a href="${linkFor(nextNum, next)}" class="related-item"><i class="ti ti-arrow-right"></i> Quẻ ${nextNum}: ${esc(next.vn)}</a>
+${relatedHexes(num, hex).map(({ n, h, label }) => `        <a href="${linkFor(n, h)}" class="related-item"><i class="ti ti-yin-yang"></i> ${label}: Quẻ ${n} ${esc(h.vn)}</a>`).join('\n')}${deepLink}
         <a href="/thuvien/64-que-kinh-dich.html" class="related-item"><i class="ti ti-article"></i> 64 Quẻ Kinh Dịch: Ý Nghĩa, Cấu Tạo &amp; Cách Tra Cứu</a>
       </div>
     </div>

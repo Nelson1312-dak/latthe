@@ -28,6 +28,8 @@ const ratingClass = (r) => (r >= 1 ? 'good' : r === 0 ? 'mid' : 'bad');
 const linkFor = (n) => `/sim/so-${n}`;
 const HUB = '/sim/bang-linh-so';
 
+const reduceMaster = (x) => { while (x > 9 && x !== 11 && x !== 22 && x !== 33) x = String(x).split('').reduce((a, d) => a + +d, 0); return x; };
+
 function buildPage(n) {
   const [name, rating, desc] = LINH_SO[n];
   const label = RATING_LABEL[String(rating)];
@@ -135,6 +137,7 @@ ${faq.map((f) => `          <details class="faq-item">
       <div class="related-list">
         <a href="${linkFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Số ${prev} — ${esc(LINH_SO[prev][0])}</a>
         <a href="${linkFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> Số ${next} — ${esc(LINH_SO[next][0])}</a>
+        <a href="/thansohoc/so-${reduceMaster(n)}" class="related-item"><i class="ti ti-hash"></i> Số ${reduceMaster(n)} trong Thần Số Học nói gì về bạn?</a>
         <a href="${HUB}" class="related-item"><i class="ti ti-list-numbers"></i> Bảng đầy đủ 81 Linh Số</a>
       </div>
     </div>

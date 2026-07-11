@@ -169,6 +169,7 @@ ${faq.map((f) => `          <details class="faq-item">
       <div class="related-list">
         <a href="${linkFor(prev)}" class="related-item"><i class="ti ti-arrow-left"></i> Thần Số Học ${esc(prev.label)}</a>
         <a href="${linkFor(next)}" class="related-item"><i class="ti ti-arrow-right"></i> Thần Số Học ${esc(next.label)}</a>
+        <a href="/sim/so-${num.n}" class="related-item"><i class="ti ti-device-mobile"></i> Linh số ${num.n} trong 81 số Kinh Dịch (phong thủy sim)</a>
         <a href="${HUB_LINK}" class="related-item"><i class="ti ti-list-numbers"></i> Tổng Quan 12 Số Chủ Đạo Thần Số Học</a>
       </div>
     </div>
