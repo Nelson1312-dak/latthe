@@ -1,19 +1,34 @@
 {
-  "regions": ["sin1"],
+  "regions": [
+    "sin1"
+  ],
   "cleanUrls": true,
   "crons": [
-    { "path": "/api/push-send", "schedule": "0 0 * * *" }
+    {
+      "path": "/api/push-send",
+      "schedule": "0 0 * * *"
+    }
   ],
   "redirects": [],
   "rewrites": [
     {
       "source": "/sitemap.xml",
-      "has": [{ "type": "host", "value": "gieoque.vn" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
       "destination": "/sitemap-gieoque.xml"
     },
     {
       "source": "/robots.txt",
-      "has": [{ "type": "host", "value": "gieoque.vn" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
       "destination": "/robots-gieoque.txt"
     },
     {
@@ -26,27 +41,92 @@
     },
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "gieoque.vn" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
       "destination": "/gieoque/index.html"
     },
     {
+      "source": "/huong-dan-gieo-que",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/huong-dan-gieo-que.html"
+    },
+    {
+      "source": "/hao-dong-la-gi",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/hao-dong-la-gi.html"
+    },
+    {
+      "source": "/gieo-que-hoi-viec-gi",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/gieo-que-hoi-viec-gi.html"
+    },
+    {
+      "source": "/gieo-que-online-co-linh-khong",
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
+      "destination": "/gieoque/gieo-que-online-co-linh-khong.html"
+    },
+    {
       "source": "/css/gieoque.css",
-      "has": [{ "type": "host", "value": "gieoque.vn" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
       "destination": "/gieoque/css/gieoque.css"
     },
     {
       "source": "/js/app.js",
-      "has": [{ "type": "host", "value": "gieoque.vn" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
       "destination": "/gieoque/js/app.js"
     },
     {
       "source": "/js/hexagrams.js",
-      "has": [{ "type": "host", "value": "gieoque.vn" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
       "destination": "/gieoque/js/hexagrams.js"
     },
     {
       "source": "/js/ai.js",
-      "has": [{ "type": "host", "value": "gieoque.vn" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "gieoque.vn"
+        }
+      ],
       "destination": "/js/ai.js"
     }
   ],
@@ -54,64 +134,118 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Robots-Tag",          "value": "all" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options",        "value": "SAMEORIGIN" },
-        { "key": "X-XSS-Protection",       "value": "1; mode=block" },
-        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy",     "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "all"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+        }
       ]
     },
     {
       "source": "/(.*).(jpg|jpeg|png|webp|gif|avif|ico)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/(.*).(css|js)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/drinking/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/(.*).(svg|woff2|woff|ttf)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/manifest.webmanifest",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400" },
-        { "key": "Content-Type",  "value": "application/manifest+json; charset=utf-8" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json; charset=utf-8"
+        }
       ]
     },
     {
       "source": "/(.*).html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
       ]
     },
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control",          "value": "public, max-age=0, must-revalidate" },
-        { "key": "Service-Worker-Allowed", "value": "/" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
       ]
     }
   ]
