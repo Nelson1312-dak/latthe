@@ -303,6 +303,16 @@ ${links}
         <i class="ti ti-wand"></i> Rút 3 lá Tarot online miễn phí — AI luận giải tiếng Việt
       </a>
 
+      <h2 class="tarot">Tra cứu theo chủ đề</h2>
+      <div class="related-list" style="margin-bottom:18px;">
+        <a href="/la-bai-tarot/chu-de-tinh-yeu" class="related-item"><i class="ti ti-heart"></i> Lá bài Tarot về tình yêu</a>
+        <a href="/la-bai-tarot/chu-de-cong-viec" class="related-item"><i class="ti ti-briefcase"></i> Lá bài Tarot về công việc</a>
+        <a href="/la-bai-tarot/chu-de-tai-chinh" class="related-item"><i class="ti ti-coins"></i> Lá bài Tarot về tiền bạc</a>
+        <a href="/la-bai-tarot/chu-de-suc-khoe" class="related-item"><i class="ti ti-heartbeat"></i> Lá bài về nghỉ ngơi &amp; chữa lành</a>
+        <a href="/la-bai-tarot/la-bai-dang-so-nhat" class="related-item"><i class="ti ti-ghost"></i> Những lá bài "đáng sợ" nhất</a>
+        <a href="/la-bai-tarot/la-bai-tot-nhat" class="related-item"><i class="ti ti-sparkles"></i> Những lá bài tốt nhất</a>
+      </div>
+
 ${sections}
 
       <div class="author-box">
