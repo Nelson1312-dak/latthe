@@ -1,20 +1,22 @@
-// Converts tarot/images/*.jpg → .webp (resized, quality 80).
-// Run: npm run build:tarot
+// Converts assets-src/tarot/*.jpg → tarot/images/*.webp (resized, quality 80).
+// The jpg originals live outside git/deploy (assets-src is gitignored) — only
+// the webp output ships. Run: npm run build:tarot
 import sharp from 'sharp';
 import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
-const DIR = 'tarot/images';
+const SRC_DIR = 'assets-src/tarot';
+const OUT_DIR = 'tarot/images';
 const MAX_WIDTH = 900;
 const QUALITY = 80;
 
-const files = readdirSync(DIR).filter((f) => f.toLowerCase().endsWith('.jpg'));
+const files = readdirSync(SRC_DIR).filter((f) => f.toLowerCase().endsWith('.jpg'));
 let totalIn = 0;
 let totalOut = 0;
 
 for (const file of files) {
-  const inPath = join(DIR, file);
-  const outPath = join(DIR, file.replace(/\.jpg$/i, '.webp'));
+  const inPath = join(SRC_DIR, file);
+  const outPath = join(OUT_DIR, file.replace(/\.jpg$/i, '.webp'));
   await sharp(inPath)
     .resize({ width: MAX_WIDTH, withoutEnlargement: true })
     .webp({ quality: QUALITY, effort: 5 })
