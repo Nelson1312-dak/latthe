@@ -264,9 +264,15 @@
         </div>`;
     }
 
+    const st = window.LatbaiStreak && window.LatbaiStreak.get();
+    const streakBadge = st && st.count >= 1
+      ? `<span class="hub-streak${st.count >= 30 ? ' is-legend' : st.count >= 7 ? ' is-hot' : ''}" title="Kỷ lục của bạn: ${st.best} ngày">
+           <i class="ti ti-flame"></i>${st.count === 1 ? 'Bắt đầu chuỗi!' : `${st.count} ngày liền`}</span>`
+      : '';
+
     dailyEl.innerHTML = `
       <div class="hub-daily-head">
-        <h2 class="hub-daily-title"><i class="ti ti-sun-moon"></i> Vận Hôm Nay</h2>
+        <h2 class="hub-daily-title"><i class="ti ti-sun-moon"></i> Vận Hôm Nay${streakBadge}</h2>
         <span class="hub-daily-date">${WEEKDAYS[now.getDay()]}, ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}${p ? ' · dành riêng cho ' + p.name.split(' ').pop() : ''}</span>
       </div>
       <div class="hub-daily-grid">

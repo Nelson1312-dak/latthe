@@ -75,6 +75,46 @@
     }
   }
 
+  // ---- Daily visit streak (device-level, localStorage) ----
+  // Recorded here because shell.js is the one script every page loads — visiting
+  // any module keeps the streak alive. Rendered only by the homepage hub.
+  const streak = (() => {
+    const KEY = 'latbai_streak';
+    const dayKey = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // Parse YYYY-MM-DD into LOCAL midnight — new Date(string) would parse as UTC
+    // and be a day off around midnight in non-UTC timezones.
+    const toLocalDate = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+    const diffDays = (a, b) => Math.round((toLocalDate(a) - toLocalDate(b)) / 864e5);
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; }
+    }
+    function checkIn() {
+      try {
+        const today = dayKey(new Date());
+        const s = load() || { count: 0, last: '', best: 0, graceAt: '' };
+        if (s.last === today) return s; // already checked in today (multi-tab safe)
+        const gap = s.last ? diffDays(today, s.last) : Infinity;
+        if (gap === 1) {
+          s.count += 1;
+        } else if (gap === 2 && (!s.graceAt || diffDays(today, s.graceAt) > 7)) {
+          // One missed day is forgiven, at most once per 7 days.
+          s.count += 1;
+          s.graceAt = today;
+        } else {
+          s.count = 1;
+        }
+        s.last = today;
+        if (s.count > s.best) s.best = s.count;
+        localStorage.setItem(KEY, JSON.stringify(s));
+        return s;
+      } catch { return null; } // localStorage blocked → silently no streak
+    }
+    return { checkIn, get: load };
+  })();
+  window.LatbaiStreak = streak;
+  streak.checkIn();
+
   bootAnalytics();
   registerSW();
   if (document.readyState === 'loading') {

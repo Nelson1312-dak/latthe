@@ -971,6 +971,28 @@ a { text-decoration: none; color: inherit; }
 .hub-daily-title i { color: var(--c-tuvi); }
 .hub-daily-date { font-size: 11.5px; color: var(--muted); font-weight: 600; }
 
+/* Chuỗi ngày liên tiếp (streak) — pill nhỏ cạnh tiêu đề Vận Hôm Nay */
+.hub-streak {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 8px; padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.3px; text-transform: none;
+  color: var(--sub);
+  vertical-align: middle;
+}
+.hub-streak i { color: var(--c-tuvi); font-size: 13px; }
+.hub-streak.is-hot {
+  background: linear-gradient(150deg, #f5ab2e, #d97706);
+  border-color: transparent; color: #fff;
+}
+.hub-streak.is-hot i { color: #fff; }
+.hub-streak.is-legend {
+  background: var(--c-tarot); border-color: transparent; color: #fff;
+}
+.hub-streak.is-legend i { color: #ffd166; }
+
 .hub-daily-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 
 .hub-daily-card {
