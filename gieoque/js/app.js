@@ -187,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const primary   = getHexagramFromLines(lines);
     const hasMoving = hasMovingLines(lines);
     const changed   = hasMoving ? getChangedHexagram(lines) : null;
+    lastCast = { primary, hasMoving, changed, lines: [...lines] };
 
     document.getElementById('hex-primary-symbol').textContent  = primary.symbol || '䷀';
     document.getElementById('hex-primary-name').textContent    = `${primary.vn} (${primary.name})`;
@@ -418,6 +419,106 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnNewCast.addEventListener('click', resetAll);
   btnRestart.addEventListener('click', resetAll);
+
+  // ==================== SHARE CARD (canvas 1080×1350, scaffold dùng chung) ====================
+  let lastCast = null;
+
+  // Vẽ quẻ bằng 6 thanh thủ công thay vì glyph unicode ䷀ — glyph này thiếu
+  // font trên nhiều máy (hiện ô vuông). values: 6 hào bottom→top (6/7/8/9).
+  function drawHexagram(ctx, values, cx, topY, barW, barH, gapY, markMoving) {
+    const segGap = Math.round(barW * 0.18);
+    for (let i = 0; i < 6; i++) {
+      const v = values[i];
+      const info = LINE_INFO[v];
+      const y = topY + (5 - i) * (barH + gapY); // hào 1 dưới cùng
+      const moving = markMoving && info.moving;
+      ctx.fillStyle = moving ? '#d98a0a' : '#20322b';
+      if (info.yang) {
+        window.LatbaiShareCard.roundRect(ctx, cx - barW / 2, y, barW, barH, barH / 2);
+        ctx.fill();
+      } else {
+        const segW = (barW - segGap) / 2;
+        window.LatbaiShareCard.roundRect(ctx, cx - barW / 2, y, segW, barH, barH / 2);
+        ctx.fill();
+        window.LatbaiShareCard.roundRect(ctx, cx + segGap / 2, y, segW, barH, barH / 2);
+        ctx.fill();
+      }
+      if (moving) {
+        ctx.beginPath();
+        ctx.arc(cx + barW / 2 + 26, y + barH / 2, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  async function shareCastCard(wantShare) {
+    const SC = window.LatbaiShareCard;
+    if (!SC || !lastCast) return;
+    const { primary, hasMoving, changed, lines: castLines } = lastCast;
+
+    const W = 1080, H = 1350;
+    const { cv, ctx } = await SC.setup(W, H);
+    SC.paintBase(ctx, W, H, '13,150,104');
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#a7887a';
+    ctx.font = SC.F(30, 800);
+    ctx.fillText('GIEO QUẺ KINH DỊCH · LATBAI.VN', W / 2, 118);
+
+    ctx.fillStyle = '#20322b';
+    ctx.font = SC.F(44, 800);
+    const q = gqQuestion.value.trim();
+    SC.wrapText(ctx, q ? `“${q}”` : 'Quẻ dẫn đường hôm nay', W / 2, 210, W - 200, 58, 2);
+
+    // Quẻ chính (— quẻ biến nếu có hào động)
+    const barW = 300, barH = 24, gapY = 18;
+    const hexH = 6 * barH + 5 * gapY; // 234
+    const topY = 400;
+    const single = !(hasMoving && changed);
+    const cxPrimary = single ? W / 2 : W / 2 - 260;
+
+    drawHexagram(ctx, castLines, cxPrimary, topY, barW, barH, gapY, true);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#0d9668';
+    ctx.font = SC.F(38, 900);
+    ctx.fillText(primary.vn, cxPrimary, topY + hexH + 66);
+    ctx.fillStyle = '#a7887a';
+    ctx.font = SC.F(28, 700);
+    ctx.fillText(`${primary.sign}  ·  ${primary.name}`, cxPrimary, topY + hexH + 110);
+
+    if (!single) {
+      ctx.fillStyle = '#d98a0a';
+      ctx.font = SC.F(64, 800);
+      ctx.fillText('→', W / 2, topY + hexH / 2 + 20);
+
+      const cxChanged = W / 2 + 260;
+      const stillLines = castLines.map(v => (v === 6 ? 7 : v === 9 ? 8 : v));
+      drawHexagram(ctx, stillLines, cxChanged, topY, barW, barH, gapY, false);
+      ctx.fillStyle = '#0d9668';
+      ctx.font = SC.F(38, 900);
+      ctx.fillText(changed.vn, cxChanged, topY + hexH + 66);
+      ctx.fillStyle = '#a7887a';
+      ctx.font = SC.F(28, 700);
+      ctx.fillText(`${changed.sign}  ·  ${changed.name}`, cxChanged, topY + hexH + 110);
+    }
+
+    // Lời quẻ
+    ctx.fillStyle = '#4a5d54';
+    ctx.font = SC.F(30, 600);
+    SC.wrapText(ctx, primary.meaning, W / 2, 960, W - 240, 44, 3);
+
+    SC.footer(ctx, W, H, 'Gieo quẻ Kinh Dịch miễn phí tại  latbai.vn/gieoque');
+
+    await SC.shareOrDownload(cv, {
+      fileName: `gieoque-${Date.now()}.png`,
+      title: 'Gieo Quẻ Kinh Dịch',
+      text: `Quẻ ${primary.vn} vừa ứng với tôi ☯ — gieo thử tại latbai.vn/gieoque`,
+      wantShare,
+    });
+  }
+
+  document.getElementById('btn-share-cast').addEventListener('click', () => shareCastCard(true));
+  document.getElementById('btn-download-cast').addEventListener('click', () => shareCastCard(false));
 
   // ---- BLOCK 2 Guide Popup Toggle ----
   const btnOpenGuide = document.getElementById('btn-open-guide');

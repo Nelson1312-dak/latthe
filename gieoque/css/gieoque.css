@@ -267,6 +267,34 @@ a { text-decoration: none; color: inherit; }
 }
 .btn-gq-primary:active { transform: scale(0.98); }
 
+/* ---- Share card actions ---- */
+.gq-share-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 32px auto 0;
+}
+.gq-share-actions .btn-gq-secondary { margin: 0; min-width: 0; }
+.gq-share-actions + #btn-new-cast { margin-top: 12px; }
+.btn-share-main {
+  padding: 14px 28px;
+  min-width: 220px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #14b884, #0d9668);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-share-main:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(13, 150, 104, 0.3);
+}
+
 .btn-gq-secondary {
   display: block;
   width: auto;

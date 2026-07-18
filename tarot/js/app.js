@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     readingDetail.classList.add('hidden');
     aiSection.classList.add('hidden');
     btnNewReading.classList.add('hidden');
+    document.getElementById('t-share-actions').classList.add('hidden');
 
     drawnCards.forEach(({ card, reversed, revealed }, index) => {
       const wrapper = document.createElement('div');
@@ -211,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
           showAISection();
           btnNewReading.classList.remove('hidden');
+          document.getElementById('t-share-actions').classList.remove('hidden');
         }, 800); // Delay AI section slightly to let flip animation finish
       }
     }
@@ -384,6 +386,107 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnNewReading.addEventListener('click', goNewReading);
   btnRestart.addEventListener('click', goNewReading);
+
+  // ==================== SHARE CARD (canvas 1080×1350, scaffold dùng chung) ====================
+  async function shareReadingCard(wantShare) {
+    const SC = window.LatbaiShareCard;
+    if (!SC || !drawnCards.length) return;
+    const spread = TAROT_SPREADS[selectedSpread];
+
+    const W = 1080, H = 1350;
+    const { cv, ctx } = await SC.setup(W, H);
+    SC.paintBase(ctx, W, H, '124,58,237');
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#a7887a';
+    ctx.font = SC.F(30, 800);
+    ctx.fillText('TRẢI BÀI TAROT · LATBAI.VN', W / 2, 118);
+
+    // Câu hỏi (tối đa 2 dòng) hoặc tên spread nếu không nhập câu hỏi
+    ctx.fillStyle = '#2b1d3a';
+    ctx.font = SC.F(44, 800);
+    const q = tarotQuestion.value.trim();
+    SC.wrapText(ctx, q ? `“${q}”` : spread.name, W / 2, 210, W - 200, 58, 2);
+
+    // Các lá bài — spread 1/3/5 lá nên kích thước phải co theo số lá
+    // (5×270 + gap = 1530 sẽ tràn canvas 1080). Ảnh gốc 900×1510, giữ tỷ lệ.
+    // Lá ngược xoay 180° (đúng nghĩa bài ngược, không chỉ ghi chữ).
+    const n = drawnCards.length;
+    const gap = n > 3 ? 24 : 45;
+    const cardW = n === 1 ? 340 : n === 3 ? 270 : Math.floor((W - 180 - (n - 1) * gap) / n);
+    const cardH = Math.round(cardW * 1510 / 900);
+    const startX = (W - (n * cardW + (n - 1) * gap)) / 2;
+    const topY = 400;
+
+    const imgs = await Promise.all(
+      drawnCards.map(({ card }) =>
+        SC.loadImage(`images/${card.id}.webp`).catch(() => null))
+    );
+
+    drawnCards.forEach(({ card, reversed }, i) => {
+      const x = startX + i * (cardW + gap);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#7c3aed';
+      ctx.font = SC.F(cardW >= 200 ? 26 : 20, 800);
+      ctx.fillText(spread.positions[i].toUpperCase(), x + cardW / 2, topY - 24);
+
+      ctx.save();
+      SC.roundRect(ctx, x, topY, cardW, cardH, 18);
+      ctx.clip();
+      const img = imgs[i];
+      if (img) {
+        if (reversed) {
+          ctx.translate(x + cardW / 2, topY + cardH / 2);
+          ctx.rotate(Math.PI);
+          ctx.drawImage(img, -cardW / 2, -cardH / 2, cardW, cardH);
+        } else {
+          ctx.drawImage(img, x, topY, cardW, cardH);
+        }
+      } else {
+        // Ảnh lỗi → ô tím nhạt + số La Mã, card vẫn dùng được
+        ctx.fillStyle = 'rgba(124,58,237,0.12)';
+        ctx.fillRect(x, topY, cardW, cardH);
+        ctx.fillStyle = '#7c3aed';
+        ctx.font = SC.F(64, 900);
+        ctx.fillText(card.number, x + cardW / 2, topY + cardH / 2 + 20);
+      }
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(124,58,237,0.45)';
+      ctx.lineWidth = 3;
+      SC.roundRect(ctx, x, topY, cardW, cardH, 18);
+      ctx.stroke();
+
+      ctx.fillStyle = '#2b1d3a';
+      ctx.font = SC.F(cardW >= 200 ? 30 : 22, 800);
+      const yAfterName = SC.wrapText(ctx, card.vn, x + cardW / 2, topY + cardH + 46, cardW + 20, cardW >= 200 ? 36 : 28, 2);
+      ctx.fillStyle = reversed ? '#d98a0a' : '#a7887a';
+      ctx.font = SC.F(cardW >= 200 ? 24 : 19, 700);
+      ctx.fillText(reversed ? '(Ngược)' : '(Xuôi)', x + cardW / 2, yAfterName + 8);
+    });
+
+    // Keywords lá giữa (Hiện Tại) / lá duy nhất — chốt cảm xúc cho card.
+    // Card 1 lá cao hơn → dòng keywords bị đẩy xuống thấp, chỉ vẽ 1 dòng
+    // để không chạm footer (y=H-92).
+    const focus = drawnCards[Math.floor((n - 1) / 2)].card;
+    const kwY = topY + cardH + 190;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#6b4f85';
+    ctx.font = SC.F(30, 600);
+    SC.wrapText(ctx, '✦ ' + focus.keywords.join(' · ') + ' ✦', W / 2, kwY, W - 240, 42, kwY > 1100 ? 1 : 2);
+
+    SC.footer(ctx, W, H, 'Rải bài Tarot miễn phí tại  latbai.vn/tarot');
+
+    await SC.shareOrDownload(cv, {
+      fileName: `tarot-${Date.now()}.png`,
+      title: 'Trải Bài Tarot',
+      text: 'Trải bài Tarot của tôi 🔮 — thử ngay tại latbai.vn/tarot',
+      wantShare,
+    });
+  }
+
+  document.getElementById('btn-share-reading').addEventListener('click', () => shareReadingCard(true));
+  document.getElementById('btn-download-reading').addEventListener('click', () => shareReadingCard(false));
 
   // ---- BLOCK 2 Guide Popup Toggle ----
   const btnOpenGuide = document.getElementById('btn-open-guide');
