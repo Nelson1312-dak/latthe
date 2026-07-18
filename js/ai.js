@@ -40,10 +40,74 @@ async function askAI({ question, context, type, history = [], onToken, onDone, o
   try {
     const res = await fetch(AI_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // Accept opts in to server-side streaming; the server only streams when the
+      // local model actually generates — cache hits, fallback and errors stay JSON,
+      // so both branches below must exist.
+      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream, application/json' },
       body: JSON.stringify({ question, context, type, history }),
       signal: controller.signal,
     });
+
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (res.ok && ct.includes('text/event-stream')) {
+      // ---- Real streaming (SSE). The 70s abort timer stays live for the whole
+      // read; an abort makes reader.read() throw AbortError → outer catch. ----
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      let built = '';
+      let pending = '';
+      let flushTimer = null;
+      // Micro-batch tokens (~80ms) so chat.js re-renders ~12x/s instead of per token.
+      const flush = () => {
+        flushTimer = null;
+        if (!pending) return;
+        const p = pending;
+        pending = '';
+        built += p;
+        onToken(p);
+      };
+      const finish = () => {
+        clearTimeout(timer);
+        if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+      };
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let sep;
+        while ((sep = buf.indexOf('\n\n')) !== -1) {
+          const rawEvent = buf.slice(0, sep);
+          buf = buf.slice(sep + 2);
+          for (const line of rawEvent.split(/\r?\n/)) {
+            if (!line.startsWith('data:')) continue;
+            let evt;
+            try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+            if (evt.token) {
+              pending += evt.token;
+              if (!flushTimer) flushTimer = setTimeout(flush, 80);
+            } else if (evt.error) {
+              finish();
+              onError({ code: 'stream', message: evt.error, retryable: evt.retryable !== false });
+              return;
+            } else if (evt.done) {
+              finish();
+              flush();
+              // The server's answer is canonical (fully post-processed) — it heals
+              // any artifacts the raw token stream displayed.
+              onDone((evt.answer || built).trim());
+              return;
+            }
+          }
+        }
+      }
+      // Stream closed without a done/error event
+      finish();
+      onError({ code: 'stream', message: 'Kết nối bị gián đoạn. Vui lòng thử lại.', retryable: true });
+      return;
+    }
+
+    // ---- Legacy JSON path: cache hits, DeepSeek fallback, old server, errors ----
     clearTimeout(timer);
 
     let data;

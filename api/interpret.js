@@ -8,7 +8,7 @@
 
 import { applyCors } from './_cors.js';
 import { getClientIp, checkRateLimit, checkDailyBudget } from './_rateLimit.js';
-import { isInfraDown, callCloudLLM, cleanChineseLeaks } from './_llm.js';
+import { callCloudLLM, cleanChineseLeaks, streamOllama, createThinkHoldback, stripCJKChars } from './_llm.js';
 import { getEmbedding, retrieveSimilar, retrieveKnowledge, storeDoc, checkExactMatchCache } from './_rag.js';
 import { SYSTEM_PROMPTS, buildFirstUserContent } from './_prompts.js';
 
@@ -21,6 +21,9 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // ---- Main handler ----
+
+// Enables progressive res.write() flushing on legacy (non-Fluid) compute; no-op on Fluid.
+export const config = { supportsResponseStreaming: true };
 
 export default async function handler(req, res) {
   if (!applyCors(req, res)) return;
@@ -56,6 +59,12 @@ export default async function handler(req, res) {
 
   let { question, context, type, history = [] } = req.body || {};
   if (!question?.trim()) return res.status(400).json({ error: 'Thiếu câu hỏi' });
+
+  // Lazy SSE commit: the client opts in via Accept, but we only switch to SSE when
+  // the first Ollama token actually arrives. Until then every path (cache hits,
+  // rate limit, DeepSeek fallback, errors) responds with plain JSON exactly as
+  // before — old cached clients never send this header and are untouched.
+  const wantsSSE = /text\/event-stream/i.test(req.headers.accept || '');
 
   // Validate & clamp inputs: stop oversized prompts and cache/DB pollution from
   // arbitrary `type` values. Caps sit far above any legitimate client payload
@@ -177,39 +186,64 @@ export default async function handler(req, res) {
   let source = 'ollama';
   let ollamaErr = breaker.localDown ? 'local backend down (circuit breaker)' : null;
 
+  // SSE opens lazily on the first emitted token. Node merges headers set earlier
+  // via setHeader (CORS, X-RateLimit-Backend) into this writeHead.
+  let sseOpen = false;
+  const emit = (tok) => {
+    if (!tok || !wantsSSE) return;
+    if (!sseOpen) {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'X-AI-Source': 'ollama',
+      });
+      res.flushHeaders?.();
+      sseOpen = true;
+    }
+    res.write(`data: ${JSON.stringify({ token: tok })}\n\n`);
+  };
+
   // Skip the chat attempt outright if an earlier local call already proved the box
   // is unreachable — no point waiting out another 20s timeout.
   if (ollamaUrl && !breaker.localDown) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), ollamaTimeoutMs);
+    // Abort the Ollama generation if the client disconnects mid-stream, freeing the
+    // slot. Must watch res (not req: its 'close' fires once the body is consumed),
+    // and only treat it as a disconnect when we never finished writing.
+    const clientGone = new AbortController();
+    res.on('close', () => { if (sseOpen && !res.writableEnded) clientGone.abort(); });
 
-      const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
-        body: JSON.stringify({
-          model,
-          messages: ollamaMessages,
-          stream: false,
-          think: false,
-          options: { temperature, num_predict: maxTokens },
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (!ollamaRes.ok) {
-        ollamaErr = `Ollama ${ollamaRes.status}`;
-      } else {
-        const data = await ollamaRes.json();
-        answer = data.message?.content || data.response || '';
+    const holdback = createThinkHoldback();
+    const r = await streamOllama({
+      ollamaUrl,
+      model,
+      messages: ollamaMessages,
+      temperature,
+      maxTokens,
+      firstTokenTimeoutMs: ollamaTimeoutMs,
+      stallTimeoutMs: parseInt(process.env.OLLAMA_STALL_MS || '', 10) || 15000,
+      onToken: (raw) => emit(stripCJKChars(holdback(raw))),
+      signal: clientGone.signal,
+    });
+    if (r.ok) {
+      answer = r.content;
+    } else {
+      ollamaErr = r.error;
+      if (r.infraDown) breaker.localDown = true;
+      if (sseOpen) {
+        // Tokens were already shown — headers are sent, so no JSON fallback is
+        // possible and a mid-stream DeepSeek swap would jarringly replace visible
+        // text. Tell the client to offer a retry instead.
+        console.error(`[interpret] Ollama died mid-stream: ${r.error}`);
+        res.write(`data: ${JSON.stringify({ error: 'AI bị gián đoạn giữa chừng. Vui lòng thử lại.', retryable: true })}\n\n`);
+        return res.end();
       }
-    } catch (err) {
-      ollamaErr = err.name === 'AbortError' ? `Ollama timeout (>${Math.round(ollamaTimeoutMs / 1000)}s)` : err.message;
-      if (isInfraDown(err)) breaker.localDown = true;
     }
   }
 
+  // Invariant: reaching here with !answer implies sseOpen === false (a mid-stream
+  // death already returned above), so plain res.status(...).json(...) stays legal.
   if (!answer && dsKey) {
     // Cap tổng lượt fallback cloud/ngày — Ollama chết cả ngày cũng không đốt hết quota.
     const budget = await checkDailyBudget('cloudllm');
@@ -253,6 +287,17 @@ export default async function handler(req, res) {
   // Stored as source='qa' (DB default). Fire-and-forget. ----
   if (cacheEligible && embedding && !breaker.localDown) {
     storeDoc(sbUrl, sbKey, { type, question, context, answer, embedding, is_followup: isFollowUp }, breaker);
+  }
+
+  if (sseOpen) {
+    // Client re-renders the bubble from this canonical post-processed answer,
+    // healing any artifacts (CJK lines, duplicate sections) shown mid-stream.
+    if (!answer) {
+      res.write(`data: ${JSON.stringify({ error: 'AI trả về nội dung rỗng. Vui lòng thử lại.', retryable: true })}\n\n`);
+      return res.end();
+    }
+    res.write(`data: ${JSON.stringify({ done: true, answer, source })}\n\n`);
+    return res.end();
   }
 
   res.setHeader('X-AI-Source', source);
