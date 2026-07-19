@@ -127,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const castControls = document.getElementById('cast-controls');
   const btnCastLine  = document.getElementById('btn-cast-line');
   const castHint     = document.getElementById('cast-hint');
-  const btnAutoRest  = document.getElementById('btn-auto-rest');
   const throwStatusBox = document.querySelector('.throw-status');
 
   let throwMode  = 'auto';   // 'auto' | 'manual'
@@ -153,14 +152,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function attachShake()  { lastMag = null; window.addEventListener('devicemotion', onMotion); }
   function detachShake()  { window.removeEventListener('devicemotion', onMotion); }
 
+  // Chờ MỘT cú lắc/chạm duy nhất — sau đó 6 hào tự gieo liên tục.
+  // (Bản đầu bắt lắc 6 lần/6 hào — user feedback: mỏi tay.)
   function waitForCast(step) {
     pendingStep = step;
     throwState  = 'waiting';
     throwLineNum.textContent = step + 1;
     if (throwStatusText) {
       throwStatusText.textContent = castHint.classList.contains('no-shake')
-        ? `Chạm nút để tung hào ${step + 1}/6`
-        : `📳 Lắc điện thoại để tung hào ${step + 1}/6`;
+        ? 'Chạm nút để gieo quẻ'
+        : '📳 Lắc điện thoại để gieo quẻ';
     }
     if (throwStatusBox) throwStatusBox.classList.add('waiting');
     castControls.classList.remove('hidden');
@@ -169,6 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function castNow() {
     if (throwState !== 'waiting') return;
     throwState = 'casting';
+    throwMode  = 'auto'; // từ cú kích hoạt trở đi: gieo tự động cả 6 hào
+    detachShake();
     castControls.classList.add('hidden');
     if (throwStatusBox) throwStatusBox.classList.remove('waiting');
     castLine(pendingStep);
@@ -208,9 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (step + 1 >= 6) {
         castLine(step + 1); // kết thúc → showResult sau 700ms
-      } else if (throwMode === 'manual') {
-        const t2 = setTimeout(() => waitForCast(step + 1), 700); // kịp đọc hào vừa rơi
-        throwTimeouts.push(t2);
       } else {
         const t2 = setTimeout(() => castLine(step + 1), 900); // 900ms to read before next throw
         throwTimeouts.push(t2);
@@ -267,12 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnCastLine.addEventListener('click', castNow);
-  btnAutoRest.addEventListener('click', () => {
-    if (throwState !== 'waiting') return;
-    detachShake();
-    throwMode = 'auto';
-    castNow();
-  });
 
   // ---- Show result ----
   function showResult() {
