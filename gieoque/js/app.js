@@ -123,52 +123,123 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---- Auto-throw all 6 lines ----
-  function autoThrow() {
+  // ---- Gieo 6 hào: auto (desktop, như cũ) hoặc manual (mobile: lắc/chạm từng hào) ----
+  const castControls = document.getElementById('cast-controls');
+  const btnCastLine  = document.getElementById('btn-cast-line');
+  const castHint     = document.getElementById('cast-hint');
+  const btnAutoRest  = document.getElementById('btn-auto-rest');
+  const throwStatusBox = document.querySelector('.throw-status');
+
+  let throwMode  = 'auto';   // 'auto' | 'manual'
+  let throwState = 'idle';   // 'idle' | 'waiting' | 'casting'
+  let pendingStep = 0;
+  let lastShakeAt = 0;
+  let lastMag = null;
+
+  // Lắc = biến thiên độ lớn gia tốc (kể cả trọng trường) giữa 2 sample đủ lớn.
+  // Chỉ nhận khi đang chờ tung (không nhận lúc xu quay) + tối thiểu 1.2s/lần.
+  function onMotion(e) {
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+    const mag = Math.hypot(a.x || 0, a.y || 0, a.z || 0);
+    if (lastMag !== null && Math.abs(mag - lastMag) > 14
+        && throwState === 'waiting' && Date.now() - lastShakeAt > 1200) {
+      lastShakeAt = Date.now();
+      castNow();
+    }
+    lastMag = mag;
+  }
+
+  function attachShake()  { lastMag = null; window.addEventListener('devicemotion', onMotion); }
+  function detachShake()  { window.removeEventListener('devicemotion', onMotion); }
+
+  function waitForCast(step) {
+    pendingStep = step;
+    throwState  = 'waiting';
+    throwLineNum.textContent = step + 1;
+    if (throwStatusText) {
+      throwStatusText.textContent = castHint.classList.contains('no-shake')
+        ? `Chạm nút để tung hào ${step + 1}/6`
+        : `📳 Lắc điện thoại để tung hào ${step + 1}/6`;
+    }
+    if (throwStatusBox) throwStatusBox.classList.add('waiting');
+    castControls.classList.remove('hidden');
+  }
+
+  function castNow() {
+    if (throwState !== 'waiting') return;
+    throwState = 'casting';
+    castControls.classList.add('hidden');
+    if (throwStatusBox) throwStatusBox.classList.remove('waiting');
+    castLine(pendingStep);
+  }
+
+  function castLine(step) {
+    if (step >= 6) {
+      detachShake();
+      throwState = 'idle';
+      const t = setTimeout(showResult, 700);
+      throwTimeouts.push(t);
+      return;
+    }
+
+    throwLineNum.textContent = step + 1;
+    if (throwStatusText) throwStatusText.textContent = `Đang gieo hào ${step + 1}/6...`;
+
+    const coinValues = [
+      Math.random() < 0.5 ? 3 : 2,
+      Math.random() < 0.5 ? 3 : 2,
+      Math.random() < 0.5 ? 3 : 2,
+    ];
+    const sum  = coinValues.reduce((a, b) => a + b, 0);
+    const info = LINE_INFO[sum];
+
+    animateCoins(coinValues);
+
+    const t = setTimeout(() => {
+      lineSymbolEl.textContent = sum === 9 ? '🔴' : sum === 6 ? '🔵' : '⬜';
+      lineTextEl.textContent   = info.label + (info.moving ? ' ✦' : '');
+      lineResultEl.classList.remove('hidden', 'pop');
+      void lineResultEl.offsetWidth; // retrigger animation cho từng hào
+      lineResultEl.classList.add('pop');
+      lines.push(sum);
+      addPreviewLine(sum);
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]); // haptic khi xu rơi (Android)
+
+      if (step + 1 >= 6) {
+        castLine(step + 1); // kết thúc → showResult sau 700ms
+      } else if (throwMode === 'manual') {
+        const t2 = setTimeout(() => waitForCast(step + 1), 700); // kịp đọc hào vừa rơi
+        throwTimeouts.push(t2);
+      } else {
+        const t2 = setTimeout(() => castLine(step + 1), 900); // 900ms to read before next throw
+        throwTimeouts.push(t2);
+      }
+    }, 850); // 850ms to allow all staggered coin spins to resolve
+    throwTimeouts.push(t);
+  }
+
+  function startThrow(mode, motionOK) {
+    throwMode = mode;
     lines = [];
     hexPreview.innerHTML = '';
     lineResultEl.classList.add('hidden');
     coinSlots.forEach(s => { s.className = 'coin-slot'; s.textContent = ''; });
+    castControls.classList.add('hidden');
+    if (throwStatusBox) throwStatusBox.classList.remove('waiting');
+    detachShake();
 
-    function throwOne(step) {
-      if (step >= 6) {
-        const t = setTimeout(showResult, 700);
-        throwTimeouts.push(t);
-        return;
-      }
-
-      throwLineNum.textContent = step + 1;
-      if (throwStatusText) throwStatusText.textContent = `Đang gieo hào ${step + 1}/6...`;
-
-      const coinValues = [
-        Math.random() < 0.5 ? 3 : 2,
-        Math.random() < 0.5 ? 3 : 2,
-        Math.random() < 0.5 ? 3 : 2,
-      ];
-      const sum  = coinValues.reduce((a, b) => a + b, 0);
-      const info = LINE_INFO[sum];
-
-      animateCoins(coinValues);
-
-      const t = setTimeout(() => {
-        lineSymbolEl.textContent = sum === 9 ? '🔴' : sum === 6 ? '🔵' : '⬜';
-        lineTextEl.textContent   = info.label + (info.moving ? ' ✦' : '');
-        lineResultEl.classList.remove('hidden', 'pop');
-        void lineResultEl.offsetWidth; // retrigger animation cho từng hào
-        lineResultEl.classList.add('pop');
-        lines.push(sum);
-        addPreviewLine(sum);
-
-        const t2 = setTimeout(() => throwOne(step + 1), 900); // 900ms to read before next throw
-        throwTimeouts.push(t2);
-      }, 850); // 850ms to allow all staggered coin spins to resolve
-      throwTimeouts.push(t);
+    if (mode === 'manual') {
+      castHint.classList.toggle('no-shake', !motionOK);
+      if (motionOK) attachShake();
+      waitForCast(0);
+    } else {
+      throwState = 'casting';
+      castLine(0);
     }
-
-    throwOne(0);
   }
 
-  btnStartThrow.addEventListener('click', () => {
+  btnStartThrow.addEventListener('click', async () => {
     const questionVal = gqQuestion.value.trim();
     if (!questionVal) {
       alert('Vui lòng nhập câu hỏi của bạn trước khi gieo quẻ! ☯');
@@ -177,9 +248,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     throwTimeouts.forEach(clearTimeout);
     throwTimeouts = [];
+
+    // Mobile: gieo từng hào bằng lắc/chạm. iOS 13+ phải xin quyền cảm biến
+    // NGAY TRONG user gesture này; denied → vẫn manual nhưng chỉ chạm nút.
+    let motionOK = false;
+    const isTouch = 'ontouchstart' in window;
+    if (isTouch && typeof DeviceMotionEvent !== 'undefined') {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        try { motionOK = (await DeviceMotionEvent.requestPermission()) === 'granted'; } catch (_) {}
+      } else {
+        motionOK = true; // Android/trình duyệt không cần xin quyền
+      }
+    }
+
     showScreen('throw');
     btnRestart.classList.remove('hidden');
-    autoThrow();
+    startThrow(isTouch ? 'manual' : 'auto', motionOK);
+  });
+
+  btnCastLine.addEventListener('click', castNow);
+  btnAutoRest.addEventListener('click', () => {
+    if (throwState !== 'waiting') return;
+    detachShake();
+    throwMode = 'auto';
+    castNow();
   });
 
   // ---- Show result ----
@@ -393,6 +485,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetAll() {
     throwTimeouts.forEach(clearTimeout);
     throwTimeouts = [];
+    detachShake();
+    throwState = 'idle';
+    castControls.classList.add('hidden');
+    if (throwStatusBox) throwStatusBox.classList.remove('waiting');
     lines = [];
     currentContext = '';
     chatHistory = [];
