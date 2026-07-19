@@ -57,7 +57,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'AI chưa được cấu hình (thiếu OLLAMA_BASE_URL hoặc DEEPSEEK_API_KEY)' });
   }
 
-  let { question, context, type, history = [] } = req.body || {};
+  let { question, context, type, history = [], memory = '' } = req.body || {};
   if (!question?.trim()) return res.status(400).json({ error: 'Thiếu câu hỏi' });
 
   // Lazy SSE commit: the client opts in via Accept, but we only switch to SSE when
@@ -78,6 +78,11 @@ export default async function handler(req, res) {
 
   const isFollowUp = history.length > 0;
 
+  // "Ký ức" các lần xem trước của user (client gửi từ localStorage, chỉ câu đầu).
+  // Không lưu server-side; chỉ dùng để cá nhân hóa prompt của request này.
+  if (typeof memory !== 'string' || isFollowUp) memory = '';
+  if (memory.length > 1500) memory = memory.slice(0, 1500);
+
   // Circuit breaker: the DB (PostgREST) and Ollama share one ngrok tunnel, so when
   // the local box is down they ALL fail. The first local call that hits a network
   // error / timeout flips this flag; every later local call then short-circuits
@@ -87,7 +92,9 @@ export default async function handler(req, res) {
 
   // Tử Vi charts are unique per person, so the Q&A cache (exact/semantic) and
   // storeDoc almost never hit for tuvi — keep those gated to non-tuvi.
-  const cacheEligible = type !== 'tuvi' && !isFollowUp;
+  // Có memory cũng loại: câu trả lời nhắc ký ức cá nhân ("Lần trước bạn hỏi...")
+  // mà vào cache/RAG chung thì user khác sẽ nhận nhầm ký ức không phải của họ.
+  const cacheEligible = type !== 'tuvi' && !isFollowUp && !memory;
   // We still need an embedding for KNOWLEDGE grounding (Thư Viện), which IS useful
   // for tuvi (the question matches theory regardless of the unique chart). So compute
   // it for every first-question; follow-ups reuse prior context and skip it.
@@ -148,7 +155,7 @@ export default async function handler(req, res) {
   if (!isFollowUp) {
     ollamaMessages.push({
       role: 'user',
-      content: buildFirstUserContent(question, context, type, fullContext, false),
+      content: buildFirstUserContent(question, context, type, fullContext, false, memory),
     });
   } else {
     // For follow-ups: strip previous AI answers to prevent small-model pattern-copying.

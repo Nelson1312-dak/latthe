@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRestart      = document.getElementById('btn-restart');
 
   let chatHistory = []; // [{role:'user'|'assistant', content:'...'}]
+  let currentMemory = '';
 
   const aiSection      = document.getElementById('ai-section');
   const aiQuestionDisp = document.getElementById('ai-question-display');
@@ -274,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
       context: buildTarotContext(),
       type: 'tarot',
       history: chatHistory,
+      memory: chatHistory.length === 0 ? currentMemory : '',
       onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: answer });
@@ -320,6 +322,9 @@ document.addEventListener('DOMContentLoaded', () => {
     aiQuestionDisp.textContent = `"${q}"`;
     aiChatMessages.innerHTML = '';
     aiError.classList.add('hidden');
+
+    // Ký ức các lần xem TRƯỚC — build trước khi save, không thì lượt này lẫn vào
+    currentMemory = (window.History && window.History.buildMemory) ? window.History.buildMemory() : '';
 
     if (window.History) {
       window.History.save('tarot', {

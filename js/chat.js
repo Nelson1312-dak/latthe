@@ -69,7 +69,7 @@ const Chat = (() => {
       return div;
     }
 
-    function sendWithUI({ question, context, type, history = [], onDone, onError: onErrorCb }) {
+    function sendWithUI({ question, context, type, history = [], memory = '', onDone, onError: onErrorCb }) {
       const q = question.trim();
       if (!q) return;
 
@@ -87,6 +87,7 @@ const Chat = (() => {
         context,
         type,
         history,
+        memory,
         onToken(token) {
           if (loadingEl) loadingEl.classList.add('hidden');
           built += token;
@@ -116,7 +117,7 @@ const Chat = (() => {
             retryBtn.onclick = () => {
               aiBubble.remove();
               userBubble.remove();
-              sendWithUI({ question: q, context, type, history, onDone });
+              sendWithUI({ question: q, context, type, history, memory, onDone });
             };
             aiBubble.appendChild(retryBtn);
           }

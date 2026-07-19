@@ -116,5 +116,27 @@
     requestAnimationFrame(() => backdrop.classList.add('open'));
   }
 
-  window.History = { save, list: load, clear, openModal };
+  // Tóm tắt tối đa 3 lần xem gần nhất (gộp cả gieoque + tarot, mới nhất trước)
+  // thành chuỗi "ký ức" gửi kèm câu hỏi AI đầu tiên — để AI nhắc lại tinh tế.
+  // PHẢI gọi TRƯỚC History.save của lượt hiện tại, không thì lượt này lẫn vào ký ức.
+  function buildMemory() {
+    const rel = (ts) => {
+      const d = Math.floor((Date.now() - ts) / 864e5);
+      return d <= 0 ? 'hôm nay' : d === 1 ? 'hôm qua' : d < 7 ? `${d} ngày trước` : `${Math.floor(d / 7)} tuần trước`;
+    };
+    const cut = (s, n = 80) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+    const items = [
+      ...load('gieoque').map((e) => ({
+        ts: e.ts,
+        txt: `[${rel(e.ts)} — gieo quẻ] hỏi "${cut(e.question)}" → quẻ ${e.mainName || '?'}${e.hasMoving && e.changedName ? ` (có hào động, biến sang ${e.changedName})` : ''}`,
+      })),
+      ...load('tarot').map((e) => ({
+        ts: e.ts,
+        txt: `[${rel(e.ts)} — tarot] hỏi "${cut(e.question)}" → rút ${(e.cards || []).map((c) => c.name + (c.reversed ? ' (ngược)' : '')).join(', ') || '?'}`,
+      })),
+    ].filter((i) => i.ts).sort((a, b) => b.ts - a.ts).slice(0, 3);
+    return items.map((i) => i.txt).join('\n');
+  }
+
+  window.History = { save, list: load, clear, openModal, buildMemory };
 })();

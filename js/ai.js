@@ -33,7 +33,7 @@ function categoriseError(status, serverMsg) {
   return { code: 'unknown', message: serverMsg || 'Đã có lỗi xảy ra.', retryable: true };
 }
 
-async function askAI({ question, context, type, history = [], onToken, onDone, onError }) {
+async function askAI({ question, context, type, history = [], memory = '', onToken, onDone, onError }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
@@ -44,7 +44,7 @@ async function askAI({ question, context, type, history = [], onToken, onDone, o
       // local model actually generates — cache hits, fallback and errors stay JSON,
       // so both branches below must exist.
       headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream, application/json' },
-      body: JSON.stringify({ question, context, type, history }),
+      body: JSON.stringify({ question, context, type, history, memory }),
       signal: controller.signal,
     });
 

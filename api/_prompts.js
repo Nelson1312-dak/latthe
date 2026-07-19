@@ -239,7 +239,21 @@ Bạn là chuyên gia Chiêm tinh học phương Tây. Người hỏi đang hỏ
 };
 
 
-export function buildFirstUserContent(q, ctx, t, fullContext, isFollowUp = false) {
+// "Ký ức" các lần xem trước của người hỏi (client gửi, chỉ câu hỏi đầu).
+// Đặt TRƯỚC input context — model 2B ưu tiên phần cuối prompt (recency), nên
+// câu hỏi hiện tại phải nằm SAU ký ức, không thì nó trộn ký ức vào lời giải
+// (đã gặp: hỏi tình cảm mà luận thành tài chính vì ký ức có câu "đầu tư").
+function memoryBlock(memory) {
+  if (!memory) return '';
+  return `# BỐI CẢNH PHỤ — các lần xem TRƯỚC ĐÂY của người hỏi (KHÔNG phải câu hỏi hiện tại):
+${memory}
+
+QUY TẮC dùng bối cảnh phụ: chỉ được dùng cho MỘT câu chào mở đầu kiểu "Lần trước bạn từng hỏi về X, hôm nay ta xem tiếp...". TUYỆT ĐỐI KHÔNG trộn nội dung các lần xem trước vào phần luận giải — toàn bộ lời giải chỉ dựa trên câu hỏi và quẻ/bài HIỆN TẠI bên dưới.
+
+`;
+}
+
+export function buildFirstUserContent(q, ctx, t, fullContext, isFollowUp = false, memory = '') {
   if (t === 'gieoque') {
     let mainName = '';
     let mainText = '';
@@ -264,7 +278,7 @@ export function buildFirstUserContent(q, ctx, t, fullContext, isFollowUp = false
 - Ý nghĩa Hào biến: ${mutatedHaoText}`;
     }
 
-    return `# INPUT CONTEXT (Dữ liệu hệ thống cung cấp):
+    return `${memoryBlock(memory)}# INPUT CONTEXT (Dữ liệu hệ thống cung cấp):
 - Câu hỏi của user: ${q}
 - Tên Quẻ Gốc (Chính quẻ): ${mainName}
 - Thoán từ/Tượng quẻ gốc: ${mainText}
@@ -341,7 +355,7 @@ Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định
 
 Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định dạng đầu ra bắt buộc của chuyên gia Chiêm tinh. (Chỉ dùng tiếng Việt thuần túy)`;
   } else {
-    const prefix = `Thông tin bài Tarot:\n${fullContext}\n\n`;
+    const prefix = `${memoryBlock(memory)}Thông tin bài Tarot:\n${fullContext}\n\n`;
     return `${prefix}Câu hỏi của user: "${q}"
 
 Hãy luận giải dựa trên hướng dẫn và trả về theo đúng định dạng đầu ra bắt buộc của chuyên gia Tarot. (Chỉ dùng tiếng Việt, tuyệt đối không dùng bất kỳ chữ Hán hay tiếng Anh nào)`;

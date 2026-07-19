@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let lines = [];
   let throwTimeouts = [];
   let currentContext = '';
+  let currentMemory = '';
   let chatHistory = [];
   let questionsAsked = 0;
 
@@ -365,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
       context: currentContext,
       type: 'gieoque',
       history: chatHistory,
+      memory: chatHistory.length === 0 ? currentMemory : '',
       onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: answer });
@@ -427,6 +429,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAskAI.disabled = false;
     aiChatInput.value = '';
     aiChatInput.placeholder = "Hỏi thêm về quẻ...";
+
+    // Ký ức các lần xem TRƯỚC — build trước khi save, không thì lượt này lẫn vào
+    currentMemory = (window.History && window.History.buildMemory) ? window.History.buildMemory() : '';
 
     if (window.History) {
       window.History.save('gieoque', {
