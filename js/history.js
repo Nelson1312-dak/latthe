@@ -134,6 +134,10 @@
         ts: e.ts,
         txt: `[${rel(e.ts)} — tarot] hỏi "${cut(e.question)}" → rút ${(e.cards || []).map((c) => c.name + (c.reversed ? ' (ngược)' : '')).join(', ') || '?'}`,
       })),
+      ...load('xinxam').map((e) => ({
+        ts: e.ts,
+        txt: `[${rel(e.ts)} — xin xăm] hỏi "${cut(e.question)}" → xăm số ${e.so || '?'} ${e.ten || ''} (${e.hangLabel || ''})`,
+      })),
     ].filter((i) => i.ts).sort((a, b) => b.ts - a.ts).slice(0, 3);
     return items.map((i) => i.txt).join('\n');
   }

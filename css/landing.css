@@ -236,6 +236,7 @@ a { text-decoration: none; color: inherit; }
 .l-ten:hover  { border-color: rgba(192, 38, 211, 0.4); }
 .l-dua:hover  { border-color: rgba(217, 119, 6, 0.4); }
 .l-hoangdao:hover { border-color: rgba(124, 58, 237, 0.4); }
+.l-xinxam:hover   { border-color: rgba(185, 28, 28, 0.4); }
 
 /* App-icon-style colored tile */
 .l-card-icon {
@@ -260,6 +261,7 @@ a { text-decoration: none; color: inherit; }
 .l-ten  .l-card-icon { background: linear-gradient(150deg, #e879f9, #c026d3); box-shadow: 0 8px 18px rgba(192,38,211,0.3); }
 .l-dua  .l-card-icon { background: linear-gradient(150deg, #fbbf24, #d97706); box-shadow: 0 8px 18px rgba(217,119,6,0.3); }
 .l-hoangdao .l-card-icon { background: linear-gradient(150deg, #9560f0, #7c3aed); box-shadow: 0 8px 18px rgba(124,58,237,0.3); }
+.l-xinxam .l-card-icon   { background: linear-gradient(150deg, #dc2626, #b91c1c); box-shadow: 0 8px 18px rgba(185,28,28,0.3); }
 .l-card:hover .l-card-icon { transform: scale(1.06) rotate(-3deg); }
 
 .l-card-body { flex: 1; min-width: 0; }
@@ -280,6 +282,7 @@ a { text-decoration: none; color: inherit; }
 .l-ten  .l-card-label { color: var(--c-ten); }
 .l-dua  .l-card-label { color: var(--c-dua); }
 .l-hoangdao .l-card-label { color: var(--c-hoangdao); }
+.l-xinxam .l-card-label   { color: #b91c1c; }
 
 .l-card-name {
   font-size: 20px;

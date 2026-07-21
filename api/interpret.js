@@ -69,7 +69,7 @@ export default async function handler(req, res) {
   // Validate & clamp inputs: stop oversized prompts and cache/DB pollution from
   // arbitrary `type` values. Caps sit far above any legitimate client payload
   // (questions are short; tuvi context is a text summary; client history ≤ 8).
-  const VALID_TYPES = ['gieoque', 'tarot', 'tuvi', 'thansohoc', 'hoangdao'];
+  const VALID_TYPES = ['gieoque', 'tarot', 'tuvi', 'thansohoc', 'hoangdao', 'xinxam'];
   if (!VALID_TYPES.includes(type)) type = 'gieoque';
   if (question.length > 4000) question = question.slice(0, 4000);
   if (typeof context === 'string' && context.length > 30000) context = context.slice(0, 30000);
@@ -281,7 +281,9 @@ export default async function handler(req, res) {
 
   // Deduplicate: small models sometimes repeat the entire structured response.
   // If the first markdown section header (### ...) appears a second time, truncate there.
-  const firstHeaderMatch = answer.match(/###\s+\S/);
+  // Flag /u bắt trọn code point: thiếu nó \S chỉ khớp NỬA surrogate pair của emoji —
+  // 🏮 và 🌟 chung high-surrogate \uD83C nên header xinxam bị coi là "lặp" và cắt cụt.
+  const firstHeaderMatch = answer.match(/###\s+\S/u);
   if (firstHeaderMatch) {
     const h   = firstHeaderMatch[0];
     const pos = answer.indexOf(h);

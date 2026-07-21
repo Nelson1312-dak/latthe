@@ -36,7 +36,11 @@ function walk(dir, acc = []) {
 const used = new Set();
 for (const f of walk('.')) {
   const txt = fs.readFileSync(f, 'utf8');
-  for (const m of txt.matchAll(/\bti ti-([a-z0-9-]+)/g)) used.add(m[1]);
+  // Bỏ tên kết thúc bằng '-' (class rỗng từ template, vd `ti-number-` khi số >9 trong sim pages)
+  for (const m of txt.matchAll(/\bti ti-([a-z0-9-]+)/g)) { if (!m[1].endsWith('-')) used.add(m[1]); }
+  // Icon khai báo rời trong JS (vd `icon: 'ti-scale'` của các chip, render qua template
+  // `ti ${d.icon}`) — pattern cũ bỏ sót khiến icon chip thành ô vuông.
+  for (const m of txt.matchAll(/['"`]ti-([a-z0-9]+(?:-[a-z0-9]+)*)['"`]/g)) used.add(m[1]);
 }
 const icons = [...used].sort();
 console.log(`Found ${icons.length} distinct icons in use.`);
