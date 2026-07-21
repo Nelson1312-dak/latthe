@@ -5,6 +5,29 @@
 document.addEventListener('DOMContentLoaded', () => {
   let selectedSpread = null;
   let drawnCards = [];
+
+  // Bộ bài đầy đủ 78 lá: 22 Ẩn Chính (cards.js) + 56 Ẩn Phụ (cards-minor.js).
+  // Chuẩn hóa lá Ẩn Phụ về cùng shape lá Ẩn Chính (thêm img/number/symbol/element)
+  // để renderReading/showDetail/share/history dùng chung không phải rẽ nhánh.
+  const FULL_DECK = (() => {
+    const majors = TAROT_CARDS.map((c) => ({ ...c, img: String(c.id) }));
+    if (typeof MINOR_ARCANA === 'undefined' || typeof SUITS === 'undefined') return majors;
+    const RANK = { 1: 'Át', 11: 'Tiểu Đồng', 12: 'Hiệp Sĩ', 13: 'Hoàng Hậu', 14: 'Vua' };
+    const minors = MINOR_ARCANA.map((c) => {
+      const s = SUITS[c.suit] || {};
+      const rank = parseInt(String(c.img).replace(/\D/g, ''), 10);
+      const emoji = (s.element || '').trim().split(/\s+/)[0] || '🎴';
+      return {
+        ...c,
+        id: c.img,          // giữ id duy nhất cho khóa
+        img: c.img,         // đường dẫn ảnh images/<img>.webp
+        number: RANK[rank] || String(rank),
+        symbol: emoji,
+        element: s.element || '',
+      };
+    });
+    return majors.concat(minors);
+  })();
   let holdTimer = null;
   let holdDone = false;
 
@@ -44,12 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---- Spread selection ----
   spreadBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      const questionVal = tarotQuestion.value.trim();
-      if (!questionVal) {
-        alert('Vui lòng nhập câu hỏi của bạn trước khi chọn kiểu rải bài! ✨');
-        tarotQuestion.focus();
-        return;
-      }
+      // Câu hỏi không còn bắt buộc — rút nhanh được ngay. Nếu không nhập,
+      // AI luận theo chính lá bài (câu hỏi mặc định theo kiểu trải, xem showAISection).
       selectedSpread = btn.dataset.spread;
       resetShuffle();
       showScreen('shuffle');
@@ -114,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const spread = TAROT_SPREADS[selectedSpread];
     
     // Fisher-Yates shuffle
-    const pool = [...TAROT_CARDS];
+    const pool = [...FULL_DECK];
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -182,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="dc-reveal-hint">Lật thẻ</span>
           </div>
           <div class="dc-card-front${reversed ? ' reversed' : ''}">
-            <img class="dc-card-img" src="images/${card.id}.webp" alt="${card.vn}" width="900" height="1510" decoding="async" loading="lazy">
+            <img class="dc-card-img" src="images/${card.img}.webp" alt="${card.vn}" width="900" height="1510" decoding="async" loading="lazy">
             <span class="dc-vn-name">${card.vn}</span>
           </div>
         </div>
@@ -314,9 +333,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Câu hỏi mặc định khi user rút nhanh mà không nhập gì — để AI vẫn có
+  // trọng tâm luận giải theo kiểu trải bài.
+  const DEFAULT_Q = {
+    one:   'Thông điệp lá bài này muốn nhắn nhủ tôi lúc này là gì?',
+    three: 'Trải bài Quá khứ – Hiện tại – Tương lai này đang nói lên điều gì về tôi?',
+    five:  'Trải bài này đang phản ánh điều gì về tình huống hiện tại của tôi?',
+  };
+
   function showAISection() {
-    const q = tarotQuestion.value.trim();
-    if (!q) return;
+    const q = tarotQuestion.value.trim() || DEFAULT_Q[selectedSpread] || 'Trải bài này đang nói lên điều gì về tôi?';
     buildChips();
     aiSection.classList.remove('hidden');
     aiQuestionDisp.textContent = `"${q}"`;
@@ -425,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const imgs = await Promise.all(
       drawnCards.map(({ card }) =>
-        SC.loadImage(`images/${card.id}.webp`).catch(() => null))
+        SC.loadImage(`images/${card.img}.webp`).catch(() => null))
     );
 
     drawnCards.forEach(({ card, reversed }, i) => {
