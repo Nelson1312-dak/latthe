@@ -63,9 +63,12 @@ const CASES = [
 ];
 
 async function getAnswer(c) {
+  // Production CORS chỉ nhận request có Origin nằm trong whitelist (api/_cors.js).
+  // Eval là server-side script nên phải tự khai Origin hợp lệ, không thì bị 403.
+  const ORIGIN = (process.env.EVAL_ORIGIN || 'https://latbai.vn').replace(/\/+$/, '');
   const res = await fetch(`${API_BASE}/api/interpret`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Origin': ORIGIN },
     body: JSON.stringify({ question: c.question, context: c.context, type: c.type, history: [] }),
   });
   const text = await res.text();
@@ -75,9 +78,9 @@ async function getAnswer(c) {
 
 async function judge(c, answer) {
   const prompt = `Bạn là giám khảo đánh giá chất lượng luận giải ${c.type}. Chấm câu trả lời theo 3 tiêu chí, mỗi tiêu chí từ 1 đến 5:
-- faithfulness: có bám sát DỮ LIỆU context (quẻ/lá số/bài) không, có bịa thông tin sai không.
+- faithfulness: có bám sát DỮ LIỆU context (quẻ/lá số/bài) không, có bịa DỮ LIỆU sai sự thật không. LƯU Ý: giọng văn nhân vật (vd "Cổ Dịch Đại Sư", "Thầy Xăm"), tiêu đề định dạng, và việc nêu lại đúng dữ liệu context (kể cả "không có hào biến") KHÔNG tính là bịa — đừng trừ điểm.
 - relevance: có trả lời đúng trọng tâm CÂU HỎI không.
-- language: tiếng Việt thuần, KHÔNG lẫn chữ Hán hay tiếng Anh.
+- language: CHỈ trừ điểm khi có (a) ký tự chữ Hán/chữ Trung thật (漢字, vd 乾 坤 财) hoặc (b) từ tiếng Anh. TUYỆT ĐỐI KHÔNG trừ điểm từ Hán-Việt viết bằng chữ Latinh (vd "lãnh đạo", "tài chính", "tâm nguyện", "ứng nghiệm", "cát hung", "cải vận") — đó là tiếng Việt chuẩn, hoàn toàn hợp lệ.
 
 CÂU HỎI: ${c.question}
 CONTEXT: ${c.context}
