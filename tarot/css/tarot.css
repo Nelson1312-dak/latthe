@@ -1362,3 +1362,25 @@ a { text-decoration: none; color: inherit; }
   .drawn-card.revealed .dc-card-front::after,
   .reading-detail { animation: none !important; }
 }
+
+/* ---- Deep-link: lá đã rút → trang chi tiết ---- */
+.detail-page-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--purple-dim, rgba(124, 58, 237, 0.16));
+  background: var(--purple-dim, rgba(124, 58, 237, 0.08));
+  color: var(--purple);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.detail-page-link:hover {
+  background: rgba(124, 58, 237, 0.16);
+  transform: translateY(-1px);
+}
+.detail-page-link i:first-child { font-size: 16px; }

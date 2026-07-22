@@ -270,7 +270,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('detail-advice').textContent  = card.advice;
     document.getElementById('detail-element').textContent = card.element;
 
+    // Deep-link sang trang chi tiết lá /la-bai-tarot/<slug> — slug khớp
+    // slugify(card.name) trong scripts/build-tarot-pages.mjs (name tiếng Anh).
+    const link = document.getElementById('detail-page-link');
+    if (link) link.href = `/la-bai-tarot/${cardPageSlug(card.name)}`;
+
     readingDetail.classList.remove('hidden');
+  }
+
+  // Đồng bộ với slugify() ở scripts/build-tarot-pages.mjs
+  function cardPageSlug(name) {
+    return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
 
   // ---- AI Chat ----
