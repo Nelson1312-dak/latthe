@@ -384,6 +384,7 @@
 .dock-item[data-module="tuvi"].active { color: #e8930a !important; }
 .dock-item[data-module="gieoque"].active { color: #0d9668 !important; }
 .dock-item[data-module="tarot"].active { color: #7c3aed !important; }
+.dock-item[data-module="thansohoc"].active { color: #6366f1 !important; }
 .dock-item[data-module="drinking"].active { color: #ea6a17 !important; }
 .dock-item[data-module="thuvien"].active { color: #2563eb !important; }
 .dock-item[data-module="home"].active { color: #d97706 !important; }
