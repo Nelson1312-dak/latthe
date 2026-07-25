@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let chatHistory = []; // [{role:'user'|'assistant', content:'...'}]
   let currentMemory = '';
+  let questionsAsked = 0;   // đếm câu hỏi phụ cho trải bài hiện tại
 
   const aiSection      = document.getElementById('ai-section');
   const aiQuestionDisp = document.getElementById('ai-question-display');
@@ -296,11 +297,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('\n\n');
   }
 
+  const MAX_HISTORY = 12;   // đồng bộ 6 module (server cap 20)
+  const MAX_ASK = 5;        // số câu hỏi phụ tối đa mỗi lượt rút
   const chat = Chat.createChat({ messagesEl: aiChatMessages, loadingEl: aiLoading, inputEl: aiChatInput, btnEl: btnAskAI });
+
+  // chipsEl khai báo bên dưới — arrow đọc lúc gọi nên không vướng TDZ
+  const disableChips = () => { if (chipsEl) chipsEl.querySelectorAll('.t-chip').forEach(b => b.disabled = true); };
 
   function sendMessage(question) {
     const q = question.trim();
     if (!q) return;
+
+    const isFollowUp = chatHistory.length > 0;
+    if (isFollowUp) {
+      if (questionsAsked >= MAX_ASK) {
+        chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã dùng đủ ${MAX_ASK} câu hỏi bổ sung cho trải bài này. Rút một trải bài mới để hỏi tiếp nhé!`);
+        return;
+      }
+      questionsAsked++;
+    }
 
     aiError.classList.add('hidden');
     chat.sendWithUI({
@@ -312,8 +327,19 @@ document.addEventListener('DOMContentLoaded', () => {
       onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: answer });
-        if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
-        aiChatInput.value = '';
+        if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+        if (questionsAsked >= MAX_ASK) {
+          aiChatInput.placeholder = `Đã đạt giới hạn ${MAX_ASK} câu hỏi bổ sung...`;
+          aiChatInput.disabled = true;
+          btnAskAI.disabled = true;
+          disableChips();
+          chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã gửi đủ ${MAX_ASK} câu hỏi bổ sung cho trải bài này. Hãy **rút trải bài mới** để hỏi tiếp nhé!`);
+        } else {
+          aiChatInput.value = '';
+        }
+      },
+      onError() {
+        if (isFollowUp) questionsAsked--;   // hoàn lượt, lỗi không tính
       },
     });
   }
@@ -362,6 +388,12 @@ document.addEventListener('DOMContentLoaded', () => {
     aiQuestionDisp.textContent = `"${q}"`;
     aiChatMessages.innerHTML = '';
     aiError.classList.add('hidden');
+    questionsAsked = 0;
+    chatHistory = [];
+    aiChatInput.disabled = false;
+    btnAskAI.disabled = false;
+    aiChatInput.value = '';
+    aiChatInput.placeholder = 'Hỏi thêm về bài Tarot...';
 
     // Ký ức các lần xem TRƯỚC — build trước khi save, không thì lượt này lẫn vào
     currentMemory = (window.History && window.History.buildMemory) ? window.History.buildMemory() : '';
@@ -413,6 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function goNewReading() {
     resetShuffle();
     chatHistory = [];
+    questionsAsked = 0;
+    aiChatInput.disabled = false;
+    btnAskAI.disabled = false;
+    aiChatInput.value = '';
+    aiChatInput.placeholder = 'Hỏi thêm về bài Tarot...';
     btnRestart.classList.add('hidden');
     aiSection.classList.add('hidden');
     aiChatMessages.innerHTML = '';

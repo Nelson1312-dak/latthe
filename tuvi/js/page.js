@@ -198,6 +198,8 @@
     let currentChart     = null;
     let currentBirthYear = null;
     let currentNamXem    = null;
+    const MAX_HISTORY    = 12;   // đồng bộ 6 module (server cap 20)
+    const MAX_ASK        = 5;    // số câu hỏi phụ tối đa mỗi lá số
     let chatHistory      = [];
     let questionsAsked   = 0;
     let demoFill         = false; // đang submit dữ liệu demo → không ghi đè hồ sơ
@@ -423,20 +425,15 @@
     });
 
     document.querySelectorAll('.prompt-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        if (questionsAsked >= 5) {
-          alert('Đã đạt giới hạn 5 câu hỏi. Vui lòng tạo lá số mới để tiếp tục.');
-          return;
-        }
-        handleAskAI(chip.getAttribute('data-q'));
-      });
+      chip.addEventListener('click', () => handleAskAI(chip.getAttribute('data-q')));
     });
 
     function handleAskAI(questionText) {
       if (!currentChart) return;
       const isFollowUp = chatHistory.length > 0;
-      if (isFollowUp && questionsAsked >= 5) {
-        alert('Đã đạt giới hạn 5 câu hỏi. Vui lòng tạo lá số mới để tiếp tục.');
+      if (isFollowUp && questionsAsked >= MAX_ASK) {
+        chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã dùng đủ ${MAX_ASK} câu hỏi bổ sung cho lá số này. Hãy **lập lá số mới** để hỏi tiếp nhé!`);
+        document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = true);
         return;
       }
       if (isFollowUp) questionsAsked++;
@@ -453,15 +450,16 @@
         onDone(fullAnswer) {
           chatHistory.push({ role: 'user', content: questionText });
           chatHistory.push({ role: 'assistant', content: fullAnswer });
-          if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
+          if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
 
           askBtn.textContent = 'THAM VẤN AI';
           document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = false);
 
-          if (questionsAsked >= 5) {
-            qInput.placeholder = 'Đã đạt giới hạn 5 câu hỏi bổ sung...';
+          if (questionsAsked >= MAX_ASK) {
+            qInput.placeholder = `Đã đạt giới hạn ${MAX_ASK} câu hỏi bổ sung...`;
             qInput.disabled = true; askBtn.disabled = true;
             document.querySelectorAll('.prompt-chip').forEach(b => b.disabled = true);
+            chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã gửi đủ ${MAX_ASK} câu hỏi bổ sung cho lá số này. Hãy **lập lá số mới** để hỏi tiếp nhé!`);
           }
         },
         onError() {

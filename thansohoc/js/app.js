@@ -807,7 +807,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==================== CHAT AI CONTROLLER ====================
+  const MAX_HISTORY = 12;   // đồng bộ 6 module (server cap 20)
+  const MAX_ASK = 5;        // số câu hỏi phụ tối đa mỗi bản đồ
   const chat = Chat.createChat({ messagesEl: aiChatMessages, loadingEl: aiLoading, inputEl: aiChatInput, btnEl: btnAskAI });
+
+  // chipsEl khai báo bên dưới — arrow đọc lúc gọi nên không vướng TDZ
+  const disableChips = () => { if (chipsEl) chipsEl.querySelectorAll('.tsh-chip').forEach(b => b.disabled = true); };
 
   function buildThansohocContext() {
     return JSON.stringify({
@@ -896,7 +901,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function askQuestion(q) {
-    if (!q || !currentProfileData || questionsAsked >= 5) return;
+    if (!q || !currentProfileData) return;
+    // Trước đây nhánh hết lượt return im lặng — bấm chip sau câu thứ 5 không phản hồi gì.
+    if (questionsAsked >= MAX_ASK) {
+      chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã dùng đủ ${MAX_ASK} câu hỏi bổ sung cho bản đồ này. Bấm **Tra Cứu Lần Khác** để hỏi tiếp nhé!`);
+      disableChips();
+      return;
+    }
     questionsAsked++;
     aiChatInput.value = '';
     aiError.classList.add('hidden');
@@ -909,15 +920,19 @@ document.addEventListener('DOMContentLoaded', () => {
       onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: answer });
-        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
-        if (questionsAsked >= 5) {
-          aiChatInput.placeholder = "Đã đạt giới hạn 5 câu hỏi bổ sung...";
+        if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+        if (questionsAsked >= MAX_ASK) {
+          aiChatInput.placeholder = `Đã đạt giới hạn ${MAX_ASK} câu hỏi bổ sung...`;
           aiChatInput.disabled = true;
           btnAskAI.disabled = true;
-          chat.appendBubble('ai', '💡 *Thông báo:* Bạn đã gửi đủ 5 câu hỏi bổ sung cho bản đồ này. Để hỏi tiếp các câu hỏi mới, vui lòng bấm nút **Tra Cứu Lần Khác** nhé!');
+          disableChips();
+          chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã gửi đủ ${MAX_ASK} câu hỏi bổ sung cho bản đồ này. Để hỏi tiếp các câu hỏi mới, vui lòng bấm nút **Tra Cứu Lần Khác** nhé!`);
         } else {
           aiChatInput.placeholder = "Hỏi thêm chuyên gia Nhân số học...";
         }
+      },
+      onError() {
+        questionsAsked--;   // hoàn lượt, lỗi không tính
       },
     });
   }

@@ -11,6 +11,8 @@
   const root = document.getElementById('hd-root');
   if (!root) return;
 
+  const MAX_HISTORY = 12;   // đồng bộ 6 module (server cap 20)
+  const MAX_ASK = 5;        // số câu hỏi tối đa mỗi phiên
   let currentSign = null;
   let chatHistory = [];
   let questionsAsked = 0;
@@ -305,10 +307,17 @@
     chat = ChatLib.createChat({ messagesEl, loadingEl, inputEl, btnEl });
     chat.appendBubble('ai', `Chào bạn! Mình là chuyên gia chiêm tinh. Hãy hỏi bất cứ điều gì về cung **${sign.ten}** của bạn — tình duyên, sự nghiệp, hay cách phát huy thế mạnh nhé.`);
 
+    const disableChips = () => document.querySelectorAll('.hd-qchip').forEach(b => b.disabled = true);
+
     function send(q) {
       q = (q || '').trim();
       if (!q || !chat) return;
-      if (questionsAsked >= 5) { chat.appendBubble('ai', 'Bạn đã hỏi đủ 5 câu cho phiên này. Hãy tải lại trang để hỏi tiếp nhé!'); return; }
+      // hoang-dao không tự gửi lượt đầu (lời chào là bubble tĩnh) nên đếm MỌI câu.
+      if (questionsAsked >= MAX_ASK) {
+        chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã hỏi đủ ${MAX_ASK} câu cho phiên này. Hãy **tải lại trang** hoặc xem cung khác để hỏi tiếp nhé!`);
+        disableChips();
+        return;
+      }
       questionsAsked++;
       inputEl.value = '';
       chat.sendWithUI({
@@ -316,7 +325,17 @@
         onDone(ans) {
           chatHistory.push({ role: 'user', content: q });
           chatHistory.push({ role: 'assistant', content: ans });
-          if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
+          if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+          if (questionsAsked >= MAX_ASK) {
+            inputEl.placeholder = `Đã đạt giới hạn ${MAX_ASK} câu hỏi...`;
+            inputEl.disabled = true;
+            btnEl.disabled = true;
+            disableChips();
+            chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã dùng đủ ${MAX_ASK} câu hỏi cho phiên này. Xem cung khác hoặc tải lại trang để hỏi tiếp nhé!`);
+          }
+        },
+        onError() {
+          questionsAsked--;   // hoàn lượt, lỗi không tính
         },
       });
     }

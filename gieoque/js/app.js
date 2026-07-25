@@ -345,7 +345,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const MAX_HISTORY = 12;   // đồng bộ 6 module (server cap 20)
+  const MAX_ASK = 5;        // số câu hỏi phụ tối đa mỗi lượt gieo
   const chat = Chat.createChat({ messagesEl: aiChatMessages, loadingEl: aiLoading, inputEl: aiChatInput, btnEl: btnAskAI });
+
+  // chipsEl khai báo bên dưới — arrow đọc lúc gọi nên không vướng TDZ
+  const disableChips = () => { if (chipsEl) chipsEl.querySelectorAll('.gq-chip').forEach(b => b.disabled = true); };
 
   function sendMessage(question) {
     const q = question.trim();
@@ -353,8 +358,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isFollowUp = chatHistory.length > 0;
     if (isFollowUp) {
-      if (questionsAsked >= 5) {
-        alert("Bạn đã đặt tối đa 5 câu hỏi phụ cho quẻ này. Vui lòng bấm 'Gieo Quẻ Mới' để thực hiện lần gieo mới.");
+      if (questionsAsked >= MAX_ASK) {
+        chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã dùng đủ ${MAX_ASK} câu hỏi bổ sung cho quẻ này. Bấm nút **Gieo Quẻ Mới** ở bên dưới để hỏi tiếp nhé!`);
         return;
       }
       questionsAsked++;
@@ -370,15 +375,19 @@ document.addEventListener('DOMContentLoaded', () => {
       onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: answer });
-        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
-        if (questionsAsked >= 5) {
-          aiChatInput.placeholder = "Đã đạt giới hạn 5 câu hỏi bổ sung...";
+        if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+        if (questionsAsked >= MAX_ASK) {
+          aiChatInput.placeholder = `Đã đạt giới hạn ${MAX_ASK} câu hỏi bổ sung...`;
           aiChatInput.disabled = true;
           btnAskAI.disabled = true;
-          chat.appendBubble('ai', '💡 *Thông báo:* Bạn đã gửi đủ 5 câu hỏi bổ sung cho quẻ này. Để tiếp tục hỏi thêm các câu hỏi khác, bạn vui lòng bấm nút **Gieo Quẻ Mới** ở bên dưới nhé!');
+          disableChips();
+          chat.appendBubble('ai', `💡 *Thông báo:* Bạn đã gửi đủ ${MAX_ASK} câu hỏi bổ sung cho quẻ này. Để tiếp tục hỏi thêm các câu hỏi khác, bạn vui lòng bấm nút **Gieo Quẻ Mới** ở bên dưới nhé!`);
         } else {
           aiChatInput.value = '';
         }
+      },
+      onError() {
+        if (isFollowUp) questionsAsked--;   // hoàn lượt, lỗi không tính
       },
     });
   }

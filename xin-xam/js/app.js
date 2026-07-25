@@ -169,14 +169,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const MAX_HISTORY = 12;   // đồng bộ 6 module (server cap 20)
+  const MAX_ASK = 5;        // số câu hỏi phụ tối đa mỗi quẻ xăm
+
+  // chipsEl khai báo bên trên/dưới — arrow đọc lúc gọi nên không vướng TDZ
+  const disableChips = () => { if (chipsEl) chipsEl.querySelectorAll('.xx-chip').forEach(b => b.disabled = true); };
+
   function sendMessage(question) {
     const q = question.trim();
     if (!q) return;
 
     const isFollowUp = chatHistory.length > 0;
     if (isFollowUp) {
-      if (questionsAsked >= 5) {
-        alert('Con đã hỏi đủ 5 câu cho quẻ xăm này. Muốn hỏi tiếp, hãy thành tâm xin một quẻ mới nhé! 🙏');
+      if (questionsAsked >= MAX_ASK) {
+        chat.appendBubble('ai', `🙏 Con đã hỏi đủ ${MAX_ASK} câu cho quẻ xăm này. Muốn hỏi tiếp, hãy thành tâm **xin một quẻ mới** nhé!`);
         return;
       }
       questionsAsked++;
@@ -192,14 +198,19 @@ document.addEventListener('DOMContentLoaded', () => {
       onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: answer });
-        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
-        if (questionsAsked >= 5) {
-          aiChatInput.placeholder = 'Đã đủ 5 câu hỏi thêm cho quẻ này...';
+        if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+        if (questionsAsked >= MAX_ASK) {
+          aiChatInput.placeholder = `Đã đủ ${MAX_ASK} câu hỏi thêm cho quẻ này...`;
           aiChatInput.disabled = true;
           btnAskAI.disabled = true;
+          disableChips();
+          chat.appendBubble('ai', `🙏 *Thông báo:* Con đã dùng đủ ${MAX_ASK} câu hỏi thêm cho quẻ xăm này. Hãy **xin một quẻ mới** để thầy luận tiếp nhé!`);
         } else {
           aiChatInput.value = '';
         }
+      },
+      onError() {
+        if (isFollowUp) questionsAsked--;   // hoàn lượt, lỗi không tính
       },
     });
   }
