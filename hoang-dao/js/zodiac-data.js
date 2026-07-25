@@ -152,6 +152,78 @@ const ZODIAC = [
   },
 ];
 
+// ── Tứ Đại nguyên tố: 4 nhóm khí chất, mỗi nhóm 3 cung cùng "chất" ──
+// Cộng hưởng cổ điển: Lửa ↔ Khí (gió thổi bùng lửa), Đất ↔ Nước (nước tưới đất).
+// Key trùng field `nguyeTo` của từng cung (Hỏa/Thổ/Khí/Thủy).
+const Z_ELEMENTS = {
+  'Hỏa': {
+    ten: 'Lửa', en: 'Fire', icon: '🔥', mau: '#e0562d',
+    cung: ['Bạch Dương', 'Sư Tử', 'Nhân Mã'],
+    khiChat: 'Nhóm Lửa sống bằng đam mê và hành động. Đây là những tâm hồn nhiệt huyết, tự tin và giàu năng lượng — luôn muốn tiến về phía trước, truyền cảm hứng cho người quanh mình và biến ý tưởng thành hành động ngay. Họ dẫn dắt bằng sự sôi nổi và niềm tin mãnh liệt vào bản thân.',
+    manh: ['Đam mê, dám hành động', 'Tự tin và lôi cuốn', 'Lạc quan, tràn năng lượng', 'Truyền cảm hứng, dẫn dắt'],
+    bongToi: ['Nóng vội, bốc đồng', 'Cái tôi lớn, hiếu thắng', 'Dễ chán khi thiếu thử thách'],
+    tinhYeu: 'Yêu nồng nhiệt, chủ động và lãng mạn bùng nổ; cần đối phương giữ được lửa và không kìm hãm sự tự do của họ.',
+    congViec: 'Toả sáng ở vai trò tiên phong, lãnh đạo, khởi nghiệp hay sân khấu — nơi cần dũng khí và tinh thần dám làm.',
+    hopVoi: ['Khí'], thachThuc: 'Nước và Đất',
+  },
+  'Thổ': {
+    ten: 'Đất', en: 'Earth', icon: '🌱', mau: '#9a7b4f',
+    cung: ['Kim Ngưu', 'Xử Nữ', 'Ma Kết'],
+    khiChat: 'Nhóm Đất là những người thực tế và đáng tin cậy nhất hoàng đạo. Họ xây dựng cuộc sống chậm mà chắc, coi trọng sự ổn định, kỷ luật và thành quả hữu hình. Kiên nhẫn, bền bỉ và trách nhiệm, họ là chỗ dựa vững vàng — nhưng cũng dễ bảo thủ và ngại rời vùng an toàn.',
+    manh: ['Thực tế, đáng tin cậy', 'Kiên nhẫn, bền bỉ', 'Kỷ luật, có trách nhiệm', 'Giỏi quản lý vật chất'],
+    bongToi: ['Bảo thủ, ngại thay đổi', 'Quá thận trọng, cứng nhắc', 'Dễ sa vào vật chất'],
+    tinhYeu: 'Chung thủy, thực tế và bền vững; thể hiện tình yêu qua sự chăm lo cụ thể hằng ngày hơn là lời hoa mỹ.',
+    congViec: 'Xuất sắc ở tài chính, xây dựng, kỹ thuật, quản trị — nơi tưởng thưởng sự tỉ mỉ, bền bỉ và đáng tin.',
+    hopVoi: ['Thủy'], thachThuc: 'Lửa và Khí',
+  },
+  'Khí': {
+    ten: 'Khí', en: 'Air', icon: '💨', mau: '#3b82f6',
+    cung: ['Song Tử', 'Thiên Bình', 'Bảo Bình'],
+    khiChat: 'Nhóm Khí sống trong thế giới của tư duy, ngôn từ và kết nối. Họ thông minh, giao tiếp khéo léo và luôn khao khát ý tưởng mới. Khách quan, cởi mở và giàu tính xã hội, họ nhìn cuộc sống bằng lý trí và sự linh hoạt — nhưng đôi khi thiếu chiều sâu cảm xúc và hay do dự.',
+    manh: ['Thông minh, nhanh nhạy', 'Giao tiếp và kết nối giỏi', 'Khách quan, cởi mở', 'Sáng tạo, nhiều ý tưởng'],
+    bongToi: ['Hay do dự, thiếu quyết đoán', 'Xa cách cảm xúc', 'Cả thèm chóng chán'],
+    tinhYeu: 'Cần một tri kỷ để trò chuyện và tôn trọng sự tự do; yêu bằng trí tuệ và sự đồng điệu tinh thần trước tiên.',
+    congViec: 'Toả sáng ở truyền thông, ngoại giao, công nghệ, sáng tạo — mọi lĩnh vực cần ý tưởng và khả năng kết nối.',
+    hopVoi: ['Hỏa'], thachThuc: 'Nước và Đất',
+  },
+  'Thủy': {
+    ten: 'Nước', en: 'Water', icon: '💧', mau: '#0e7490',
+    cung: ['Cự Giải', 'Bọ Cạp', 'Song Ngư'],
+    khiChat: 'Nhóm Nước cảm nhận thế giới bằng trực giác và cảm xúc. Sâu sắc, nhạy cảm và giàu lòng trắc ẩn, họ thấu hiểu điều người khác không nói ra và gắn bó bằng cả trái tim. Đây là những tâm hồn giàu tình cảm và trung thành — nhưng dễ tổn thương và cần ranh giới để không chìm trong cảm xúc của người khác.',
+    manh: ['Trực giác nhạy bén', 'Giàu tình cảm, đồng cảm', 'Trung thành, sâu sắc', 'Sáng tạo, giàu tưởng tượng'],
+    bongToi: ['Quá nhạy cảm, dễ tổn thương', 'Tâm trạng thất thường', 'Hay bám víu, khó buông bỏ'],
+    tinhYeu: 'Yêu sâu đậm và tận hiến; cần cảm giác an toàn và một người trân trọng sự nhạy cảm của họ.',
+    congViec: 'Hợp nghệ thuật, chữa lành, tâm lý, chăm sóc — nơi cần sự thấu cảm, trực giác và chiều sâu nội tâm.',
+    hopVoi: ['Thổ'], thachThuc: 'Lửa và Khí',
+  },
+};
+
+// Tam Thái (tính chất) — cách mỗi cung vận hành năng lượng của nó. Mỗi nhóm 4 cung
+// (một cung ở đầu/giữa/cuối mỗi mùa). Key trùng field `tinhChat`.
+const Z_MODALITY = {
+  'Thống Lĩnh (Cardinal)': {
+    ten: 'Thống Lĩnh', en: 'Cardinal', icon: '🚀', mau: '#dc2626',
+    tomTat: 'nhóm Khởi Xướng — giỏi mở đầu, châm ngòi và dẫn dắt những chương mới',
+    cung: ['Bạch Dương', 'Cự Giải', 'Thiên Bình', 'Ma Kết'],
+    khiChat: 'Nhóm Thống Lĩnh (Cardinal) mở đầu mỗi mùa trong năm — và cũng mở đầu mọi thứ trong đời. Đây là những người khởi xướng: giàu sáng kiến, chủ động ra quyết định và thích đặt mọi thứ vào chuyển động. Họ là ngòi nổ và người dẫn đường, nhưng đôi khi khởi đầu nhiều hơn là hoàn thành.',
+    manh: ['Chủ động, dám khởi xướng', 'Giàu sáng kiến, quyết đoán', 'Bản năng lãnh đạo'],
+  },
+  'Kiên Định (Fixed)': {
+    ten: 'Kiên Định', en: 'Fixed', icon: '🗿', mau: '#7c3aed',
+    tomTat: 'nhóm Bền Vững — kiên trì, ổn định và giữ vững lập trường đến cùng',
+    cung: ['Kim Ngưu', 'Sư Tử', 'Bọ Cạp', 'Bảo Bình'],
+    khiChat: 'Nhóm Kiên Định (Fixed) nằm giữa mỗi mùa — nơi năng lượng ổn định và bền chặt nhất. Đây là những người giữ nhịp: kiên trì, trung thành và đáng tin, một khi đã cam kết thì theo đến cùng. Sức mạnh của họ là sự bền bỉ; điểm mù là cứng đầu, khó đổi hướng khi cần.',
+    manh: ['Kiên trì, bền bỉ', 'Trung thành, đáng tin', 'Ý chí mạnh, giữ vững lập trường'],
+  },
+  'Linh Hoạt (Mutable)': {
+    ten: 'Linh Hoạt', en: 'Mutable', icon: '🌊', mau: '#0d9668',
+    tomTat: 'nhóm Thích Ứng — mềm dẻo, đa năng và giỏi xoay chuyển theo hoàn cảnh',
+    cung: ['Song Tử', 'Xử Nữ', 'Nhân Mã', 'Song Ngư'],
+    khiChat: 'Nhóm Linh Hoạt (Mutable) khép lại mỗi mùa — bậc thầy của sự chuyển tiếp và thích nghi. Đây là những người mềm dẻo: đa năng, cởi mở với thay đổi và giỏi dung hòa. Họ là chất keo kết nối mọi người, nhưng đôi khi thiếu kiên định và dễ bị cuốn theo hoàn cảnh.',
+    manh: ['Thích nghi, mềm dẻo', 'Đa năng, cởi mở', 'Giỏi dung hòa, kết nối'],
+  },
+};
+
 // Ngày bắt đầu mỗi cung (tháng, ngày) — xác định cung từ ngày sinh
 const Z_RANGES = [
   ['Ma Kết', 1, 1], ['Bảo Bình', 1, 20], ['Song Ngư', 2, 19], ['Bạch Dương', 3, 21],

@@ -17,7 +17,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 // ---- Nạp dữ liệu nguồn ----
 const zdSrc = fs.readFileSync(path.join(ROOT, 'hoang-dao', 'js', 'zodiac-data.js'), 'utf8');
-const { ZODIAC } = new Function(`${zdSrc}; return { ZODIAC };`)();
+const { ZODIAC, Z_ELEMENTS, Z_MODALITY } = new Function(`${zdSrc}; return { ZODIAC, Z_ELEMENTS, Z_MODALITY };`)();
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -151,8 +151,16 @@ function buildSignPage(z) {
     return { o, ...r };
   }).sort((x, y) => y.score - x.score);
 
+  const EL = Z_ELEMENTS[z.nguyeTo];
+  const MOD = Z_MODALITY[z.tinhChat];
+  const linkSign = (n) => { const o = ZODIAC.find((s) => s.ten === n); return o ? `<a href="${cungUrl(o)}">${esc(n)}</a>` : esc(n); };
+  const elGroupLinks = EL.cung.map((c) => c === z.ten ? `<strong>${esc(c)}</strong>` : linkSign(c)).join(', ');
+  const elHopNames = EL.hopVoi.map((k) => Z_ELEMENTS[k] ? Z_ELEMENTS[k].ten : k).join(' và ');
+  const modSiblingLinks = MOD.cung.filter((c) => c !== z.ten).map(linkSign).join(', ');
+
   const faq = [
     { q: `Cung ${z.ten} sinh ngày nào?`, a: `Cung ${z.ten} (${z.en}) gồm những người sinh từ ${z.range} dương lịch, thuộc nguyên tố ${z.nguyeTo}, nhóm ${z.tinhChat}, được ${z.sao} chiếu mệnh.` },
+    { q: `Cung ${z.ten} thuộc nhóm nguyên tố nào?`, a: `${z.ten} thuộc nguyên tố ${z.nguyeTo} (nhóm ${EL.ten}), cùng nhóm với ${EL.cung.filter((c) => c !== z.ten).join(' và ')}. Về tính chất, ${z.ten} thuộc nhóm ${MOD.ten} (${MOD.en}) — ${MOD.tomTat}.` },
     { q: `Cung ${z.ten} hợp với cung nào nhất?`, a: `${z.ten} hợp tự nhiên nhất với ${z.hop.join(', ')} — các cung cùng hoặc bổ trợ nguyên tố ${z.nguyeTo}. Hợp không có nghĩa đảm bảo, mà là hai năng lượng dễ cộng hưởng.` },
     { q: `Cung ${z.ten} khắc cung nào?`, a: `${z.ten} thường cần dung hòa nhiều nhất với ${z.khac.join(' và ')}. "Khắc" không phải không thể yêu — chỉ là hai nhịp sống khác nhau, cần đối thoại nhiều hơn.` },
   ];
@@ -210,15 +218,20 @@ function buildSignPage(z) {
       <p><strong>Điểm cần hoàn thiện:</strong></p>
       <ul>${z.yeu.map((y) => `<li>${esc(y)}</li>`).join('')}</ul>
 
-      <h2 class="tuvi">2. ${esc(z.ten)} trong tình yêu</h2>
+      <h2 class="tuvi">2. ${esc(z.ten)} thuộc nhóm nguyên tố ${esc(z.nguyeTo)} (${esc(EL.ten)})</h2>
+      <p>${esc(EL.khiChat)}</p>
+      <p>Ba cung cùng nhóm ${esc(EL.ten)} là ${elGroupLinks} — cùng chia sẻ khí chất này. Nhóm ${esc(EL.ten)} cộng hưởng tự nhiên với <strong>nhóm ${esc(elHopNames)}</strong> và các cung cùng ${esc(EL.ten)}; dễ va chạm hơn với <strong>${esc(EL.thachThuc)}</strong>.</p>
+      <p><strong>Về tính chất, ${esc(z.ten)} thuộc nhóm ${esc(MOD.ten)} (${esc(MOD.en)}):</strong> ${esc(MOD.khiChat)} Cùng nhóm ${esc(MOD.ten)} còn có ${modSiblingLinks}.</p>
+
+      <h2 class="tuvi">3. ${esc(z.ten)} trong tình yêu</h2>
       <p>${esc(z.tinhYeu)}</p>
       <p>Hợp tự nhiên nhất với ${z.hop.map((n) => { const o = ZODIAC.find((s) => s.ten === n); return `<a href="${pairPath(z, o)}">${esc(n)}</a>`; }).join(', ')}; cần dung hòa nhiều nhất với ${z.khac.map((n) => { const o = ZODIAC.find((s) => s.ten === n); return `<a href="${pairPath(z, o)}">${esc(n)}</a>`; }).join(' và ')}.</p>
 
-      <h2 class="tuvi">3. Sự nghiệp và tài chính</h2>
+      <h2 class="tuvi">4. Sự nghiệp và tài chính</h2>
       <p><strong>Sự nghiệp:</strong> ${esc(z.suNghiep)}</p>
       <p><strong>Tài chính:</strong> ${esc(z.taiChinh)}</p>
 
-      <h2 class="tuvi">4. Độ hợp của ${esc(z.ten)} với 11 cung</h2>
+      <h2 class="tuvi">5. Độ hợp của ${esc(z.ten)} với 11 cung</h2>
       <div class="table-responsive">
         <table class="seo-table">
           <thead><tr><th>Cặp đôi</th><th>Độ hợp</th><th>Nhận định</th></tr></thead>

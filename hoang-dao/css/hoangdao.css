@@ -177,6 +177,32 @@ a { color: var(--violet-d); }
 .hd-chat .chat-ai { background: var(--bg); color: var(--text); align-self: flex-start; }
 .hd-chat .chat-user { background: linear-gradient(135deg, #9560f0, var(--violet-d)); color: #fff; align-self: flex-end; }
 
+/* Nhóm nguyên tố (Tứ Đại) */
+.hd-element .hd-sec-head i { color: var(--el, var(--violet)); }
+.hd-el-hero { display: flex; align-items: center; gap: 14px; margin: 10px 0 12px; }
+.hd-el-badge {
+  font-size: 40px; line-height: 1; flex-shrink: 0;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.14));
+}
+.hd-el-name { font-size: 12px; font-weight: 700; color: var(--muted); }
+.hd-el-signs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.hd-el-sign {
+  font-size: 12.5px; font-weight: 800; color: var(--violet-d); background: var(--violet-dim);
+  border: 1px solid var(--border); border-radius: 99px; padding: 4px 12px; cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.hd-el-sign:hover { background: var(--violet); color: #fff; }
+.hd-el-sign.is-me { background: var(--el, var(--violet)); color: #fff; cursor: default; border-color: transparent; }
+.hd-el-facets { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.hd-el-facets p { font-size: 13px; color: var(--sub); line-height: 1.6; }
+.hd-el-facets b { color: var(--text); }
+.hd-el-mod { font-size: 12.5px; color: var(--sub); line-height: 1.6; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.hd-el-compat { font-size: 12.5px; color: var(--sub); line-height: 1.6; margin-top: 8px; }
+.hd-el-mod b, .hd-el-compat b { color: var(--text); }
+.hd-el-mod i, .hd-el-compat i { color: var(--violet); }
+.hd-match-why { font-size: 12.5px; color: var(--sub); line-height: 1.6; margin-top: 10px; }
+.hd-match-why i { color: var(--violet); margin-right: 4px; }
+
 .hd-actions { display: flex; gap: 10px; }
 .hd-actions .hd-btn { flex: 1.3; justify-content: center; display: inline-flex; align-items: center; gap: 6px; }
 .hd-btn-sub {

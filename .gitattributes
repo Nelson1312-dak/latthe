@@ -1,0 +1,6 @@
+# Các trang tĩnh sinh bởi scripts/build-*-pages.mjs luôn ghi LF.
+# Với core.autocrlf=true và không có file này, git thỉnh thoảng báo "modified"
+# oan cho chúng (theo mtime/autocrlf) dù nội dung y hệt, và làm hash trong
+# scripts/.lastmod-cache.json lệch giữa các máy. Pin eol=lf cho .html để ổn định.
+# (Repo hiện đã toàn LF cho .html nên không gây thay đổi nội dung.)
+*.html text eol=lf

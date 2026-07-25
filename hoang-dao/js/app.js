@@ -85,6 +85,74 @@
     return { score, verdict };
   }
 
+  // ==================== NHÓM NGUYÊN TỐ (Tứ Đại) ====================
+  function elementCard(sign) {
+    const E = (typeof Z_ELEMENTS !== 'undefined') ? Z_ELEMENTS[sign.nguyeTo] : null;
+    if (!E) return '';
+    const hopNames = E.hopVoi.map((k) => Z_ELEMENTS[k] ? Z_ELEMENTS[k].ten : k).join(' và ');
+    const signChips = E.cung.map((c) =>
+      `<span class="hd-el-sign${c === sign.ten ? ' is-me' : ''}" data-sign="${c}">${c}</span>`).join('');
+    return `
+      <div class="hd-card hd-element" style="--el:${E.mau}">
+        <div class="hd-sec-head"><i class="ti ti-flame"></i> Nhóm nguyên tố · ${E.icon} ${E.ten}</div>
+        <div class="hd-el-hero">
+          <span class="hd-el-badge">${E.icon}</span>
+          <div>
+            <p class="hd-el-name">Cung ${E.en} — nhóm ${E.ten}</p>
+            <p class="hd-el-signs">${signChips}</p>
+          </div>
+        </div>
+        <p class="hd-body">${E.khiChat}</p>
+        <div class="hd-sw">
+          <div class="hd-sw-col hd-strong">
+            <span class="hd-sw-title"><i class="ti ti-plus"></i> Chất mạnh nhóm ${E.ten}</span>
+            <ul>${E.manh.map((x) => `<li>${x}</li>`).join('')}</ul>
+          </div>
+          <div class="hd-sw-col hd-weak">
+            <span class="hd-sw-title"><i class="ti ti-minus"></i> Mặt cần tiết chế</span>
+            <ul>${E.bongToi.map((x) => `<li>${x}</li>`).join('')}</ul>
+          </div>
+        </div>
+        <div class="hd-el-facets">
+          <p><b>Trong tình yêu:</b> ${E.tinhYeu}</p>
+          <p><b>Trong công việc:</b> ${E.congViec}</p>
+        </div>
+        <p class="hd-el-compat"><i class="ti ti-arrows-shuffle"></i> Nhóm ${E.ten} cộng hưởng tự nhiên với <b>nhóm ${hopNames}</b> và các cung cùng ${E.ten}; dễ va chạm hơn với <b>${E.thachThuc}</b>.</p>
+      </div>`;
+  }
+
+  // ==================== NHÓM TÍNH CHẤT (Tam Thái) ====================
+  function modalityCard(sign) {
+    const M = (typeof Z_MODALITY !== 'undefined') ? Z_MODALITY[sign.tinhChat] : null;
+    if (!M) return '';
+    const signChips = M.cung.map((c) =>
+      `<span class="hd-el-sign${c === sign.ten ? ' is-me' : ''}" data-sign="${c}">${c}</span>`).join('');
+    return `
+      <div class="hd-card hd-element" style="--el:${M.mau}">
+        <div class="hd-sec-head"><i class="ti ti-adjustments"></i> Nhóm tính chất · ${M.icon} ${M.ten}</div>
+        <div class="hd-el-hero">
+          <span class="hd-el-badge">${M.icon}</span>
+          <div>
+            <p class="hd-el-name">${M.en} — nhóm ${M.ten}</p>
+            <p class="hd-el-signs">${signChips}</p>
+          </div>
+        </div>
+        <p class="hd-body">${M.khiChat}</p>
+        <div class="hd-el-facets">
+          <p><b>Chất riêng của nhóm ${M.ten}:</b> ${M.manh.join(' · ')}.</p>
+        </div>
+      </div>`;
+  }
+
+  // Giải thích "vì sao hợp" theo nguyên tố — suy từ Z_ELEMENTS.hopVoi (không data trùng).
+  function elementWhy(elA, elB) {
+    const E = (typeof Z_ELEMENTS !== 'undefined') ? Z_ELEMENTS : null;
+    if (!E || !E[elA] || !E[elB]) return '';
+    if (elA === elB) return `Cùng nhóm ${E[elA].ten} — chung khí chất, dễ đồng điệu và hiểu nhau không cần giải thích.`;
+    if (E[elA].hopVoi.includes(elB)) return `${E[elA].ten} gặp ${E[elB].ten} — hai nguyên tố cộng hưởng tự nhiên, bổ khuyết cho nhau.`;
+    return `${E[elA].ten} và ${E[elB].ten} khác khí chất — hút nhau kiểu đối cực, cần dung hòa và đối thoại nhiều hơn.`;
+  }
+
   // ==================== RENDER SIGN ====================
   function show(sign) {
     currentSign = sign;
@@ -131,6 +199,10 @@
           </div>
         </div>
       </div>
+
+      ${elementCard(sign)}
+
+      ${modalityCard(sign)}
 
       <div class="hd-card">
         <div class="hd-sec-head"><i class="ti ti-heart"></i> Tình yêu · Sự nghiệp · Tài chính</div>
@@ -181,15 +253,25 @@
       const box = document.getElementById('hd-match-result');
       if (!bName) { box.innerHTML = ''; return; }
       const r = compat(sign, bName);
+      const bSign = ZODIAC.find((z) => z.ten === bName);
+      const why = bSign ? elementWhy(sign.nguyeTo, bSign.nguyeTo) : '';
       const cls = r.score >= 80 ? 'good' : r.score >= 62 ? 'mid' : 'low';
       box.innerHTML = `<div class="hd-match-score hd-${cls}">
         <span class="hd-match-pct">${r.score}%</span>
         <span class="hd-match-verdict">${sign.ten} × ${bName}: ${r.verdict}</span>
-      </div>`;
+      </div>${why ? `<p class="hd-match-why"><i class="ti ti-flame"></i> ${why}</p>` : ''}`;
     });
 
     document.getElementById('hd-other').addEventListener('click', renderPicker);
     document.getElementById('hd-share').addEventListener('click', () => shareCard(sign, d));
+
+    // Bấm cung cùng nhóm nguyên tố → chuyển sang cung đó
+    root.querySelectorAll('.hd-el-sign[data-sign]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const z = ZODIAC.find((s) => s.ten === el.dataset.sign);
+        if (z && z.ten !== sign.ten) show(z);
+      });
+    });
 
     // AI
     setupAI(sign);
@@ -198,10 +280,16 @@
 
   // ==================== AI ====================
   function buildContext(sign) {
+    const E = (typeof Z_ELEMENTS !== 'undefined') ? Z_ELEMENTS[sign.nguyeTo] : null;
+    const MOD = (typeof Z_MODALITY !== 'undefined') ? Z_MODALITY[sign.tinhChat] : '';
     return JSON.stringify({
       cung: sign.ten, en: sign.en, nguyeTo: sign.nguyeTo, sao: sign.sao,
       tinhChat: sign.tinhChat, manh: sign.manh.join(', '), yeu: sign.yeu.join(', '),
       hop: sign.hop.join(', '), khac: sign.khac.join(', '),
+      nhomNguyenTo: E ? `${E.ten} (${E.cung.join(', ')}) — ${E.khiChat}` : sign.nguyeTo,
+      nguyenToCongHuong: E ? `${E.hopVoi.map((k) => Z_ELEMENTS[k] ? Z_ELEMENTS[k].ten : k).join(', ')}` : '',
+      tinhChatVanHanh: MOD ? MOD.tomTat : sign.tinhChat,
+      nhomTinhChat: MOD ? `${MOD.ten} (${MOD.cung.join(', ')})` : sign.tinhChat,
     });
   }
 
@@ -238,16 +326,17 @@
   }
 
   // ==================== SHARE CARD ====================
+  // Thẻ hoàng đạo dùng visual TỐI riêng (gradient tím, viền tím đơn) khác
+  // scaffold nền-kem — nên chỉ mượn setup/F/wrapText/shareOrDownload, tự vẽ nền.
   async function shareCard(sign, d) {
-    await document.fonts.ready;
-    const W = 1080, H = 1350, cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
+    const S = window.LatbaiShareCard;
+    const W = 1080, H = 1350;
+    const { cv, ctx } = await S.setup(W, H);
+    const F = S.F;
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#241a3a'); g.addColorStop(1, '#0f0a1e');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = 'rgba(196,164,252,0.7)'; ctx.lineWidth = 6; ctx.strokeRect(28, 28, W - 56, H - 56);
-    const F = (s, w = 800) => `${w} ${s}px 'Be Vietnam Pro', sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#c4a4fc'; ctx.font = F(30, 800); ctx.fillText('CUNG HOÀNG ĐẠO · LATBAI.VN', W / 2, 118);
     ctx.fillStyle = '#fff'; ctx.font = '200px serif'; ctx.fillText(sign.sym, W / 2, 380);
@@ -258,33 +347,19 @@
     ctx.fillText('★'.repeat(d.stars) + '☆'.repeat(5 - d.stars), W / 2, 640);
     // tử vi hôm nay
     ctx.fillStyle = '#eee'; ctx.font = F(30, 500);
-    wrap(ctx, 'Tử vi hôm nay: ' + d.tongQuan, W / 2, 720, W - 200, 46);
+    S.wrapText(ctx, 'Tử vi hôm nay: ' + d.tongQuan, W / 2, 720, W - 200, 46, 20);
     ctx.fillStyle = '#c4a4fc'; ctx.font = F(28, 700);
     ctx.fillText('May mắn: số ' + d.soMayMan + ' · màu ' + d.mauMayMan, W / 2, 980);
+    // footer riêng (màu tím, khác scaffold footer nền-kem)
     ctx.fillStyle = '#8a7ba8'; ctx.font = F(26, 600);
     ctx.fillText('Xem cung của bạn tại  latbai.vn/hoang-dao', W / 2, H - 90);
 
-    const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
-    const fname = `cung-${sign.en.toLowerCase()}.png`;
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], fname, { type: 'image/png' })] })) {
-      try {
-        await navigator.share({ files: [new File([blob], fname, { type: 'image/png' })], title: 'Cung ' + sign.ten,
-          text: `Mình là cung ${sign.ten} ${sign.sym}! Xem cung của bạn tại latbai.vn/hoang-dao` });
-        return;
-      } catch (_) {}
-    }
-    const url = URL.createObjectURL(blob), a = document.createElement('a');
-    a.download = fname; a.href = url; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
-  function wrap(ctx, text, x, y, maxW, lh) {
-    const words = text.split(' '); let line = '', yy = y;
-    for (const w of words) {
-      const t = line ? line + ' ' + w : w;
-      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, yy); line = w; yy += lh; }
-      else line = t;
-    }
-    if (line) ctx.fillText(line, x, yy);
+    await S.shareOrDownload(cv, {
+      fileName: `cung-${sign.en.toLowerCase()}.png`,
+      title: 'Cung ' + sign.ten,
+      text: `Mình là cung ${sign.ten} ${sign.sym}! Xem cung của bạn tại latbai.vn/hoang-dao`,
+      wantShare: true,
+    });
   }
 
   // ==================== BOOT ====================
