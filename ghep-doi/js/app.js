@@ -6,21 +6,6 @@
 (function () {
   'use strict';
 
-  // vẽ tim bằng path canvas — tránh phụ thuộc glyph font ('❤' bị iOS ép
-  // thành emoji màu trên canvas, bỏ qua ctx.fillStyle).
-  function drawHeart(ctx, cx, cy, size) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + size * 0.3);
-    ctx.bezierCurveTo(cx, cy - size * 0.1, cx - size * 0.5, cy - size * 0.5, cx - size * 0.5, cy - size * 0.1);
-    ctx.bezierCurveTo(cx - size * 0.5, cy + size * 0.25, cx - size * 0.15, cy + size * 0.5, cx, cy + size * 0.7);
-    ctx.bezierCurveTo(cx + size * 0.15, cy + size * 0.5, cx + size * 0.5, cy + size * 0.25, cx + size * 0.5, cy - size * 0.1);
-    ctx.bezierCurveTo(cx + size * 0.5, cy - size * 0.5, cx, cy - size * 0.1, cx, cy + size * 0.3);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
   // ==================== THẦN SỐ CƠ BẢN ====================
   function stripAccents(str) {
     return str.normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -253,28 +238,11 @@
   // ==================== SHARE CARD (canvas 1080×1350) ====================
   async function shareCard(wantShare) {
     if (!lastResult || !lastNames) return;
-    await document.fonts.ready;
-
+    const S = window.LatbaiShareCard;
     const W = 1080, H = 1350;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
-
-    // nền kem + viền vàng kép
-    ctx.fillStyle = '#fbf3e4';
-    ctx.fillRect(0, 0, W, H);
-    const grad = ctx.createRadialGradient(W / 2, 0, 100, W / 2, 0, 900);
-    grad.addColorStop(0, 'rgba(244, 114, 182, 0.14)');
-    grad.addColorStop(1, 'rgba(244, 114, 182, 0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(217, 138, 10, 0.75)';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(28, 28, W - 56, H - 56);
-    ctx.lineWidth = 2;
-    ctx.strokeRect(44, 44, W - 88, H - 88);
-
-    const F = (size, weight = 800) => `${weight} ${size}px 'Be Vietnam Pro', sans-serif`;
+    const { cv, ctx } = await S.setup(W, H);
+    S.paintBase(ctx, W, H, '244,114,182');
+    const F = S.F;
     ctx.textAlign = 'center';
 
     ctx.fillStyle = '#a7887a';
@@ -287,10 +255,9 @@
     const nameA = lastNames.a.length > 22 ? lastNames.a.slice(0, 21) + '…' : lastNames.a;
     const nameB = lastNames.b.length > 22 ? lastNames.b.slice(0, 21) + '…' : lastNames.b;
     ctx.fillText(nameA, W / 2, 212);
-    // vẽ tim bằng path thay vì glyph font — iOS ép '❤' thành emoji màu
-    // trên canvas và bỏ qua fillStyle (glyph còn có nguy cơ méo giữa font)
+    // tim vẽ bằng path (S.drawHeart) — iOS ép '❤' thành emoji màu trên canvas
     ctx.fillStyle = '#e11d48';
-    drawHeart(ctx, W / 2, 278, 26);
+    S.drawHeart(ctx, W / 2, 278, 26);
     ctx.fillStyle = '#2b1408';
     ctx.font = F(52, 900);
     ctx.fillText(nameB, W / 2, 348);
@@ -317,50 +284,24 @@
       ctx.textAlign = 'left';
       // track + fill
       ctx.fillStyle = 'rgba(160, 80, 70, 0.14)';
-      roundRect(ctx, 120, yPos + 18, W - 240, 22, 11);
+      S.roundRect(ctx, 120, yPos + 18, W - 240, 22, 11);
       ctx.fill();
       const fillGrad = ctx.createLinearGradient(120, 0, W - 120, 0);
       fillGrad.addColorStop(0, '#fb7185');
       fillGrad.addColorStop(1, '#e11d48');
       ctx.fillStyle = fillGrad;
-      roundRect(ctx, 120, yPos + 18, (W - 240) * p.score / 100, 22, 11);
+      S.roundRect(ctx, 120, yPos + 18, (W - 240) * p.score / 100, 22, 11);
       ctx.fill();
       yPos += 108;
     });
 
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#a7887a';
-    ctx.font = F(28, 600);
-    ctx.fillText('Xem độ hợp đôi của bạn tại  latbai.vn/ghep-doi', W / 2, H - 92);
+    S.footer(ctx, W, H, 'Xem độ hợp đôi của bạn tại  latbai.vn/ghep-doi');
 
-    const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
-    const fileName = `ghep-doi-${lastResult.total}.png`;
-
-    if (wantShare && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
-      try {
-        await navigator.share({
-          files: [new File([blob], fileName, { type: 'image/png' })],
-          title: 'Ghép Đôi Thần Số',
-          text: `${lastNames.a} ❤ ${lastNames.b} — hợp nhau ${lastResult.total}%! Thử ngay tại latbai.vn/ghep-doi`
-        });
-        return;
-      } catch (_) { /* người dùng hủy → rơi xuống tải ảnh */ }
-    }
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = fileName;
-    link.href = url;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
-
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
+    await S.shareOrDownload(cv, {
+      fileName: `ghep-doi-${lastResult.total}.png`,
+      title: 'Ghép Đôi Thần Số',
+      text: `${lastNames.a} ❤ ${lastNames.b} — hợp nhau ${lastResult.total}%! Thử ngay tại latbai.vn/ghep-doi`,
+      wantShare,
+    });
   }
 })();

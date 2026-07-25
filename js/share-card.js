@@ -1,9 +1,10 @@
 /**
  * js/share-card.js — Scaffold chung cho share card ảnh (canvas 1080×1350).
  *
- * Chuẩn hóa pattern đã dùng ở ghep-doi/bao-cao/hoang-dao (nền kem, viền gold
- * kép, toBlob → Web Share Level 2 → fallback tải ảnh) để các module mới không
- * copy-paste lần nữa. 3 module cũ vẫn giữ bản riêng của chúng.
+ * Chuẩn hóa pattern share card (nền kem, viền gold kép, toBlob → Web Share
+ * Level 2 → fallback tải ảnh). Dùng bởi tarot, gieoque, xin-xam, ghep-doi,
+ * bao-cao, hoang-dao (hoang-dao tự vẽ nền tối riêng, chỉ mượn setup/F/wrapText/
+ * shareOrDownload). Module mới cần share card → dùng scaffold này, đừng copy-paste.
  *
  * Global: window.LatbaiShareCard
  */
@@ -23,11 +24,12 @@
 
   // Nền kem + glow màu module từ đỉnh + viền gold kép.
   // glowRGB: chuỗi 'r,g,b' (vd '124,58,237' cho tarot).
-  function paintBase(ctx, W, H, glowRGB) {
+  // glowOpacity: cường độ glow (mặc định 0.14; bao-cao dùng 0.16).
+  function paintBase(ctx, W, H, glowRGB, glowOpacity = 0.14) {
     ctx.fillStyle = '#fbf3e4';
     ctx.fillRect(0, 0, W, H);
     const grad = ctx.createRadialGradient(W / 2, 0, 100, W / 2, 0, 900);
-    grad.addColorStop(0, `rgba(${glowRGB}, 0.14)`);
+    grad.addColorStop(0, `rgba(${glowRGB}, ${glowOpacity})`);
     grad.addColorStop(1, `rgba(${glowRGB}, 0)`);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
@@ -46,6 +48,21 @@
     ctx.arcTo(x, y + h, x, y, r);
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
+  }
+
+  // Vẽ trái tim bằng path canvas — tránh phụ thuộc glyph font ('❤' bị iOS ép
+  // thành emoji màu trên canvas, bỏ qua ctx.fillStyle). Caller set fillStyle trước.
+  function drawHeart(ctx, cx, cy, size) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 0.3);
+    ctx.bezierCurveTo(cx, cy - size * 0.1, cx - size * 0.5, cy - size * 0.5, cx - size * 0.5, cy - size * 0.1);
+    ctx.bezierCurveTo(cx - size * 0.5, cy + size * 0.25, cx - size * 0.15, cy + size * 0.5, cx, cy + size * 0.7);
+    ctx.bezierCurveTo(cx + size * 0.15, cy + size * 0.5, cx + size * 0.5, cy + size * 0.25, cx + size * 0.5, cy - size * 0.1);
+    ctx.bezierCurveTo(cx + size * 0.5, cy - size * 0.5, cx, cy - size * 0.1, cx, cy + size * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   // Word-wrap theo measureText. Vẽ tối đa maxLines dòng (dòng cuối bị cắt thì
@@ -120,5 +137,5 @@
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 
-  window.LatbaiShareCard = { setup, F, paintBase, roundRect, wrapText, loadImage, footer, shareOrDownload };
+  window.LatbaiShareCard = { setup, F, paintBase, roundRect, drawHeart, wrapText, loadImage, footer, shareOrDownload };
 })();

@@ -187,17 +187,11 @@
 
   // ==================== SHARE CARD 1080×1350 ====================
   async function shareCard(R, wantShare) {
-    await document.fonts.ready;
-    const W=1080, H=1350, cv=document.createElement('canvas');
-    cv.width=W; cv.height=H;
-    const ctx=cv.getContext('2d');
-    ctx.fillStyle='#fbf3e4'; ctx.fillRect(0,0,W,H);
-    const g=ctx.createRadialGradient(W/2,0,100,W/2,0,900);
-    g.addColorStop(0,'rgba(217,138,10,0.16)'); g.addColorStop(1,'rgba(217,138,10,0)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='rgba(217,138,10,0.75)'; ctx.lineWidth=6; ctx.strokeRect(28,28,W-56,H-56);
-    ctx.lineWidth=2; ctx.strokeRect(44,44,W-88,H-88);
-    const F=(s,w=800)=>`${w} ${s}px 'Be Vietnam Pro', sans-serif`;
+    const S = window.LatbaiShareCard;
+    const W=1080, H=1350;
+    const { cv, ctx } = await S.setup(W, H);
+    S.paintBase(ctx, W, H, '217,138,10', 0.16);
+    const F = S.F;
     ctx.textAlign='center';
 
     ctx.fillStyle='#a7887a'; ctx.font=F(30,800);
@@ -212,8 +206,8 @@
     const bw=470, bh=150, gap=40, x0=(W-bw*2-gap)/2;
     boxes.forEach((b,i)=>{
       const bx=x0+(i%2)*(bw+gap), by=320+Math.floor(i/2)*(bh+gap);
-      ctx.fillStyle='#fff'; roundRect(ctx,bx,by,bw,bh,20); ctx.fill();
-      ctx.strokeStyle='rgba(217,138,10,0.3)'; ctx.lineWidth=1.5; roundRect(ctx,bx,by,bw,bh,20); ctx.stroke();
+      ctx.fillStyle='#fff'; S.roundRect(ctx,bx,by,bw,bh,20); ctx.fill();
+      ctx.strokeStyle='rgba(217,138,10,0.3)'; ctx.lineWidth=1.5; S.roundRect(ctx,bx,by,bw,bh,20); ctx.stroke();
       ctx.fillStyle='#d98a0a'; ctx.font=F(60,900); ctx.fillText(String(b[1]), bx+bw/2, by+82);
       ctx.fillStyle='#8a7258'; ctx.font=F(26,700); ctx.fillText(b[0], bx+bw/2, by+122);
     });
@@ -221,40 +215,23 @@
     // câu tóm tính cách (số chủ đạo) — lấy đoạn <p> mô tả, cắt theo từ
     const lpText = clampWords(paraText(meaning('lifepath', R.lp)), 200);
     ctx.fillStyle='#3f2d1e'; ctx.font=F(30,500);
-    wrapText(ctx, lpText, W/2, 760, W-200, 46);
+    S.wrapText(ctx, lpText, W/2, 760, W-200, 46, 6);
 
-    ctx.fillStyle='#a7887a'; ctx.font=F(28,600);
-    ctx.fillText('Xem báo cáo đầy đủ của bạn tại  latbai.vn/bao-cao', W/2, H-92);
+    S.footer(ctx, W, H, 'Xem báo cáo đầy đủ của bạn tại  latbai.vn/bao-cao');
 
-    const blob = await new Promise(r=>cv.toBlob(r,'image/png'));
-    const fname = `bao-cao-${stripAccents(R.p.name).replace(/[^A-Z]/g,'').slice(0,12)||'vanmenh'}.png`;
-    if (wantShare && navigator.canShare && navigator.canShare({ files:[new File([blob],fname,{type:'image/png'})] })) {
-      try {
-        await navigator.share({ files:[new File([blob],fname,{type:'image/png'})], title:'Báo Cáo Vận Mệnh',
-          text:`Báo cáo vận mệnh của ${R.p.name} — số chủ đạo ${R.lp}, tuổi ${R.cc.giap}, mệnh ${R.menh}. Lập của bạn tại latbai.vn/bao-cao` });
-        return;
-      } catch(_) {}
-    }
-    const url=URL.createObjectURL(blob), a=document.createElement('a');
-    a.download=fname; a.href=url; a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    await S.shareOrDownload(cv, {
+      fileName: `bao-cao-${stripAccents(R.p.name).replace(/[^A-Z]/g,'').slice(0,12)||'vanmenh'}.png`,
+      title: 'Báo Cáo Vận Mệnh',
+      text: `Báo cáo vận mệnh của ${R.p.name} — số chủ đạo ${R.lp}, tuổi ${R.cc.giap}, mệnh ${R.menh}. Lập của bạn tại latbai.vn/bao-cao`,
+      wantShare,
+    });
   }
 
-  function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
   function trim(s,n){s=(s||'').trim();return s.length<=n?s:s.slice(0,n-1)+'…';}
   function stripHtml(h){const d=document.createElement('div');d.innerHTML=h||'';return (d.textContent||'').replace(/\s+/g,' ').trim();}
   // ưu tiên nội dung trong <p> (bỏ tiêu đề <h4>); fallback strip toàn bộ
   function paraText(h){const m=(h||'').match(/<p[^>]*>([\s\S]*?)<\/p>/i);return stripHtml(m?m[1]:h);}
   function clampWords(s,n){s=(s||'').trim();if(s.length<=n)return s;const cut=s.slice(0,n);return cut.slice(0,cut.lastIndexOf(' ')).trimEnd()+'…';}
-  function wrapText(ctx,text,x,y,maxW,lh){
-    const words=text.split(' '); let line='', yy=y;
-    for (const w of words){
-      const test=line?line+' '+w:w;
-      if (ctx.measureText(test).width>maxW && line){ ctx.fillText(line,x,yy); line=w; yy+=lh; }
-      else line=test;
-    }
-    if (line) ctx.fillText(line,x,yy);
-  }
 
   // ==================== BOOT ====================
   function boot() {
