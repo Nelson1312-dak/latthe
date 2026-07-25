@@ -1384,3 +1384,54 @@ a { text-decoration: none; color: inherit; }
   transform: translateY(-1px);
 }
 .detail-page-link i:first-child { font-size: 16px; }
+
+/* ---- Xáo bài: gợi ý chạm rõ ràng (bộ bài "thở" + nút CTA) ---- */
+.deck-visual { animation: deck-breathe 2.6s ease-in-out infinite; }
+.deck-visual::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 28px;
+  background: radial-gradient(ellipse at center, rgba(124, 58, 237, 0.30), transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+  animation: deck-halo 2.6s ease-in-out infinite;
+}
+.deck-visual.holding, .deck-visual.shuffle-done { animation: none; }
+.deck-visual.holding::before, .deck-visual.shuffle-done::before { animation: none; opacity: 0; }
+@keyframes deck-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-6px) scale(1.03); }
+}
+@keyframes deck-halo {
+  0%, 100% { opacity: 0.22; transform: scale(0.95); }
+  50%      { opacity: 0.55; transform: scale(1.05); }
+}
+
+.btn-shuffle-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px auto 4px;
+  padding: 13px 28px;
+  border-radius: 99px;
+  border: none;
+  background: linear-gradient(135deg, #7c3aed, #c084fc);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(124, 58, 237, 0.32);
+  animation: cta-pulse 1.9s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-shuffle-cta:active { transform: scale(0.96); }
+@keyframes cta-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 8px 22px rgba(124, 58, 237, 0.30); }
+  50%      { transform: scale(1.04); box-shadow: 0 11px 28px rgba(124, 58, 237, 0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-visual, .deck-visual::before, .btn-shuffle-cta { animation: none; }
+}

@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deckVisual.classList.remove('holding', 'shuffle-done');
     shuffleHintEl.textContent = 'Chạm vào bộ bài để truyền năng lượng & xáo bài... ✨';
     btnDraw.classList.add('hidden');
+    if (btnShuffle) btnShuffle.classList.remove('hidden');
   }
 
   function settleDeckCards() {
@@ -103,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (holdDone || isShuffling) return;
     isShuffling = true;
     deckVisual.classList.add('holding');
+    if (btnShuffle) btnShuffle.classList.add('hidden');
     shuffleHintEl.textContent = 'Đang truyền năng lượng & xáo bài... ✨';
 
     deckVisual.querySelectorAll('.deck-card').forEach(c => {
@@ -127,6 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   deckVisual.addEventListener('click', startShuffle);
+  const btnShuffle = document.getElementById('btn-shuffle');
+  if (btnShuffle) btnShuffle.addEventListener('click', startShuffle);
 
   // ---- Draw cards ----
   btnDraw.addEventListener('click', () => {
