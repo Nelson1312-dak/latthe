@@ -43,8 +43,12 @@ function resolveFile(urlPath, hostDir) {
   return null;
 }
 
+// Chuẩn hoá CRLF→LF trước khi băm. Worktree Windows (core.autocrlf=true) và
+// runner Linux của GitHub Actions cho ra byte KHÁC NHAU cho cùng một nội dung;
+// nếu băm byte thô thì cache seed trên Windows sẽ khiến CI thấy mọi URL "đổi"
+// và dập lastmod toàn sitemap (đã xảy ra 2026-07-25, bump oan 759 URL).
 function sha1(buf) {
-  return crypto.createHash('sha1').update(buf).digest('hex');
+  return crypto.createHash('sha1').update(buf.toString('utf8').replace(/\r\n/g, '\n')).digest('hex');
 }
 
 let cache = {};
