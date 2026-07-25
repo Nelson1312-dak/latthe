@@ -355,6 +355,8 @@
       playReveal();
     });
     // ==================== IMAGE EXPORT ====================
+    // Gán bởi initChieuOverlay() bên dưới — export cần xoá overlay trước khi chụp.
+    let clearChieuOverlay = null;
     // html2canvas (~200KB) chỉ nạp khi thật sự bấm xuất ảnh — không đè lên first load
     let html2canvasPromise = null;
     function ensureHtml2canvas() {
@@ -376,10 +378,15 @@
       const nameVal = document.getElementById('f-name').value.trim() || 'vo-danh';
       const exportBtn = document.getElementById('btn-export-img');
 
+      // #chieu-svg + class is-chieu* nằm TRONG .chart-outer nên lọt vào ảnh nếu
+      // user vừa hover một cung — xoá trước khi render.
+      if (clearChieuOverlay) clearChieuOverlay();
+
       exportBtn.disabled = true;
       exportBtn.textContent = 'Đang xuất... ⏳';
 
-      ensureHtml2canvas().then((html2canvas) => {
+      // Chờ font: canvas không tự đợi, thiếu bước này lần xuất đầu rasterize bằng font fallback.
+      document.fonts.ready.then(ensureHtml2canvas).then((html2canvas) => {
         html2canvas(target, {
           scale: 2,
           useCORS: true,
@@ -534,6 +541,7 @@
           c.classList.remove('is-chieu-self', 'is-chieu', 'is-chieu-dim');
         });
       }
+      clearChieuOverlay = clearOverlay;   // để nút "Xuất ảnh lá số" gọi được
 
       let clearTimer = null;
 

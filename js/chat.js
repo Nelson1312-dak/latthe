@@ -117,7 +117,9 @@ const Chat = (() => {
             retryBtn.onclick = () => {
               aiBubble.remove();
               userBubble.remove();
-              sendWithUI({ question: q, context, type, history, memory, onDone });
+              // onError phải truyền lại, không thì lỗi lần 2 qua nút này sẽ bỏ qua
+              // xử lý lỗi của module (vd tuvi hoàn lại lượt hỏi).
+              sendWithUI({ question: q, context, type, history, memory, onDone, onError: onErrorCb });
             };
             aiBubble.appendChild(retryBtn);
           }
