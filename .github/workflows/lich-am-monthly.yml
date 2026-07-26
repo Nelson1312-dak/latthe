@@ -1,0 +1,56 @@
+# Tự động nối trang lịch âm của tháng mới vào ngày 25 hằng tháng.
+# Chạy tay: tab Actions trên GitHub → "Lich am thang moi" → Run workflow.
+#
+# Vì sao tách riêng khỏi ngay-tot-monthly.yml: build-licham-pages.mjs có 2 chỗ
+# `throw` (vượt ngưỡng MAX_DAY_PAGES, lệch bảng tiết khí). Nếu chung một bước `run`
+# thì một throw sẽ chặn luôn việc sinh trang tháng của ngay-tot — vốn là tài sản
+# quan trọng hơn. Tách ra để hỏng cái nào chỉ đỏ cái đó.
+#
+# Chạy SAU ngay-tot 2 tiếng để push của nó đã hạ cánh; vẫn `git pull --rebase`
+# trước khi push vì hai workflow cùng ghi vào một branch trong cùng một ngày.
+name: Lich am thang moi
+
+on:
+  schedule:
+    - cron: '0 3 25 * *' # 03:00 UTC ngày 25 = 10:00 sáng giờ VN (sau ngay-tot 2 tiếng)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sinh trang lich am + lastmod
+        run: |
+          node scripts/build-licham-pages.mjs
+          node scripts/update-sitemap-lastmod.mjs
+
+      - name: Commit & push
+        id: push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Không có gì thay đổi — bỏ qua."
+          else
+            git commit -m "chore(lich-am): regen trang ngay + tiet khi (auto ngay 25)"
+            git pull --rebase --autostash
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Doi Vercel deploy roi ban IndexNow
+        if: steps.push.outputs.changed == 'true'
+        run: |
+          sleep 150
+          node scripts/submit-indexnow.mjs

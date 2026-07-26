@@ -10,6 +10,7 @@
     "eval": "node scripts/eval-rag.mjs",
     "test:amlich": "node scripts/verify-amlich.mjs",
     "seo:xinxam": "node scripts/build-xinxam-pages.mjs",
+    "seo:licham": "node scripts/build-licham-pages.mjs",
     "seo:lastmod": "node scripts/update-sitemap-lastmod.mjs",
     "seo:indexnow": "node scripts/submit-indexnow.mjs"
   },

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Lịch âm hôm nay và lịch vạn niên: xem âm lịch song song dương lịch, đổi ngày âm sang dương và ngược lại, can chi ngày tháng năm, 12 Trực, sao hoàng đạo, giờ hoàng đạo và 24 tiết khí. Miễn phí.">
+  <meta name="keywords" content="lịch âm, lịch âm hôm nay, âm lịch hôm nay, lịch vạn niên, đổi ngày âm sang dương, đổi ngày dương sang âm, xem lịch âm, can chi ngày, 24 tiết khí, giờ hoàng đạo, hôm nay ngày bao nhiêu âm">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Lật Bài">
+  <meta name="theme-color" content="#fbf3e4">
+  <link rel="canonical" href="https://latbai.vn/lich-am/">
+  <title>Lịch Âm Hôm Nay — Lịch Vạn Niên, Đổi Ngày Âm Dương, 24 Tiết Khí | Lật Bài</title>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://latbai.vn/lich-am/">
+  <meta property="og:site_name" content="Lật Bài">
+  <meta property="og:locale" content="vi_VN">
+  <meta property="og:title" content="Lịch Âm Hôm Nay — Lịch Vạn Niên, Đổi Ngày Âm Dương, 24 Tiết Khí">
+  <meta property="og:description" content="Xem lịch âm song song dương lịch, đổi ngày hai chiều, can chi, 12 Trực, giờ hoàng đạo và 24 tiết khí. Miễn phí, không quảng cáo.">
+  <meta property="og:image" content="https://latbai.vn/images/og-licham.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Lịch Âm Hôm Nay — Lịch Vạn Niên, Đổi Ngày Âm Dương">
+  <meta name="twitter:description" content="Âm lịch song song dương lịch, can chi, 12 Trực, giờ hoàng đạo, 24 tiết khí.">
+  <meta name="twitter:image" content="https://latbai.vn/images/og-licham.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+  <link rel="apple-touch-icon" href="/images/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Lịch Âm">
+  <link rel="stylesheet" href="/css/fonts.css">
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/lich-am/css/licham.css">
+
+  <!-- Shared shell: floating dock, service worker, Vercel analytics -->
+  <script src="/js/shell.js" defer></script>
+  <script src="/js/profile.js" defer></script>
+  <!-- Mystic FX: hat huyen hoc nen theo chu de module -->
+  <script src="/js/mystic-fx.js" defer data-color="14,116,144" data-glyphs="☾☽❉" data-count="40"></script>
+  <script src="/js/amlich.js" defer></script>
+  <script src="/lich-am/js/licham-data.js" defer></script>
+  <script src="/lich-am/js/app.js" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Lịch Âm — Lịch Vạn Niên",
+    "description": "Xem lịch âm hôm nay, đổi ngày âm dương hai chiều, can chi, 12 Trực, giờ hoàng đạo và 24 tiết khí. Miễn phí.",
+    "url": "https://latbai.vn/lich-am/",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "VND" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [{
+      "@type": "Question",
+      "name": "Hôm nay là ngày bao nhiêu âm lịch?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Thẻ \"Hôm nay\" ở đầu trang hiển thị ngay ngày âm lịch tương ứng với hôm nay, kèm can chi ngày, tháng, năm, trực, sao hoàng đạo hay hắc đạo, tiết khí đang diễn ra và các khung giờ hoàng đạo. Kết quả tính theo múi giờ Việt Nam (UTC+7)."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Vì sao âm lịch Việt Nam đôi khi lệch một ngày so với lịch Trung Quốc?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Âm lịch được tính theo thời điểm trăng non và vị trí mặt trời quy về múi giờ địa phương. Việt Nam dùng UTC+7 còn Trung Quốc dùng UTC+8, nên khi điểm sóc rơi vào khoảng gần nửa đêm, hai nước có thể ghi nhận mùng một khác nhau một ngày. Công cụ này tính theo UTC+7."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Tháng nhuận âm lịch là gì và tính thế nào?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Một năm âm lịch có khoảng 354 ngày, ngắn hơn năm dương khoảng 11 ngày, nên cứ vài năm phải thêm một tháng nhuận để mùa không bị trôi. Quy tắc dựa trên tiết Đông Chí: tháng âm nào không chứa trung khí thì được lấy làm tháng nhuận. Ví dụ năm 2025 nhuận tháng 6, năm 2028 nhuận tháng 5."
+      }
+    }, {
+      "@type": "Question",
+      "name": "24 tiết khí là gì?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "24 tiết khí chia một vòng chuyển động biểu kiến của mặt trời thành 24 chặng, mỗi chặng 15 độ kinh độ, dùng để định mùa vụ nông nghiệp. Vì tính theo mặt trời nên tiết khí gắn với dương lịch khá ổn định, ví dụ Lập Xuân luôn rơi vào khoảng mùng 4 tháng 2 dương lịch."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Người sinh trước Lập Xuân tính con giáp năm nào?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Trong tử vi và trạch nhật, năm can chi đổi tại tiết Lập Xuân chứ không đổi tại Tết Nguyên Đán. Người sinh sau Tết nhưng trước Lập Xuân vẫn được tính con giáp của năm cũ. Đây là điểm rất hay bị nhầm khi xem tuổi."
+      }
+    }]
+  }
+  </script>
+</head>
+<body class="light-theme licham-theme">
+
+  <div class="gemini-glow-1"></div><div class="gemini-glow-2"></div><div class="gemini-glow-3"></div>
+
+  <header class="module-header">
+    <a href="/" class="header-back" aria-label="Về trang chủ"><i class="ti ti-chevron-left"></i></a>
+    <span class="header-title">Lịch Âm</span>
+    <div class="header-actions" style="width: 38px;"></div>
+  </header>
+
+  <h1 class="sr-only">Lịch Âm Hôm Nay — Lịch Vạn Niên, Đổi Ngày Âm Dương, Can Chi &amp; 24 Tiết Khí</h1>
+
+  <div class="la-wrapper">
+    <div class="la-hero">
+      <div class="l-brand-icon" aria-hidden="true">
+        <img src="/images/logo.svg" alt="Lật Bài Logo">
+      </div>
+      <h2 class="la-title">Lịch Âm</h2>
+      <p class="la-subtitle">Âm ↔ Dương • Can Chi • 12 Trực • 24 Tiết Khí</p>
+      <div class="seo-app-intro">
+        Xem âm lịch song song dương lịch, đổi ngày hai chiều, tra can chi và giờ hoàng đạo của bất kỳ ngày nào từ 1900 đến 2100.
+      </div>
+    </div>
+
+    <!-- Hôm nay -->
+    <section class="la-card" id="la-today" aria-live="polite"></section>
+
+    <!-- Lịch tháng -->
+    <section class="la-card">
+      <div class="la-month-nav">
+        <button type="button" id="la-prev" class="la-nav-btn" aria-label="Tháng trước"><i class="ti ti-chevron-left"></i></button>
+        <span id="la-month-label" class="la-month-label">Tháng —</span>
+        <button type="button" id="la-next" class="la-nav-btn" aria-label="Tháng sau"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <div class="la-jump">
+        <select id="la-jump-m" class="la-select" aria-label="Chọn tháng"></select>
+        <select id="la-jump-y" class="la-select" aria-label="Chọn năm"></select>
+        <button type="button" id="la-btn-today" class="la-btn-today">Hôm nay</button>
+      </div>
+      <div class="la-dows" aria-hidden="true">
+        <span class="la-dow">T2</span><span class="la-dow">T3</span><span class="la-dow">T4</span>
+        <span class="la-dow">T5</span><span class="la-dow">T6</span><span class="la-dow">T7</span>
+        <span class="la-dow is-sun">CN</span>
+      </div>
+      <div class="la-grid" id="la-grid"></div>
+      <div class="la-legend">
+        <span><i style="background:var(--am)"></i> Hôm nay</span>
+        <span><i class="la-mark-tk"></i> Tiết khí</span>
+        <span><i class="la-mark-le"></i> Lễ / Tết</span>
+        <span><i style="background:var(--am-dark)"></i> Mùng 1</span>
+      </div>
+    </section>
+
+    <!-- Đổi ngày -->
+    <section class="la-card">
+      <div class="la-sec-head"><i class="ti ti-arrows-exchange"></i> Đổi ngày âm ↔ dương</div>
+      <div class="la-tabs" role="tablist">
+        <button type="button" id="la-tab-s2l" class="la-tab is-active" role="tab" aria-selected="true">Dương → Âm</button>
+        <button type="button" id="la-tab-l2s" class="la-tab" role="tab" aria-selected="false">Âm → Dương</button>
+      </div>
+      <div id="la-pane-s2l" class="la-pane is-active">
+        <div class="la-inputs">
+          <input type="number" id="la-s-d" class="la-num" placeholder="Ngày" min="1" max="31" aria-label="Ngày dương lịch">
+          <input type="number" id="la-s-m" class="la-num" placeholder="Tháng" min="1" max="12" aria-label="Tháng dương lịch">
+          <input type="number" id="la-s-y" class="la-num" placeholder="Năm" min="1900" max="2100" aria-label="Năm dương lịch">
+          <button type="button" id="la-s-go" class="la-go">Đổi</button>
+        </div>
+      </div>
+      <div id="la-pane-l2s" class="la-pane">
+        <div class="la-inputs">
+          <input type="number" id="la-l-d" class="la-num" placeholder="Ngày" min="1" max="30" aria-label="Ngày âm lịch">
+          <input type="number" id="la-l-m" class="la-num" placeholder="Tháng" min="1" max="12" aria-label="Tháng âm lịch">
+          <input type="number" id="la-l-y" class="la-num" placeholder="Năm" min="1900" max="2100" aria-label="Năm âm lịch">
+          <label class="la-leap"><input type="checkbox" id="la-l-leap"> tháng nhuận</label>
+          <button type="button" id="la-l-go" class="la-go">Đổi</button>
+        </div>
+      </div>
+      <div id="la-out" class="la-out"></div>
+    </section>
+
+    <!-- 24 tiết khí -->
+    <section class="la-card">
+      <div class="la-sec-head"><i class="ti ti-sun"></i> 24 tiết khí <span id="la-tk-year" style="font-weight:600;color:var(--muted)"></span></div>
+      <div class="la-tk-strip" id="la-tk-strip"></div>
+    </section>
+
+    <!-- Lễ tết trong tháng -->
+    <section class="la-card">
+      <div class="la-sec-head"><i class="ti ti-confetti"></i> Lễ &amp; Tết trong tháng</div>
+      <div class="la-le-list" id="la-holidays"></div>
+    </section>
+
+    <a href="/lich-am/lich-van-nien" class="seo-library-link licham-page-cta">
+      <i class="ti ti-calendar-month"></i> Tra cứu lịch âm từng ngày &amp; lịch vạn niên đầy đủ
+      <i class="ti ti-arrow-right" style="margin-left:auto;opacity:0.5;"></i>
+    </a>
+
+    <section class="seo-content">
+      <h2>Lịch âm là gì? Cách đọc lịch vạn niên</h2>
+      <p>Âm lịch Việt Nam thực chất là <strong>âm dương lịch</strong>: tháng tính theo chu kỳ tròn khuyết của mặt trăng, còn năm được điều chỉnh theo mặt trời bằng cách thêm tháng nhuận, để mùa vụ không bị trôi dần. Mỗi tháng âm bắt đầu vào ngày chứa điểm sóc (trăng non) và dài 29 hoặc 30 ngày.</p>
+      <p>Một tờ lịch vạn niên đầy đủ không chỉ ghi ngày âm. Nó còn cho biết <strong>can chi</strong> của ngày, tháng, năm; <strong>trực</strong> trong vòng 12 trực Kiến – Trừ – Mãn – Bình – Định – Chấp – Phá – Nguy – Thành – Thu – Khai – Bế; ngày thuộc <strong>hoàng đạo</strong> hay <strong>hắc đạo</strong>; các <strong>giờ hoàng đạo</strong> trong ngày; và <strong>tiết khí</strong> đang diễn ra. Đó chính là những thông tin công cụ này hiển thị khi bạn bấm vào một ngày bất kỳ trên lịch.</p>
+
+      <h3>Đổi ngày âm sang dương và ngược lại</h3>
+      <p>Việc quy đổi không thể làm bằng phép cộng trừ đơn giản, vì độ dài tháng âm thay đổi và tháng nhuận xuất hiện không đều. Công cụ ở trên tính trực tiếp theo thuật toán thiên văn (thời điểm trăng non và kinh độ mặt trời quy về múi giờ UTC+7), cho kết quả chính xác trong khoảng <strong>1900 – 2100</strong>. Khi đổi từ âm sang dương, nếu bạn tích ô "tháng nhuận" mà năm đó không có tháng nhuận ấy, hệ thống sẽ báo lỗi thay vì trả về một ngày sai.</p>
+
+      <h3>24 tiết khí và mùa vụ</h3>
+      <p>24 tiết khí chia đường đi biểu kiến của mặt trời thành 24 chặng bằng nhau, mỗi chặng 15 độ. Vì gắn với mặt trời nên tiết khí rơi vào ngày dương lịch khá cố định: Lập Xuân quanh mùng 4/2, Hạ Chí quanh 21/6, Đông Chí quanh 21–22/12. Hệ tiết khí hình thành ở lưu vực Hoàng Hà nên mô tả khí hậu hợp với <strong>miền Bắc Việt Nam</strong> hơn cả; miền Nam về cơ bản chỉ có mùa mưa và mùa khô.</p>
+      <p>Riêng <strong>Đông Chí</strong> giữ vai trò đặc biệt trong lịch pháp: tháng âm chứa Đông Chí được định là tháng Mười Một, từ đó suy ra toàn bộ cách đánh số tháng và xác định tháng nhuận của năm.</p>
+
+      <h3>Một điểm rất hay bị nhầm</h3>
+      <p>Năm can chi trong tử vi và trạch nhật đổi tại <strong>tiết Lập Xuân</strong>, không đổi tại Tết Nguyên Đán. Người sinh sau Tết nhưng trước Lập Xuân vẫn mang con giáp của năm cũ. Nếu bạn xem tuổi để chọn ngày hay lập lá số, hãy để ý mốc này.</p>
+
+      <h3>Công cụ liên quan</h3>
+      <ul>
+        <li><a href="/ngay-tot/">Xem ngày tốt</a> — chấm điểm từng ngày theo loại việc (cưới hỏi, khai trương, động thổ...) và lọc ngày xung tuổi.</li>
+        <li><a href="/lich-am/24-tiet-khi">24 tiết khí</a> — ngày bắt đầu từng tiết và ý nghĩa khí hậu, nông vụ, sức khỏe.</li>
+        <li><a href="/tuvi/">Lá số Tử Vi</a> — nhận cả ngày sinh âm lịch, tự quy đổi sang dương lịch.</li>
+        <li><a href="/thuvien/12-con-giap">12 con giáp</a> và <a href="/thuvien/am-duong-ngu-hanh">âm dương ngũ hành</a> — nền lý thuyết phía sau can chi.</li>
+      </ul>
+    </section>
+
+    <div class="faq-section" id="seo-faq">
+      <h2 class="faq-title">Câu hỏi thường gặp về lịch âm</h2>
+      <details class="faq-item">
+        <summary class="faq-question">Hôm nay là ngày bao nhiêu âm lịch?</summary>
+        <p class="faq-answer">Thẻ "Hôm nay" ở đầu trang hiển thị ngay ngày âm lịch tương ứng, kèm can chi ngày/tháng/năm, trực, sao hoàng đạo hay hắc đạo, tiết khí đang diễn ra và các khung giờ hoàng đạo. Kết quả tính theo múi giờ Việt Nam (UTC+7).</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question">Vì sao âm lịch Việt Nam đôi khi lệch một ngày so với lịch Trung Quốc?</summary>
+        <p class="faq-answer">Âm lịch tính theo thời điểm trăng non quy về múi giờ địa phương. Việt Nam dùng UTC+7, Trung Quốc dùng UTC+8, nên khi điểm sóc rơi gần nửa đêm, hai nước có thể ghi nhận mùng một lệch nhau một ngày. Công cụ này tính theo UTC+7.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question">Tháng nhuận âm lịch là gì?</summary>
+        <p class="faq-answer">Năm âm lịch khoảng 354 ngày, ngắn hơn năm dương chừng 11 ngày, nên cứ vài năm phải thêm một tháng nhuận để mùa không trôi. Quy tắc dựa trên tiết Đông Chí: tháng âm nào không chứa trung khí thì lấy làm tháng nhuận. Ví dụ 2025 nhuận tháng 6, 2028 nhuận tháng 5.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question">Người sinh trước Lập Xuân tính con giáp năm nào?</summary>
+        <p class="faq-answer">Năm can chi đổi tại tiết Lập Xuân chứ không phải Tết Nguyên Đán. Người sinh sau Tết nhưng trước Lập Xuân vẫn tính con giáp năm cũ — điểm này rất hay bị nhầm khi xem tuổi.</p>
+      </details>
+    </div>
+
+    <p class="la-disclaimer">Số liệu âm lịch, can chi và tiết khí tính bằng thuật toán thiên văn theo múi giờ UTC+7, chính xác trong khoảng 1900–2100. Phần luận đoán ngày tốt xấu mang tính tham khảo &amp; chiêm nghiệm văn hóa.</p>
+  </div>
+
+  <!-- Sheet chi tiết ngày -->
+  <div class="las-wrap" id="la-sheet" hidden>
+    <div class="las-backdrop" id="la-sheet-backdrop"></div>
+    <div class="las-panel" role="dialog" aria-modal="true" aria-labelledby="las-title">
+      <div class="las-handle"></div>
+      <div class="las-head">
+        <div>
+          <div class="las-title" id="las-title">—</div>
+          <div class="las-sub" id="las-sub"></div>
+        </div>
+        <button type="button" class="las-close" id="la-sheet-close" aria-label="Đóng">✕</button>
+      </div>
+      <div class="las-body" id="las-body"></div>
+    </div>
+  </div>
+
+</body>
+</html>

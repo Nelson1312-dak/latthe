@@ -15,6 +15,7 @@ const SOURCES = [
   { src: 'og-source-drinking.svg', out: 'og-drinking.png' },
   { src: 'og-source-tuvi.svg',     out: 'og-tuvi.png' },
   { src: 'og-source-xinxam.svg',   out: 'og-xinxam.png' },
+  { src: 'og-source-licham.svg',   out: 'og-licham.png' },
 ];
 
 for (const { src, out } of SOURCES) {

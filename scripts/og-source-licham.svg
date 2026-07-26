@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#fffefb"/>
+      <stop offset="100%" stop-color="#e4eef0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#0e7490" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#0e7490" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="moon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0e7490"/>
+    </linearGradient>
+    <!-- Lưỡi liềm bằng mask: hình tròn trắng trừ đi hình tròn đen lệch sang phải.
+         Cách vẽ bằng path 2 cung không fill được nên đã bỏ. -->
+    <mask id="crescent">
+      <circle cx="150" cy="98" r="78" fill="#fff"/>
+      <circle cx="192" cy="84" r="70" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <ellipse cx="920" cy="315" rx="380" ry="320" fill="url(#glow)"/>
+
+  <text x="80" y="160" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="20" font-weight="700" fill="#0e7490" letter-spacing="4">LỊCH VẠN NIÊN · ÂM DƯƠNG LỊCH</text>
+
+  <text x="80" y="270" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="88" font-weight="900" fill="#10262b" letter-spacing="-2">Lịch Âm</text>
+  <text x="80" y="340" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="40" font-weight="700" fill="#0e7490">Đổi ngày âm ↔ dương tức thì</text>
+
+  <line x1="80" y1="380" x2="180" y2="380" stroke="#0e7490" stroke-width="3"/>
+
+  <text x="80" y="430" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="24" font-weight="500" fill="#3f6169">Can chi ngày tháng năm · 12 Trực · Giờ hoàng đạo</text>
+  <text x="80" y="465" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="24" font-weight="500" fill="#3f6169">24 tiết khí · Tra cứu 1900 – 2100</text>
+
+  <text x="80" y="560" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="20" font-weight="500" fill="#0b1e22" opacity="0.5">latbai.vn/lich-am · miễn phí</text>
+
+  <!-- Phải: trăng khuyết trên lưới lịch -->
+  <g transform="translate(820 150)">
+    <!-- trăng khuyết -->
+    <circle cx="150" cy="98" r="78" fill="url(#moon)" mask="url(#crescent)"/>
+    <circle cx="243" cy="52" r="5" fill="#0e7490" opacity="0.55"/>
+    <circle cx="268" cy="96" r="3.5" fill="#0e7490" opacity="0.4"/>
+    <circle cx="232" cy="128" r="3" fill="#0e7490" opacity="0.35"/>
+
+    <!-- lưới lịch 7 cột -->
+    <g transform="translate(38 210)">
+      <rect x="0" y="0" width="266" height="176" rx="18" fill="#ffffff" stroke="#0e7490" stroke-width="3"/>
+      <rect x="0" y="0" width="266" height="34" rx="18" fill="#0e7490"/>
+      <rect x="0" y="22" width="266" height="12" fill="#0e7490"/>
+      <text x="133" y="24" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="17" font-weight="800" fill="#ffffff" text-anchor="middle">ÂM · DƯƠNG</text>
+      <g fill="#3f6169" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="15" font-weight="700" text-anchor="middle">
+        <text x="26" y="66">1</text><text x="64" y="66">2</text><text x="102" y="66">3</text>
+        <text x="140" y="66">4</text><text x="178" y="66">5</text><text x="216" y="66">6</text><text x="248" y="66">7</text>
+        <text x="26" y="112">8</text><text x="64" y="112">9</text><text x="102" y="112">10</text>
+        <text x="178" y="112">12</text><text x="216" y="112">13</text><text x="248" y="112">14</text>
+      </g>
+      <!-- ô hôm nay -->
+      <rect x="122" y="88" width="36" height="34" rx="10" fill="#0e7490"/>
+      <text x="140" y="112" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="15" font-weight="800" fill="#ffffff" text-anchor="middle">11</text>
+      <g fill="#8aa3a9" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="11" font-weight="600" text-anchor="middle">
+        <text x="26" y="146">15</text><text x="64" y="146">16</text><text x="102" y="146">17</text>
+        <text x="140" y="146">18</text><text x="178" y="146">19</text><text x="216" y="146">20</text><text x="248" y="146">21</text>
+      </g>
+    </g>
+  </g>
+</svg>
