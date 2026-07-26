@@ -2,7 +2,7 @@
  * scripts/build-ngaytot-pages.mjs — sinh trang ngày tốt tĩnh:
  *   - Trang tháng: /ngay-tot/thang-{M}-{YYYY}.html (từ tháng hiện tại → hết Q1 năm sau)
  *   - 4 hub việc:  /ngay-tot/cuoi-hoi | khai-truong | dong-tho | xuat-hanh
- * Chạy đúng thuật toán âm lịch + chấm điểm của module (ngay-tot/js/amlich.js,
+ * Chạy đúng thuật toán âm lịch + chấm điểm của module (js/amlich.js,
  * bảng TRUC_INFO/Tam Nương/Nguyệt Kỵ chép từ ngay-tot/js/app.js — sửa app thì sửa cả đây).
  * Chạy lại ngày 25 hằng tháng để nối thêm tháng mới (trang tháng cũ giữ nguyên).
  * Run: node scripts/build-ngaytot-pages.mjs && npm run seo:lastmod
@@ -17,7 +17,7 @@ const SITEMAP = path.join(ROOT, 'sitemap-latbai.xml');
 const TODAY = new Date().toISOString().slice(0, 10);
 
 // ---- Nạp AmLich (IIFE gắn vào window) ----
-const alSrc = fs.readFileSync(path.join(ROOT, 'ngay-tot', 'js', 'amlich.js'), 'utf8');
+const alSrc = fs.readFileSync(path.join(ROOT, 'js', 'amlich.js'), 'utf8');
 const W = {};
 new Function('window', alSrc)(W);
 const A = W.AmLich;

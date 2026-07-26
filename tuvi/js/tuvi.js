@@ -192,35 +192,36 @@ function convertSolar2Lunar(dd, mm, yy, timeZone = 7.0) {
  * Converts Lunar date to Gregorian Solar Date
  */
 export function convertLunar2Solar(lunarDay, lunarMonth, lunarYear, lunarLeap = 0, timeZone = 7.0) {
-  let a11 = getLunarMonth11(lunarYear - 1, timeZone);
-  let k = INT((a11 - 2415021.076998695) / 29.530588853 + 0.5);
-  
-  let offset = 0;
-  if (lunarMonth >= 11) {
-    offset = lunarMonth - 11;
+  // Neo a11 theo chính lunarMonth. Tháng 11-12 của năm âm Y nằm trong năm DƯƠNG Y
+  // (xem `if (lunarMonth >= 11 && diff < 4) lunarYear -= 1` ở convertSolar2Lunar),
+  // nên phải dùng getLunarMonth11(Y), không phải (Y-1).
+  // Bản cũ neo (Y-1) cho mọi tháng ⇒ tháng 11-12 lệch ~1 năm: round-trip 2020-2030
+  // sai 592/3696 (16%), toàn bộ rơi vào tháng âm 11 và 12. Bản này: 0/7248 sai (1950-2100).
+  let a11, b11;
+  if (lunarMonth < 11) {
+    a11 = getLunarMonth11(lunarYear - 1, timeZone);
+    b11 = getLunarMonth11(lunarYear, timeZone);
   } else {
-    offset = lunarMonth + 1;
+    a11 = getLunarMonth11(lunarYear, timeZone);
+    b11 = getLunarMonth11(lunarYear + 1, timeZone);
   }
-  
-  let b11 = getLunarMonth11(lunarYear, timeZone);
-  let hasLeap = (b11 - a11 > 365);
-  let leapMonth = 0;
-  if (hasLeap) {
-    leapMonth = getLeapMonthOffset(a11, timeZone);
+
+  let offset = lunarMonth - 11;
+  if (offset < 0) offset += 12;
+
+  if (b11 - a11 > 365) {
+    const leapOff = getLeapMonthOffset(a11, timeZone);
+    let leapMonth = leapOff - 2;
+    if (leapMonth < 0) leapMonth += 12;
+    if (lunarLeap !== 0 && lunarMonth !== leapMonth) return null;  // năm có nhuận nhưng không phải tháng này
+    if (lunarLeap !== 0 || leapOff <= offset) offset += 1;
+  } else if (lunarLeap !== 0) {
+    return null;                                                   // năm không có tháng nhuận
   }
-  
-  let targetK = k + offset;
-  if (hasLeap) {
-    if (lunarLeap === 1) {
-      targetK = k + leapMonth;
-    } else if (offset >= leapMonth) {
-      targetK = k + offset + 1;
-    }
-  }
-  
-  let monthStartJd = getNewMoonDay(targetK, timeZone);
-  let dayJd = monthStartJd + lunarDay - 1;
-  
+
+  const k = INT(0.5 + (a11 - 2415021.076998695) / 29.530588853);
+  const dayJd = getNewMoonDay(k + offset, timeZone) + lunarDay - 1;
+
   return jdToDate(dayJd);
 }
 
@@ -405,6 +406,12 @@ export function getTuViChart({ namSinh, thangSinh, ngaySinh, gioSinh, gioiTinh, 
   // Convert Lunar to Solar if specified
   if (inputCalendar === "lunar") {
     const solarDate = convertLunar2Solar(ngaySinh, thangSinh, namSinh, lunarLeapInput, 7.0);
+    // null = tháng nhuận được yêu cầu không tồn tại trong năm âm đó. UI hiện chưa có
+    // ô chọn tháng nhuận (lunarLeapInput luôn 0) nên nhánh này chưa xảy ra, nhưng báo
+    // lỗi rõ ràng còn hơn để TypeError trên null[0] nếu sau này thêm.
+    if (!solarDate) {
+      throw new Error(`Năm âm ${namSinh} không có tháng ${thangSinh} nhuận.`);
+    }
     solarDay = solarDate[0];
     solarMonth = solarDate[1];
     solarYear = solarDate[2];

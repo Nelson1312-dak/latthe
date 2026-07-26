@@ -1,7 +1,11 @@
 /**
- * ngay-tot/js/amlich.js — Âm lịch VN (thuật toán Hồ Ngọc Đức, bản rút từ tuvi.js)
- * + Can Chi ngày/tháng/năm, 12 Trực, sao Hoàng đạo/Hắc đạo, giờ hoàng đạo.
- * Globals: AmLich
+ * scripts/.amlich-old-snapshot.js — ẢNH CHỤP ĐÔNG LẠNH của ngay-tot/js/amlich.js
+ * tại thời điểm trước khi gộp vào js/amlich.js (2026-07-26). File gốc đã xoá.
+ *
+ * KHÔNG phải code chết, KHÔNG được "dọn dẹp": đây là baseline hồi quy cho
+ * scripts/verify-amlich.mjs. Test round-trip KHÔNG bắt được lỗi lệch đồng thời cả
+ * hai chiều (solar2lunar và lunar2solar cùng dịch thì round-trip vẫn pass) —
+ * chỉ so với ảnh chụp này mới phát hiện.
  */
 (function () {
   'use strict';
