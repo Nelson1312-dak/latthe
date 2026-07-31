@@ -105,6 +105,15 @@
   const bestEl = document.getElementById('nt-best');
   const profileNote = document.getElementById('nt-profile-note');
 
+  // ---- AI Thầy Trạch Nhật ----
+  const MAX_HISTORY = 12;   // đồng bộ các module AI khác (server cap 20)
+  const MAX_ASK = 5;        // số câu hỏi tối đa mỗi phiên
+  let chatHistory = [];
+  let questionsAsked = 0;
+  let chat = null;
+  let lastResults = [];     // set ở cuối render() — AI luận trên đúng tháng đang xem
+  let lastChiIdx = null;
+
   function profileChi() {
     if (!P) return null;
     const p = P.get();
@@ -193,6 +202,12 @@
         openDetail(d, analyzeDay(d, viewMonth, viewYear, curEvent, chiIdx));
       });
     });
+
+    lastResults = results;
+    lastChiIdx = chiIdx;
+    renderAIChips();
+    const aiSub = document.getElementById('nt-ai-sub');
+    if (aiSub) aiSub.textContent = `Đang xem tháng ${viewMonth}/${viewYear} · việc ${EVENTS[curEvent].label}. Ngày cụ thể ở mục "Tốt nhất tháng"; AI giải thích cách chọn & xét tuổi.`;
   }
 
   // ==================== SHEET CHI TIẾT NGÀY ====================
@@ -240,5 +255,106 @@
     render();
   });
 
+  // ==================== AI THẦY TRẠCH NHẬT ====================
+  const aiSection = document.getElementById('nt-ai');
+  const aiChipsEl = document.getElementById('nt-ai-chips');
+  const aiInput = document.getElementById('nt-ai-input');
+  const aiBtn = document.getElementById('nt-ai-ask');
+
+  const disableChips = () => {
+    if (aiChipsEl) aiChipsEl.querySelectorAll('.nt-ai-chip').forEach(b => { b.disabled = true; });
+  };
+
+  // Chip được dựng LẠI mỗi lần đổi tháng/đổi việc, nên phải khoá lại nếu đã hết lượt —
+  // không thì đổi tháng sẽ hồi sinh chip đã khoá. Các module khác dựng chip một lần
+  // nên không gặp chuyện này.
+  function renderAIChips() {
+    if (!aiChipsEl || !chat) return;
+    const label = EVENTS[curEvent].label.toLowerCase();
+    const defs = [
+      { icon: 'ti-award', label: `Tháng này hợp ${label}?`, q: `Tháng ${viewMonth}/${viewYear} có hợp để ${label} không? Nên chọn ngày thế nào cho đúng?` },
+      { icon: 'ti-sun', label: 'Hôm nay thế nào?', q: `Hôm nay có nên ${label} không? Nếu không thì hôm nay hợp làm việc gì?` },
+      { icon: 'ti-user-check', label: 'Xét theo tuổi tôi', q: `Với tuổi của tôi, khi ${label} thì nên tránh những ngày nào?` },
+    ];
+    aiChipsEl.innerHTML = '';
+    defs.forEach(d => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'nt-ai-chip';
+      b.innerHTML = `<i class="ti ${d.icon}"></i> ${d.label}`;
+      b.addEventListener('click', () => sendMessage(d.q));
+      aiChipsEl.appendChild(b);
+    });
+    if (questionsAsked >= MAX_ASK) disableChips();
+  }
+
+  // Context CHỈ gồm số đếm + trực/loại-ngày của hôm nay. KHÔNG gửi bất kỳ tên ngày,
+  // can chi, tên sao hay tên giờ nào: qwen 2B bóp méo danh từ riêng tiếng Việt (sai cả
+  // thứ trong tuần), mà sai ngày trong tư vấn cưới hỏi là hại thật. Ngày cụ thể đã hiển
+  // thị chính xác ở mục "Tốt nhất tháng" trên lịch (do JS tính, không qua AI).
+  function buildNTContext() {
+    const soNgayTot = lastResults.filter(x => x.r.rating === 3).length;
+    const soNgayKha = lastResults.filter(x => x.r.rating === 2).length;
+    const t = analyzeDay(now.getDate(), now.getMonth() + 1, now.getFullYear(), curEvent, lastChiIdx);
+    return JSON.stringify({
+      viec: EVENTS[curEvent].label,
+      thang: `${viewMonth}/${viewYear}`,
+      soNgayTot,
+      soNgayKha,
+      homNay: `trực ${t.trucName}, ${t.god.good ? 'ngày hoàng đạo' : 'ngày hắc đạo'}`,
+      // Gửi boolean thôi, KHÔNG gửi chi: model 2B đảo ngược luật xung. Việc lọc xung tuổi
+      // đã do analyzeDay() làm sẵn (trừ điểm ngày xung), nên danh sách đã đúng.
+      daLocTuoi: lastChiIdx !== null,
+    });
+  }
+
+  function sendMessage(q) {
+    q = (q || '').trim();
+    if (!q || !chat) return;
+    // Lời chào là bubble tĩnh (không tự gửi lượt đầu) nên đếm MỌI câu — giống hoang-dao.
+    if (questionsAsked >= MAX_ASK) {
+      chat.appendBubble('ai', `📅 *Thông báo:* Bạn đã hỏi đủ ${MAX_ASK} câu cho phiên này. Hãy **tải lại trang** để hỏi tiếp nhé!`);
+      disableChips();
+      return;
+    }
+    questionsAsked++;
+    aiInput.value = '';
+    chat.sendWithUI({
+      question: q, context: buildNTContext(), type: 'ngaytot', history: chatHistory,
+      onDone(ans) {
+        chatHistory.push({ role: 'user', content: q });
+        chatHistory.push({ role: 'assistant', content: ans });
+        if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+        if (questionsAsked >= MAX_ASK) {
+          aiInput.placeholder = `Đã đạt giới hạn ${MAX_ASK} câu hỏi...`;
+          aiInput.disabled = true;
+          aiBtn.disabled = true;
+          disableChips();
+          chat.appendBubble('ai', `📅 *Thông báo:* Bạn đã dùng đủ ${MAX_ASK} câu hỏi cho phiên này. Tải lại trang để hỏi tiếp nhé!`);
+        }
+      },
+      onError() {
+        questionsAsked--;   // hoàn lượt, lỗi không tính
+      },
+    });
+  }
+
+  function setupAI() {
+    // chat.js khai báo `const Chat` (global nhưng KHÔNG nằm trên window)
+    const ChatLib = (typeof Chat !== 'undefined') ? Chat : null;
+    if (!ChatLib || !aiSection) { if (aiSection) aiSection.style.display = 'none'; return; }
+    chat = ChatLib.createChat({
+      messagesEl: document.getElementById('nt-chat'),
+      loadingEl: document.getElementById('nt-ai-loading'),
+      inputEl: aiInput,
+      btnEl: aiBtn,
+    });
+    chat.appendBubble('ai', 'Chào bạn! Tôi là **Thầy Trạch Nhật**. Danh sách ngày đẹp cụ thể đã hiện ở mục **"Tốt nhất tháng"** ngay trên. Hỏi tôi tháng này có hợp việc của bạn không, nên chọn ngày thế nào và có kiêng gì theo tuổi.');
+    aiBtn.addEventListener('click', () => sendMessage(aiInput.value));
+    aiInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(aiInput.value); } });
+    renderAIChips();
+  }
+
   render();
+  setupAI();     // sau render() để chip dựng được; gọi MỘT LẦN, không gọi trong render()
 })();

@@ -42,6 +42,8 @@
   <!-- Mystic FX: hat huyen hoc nen theo chu de module -->
   <script src="/js/mystic-fx.js" defer data-color="220,38,38" data-glyphs="✦✧☾" data-count="46"></script>
   <script src="/js/amlich.js" defer></script>
+  <script src="/js/ai.js" defer></script>
+  <script src="/js/chat.js" defer></script>
   <script src="/ngay-tot/js/app.js" defer></script>
 
   <script type="application/ld+json">
@@ -134,6 +136,23 @@
     </div>
 
     <div class="nt-best" id="nt-best"></div>
+
+    <section id="nt-ai" class="nt-ai-card">
+      <div class="nt-ai-head"><i class="ti ti-wand"></i> Hỏi Thầy Trạch Nhật AI</div>
+      <p class="nt-ai-sub" id="nt-ai-sub">Ngày cụ thể ở mục "Tốt nhất tháng"; AI giải thích cách chọn ngày &amp; xét theo tuổi.</p>
+      <div id="nt-chat" class="nt-chat"></div>
+      <div id="nt-ai-loading" class="nt-ai-loading hidden"><span>Thầy đang tra lịch...</span></div>
+      <div class="nt-ai-chips" id="nt-ai-chips"></div>
+      <div class="nt-ai-row">
+        <input id="nt-ai-input" class="nt-ai-input" type="text" placeholder="Hỏi về ngày tốt cho việc của bạn..." maxlength="300" aria-label="Câu hỏi cho Thầy Trạch Nhật AI">
+        <button id="nt-ai-ask" class="nt-ai-ask" aria-label="Gửi câu hỏi"><i class="ti ti-send"></i></button>
+      </div>
+    </section>
+
+    <a href="/lich-am/" class="seo-library-link ngaytot-page-cta">
+      <i class="ti ti-moon"></i> Xem lịch âm hôm nay, đổi ngày âm ↔ dương, tra 24 tiết khí
+      <i class="ti ti-arrow-right" style="margin-left:auto;opacity:0.5;"></i>
+    </a>
 
     <a href="/thuvien/" class="seo-library-link ngaytot-page-cta">
       <i class="ti ti-books"></i> Xem thêm kiến thức về Kinh Dịch &amp; cổ học phương Đông

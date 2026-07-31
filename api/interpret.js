@@ -12,6 +12,9 @@ import { callCloudLLM, cleanChineseLeaks, streamOllama, createThinkHoldback, str
 import { getEmbedding, retrieveSimilar, retrieveKnowledge, storeDoc, checkExactMatchCache } from './_rag.js';
 import { SYSTEM_PROMPTS, buildFirstUserContent } from './_prompts.js';
 
+// Type nào không có bài Thư Viện riêng thì lấy nền lý thuyết của type gần nhất.
+const KB_TYPE = { ngaytot: 'tuvi' };
+
 // Prevent uncaught exceptions / unhandled rejections from crashing the dev server
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -69,7 +72,7 @@ export default async function handler(req, res) {
   // Validate & clamp inputs: stop oversized prompts and cache/DB pollution from
   // arbitrary `type` values. Caps sit far above any legitimate client payload
   // (questions are short; tuvi context is a text summary; client history ≤ 12).
-  const VALID_TYPES = ['gieoque', 'tarot', 'tuvi', 'thansohoc', 'hoangdao', 'xinxam'];
+  const VALID_TYPES = ['gieoque', 'tarot', 'tuvi', 'thansohoc', 'hoangdao', 'xinxam', 'ngaytot'];
   if (!VALID_TYPES.includes(type)) type = 'gieoque';
   if (question.length > 4000) question = question.slice(0, 4000);
   if (typeof context === 'string' && context.length > 30000) context = context.slice(0, 30000);
@@ -94,7 +97,11 @@ export default async function handler(req, res) {
   // storeDoc almost never hit for tuvi — keep those gated to non-tuvi.
   // Có memory cũng loại: câu trả lời nhắc ký ức cá nhân ("Lần trước bạn hỏi...")
   // mà vào cache/RAG chung thì user khác sẽ nhận nhầm ký ức không phải của họ.
-  const cacheEligible = type !== 'tuvi' && !isFollowUp && !memory;
+  // ngaytot bị loại cùng tuvi: câu trả lời neo vào "hôm nay", vào tháng đang xem và
+  // vào tuổi trong hồ sơ người hỏi. Cache lại thì tuần sau trả về "nên chọn ngày 28/7"
+  // đã trôi qua, hoặc trả lời đã lọc theo tuổi của người khác. Cờ này cũng gate storeDoc
+  // nên đồng thời tránh làm bẩn RAG chung bằng lời khuyên theo tháng.
+  const cacheEligible = type !== 'tuvi' && type !== 'ngaytot' && !isFollowUp && !memory;
   // We still need an embedding for KNOWLEDGE grounding (Thư Viện), which IS useful
   // for tuvi (the question matches theory regardless of the unique chart). So compute
   // it for every first-question; follow-ups reuse prior context and skip it.
@@ -127,7 +134,10 @@ export default async function handler(req, res) {
     // Thư Viện knowledge (all types) + Q&A cache (non-tuvi only) in parallel.
     const [similar, knowledge] = await Promise.all([
       cacheEligible ? retrieveSimilar(sbUrl, sbKey, embedding, type, breaker) : Promise.resolve([]),
-      retrieveKnowledge(sbUrl, sbKey, embedding, type, breaker),
+      // Thư Viện chưa có bài nào gắn type 'ngaytot' nên grounding sẽ trả rỗng; nền lý
+      // thuyết đúng cho trạch nhật (12 con giáp, âm dương ngũ hành, hạn tam tai) đang
+      // index dưới type 'tuvi'. Chỉ remap cho retrieveKnowledge, không đụng cache Q&A.
+      retrieveKnowledge(sbUrl, sbKey, embedding, KB_TYPE[type] || type, breaker),
     ]);
 
     // Ground the interpretation in relevant Thư Viện theory (if indexed).
@@ -182,13 +192,20 @@ export default async function handler(req, res) {
           ? `CÂU HỎI MỚI: "${question}"\n\n(Trả lời 3-5 câu ngắn gọn, trực diện liên quan đến lá số Tử Vi và các sao của bạn. Không lặp lại định dạng cũ.)`
           : (type === 'thansohoc'
               ? `CÂU HỎI MỚI: "${question}"\n\n(Trả lời 3-5 câu ngắn gọn, phân tích các con số và biểu đồ ngày sinh Thần Số Học của bạn dưới góc nhìn mới.)`
-              : `CÂU HỎI MỚI: "${question}"\n\nTrả lời theo đúng format:\n**Nhận định:** [...]\n**Trả lời:** [...]\n- **Nên làm:** [...]\n- **Cần tránh:** [...]`));
+              : (type === 'ngaytot'
+                  // Nhánh riêng: format mặc định (**Nhận định:**/**Trả lời:**) không khớp
+                  // **Thầy luận:**, và cần lặp lại rào cấm nêu ngày ở message cuối vì model
+                  // 2B ưu tiên phần gần nhất.
+                  ? `CÂU HỎI MỚI: "${question}"\n\nTrả lời 3-5 câu. TUYỆT ĐỐI không tự nêu ngày dương/âm cụ thể, không viết can chi, không viết tên sao — muốn biết ngày cụ thể thì chỉ người hỏi xem mục "Tốt nhất tháng" trên lịch. Được nhắc tên trực và loại ngày hoàng đạo/hắc đạo.\n\nTrả lời theo đúng format:\n**Thầy luận:** [...]\n- **Nên làm:** [...]\n- **Cần tránh:** [...]`
+                  : `CÂU HỎI MỚI: "${question}"\n\nTrả lời theo đúng format:\n**Nhận định:** [...]\n**Trả lời:** [...]\n- **Nên làm:** [...]\n- **Cần tránh:** [...]`)));
     ollamaMessages.push({ role: 'user', content: finalInstruction });
   }
 
   // ---- Call Ollama first, fall back to DeepSeek on any failure ----
   const temperature = isFollowUp ? 0.4 : 0.2;
-  const maxTokens   = isFollowUp ? 500 : (type === 'tuvi' || type === 'thansohoc' ? 1400 : 1000);
+  // ngaytot lượt đầu có 4 mục kèm danh sách giờ nên cần rộng hơn mức chung 1000.
+  const maxTokens   = isFollowUp ? 500
+    : (type === 'tuvi' || type === 'thansohoc' ? 1400 : (type === 'ngaytot' ? 1200 : 1000));
   let answer = '';
   let source = 'ollama';
   let ollamaErr = breaker.localDown ? 'local backend down (circuit breaker)' : null;

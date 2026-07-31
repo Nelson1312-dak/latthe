@@ -277,3 +277,46 @@ a { color: var(--son-dark); }
   .nt-solar { font-size: 17px; }
   .nt-lunar { font-size: 10px; }
 }
+
+/* ---------- AI Thầy Trạch Nhật ---------- */
+.nt-ai-card {
+  background: var(--bg-surface); border: 1px solid var(--border); border-radius: 22px;
+  padding: 18px; box-shadow: var(--shadow); position: relative; margin-top: 14px;
+}
+.nt-ai-card::after {
+  content: ''; position: absolute; inset: 5px; border: 1px solid rgba(160,60,30,0.10);
+  border-radius: 17px; pointer-events: none;
+}
+.nt-ai-head {
+  font-size: 13px; font-weight: 800; letter-spacing: .3px; color: var(--text);
+  display: flex; align-items: center; gap: 6px;
+}
+.nt-ai-head i { color: var(--son); font-size: 15px; }
+.nt-ai-sub { font-size: 12px; color: var(--muted); margin: 4px 0 12px; line-height: 1.5; }
+.nt-chat { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.nt-ai-loading { font-size: 12.5px; color: var(--muted); font-style: italic; padding: 6px 0; }
+.nt-ai-loading.hidden { display: none; }
+.nt-ai-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.nt-ai-chip {
+  border: 1px solid rgba(220,38,38,0.32); background: var(--son-dim); color: var(--son-dark);
+  border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  font-family: inherit; cursor: pointer; transition: background .18s ease, color .18s ease;
+}
+.nt-ai-chip:hover:not(:disabled) { background: var(--son); color: #fff; }
+.nt-ai-chip:disabled { opacity: .45; cursor: not-allowed; }
+.nt-ai-row { display: flex; gap: 8px; }
+.nt-ai-input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; font-size: 14px; font-family: inherit; color: var(--text);
+}
+.nt-ai-input:focus { outline: none; border-color: var(--son); }
+.nt-ai-input:disabled { opacity: .6; }
+.nt-ai-ask {
+  border: none; background: linear-gradient(135deg, #ef4444, var(--son-dark)); color: #fff;
+  border-radius: 12px; padding: 12px 16px; font-size: 15px; cursor: pointer;
+}
+.nt-ai-ask:disabled { opacity: .5; cursor: not-allowed; }
+/* bong bóng chat dùng class chung của chat.js */
+.nt-chat .chat-bubble { font-size: 13.5px; line-height: 1.6; padding: 11px 14px; border-radius: 14px; max-width: 92%; }
+.nt-chat .chat-ai   { background: var(--bg); color: var(--text); align-self: flex-start; }
+.nt-chat .chat-user { background: linear-gradient(135deg, #ef4444, var(--son-dark)); color: #fff; align-self: flex-end; }
