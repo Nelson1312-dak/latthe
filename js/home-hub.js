@@ -270,10 +270,19 @@
            <i class="ti ti-flame"></i>${st.count === 1 ? 'Bắt đầu chuỗi!' : `${st.count} ngày liền`}</span>`
       : '';
 
+    // Dòng lịch âm — dùng js/amlich.js (toán thuần, offline, không cần hồ sơ). Guard để
+    // trang chủ vẫn chạy nếu engine chưa nạp: khi đó chỉ hiện dương lịch như trước.
+    let lunarLine = '';
+    if (window.AmLich) {
+      const info = AmLich.dayInfo(now.getDate(), now.getMonth() + 1, now.getFullYear());
+      lunarLine = `<span class="hub-lunar"><i class="ti ti-moon"></i> ${info.lunar.day}/${info.lunar.month}${info.lunar.leap ? ' nhuận' : ''} âm · ngày ${info.dayCanChi.text} · <b class="${info.god.good ? 'is-hd' : 'is-hac'}">${info.god.good ? 'Hoàng đạo' : 'Hắc đạo'}</b> <a class="hub-lunar-link" href="/lich-am/">Lịch âm <i class="ti ti-arrow-right"></i></a></span>`;
+    }
+
     dailyEl.innerHTML = `
       <div class="hub-daily-head">
         <h2 class="hub-daily-title"><i class="ti ti-sun-moon"></i> Vận Hôm Nay${streakBadge}</h2>
         <span class="hub-daily-date">${WEEKDAYS[now.getDay()]}, ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}${p ? ' · dành riêng cho ' + p.name.split(' ').pop() : ''}</span>
+        ${lunarLine}
       </div>
       <div class="hub-daily-grid">
         <a class="hub-daily-card hub-hex" href="/kinh-dich/${hex.slug}">
