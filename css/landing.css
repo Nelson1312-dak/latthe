@@ -509,8 +509,8 @@ a { text-decoration: none; color: inherit; }
   .l-divider { max-width: 800px; }
   .l-main-content { max-width: 800px; gap: 40px; }
 
-  .l-modules { flex-direction: row; gap: 20px; }
-  .l-modules.drinking-group {
+  /* Grid 3 cột: nhiều module (7 card nhóm 1) tự xuống hàng thay vì dồn 1 hàng flex bị bóp */
+  .l-modules {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
