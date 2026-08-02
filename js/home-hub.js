@@ -303,9 +303,20 @@
       </div>`;
   }
 
+  // Card "Lịch Âm" ở khu Tra Cứu Nhanh: thay 🌙 tĩnh bằng số ngày âm hôm nay (cyan,
+  // cùng kiểu số to như 64/78/12) cho nổi bật. Guard AmLich để giữ nguyên 🌙 nếu chưa nạp.
+  function renderLunarLookup() {
+    const el = document.getElementById('lookupLunar');
+    if (!el || !window.AmLich) return;
+    const now = new Date();
+    const info = AmLich.dayInfo(now.getDate(), now.getMonth() + 1, now.getFullYear());
+    el.innerHTML = `${info.lunar.day}<span class="l-lunar-sup">âm</span>`;
+  }
+
   function boot() {
     renderProfile();
     renderDaily();
+    renderLunarLookup();
   }
 
   if (document.readyState === 'loading') {
