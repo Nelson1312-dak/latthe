@@ -19,9 +19,11 @@
   speak: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   line-height: 1; vertical-align: -0.125em; display: inline-block;
 }
+.ti-adjustments:before{content:"\ea03"}
 .ti-alert-triangle:before{content:"\ea06"}
 .ti-arrow-left:before{content:"\ea19"}
 .ti-arrow-right:before{content:"\ea1f"}
+.ti-arrows-exchange:before{content:"\f1f4"}
 .ti-arrows-left-right:before{content:"\edb0"}
 .ti-arrows-shuffle:before{content:"\f000"}
 .ti-article:before{content:"\f1e2"}
@@ -37,6 +39,8 @@
 .ti-building-store:before{content:"\ea4e"}
 .ti-bulb:before{content:"\ea51"}
 .ti-calendar:before{content:"\ea53"}
+.ti-calendar-check:before{content:"\f824"}
+.ti-calendar-month:before{content:"\fd2f"}
 .ti-calendar-star:before{content:"\f830"}
 .ti-camera:before{content:"\ea54"}
 .ti-car:before{content:"\ebbb"}
@@ -52,6 +56,7 @@
 .ti-device-mobile:before{content:"\ea8a"}
 .ti-device-mobile-star:before{content:"\f8bd"}
 .ti-download:before{content:"\ea96"}
+.ti-external-link:before{content:"\ea99"}
 .ti-file-star:before{content:"\f03f"}
 .ti-flame:before{content:"\ec2c"}
 .ti-ghost:before{content:"\eb8e"}
@@ -79,6 +84,7 @@
 .ti-lock:before{content:"\eae2"}
 .ti-message-question:before{content:"\f98b"}
 .ti-minus:before{content:"\eaf2"}
+.ti-moon:before{content:"\eaf8"}
 .ti-number:before{content:"\f1fe"}
 .ti-number-1:before{content:"\edf1"}
 .ti-number-2:before{content:"\edf2"}
@@ -97,6 +103,7 @@
 .ti-planet:before{content:"\ec08"}
 .ti-plus:before{content:"\eb0b"}
 .ti-refresh:before{content:"\eb13"}
+.ti-report:before{content:"\eece"}
 .ti-route:before{content:"\eb17"}
 .ti-scale:before{content:"\ebc2"}
 .ti-school:before{content:"\ecf7"}

@@ -379,6 +379,11 @@ a { text-decoration: none; color: inherit; }
 .l-lookup-card:nth-child(2) .l-lookup-big { color: var(--c-tarot); }
 .l-lookup-card:nth-child(3) .l-lookup-big { color: var(--c-thansohoc); }
 .l-lookup-card:nth-child(4) .l-lookup-big { color: var(--c-thuvien); }
+/* Card 6-9 giờ dùng icon Tabler (đồng bộ, bỏ emoji đa màu chỏi nền kem) — gán màu module */
+.l-lookup-card:nth-child(6) .l-lookup-big { color: var(--c-drink); }
+.l-lookup-card:nth-child(7) .l-lookup-big { color: var(--c-gieoque); }
+.l-lookup-card:nth-child(8) .l-lookup-big { color: var(--c-ten); }
+.l-lookup-card:nth-child(9) .l-lookup-big { color: var(--c-dua); }
 
 /* ---- Featured lookup card (Lịch Âm) — nổi bật tông cyan + số ngày âm hôm nay ---- */
 .l-lookup-card--feature {
