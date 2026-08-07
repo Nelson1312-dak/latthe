@@ -1,6 +1,24 @@
+# ===== Bot rác: crawl liên tục để phân tích backlink / scrape, không mang lại traffic =====
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: MJ12bot
+User-agent: DotBot
+User-agent: BLEXBot
+User-agent: DataForSeoBot
+User-agent: PetalBot
+User-agent: Barkrowler
+User-agent: MegaIndex
+User-agent: rogerbot
+User-agent: MauiBot
+User-agent: SeekportBot
+User-agent: serpstatbot
+User-agent: ZoominfoBot
+User-agent: Bytespider
+Disallow: /
+
+# ===== Còn lại (Google, Bing, Cốc Cốc, DuckDuckGo, bot AI, social preview) =====
 User-agent: *
 Allow: /
-
 Disallow: /api/
 
 Sitemap: https://gieoque.vn/sitemap.xml
