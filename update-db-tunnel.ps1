@@ -65,6 +65,25 @@ $supabaseUrl | npx vercel env add SUPABASE_URL production
 Write-Host "Redeploying Vercel..."
 npx vercel --prod --yes
 
+# Warm cache "Lá Bài Hôm Nay" ngay khi tunnel + deploy vừa sẵn sàng. Đây là thời điểm
+# DUY NHẤT chắc chắn Ollama + PostgREST đều sống (tunnel vừa được xác nhận ở trên), nên
+# là chỗ tốt nhất để sinh sẵn lời luận cho user đầu tiên trong ngày. Idempotent: lá đã
+# có cache thì endpoint trả cache-exact, không sinh AI lần nữa. Cache dùng chung
+# (PostgREST) nên không cần chờ alias production trỏ sang deployment mới.
+# Secret đọc từ $env:CRON_SECRET — KHÔNG hardcode vào file commit.
+if ($ollamaUrl -and $env:CRON_SECRET) {
+    Write-Host "Pre-warming Lá Bài Hôm Nay cache..." -ForegroundColor Yellow
+    try {
+        $warm = Invoke-RestMethod "https://latbai.vn/api/prewarm-daily?key=$($env:CRON_SECRET)" -TimeoutSec 120 -ErrorAction Stop
+        Write-Host "      $($warm | ConvertTo-Json -Depth 4 -Compress)" -ForegroundColor Cyan
+    } catch {
+        # Không để pre-warm fail chặn script — user đầu tiên vẫn tự ghi cache như thường.
+        Write-Host "      Pre-warm skipped (non-fatal): $_" -ForegroundColor Gray
+    }
+} elseif ($ollamaUrl) {
+    Write-Host "Pre-warm skipped: set `$env:CRON_SECRET to enable." -ForegroundColor Gray
+}
+
 if ($ollamaUrl) {
     Write-Host "Done! qwen3.5:2b (local) is now primary AI. DeepSeek is fallback." -ForegroundColor Green
 } else {
