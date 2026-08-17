@@ -122,6 +122,15 @@ async function askAI({ question, context, type, history = [], memory = '', onTok
       return;
     }
 
+    // Cache hit (X-AI-Source: cache-exact/cache-semantic) → đổ ra NGAY, không mô
+    // phỏng typing: 30ms/từ nghĩa là lời luận ~250 từ mất ~7.5s mới hiện xong —
+    // đúng thứ mà cache tồn tại để loại bỏ. chat.js onDone tự parseMarkdown +
+    // bật lại input nên không cần gọi onToken.
+    if (data.cached) {
+      onDone((data.answer || '').trim());
+      return;
+    }
+
     // Simulate streaming word-by-word for UX
     const words = (data.answer || '').split(' ');
     let built = '';

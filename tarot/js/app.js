@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // chipsEl khai báo bên dưới — arrow đọc lúc gọi nên không vướng TDZ
   const disableChips = () => { if (chipsEl) chipsEl.querySelectorAll('.t-chip').forEach(b => b.disabled = true); };
 
-  function sendMessage(question) {
+  function sendMessage(question, opts = {}) {
     const q = question.trim();
     if (!q) return;
 
@@ -323,7 +323,11 @@ document.addEventListener('DOMContentLoaded', () => {
       context: buildTarotContext(),
       type: 'tarot',
       history: chatHistory,
-      memory: chatHistory.length === 0 ? currentMemory : '',
+      // Lá "hôm nay" CỐ Ý bỏ ký ức cá nhân (opts.noMemory): nó là lời luận CHUNG
+      // cho mọi người (như tử vi báo giấy), đổi lại api/interpret.js coi là
+      // cacheEligible (memory rỗng) nên cả site chỉ sinh AI 1 lần/ngày cho lá đó
+      // và user nhận trả lời tức thì. Trải bài 1/3/5 lá vẫn giữ "Thầy nhớ bạn".
+      memory: (chatHistory.length === 0 && !opts.noMemory) ? currentMemory : '',
       onDone(answer) {
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: answer });
@@ -381,7 +385,12 @@ document.addEventListener('DOMContentLoaded', () => {
     five:  'Trải bài này đang phản ánh điều gì về tình huống hiện tại của tôi?',
   };
 
-  function showAISection(presetQ) {
+  // Câu hỏi của lượt luận "Lá Bài Hôm Nay" — CỐ ĐỊNH TỪNG BYTE, vì nó là một phần
+  // khóa cache dùng chung (type, question, context) của api/interpret.js. Sửa chuỗi
+  // này thì phải sửa cả DAILY_QUESTION trong api/prewarm-daily.js.
+  const DAILY_Q = 'Lá bài hôm nay muốn nhắn nhủ điều gì cho tôi?';
+
+  function showAISection(presetQ, opts = {}) {
     const q = (presetQ || '').trim() || tarotQuestion.value.trim() || DEFAULT_Q[selectedSpread] || 'Trải bài này đang nói lên điều gì về tôi?';
     buildChips();
     aiSection.classList.remove('hidden');
@@ -408,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    sendMessage(q);
+    sendMessage(q, opts);
   }
 
   // ---- History modal ----
@@ -491,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
       drawnCards[0].revealed = true;
       showDetail(0);
       setTimeout(() => {
-        showAISection('Lá bài hôm nay muốn nhắn nhủ điều gì cho tôi?');
+        showAISection(DAILY_Q, { noMemory: true });
         btnNewReading.classList.remove('hidden');
         document.getElementById('t-share-actions').classList.remove('hidden');
       }, 650);
