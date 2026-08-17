@@ -38,8 +38,8 @@ const hex = Object.entries(HEXAGRAMS).map(([n, h]) => ({
 }));
 
 // ---- 78 lá tarot (22 major + 56 minor) ----
-const { TAROT_CARDS } = evalGlobals(
-  readFileSync(join(ROOT, 'tarot/js/cards.js'), 'utf8'), ['TAROT_CARDS']);
+const { TAROT_CARDS, TAROT_SPREADS } = evalGlobals(
+  readFileSync(join(ROOT, 'tarot/js/cards.js'), 'utf8'), ['TAROT_CARDS', 'TAROT_SPREADS']);
 const { MINOR_ARCANA } = evalGlobals(
   readFileSync(join(ROOT, 'tarot/js/cards-minor.js'), 'utf8'), ['MINOR_ARCANA']);
 
@@ -56,6 +56,22 @@ const tarot = [
   }))
 ];
 
+// ---- Chuỗi context cho pre-warm cache "Lá Bài Hôm Nay" (CHỈ đi vào api/_daily.js) ----
+// PHẢI khớp TỪNG BYTE với buildTarotContext() ở tarot/js/app.js (spread 'one', lá
+// daily LUÔN xuôi), vì (type, question, context) chính là khóa exact-match của
+// checkExactMatchCache() trong api/_rag.js. Lệch 1 ký tự = cache không bao giờ hit
+// (fail-soft: user vẫn có câu trả lời, chỉ là phải chờ AI). scripts/check-infra.mjs
+// so từng byte để chặn drift. KHÔNG nhồi field này vào js/daily-data.js: client
+// không cần, +~19KB tải phí.
+const DAILY_POS = TAROT_SPREADS.one.positions[0];   // 'Thông điệp'
+const dailyCtx = (c) =>
+  `• Vị trí "${DAILY_POS}": ${c.vn} (${c.name}) — Xuôi\n  Ý nghĩa: ${c.upright}`;
+
+// Cùng thứ tự với mảng `tarot` ở trên (major rồi minor) → ghép theo index an toàn.
+const srcCards = [...TAROT_CARDS, ...MINOR_ARCANA];
+if (srcCards.length !== tarot.length) throw new Error('build-daily-data: lệch số lá');
+const tarotSrv = tarot.map((t, i) => ({ ...t, ctx: dailyCtx(srcCards[i]) }));
+
 const out = `/**
  * js/daily-data.js — dữ liệu compact cho widget "Vận Hôm Nay" (trang chủ).
  * FILE SINH TỰ ĐỘNG bởi scripts/build-daily-data.mjs — ĐỪNG SỬA TAY.
@@ -70,6 +86,6 @@ console.log(`daily-data.js: ${hex.length} quẻ + ${tarot.length} lá, ${out.len
 // seed "quẻ hôm nay" trùng khớp giữa client và server. Dùng .js (không phải
 // JSON import) để tương thích mọi phiên bản Node trên Vercel + được bundler trace.
 const mod = `// FILE SINH TỰ ĐỘNG bởi scripts/build-daily-data.mjs — ĐỪNG SỬA TAY.\n` +
-  `export default ${JSON.stringify({ hex, tarot })};\n`;
+  `export default ${JSON.stringify({ hex, tarot: tarotSrv })};\n`;
 writeFileSync(join(ROOT, 'api/_daily.js'), mod);
 console.log(`api/_daily.js: ${mod.length} bytes`);

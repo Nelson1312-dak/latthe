@@ -9,7 +9,7 @@
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join } from 'path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -97,6 +97,45 @@ function urlToFile(url) {
     }
   }
   console.log(`Syntax check: ${checked} file JS OK`);
+}
+
+// ---- 5. Pre-warm "Lá Bài Hôm Nay": context server dựng phải khớp client ----
+// Drift ở đây FAIL-SOFT (cache không hit ⇒ user chờ AI như cũ, không sai nội dung)
+// nên nó âm thầm làm mất tính năng nếu không có gác cổng. Chặn 3 loại drift:
+//   (a) đổi câu hỏi ở app.js mà quên api/prewarm-daily.js
+//   (b) đổi format buildTarotContext() ở app.js
+//   (c) sửa cards.js/cards-minor.js mà quên `npm run build:daily`
+{
+  const appSrc = readFileSync(join(ROOT, 'tarot/js/app.js'), 'utf8');
+  const prewarmSrc = readFileSync(join(ROOT, 'api/prewarm-daily.js'), 'utf8');
+
+  // (a) câu hỏi lá daily phải trùng giữa client và pre-warm (là một phần khóa cache)
+  const q = prewarmSrc.match(/const DAILY_QUESTION = '([^']+)'/)?.[1];
+  if (!q) bad('api/prewarm-daily.js: không đọc được DAILY_QUESTION');
+  else if (!appSrc.includes(`'${q}'`))
+    bad(`Câu hỏi lá daily lệch: prewarm-daily.js dùng "${q}" nhưng tarot/js/app.js không chứa chuỗi này`);
+
+  // (b) format buildTarotContext() không được đổi mà không sửa dailyCtx() bên generator
+  const TPL = '`• Vị trí "${spread.positions[i]}": ${card.vn} (${card.name}) — ${dir}\\n  Ý nghĩa: ${reversed ? card.reversed : card.upright}`';
+  if (!appSrc.includes(TPL))
+    bad('buildTarotContext() ở tarot/js/app.js đã đổi format — sửa dailyCtx() trong scripts/build-daily-data.mjs rồi chạy `npm run build:daily`');
+
+  // (c) dựng lại chuỗi mong đợi từ NGUỒN GỐC rồi so từng byte với api/_daily.js
+  const ev = (code, names) => new Function(code + `; return { ${names.join(', ')} };`)();
+  const { TAROT_CARDS, TAROT_SPREADS } = ev(readFileSync(join(ROOT, 'tarot/js/cards.js'), 'utf8'), ['TAROT_CARDS', 'TAROT_SPREADS']);
+  const { MINOR_ARCANA } = ev(readFileSync(join(ROOT, 'tarot/js/cards-minor.js'), 'utf8'), ['MINOR_ARCANA']);
+  const pos = TAROT_SPREADS.one.positions[0];
+  const expected = [...TAROT_CARDS, ...MINOR_ARCANA]
+    .map(c => `• Vị trí "${pos}": ${c.vn} (${c.name}) — Xuôi\n  Ý nghĩa: ${c.upright}`);
+
+  const daily = (await import(pathToFileURL(join(ROOT, 'api/_daily.js')).href)).default;
+  if (daily.tarot.length !== expected.length) {
+    bad(`api/_daily.js có ${daily.tarot.length} lá, nguồn có ${expected.length} — chạy \`npm run build:daily\``);
+  } else {
+    const i = daily.tarot.findIndex((t, k) => t.ctx !== expected[k]);
+    if (i >= 0) bad(`api/_daily.js lỗi thời (lá "${daily.tarot[i].vn}") — chạy \`npm run build:daily\``);
+    else console.log('Prewarm daily: context 78 lá khớp client ✓');
+  }
 }
 
 if (errors) {

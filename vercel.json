@@ -5,6 +5,9 @@
   "functions": {
     "api/interpret.js": {
       "maxDuration": 60
+    },
+    "api/prewarm-daily.js": {
+      "maxDuration": 60
     }
   },
   "cleanUrls": true,
@@ -12,6 +15,10 @@
     {
       "path": "/api/push-send",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/prewarm-daily",
+      "schedule": "0 17 * * *"
     }
   ],
   "redirects": [],
