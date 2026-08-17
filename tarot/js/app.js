@@ -544,6 +544,32 @@ document.addEventListener('DOMContentLoaded', () => {
     elFullLink.href = `/la-bai-tarot/${meta.slug}`;
     section.classList.remove('hidden');
 
+    // ---- Badge chuỗi ngày (window.LatbaiStreak, js/shell.js) ----
+    // BẢN CHẤT DỮ LIỆU: đây là chuỗi ngày GHÉ latbai.vn — shell.js gọi checkIn() ở
+    // top-level trên MỌI trang, không gắn với việc lật lá. Nên chữ phải nói đúng là
+    // "ghé"; viết "N ngày lật bài" cạnh chữ "LÁ BÀI HÔM NAY" là hiển thị sai dữ liệu.
+    (function renderStreakBadge() {
+      const st = window.LatbaiStreak && window.LatbaiStreak.get();
+      // null = localStorage bị chặn (private mode) hoặc shell.js không nạp được.
+      // count < 2 thì chưa gọi là "chuỗi" → khỏi làm chật .daily-head.
+      if (!st || !st.count || st.count < 2) return;
+
+      // shell.js dùng ngày ĐỊA PHƯƠNG có pad 0 ("2026-08-05"), KHÁC dateKey ở trên
+      // (giờ ICT, không pad: "2026-8-5") → phải tự dựng key, đừng tái dùng dateKey.
+      const d = new Date();
+      const localKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      // get() trả state THÔ, không tự kiểm last có phải hôm nay. Lệch = chuỗi đã chết
+      // (ghi localStorage thất bại) → thà không hiện còn hơn hiện sai.
+      if (st.last !== localKey) return;
+
+      const eyebrow = section.querySelector('.daily-eyebrow');
+      if (!eyebrow) return;
+      const tier = st.count >= 30 ? ' is-legend' : st.count >= 7 ? ' is-hot' : '';
+      eyebrow.insertAdjacentHTML('beforeend',
+        `<span class="daily-streak${tier}" title="Chuỗi ngày bạn ghé Lật Bài · kỷ lục ${st.best} ngày">`
+        + `<i class="ti ti-flame"></i>${st.count} ngày ghé liền</span>`);
+    })();
+
     const LS_KEY = 'tarot_daily_seen';
     let revealed = false;
     function reveal() {

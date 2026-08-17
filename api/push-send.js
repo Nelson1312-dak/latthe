@@ -24,11 +24,25 @@ export default async function handler(req, res) {
   webpush.setVapidDetails(subject, pub, priv);
 
   const { hex, card } = todaysFortune();
+  // Đích MẶC ĐỊNH là /tarot/ (không phải '/'): đó là nơi DUY NHẤT có section "Lá Bài
+  // Hôm Nay" tương tác — lật lá 1 chạm rồi luận giải AI. Trước đây url='/' nên thông
+  // báo nói "Lá bài: X" mà bấm vào lại về trang chủ, hở đúng chỗ cần khép vòng.
+  // /kinh-dich/<slug> là bài viết tĩnh dead-end nên chỉ để làm action phụ.
+  // Body phải nói "lật lá bài" — câu cũ "xem nhịp ngày của bạn" trỏ vào block
+  // "Nhịp ngày của bạn" ở trang chủ, giữ nguyên sẽ tạo mismatch mới.
+  // iOS/Safari BỎ QUA `actions` im lặng ⇒ mọi thứ quan trọng phải nằm ở url mặc định.
+  const UTM = 'utm_source=push&utm_medium=daily&utm_campaign=van-hom-nay';
   const payload = JSON.stringify({
     title: `🔮 Vận hôm nay: ${hex.vn}`,
-    body: `${trimTo(hex.m, 90)}  •  Lá bài: ${card.vn}. Chạm để xem nhịp ngày của bạn.`,
-    url: '/?utm_source=push&utm_medium=daily',
+    body: `${trimTo(hex.m, 80)}  •  Lá bài: ${card.vn}. Chạm để lật lá bài hôm nay.`,
+    url: `/tarot/?${UTM}`,
     tag: 'van-hom-nay',
+    // Chrome/Android Notification.maxActions thường = 2 → gửi đúng 2 (sw.js tự cắt thêm).
+    // Giữ được cả 2 lời hứa: trang chủ bán "Vận Hôm Nay" (quẻ), /tarot/ bán "lá bài".
+    actions: [
+      { action: 'bai', title: 'Lật lá bài', url: `/tarot/?${UTM}&utm_content=act-bai` },
+      { action: 'que', title: `Xem quẻ ${hex.n}`, url: `/kinh-dich/${hex.slug}?${UTM}&utm_content=act-que` },
+    ],
   });
 
   let subs;

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!--
+    Badge cho Web Push notification (status bar Android).
+
+    Android dùng `badge` như một MẶT NẠ ALPHA rồi tự tô màu hệ thống lên — mọi màu
+    trong file này bị bỏ qua, chỉ kênh alpha có ý nghĩa. Hệ quả 2 điều bắt buộc:
+      1. Nền TRONG SUỐT. Nếu rasterize images/icon.svg (có <rect> nền full-bleed) thì
+         badge sẽ thành một Ô VUÔNG ĐẶC trên status bar.
+      2. Hình TRẮNG ĐẶC, nét dày, không chi tiết nhỏ — badge hiển thị ở ~24dp nên
+         mọi thứ mảnh hơn ~6px (ở khung 96) sẽ biến thành vệt mờ.
+
+    Lấy motif sao-trong-vòng-astrolabe của thương hiệu, giản lược tối đa.
+  -->
+  <circle cx="48" cy="48" r="38" fill="none" stroke="#ffffff" stroke-width="7"/>
+  <path d="M 48 14 L 56 40 L 82 48 L 56 56 L 48 82 L 40 56 L 14 48 L 40 40 Z" fill="#ffffff"/>
+</svg>

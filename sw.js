@@ -7,7 +7,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v145-2026-08-17';
+const CACHE_VERSION = 'v146-2026-08-17';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -17,6 +17,9 @@ const SHELL = [
   '/images/icon.svg',
   '/images/icon-maskable.svg',
   '/images/logo.svg',
+  // PNG cho Web Push notification (SVG không render được cho icon/badge trên Android)
+  '/images/icon-192.png',
+  '/images/badge-96.png',
   '/css/landing.css',
   '/css/common.css',
   '/fonts/tabler-icons-subset.woff2',
@@ -145,29 +148,76 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+
+  // Payload gửi actions kèm url riêng cho từng nút, nhưng showNotification chỉ nhận
+  // {action,title,icon} → tách url sang data.urls để notificationclick tra lại.
+  const list = Array.isArray(data.actions) ? data.actions.slice(0, 2) : [];
+  const urls = {};
+  for (const a of list) { if (a && a.action && a.url) urls[a.action] = a.url; }
+
   const title = data.title || 'Lật Bài — Vận Hôm Nay';
   const options = {
     body: data.body || 'Quẻ dẫn đường hôm nay của bạn đã sẵn sàng.',
-    icon: '/images/icon-maskable.svg',
-    badge: '/images/icon.svg',
+    // PNG, KHÔNG phải SVG: Chrome/Android không render SVG cho `badge` và cũng không
+    // ổn định cho `icon` → thông báo rơi về icon Chrome mặc định (mất thương hiệu ở
+    // đúng kênh làm retention). Sinh bởi `npm run build:pushicons`.
+    icon: '/images/icon-192.png',
+    badge: '/images/badge-96.png',
     tag: data.tag || 'van-hom-nay',
     renotify: true,
-    data: { url: data.url || '/' },
+    lang: 'vi',
+    data: { url: data.url || '/tarot/', urls },
   };
+  if (list.length) options.actions = list.map((a) => ({ action: a.action, title: a.title }));
+
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// '/tarot/', '/tarot/index.html' và '/tarot' là CÙNG một trang (cleanUrls: true) —
+// chuẩn hoá path để so sánh tab đúng đích và để không mở tab trùng.
+function samePage(a, b) {
+  const norm = (p) => p.replace(/\/index\.html$/, '/').replace(/\/+$/, '') || '/';
+  return norm(a) === norm(b);
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || '/';
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      for (const c of list) {
-        if ('focus' in c) { c.navigate(target); return c.focus(); }
+  const d = event.notification.data || {};
+  // Nút action có url riêng; chạm vào THÂN thông báo thì event.action === '' → url mặc định.
+  const target = (event.action && d.urls && d.urls[event.action]) || d.url || '/tarot/';
+
+  event.waitUntil((async () => {
+    const dest = new URL(target, self.location.origin);
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+    // (1) Bản cũ lấy tab ĐẦU TIÊN bất kỳ rồi navigate() → CƯỚP tab user đang đọc
+    // (đang xem /tuvi/ bị điều hướng đi). Chỉ focus khi tab đó ĐÚNG trang đích.
+    for (const c of list) {
+      let u;
+      try { u = new URL(c.url); } catch { continue; }
+      if (u.origin === dest.origin && samePage(u.pathname, dest.pathname) && 'focus' in c) {
+        return c.focus();
       }
-      return self.clients.openWindow(target);
-    })
-  );
+    }
+
+    // (2) openWindow TRƯỚC, không navigate: với includeUncontrolled:true thì
+    // client.navigate() REJECT trên tab mà SW chưa control (SW vừa update, tab chưa
+    // reload) → bản cũ bấm thông báo không mở gì và cũng không fallback.
+    try {
+      const w = await self.clients.openWindow(dest.href);
+      if (w) return w;
+    } catch { /* một số WebView/PWA chặn openWindow → xuống (3) */ }
+
+    // (3) Fallback cuối: navigate tab cùng origin, có AWAIT rồi mới focus
+    // (bản cũ gọi focus() song song với navigate() → race).
+    for (const c of list) {
+      try {
+        const nav = await c.navigate(dest.href);
+        if (nav && 'focus' in nav) return nav.focus();
+        return;
+      } catch { /* thử tab kế tiếp */ }
+    }
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -191,7 +241,10 @@ self.addEventListener('fetch', (event) => {
           caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy)).catch(() => {});
           return res;
         })
-        .catch(() => caches.match(req).then((cached) => cached || caches.match('/')))
+        // ignoreSearch: url push có query UTM (/tarot/?utm_source=push...) nên
+        // caches.match(req) sẽ MISS '/tarot/' đã precache rồi rơi về trang chủ.
+        // An toàn vì tarot/ không đọc query string nào.
+        .catch(() => caches.match(req, { ignoreSearch: true }).then((cached) => cached || caches.match('/')))
     );
     return;
   }

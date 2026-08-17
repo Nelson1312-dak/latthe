@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!--
+    Source TĨNH cho scripts/build-push-icons.mjs (icon thông báo + icon PWA dạng PNG).
+
+    ĐỪNG rasterize images/icon.svg hay images/icon-maskable.svg: ở đó vị trí 3 lá bài
+    CHỈ tồn tại trong CSS @keyframes (tarot-sway / drinking-sway / center-float) và các
+    vòng astrolabe KHÔNG set fill="none". librsvg (backend của sharp) không chạy CSS
+    animation ⇒ 3 lá bài dồn hết về gốc toạ độ, còn vòng tròn bị fill đen mặc định phủ
+    kín tâm ⇒ PNG ra là một khối ĐEN (đã đo pixel để xác nhận).
+
+    Nên file này: (1) bake transform từ @keyframes thành attribute thật — lấy giá trị
+    giữa 2 mốc keyframe, (2) thêm fill="none" cho mọi vòng, (3) bỏ <style>, bỏ
+    filter="drop-shadow(...)" (librsvg không hỗ trợ filter-function trong attribute),
+    (4) bỏ stardust + vòng mờ r=40 + 2 gạch nhỏ vì ở 192px chúng chỉ thành nhiễu.
+
+    Cùng quy ước với scripts/og-source-*.svg + scripts/build-og.js.
+    Nội dung vươn tới r=44/50 (88% nửa chiều rộng): vừa đủ sống với circle-crop của
+    notification (r=256/256) nhưng VƯỢT safe-zone 80% của maskable ⇒ PNG sinh ra chỉ
+    được khai purpose="any" trong manifest, KHÔNG phải "maskable".
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2e1047"/>
+      <stop offset="50%" stop-color="#11031c"/>
+      <stop offset="100%" stop-color="#090115"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe29a"/>
+      <stop offset="50%" stop-color="#d98a0a"/>
+      <stop offset="100%" stop-color="#8b5a00"/>
+    </linearGradient>
+    <linearGradient id="cosmicBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="40%" stop-color="#7c3aed"/>
+      <stop offset="70%" stop-color="#0d9668"/>
+      <stop offset="100%" stop-color="#ea6a17"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)" stroke="url(#goldGrad)" stroke-width="4"/>
+
+  <g transform="scale(5.12)">
+    <!-- Astrolabe: fill="none" BẮT BUỘC — thiếu là fill đen mặc định phủ kín tâm icon -->
+    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#goldGrad)" stroke-width="1.8" stroke-dasharray="1 3.5"/>
+    <circle cx="50" cy="50" r="37" fill="none" stroke="url(#goldGrad)" stroke-width="1.5"/>
+
+    <!-- 4 sao định hướng (twinkle → opacity 1, scale 1) -->
+    <path d="M 50 6 L 52 10 L 50 14 L 48 10 Z" fill="url(#goldGrad)"/>
+    <path d="M 50 94 L 52 90 L 50 86 L 48 90 Z" fill="url(#goldGrad)"/>
+    <path d="M 6 50 L 10 52 L 14 50 L 10 48 Z" fill="url(#goldGrad)"/>
+    <path d="M 94 50 L 90 52 L 86 50 L 90 48 Z" fill="url(#goldGrad)"/>
+
+    <!-- Lá trái tím (tarot-sway: -20deg → -14deg, lấy -17deg) -->
+    <g transform="translate(42 50) rotate(-17)">
+      <rect x="-14" y="-21" width="28" height="42" rx="5" fill="#fdfaff" stroke="#7c3aed" stroke-width="1.5"/>
+      <path d="M -9 6 L -7 8 L -5 6 L -7 4 Z" fill="#7c3aed"/>
+    </g>
+
+    <!-- Lá phải cam (drinking-sway: 14deg → 20deg, lấy 17deg) -->
+    <g transform="translate(58 50) rotate(17)">
+      <rect x="-14" y="-21" width="28" height="42" rx="5" fill="#fffaf5" stroke="#ea6a17" stroke-width="1.5"/>
+      <circle cx="5" cy="-2" r="3" fill="#ea6a17"/>
+    </g>
+
+    <!-- Lá giữa (center-float: translate(50,50) rotate(-3) → translate(50,46) rotate(1)) -->
+    <g transform="translate(50 48) rotate(-1)">
+      <rect x="-16" y="-24" width="32" height="48" rx="6" fill="url(#cosmicBg)" stroke="url(#goldGrad)" stroke-width="2"/>
+      <rect x="-13" y="-21" width="26" height="42" rx="4" fill="none" stroke="url(#goldGrad)" stroke-width="0.8" opacity="0.8" stroke-dasharray="3 1.5"/>
+      <!-- Âm dương (yinyang-spin quanh tâm → xoay là identity về thị giác) -->
+      <g transform="translate(0 -2)">
+        <circle cx="0" cy="0" r="7" fill="#ffffff" stroke="url(#goldGrad)" stroke-width="1"/>
+        <path d="M 0 -7 A 3.5 3.5 0 0 1 0 0 A 3.5 3.5 0 0 0 0 7 A 7 7 0 0 1 0 -7 Z" fill="#d98a0a"/>
+        <circle cx="0" cy="-3.5" r="1" fill="#d98a0a"/>
+        <circle cx="0" cy="3.5" r="1" fill="#ffffff"/>
+      </g>
+      <path d="M -8 -13 L -6 -11 L -4 -13 L -6 -15 Z" fill="#ffe29a"/>
+      <path d="M 8 9 L 10 11 L 12 9 L 10 7 Z" fill="#ffe29a"/>
+    </g>
+  </g>
+</svg>
