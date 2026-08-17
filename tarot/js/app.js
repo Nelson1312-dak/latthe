@@ -381,8 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
     five:  'Trải bài này đang phản ánh điều gì về tình huống hiện tại của tôi?',
   };
 
-  function showAISection() {
-    const q = tarotQuestion.value.trim() || DEFAULT_Q[selectedSpread] || 'Trải bài này đang nói lên điều gì về tôi?';
+  function showAISection(presetQ) {
+    const q = (presetQ || '').trim() || tarotQuestion.value.trim() || DEFAULT_Q[selectedSpread] || 'Trải bài này đang nói lên điều gì về tôi?';
     buildChips();
     aiSection.classList.remove('hidden');
     aiQuestionDisp.textContent = `"${q}"`;
@@ -468,6 +468,146 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnNewReading.addEventListener('click', goNewReading);
   btnRestart.addEventListener('click', goNewReading);
+
+  // ==================== LÁ BÀI HÔM NAY (daily card) ====================
+  // Rút MIỄN PHÍ, không tốn lượt trải bài. Lá tất định theo ngày, dùng CÙNG seed
+  // với push 7h sáng (api/_push.js todaysFortune): FNV-1a của dateKey(giờ VN)+'#tarot'
+  // → user chạm thông báo thấy đúng lá này. Ghép sang FULL_DECK theo img để lấy
+  // keywords/ý nghĩa/lời khuyên đầy đủ cho phần "Luận giải cùng AI".
+
+  // Dựng 1 trải bài từ lá hôm nay (xuôi) rồi nhảy thẳng vào màn reading + AI.
+  function startDailyReading(fullCard) {
+    selectedSpread = 'one';
+    drawnCards = [{ card: fullCard, reversed: false, revealed: true }];
+    tarotQuestion.value = '';
+    showScreen('reading');
+    window.scrollTo({ top: 0 });
+    btnRestart.classList.remove('hidden');
+    renderReading();
+    // Auto-lật lá duy nhất — nút "Luận giải cùng AI" đã là 1 gesture, không bắt chạm lại.
+    requestAnimationFrame(() => {
+      const wrapper = cardsLayout.querySelector('.drawn-card');
+      if (wrapper) wrapper.classList.add('revealed', 'active-card');
+      drawnCards[0].revealed = true;
+      showDetail(0);
+      setTimeout(() => {
+        showAISection('Lá bài hôm nay muốn nhắn nhủ điều gì cho tôi?');
+        btnNewReading.classList.remove('hidden');
+        document.getElementById('t-share-actions').classList.remove('hidden');
+      }, 650);
+    });
+  }
+
+  (function initDailyCard() {
+    const data = (typeof DAILY_TAROT !== 'undefined') ? DAILY_TAROT : null;
+    const section = document.getElementById('daily-card');
+    if (!data || !section) return;
+
+    // FNV-1a — trùng hashHex() trong api/_push.js để chọn cùng chỉ số lá.
+    function fnv(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+      return h >>> 0;
+    }
+    // dateKey theo giờ VN (UTC+7) — trùng todaysFortune() để khớp lá push nhắc.
+    const ict = new Date(Date.now() + 7 * 3600 * 1000);
+    const dateKey = `${ict.getUTCFullYear()}-${ict.getUTCMonth() + 1}-${ict.getUTCDate()}`;
+    const meta = data[fnv(dateKey + '#tarot') % data.length];
+    const full = FULL_DECK.find((c) => String(c.img) === String(meta.img)) || null;
+
+    const elDate = document.getElementById('daily-date');
+    const elImg = document.getElementById('daily-img');
+    const elName = document.getElementById('daily-name');
+    const elMsg = document.getElementById('daily-msg');
+    const elKw = document.getElementById('daily-kw');
+    const elActions = document.getElementById('daily-actions');
+    const elFullLink = document.getElementById('daily-full-link');
+    const elFoot = document.getElementById('daily-foot');
+    const flip = document.getElementById('daily-flip');
+    const askAI = document.getElementById('daily-ask-ai');
+
+    const WD = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const now = new Date();
+    elDate.textContent = `${WD[now.getDay()]}, ${now.getDate()}/${now.getMonth() + 1}`;
+
+    elImg.src = `images/thumbs/${meta.img}.webp`;  // thumb nhẹ (72×121) đủ cho preview ~120px
+    elImg.alt = meta.vn;
+    elFullLink.href = `/la-bai-tarot/${meta.slug}`;
+    section.classList.remove('hidden');
+
+    const LS_KEY = 'tarot_daily_seen';
+    let revealed = false;
+    function reveal() {
+      if (revealed) return;
+      revealed = true;
+      flip.classList.add('flipped');
+      elName.textContent = `${meta.vn} · ${meta.en}`;
+      elMsg.textContent = meta.m;
+      if (full && Array.isArray(full.keywords)) {
+        elKw.innerHTML = full.keywords.slice(0, 4).map((k) => `<span class="keyword-tag">${k}</span>`).join('');
+      }
+      elActions.classList.remove('hidden');
+      elFoot.textContent = 'Quay lại ngày mai để lật một lá mới ✨';
+      try { localStorage.setItem(LS_KEY, dateKey); } catch (e) { /* private mode */ }
+    }
+
+    // Hôm nay đã lật rồi → hiện luôn mặt trước (không bắt chạm lại, khớp thói quen quay lại).
+    let already = false;
+    try { already = localStorage.getItem(LS_KEY) === dateKey; } catch (e) { /* ignore */ }
+    if (already) reveal();
+
+    flip.addEventListener('click', reveal);
+    askAI.addEventListener('click', () => { if (full) startDailyReading(full); });
+  })();
+
+  // ---- Bật/tắt nhắc "Lá bài mỗi sáng" (tái dùng window.LatbaiPush) ----
+  (async function initDailyPush() {
+    const box = document.getElementById('daily-push');
+    const Push = window.LatbaiPush;
+    if (!box || !Push || !Push.isSupported()) return;
+    box.hidden = false;
+
+    function paint(state, msg) {
+      if (state === 'on') {
+        box.innerHTML = `<button type="button" class="daily-push-btn is-on" id="daily-push-toggle"><i class="ti ti-bell-ringing"></i> Đang nhắc lá bài mỗi sáng — tắt</button>`
+          + (msg ? `<span class="daily-push-msg">${msg}</span>` : '');
+      } else if (state === 'blocked') {
+        box.innerHTML = `<span class="daily-push-msg"><i class="ti ti-bell-off"></i> Bạn đã chặn thông báo. Bật lại trong cài đặt trình duyệt để nhận lá bài mỗi sáng.</span>`;
+        return;
+      } else {
+        box.innerHTML = `<button type="button" class="daily-push-btn" id="daily-push-toggle"><i class="ti ti-bell"></i> Nhắc tôi lá bài mỗi sáng</button>`
+          + (msg ? `<span class="daily-push-msg">${msg}</span>` : '');
+      }
+      const btn = document.getElementById('daily-push-toggle');
+      if (btn) btn.addEventListener('click', onToggle);
+    }
+
+    async function onToggle() {
+      const btn = document.getElementById('daily-push-toggle');
+      const cur = await Push.getState();
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+      if (cur === 'on') {
+        await Push.disable();
+        paint('off', 'Đã tắt nhắc hằng ngày.');
+      } else {
+        const r = await Push.enable();
+        if (r.ok) {
+          paint('on', 'Tuyệt! Sáng mai bạn sẽ nhận lá bài dẫn đường đầu tiên 🔮');
+        } else {
+          const reasons = {
+            blocked: 'Bạn đã từ chối quyền thông báo — bật lại trong cài đặt trình duyệt.',
+            dismissed: 'Bạn chưa cấp quyền thông báo. Thử lại khi sẵn sàng nhé.',
+            notconfigured: 'Tính năng đang được kích hoạt, vui lòng quay lại sau.',
+            network: 'Lỗi kết nối, thử lại sau ít phút.',
+          };
+          paint(r.reason === 'blocked' ? 'blocked' : 'off', reasons[r.reason] || 'Chưa bật được, thử lại sau.');
+        }
+      }
+    }
+
+    paint('off');
+    paint(await Push.getState());
+  })();
 
   // ==================== SHARE CARD (canvas 1080×1350, scaffold dùng chung) ====================
   async function shareReadingCard(wantShare) {

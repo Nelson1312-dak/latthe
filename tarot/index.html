@@ -121,6 +121,37 @@
           </div>
         </div>
 
+        <!-- ===== LÁ BÀI HÔM NAY (rút miễn phí, tất định theo ngày — khớp lá push nhắc mỗi sáng) ===== -->
+        <section id="daily-card" class="daily-card hidden" aria-live="polite">
+          <div class="daily-head">
+            <span class="daily-eyebrow"><i class="ti ti-sparkles"></i> Lá Bài Hôm Nay</span>
+            <span class="daily-date" id="daily-date"></span>
+          </div>
+          <div class="daily-body">
+            <button type="button" class="daily-flip" id="daily-flip" aria-label="Lật lá bài hôm nay">
+              <div class="daily-flip-inner">
+                <div class="daily-face daily-back">
+                  <span class="daily-tap-hint">Chạm để lật</span>
+                </div>
+                <div class="daily-face daily-front">
+                  <img id="daily-img" class="daily-img" alt="" width="900" height="1510" decoding="async" loading="lazy">
+                </div>
+              </div>
+            </button>
+            <div class="daily-info">
+              <h2 class="daily-name" id="daily-name">Lá bài dẫn đường cho ngày mới</h2>
+              <p class="daily-msg" id="daily-msg">Chạm vào lá bài để mở thông điệp vũ trụ dành riêng cho hôm nay — miễn phí, không tốn lượt trải bài.</p>
+              <div class="daily-kw" id="daily-kw"></div>
+              <div class="daily-actions hidden" id="daily-actions">
+                <button type="button" class="daily-btn-ai" id="daily-ask-ai"><i class="ti ti-wand"></i> Luận giải cùng AI</button>
+                <a class="daily-btn-link" id="daily-full-link" href="#"><i class="ti ti-book"></i> Ý nghĩa đầy đủ</a>
+              </div>
+            </div>
+          </div>
+          <div class="daily-push" id="daily-push" hidden></div>
+          <p class="daily-foot" id="daily-foot"></p>
+        </section>
+
         <!-- Question input -->
         <div class="question-box">
           <label class="question-label" for="tarot-question"><i class="ti ti-sparkles"></i> Bước 1: Nhập câu hỏi của bạn</label>
@@ -373,6 +404,8 @@
 
   <script src="js/cards.js"></script>
   <script src="js/cards-minor.js"></script>
+  <script src="/js/daily-data.js"></script>
+  <script src="/js/push.js" defer></script>
   <script src="../js/ai.js"></script>
   <script src="../js/history.js"></script>
   <script src="../js/chat.js"></script>
