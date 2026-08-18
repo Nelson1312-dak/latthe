@@ -3,33 +3,6 @@
  * Cần load sau: /js/profile.js và /js/daily-data.js (DAILY_HEX, DAILY_TAROT).
  * Render vào 2 placeholder: #hub-profile và #hub-daily trong index.html.
  */
-
-/* ---- FeatureGrid: segmented tabs (khử card soup) ----
-   IIFE riêng, KHÔNG phụ thuộc hồ sơ (chạy cả khi chưa có LatbaiProfile).
-   Inline-script bị CSP chặn nên logic đặt ở file đã-load này. */
-(function () {
-  'use strict';
-  const seg = document.getElementById('fgSeg');
-  if (!seg) return;
-  const ind = document.getElementById('fgInd');
-  const tabs = Array.prototype.slice.call(seg.querySelectorAll('.fg-tab'));
-  const panels = Array.prototype.slice.call(document.querySelectorAll('.fg-panel'));
-  function move(i) {
-    const b = tabs[i];
-    if (!b) return;
-    ind.style.width = b.offsetWidth + 'px';
-    ind.style.transform = 'translateX(' + (b.offsetLeft - 4) + 'px)';
-    tabs.forEach(function (x, k) { x.classList.toggle('active', k === i); x.setAttribute('aria-selected', k === i); });
-    panels.forEach(function (p, k) { p.classList.toggle('active', k === i); });
-  }
-  tabs.forEach(function (b, i) { b.addEventListener('click', function () { move(i); }); });
-  const cur = function () { return Math.max(0, tabs.findIndex(function (b) { return b.classList.contains('active'); })); };
-  requestAnimationFrame(function () { move(0); });
-  // Tái định vị indicator sau khi font/layout ổn định + khi resize.
-  window.addEventListener('load', function () { move(cur()); });
-  window.addEventListener('resize', function () { move(cur()); });
-})();
-
 (function () {
   'use strict';
 
