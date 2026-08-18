@@ -1095,3 +1095,73 @@ a.hub-daily-card:hover {
 @media (min-width: 1024px) {
   .l-hub { max-width: 980px; }
 }
+
+/* ============================================================
+   FeatureGrid — segmented tabs thay module card grid ("khử card soup")
+   Editorial craft: hairline 1px · tag category · icon tint theo nhóm ·
+   hover arrow. Dùng token sẵn có (--surface/--border/--text/--sub/--muted)
+   để hoà với phần còn lại của trang; accent trầm truyền qua --fg-accent.
+   ============================================================ */
+.fg { margin-top: 4px; }
+.fg-seg-wrap { display: flex; justify-content: center; margin-bottom: 26px; }
+.fg-seg {
+  position: relative; display: inline-flex; gap: 2px; padding: 4px; max-width: 100%;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.fg-seg::-webkit-scrollbar { display: none; }
+.fg-ind {
+  position: absolute; top: 4px; bottom: 4px; left: 4px; width: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(120,75,25,.10);
+  transition: transform .32s cubic-bezier(.4,0,.2,1), width .32s cubic-bezier(.4,0,.2,1);
+}
+.fg-tab {
+  position: relative; z-index: 1; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: 13.5px; font-weight: 700; color: var(--muted);
+  padding: 9px 15px; border-radius: 10px; display: inline-flex; align-items: center; gap: 7px;
+  white-space: nowrap; transition: color .25s; -webkit-tap-highlight-color: transparent;
+}
+.fg-tab i { font-size: 16px; }
+.fg-tab.active { color: var(--text); }
+
+.fg-panel { display: none; }
+.fg-panel.active { display: block; animation: fg-in .38s cubic-bezier(.2,.8,.2,1); }
+@keyframes fg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.fg-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+.fg-card {
+  position: relative; display: flex; flex-direction: column; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 20px; overflow: hidden; color: var(--text);
+  transition: border-color .3s, transform .3s, box-shadow .3s;
+}
+.fg-card::before { /* inner highlight 1px — chi tiết craft */
+  content: ''; position: absolute; inset: 0 0 auto; height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,.5), transparent); pointer-events: none;
+}
+.fg-card:hover { border-color: rgba(120,80,25,.24); transform: translateY(-3px); box-shadow: var(--shadow); }
+.fg-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fg-icon {
+  width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; font-size: 23px;
+  color: var(--fg-accent); background: var(--fg-accent-bg); border: 1px solid var(--border);
+  transition: transform .3s; flex-shrink: 0;
+}
+.fg-card:hover .fg-icon { transform: scale(1.06) rotate(-3deg); }
+.fg-tag { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: right; }
+.fg-card h3 { font-family: inherit; font-size: 18px; font-weight: 800; letter-spacing: -.01em; color: var(--text); }
+.fg-card p { font-size: 13px; color: var(--sub); line-height: 1.5; }
+.fg-more { font-size: 13px; font-weight: 700; color: var(--fg-accent); display: inline-flex; align-items: center; gap: 5px;
+  opacity: 0; transform: translateX(-4px); transition: opacity .3s, transform .3s; }
+.fg-card:hover .fg-more { opacity: 1; transform: none; }
+
+@media (min-width: 768px) {
+  .fg-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fg-panel.active { animation: none; }
+  .fg-ind, .fg-card, .fg-icon, .fg-more { transition: none; }
+}
+.l-fg-head { text-align: center; margin-bottom: 22px; }
+.l-fg-head .l-lookup-sub { margin-top: 6px; }
