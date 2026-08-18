@@ -1306,10 +1306,11 @@ a { text-decoration: none; color: inherit; }
   .daily-flip { width: 120px; height: 192px; }
   .daily-name { font-size: 19px; }
   .daily-msg { font-size: 14px; }
-  /* Cân lại desktop: nội dung ngắn (~740px) dồn trái trong card full-width để trống
-     ~60% phải INSIDE card. Cap card ở ~800px, CANH TRÁI (mép trái thẳng hàng form
-     bên dưới) → nội dung lấp gần kín card, header neo đúng 2 góc card. */
-  .daily-card { max-width: 800px; }
+  /* Cân lại desktop: GIỮ card full-width (mép thẳng hàng form nhập bên dưới — cap
+     hẹp hơn thì lệch mép nhìn kì), nhưng nội dung ngắn dồn về trái để trống lệch
+     phải. Gom body/push/foot vào cột GIỮA ~660px cho cân đối đối xứng (đẹp cả lúc
+     chưa lật lẫn đã lật). Header vẫn full-width: nhãn trái · ngày phải. */
+  .daily-body, .daily-push, .daily-foot { max-width: 660px; margin-left: auto; margin-right: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .daily-flip:not(.flipped) .daily-back { animation: none; }
