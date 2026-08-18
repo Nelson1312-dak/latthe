@@ -7,7 +7,7 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v148-2026-08-18';
+const CACHE_VERSION = 'v149-2026-08-18';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -249,19 +249,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for everything else same-origin
+  // Stale-while-revalidate for same-origin CSS/JS/fonts/icons: trả cache NGAY
+  // (nhanh + chạy offline) đồng thời tải bản mới ở NỀN để lần tải sau tự cập nhật
+  // — không cần bump CACHE_VERSION tay nữa, hết cảnh kẹt CSS/JS cũ sau deploy.
+  // Đọc RUNTIME_CACHE TRƯỚC: bản mới ghi vào runtime sẽ che bản precache cũ trong
+  // SHELL (caches.match duyệt SHELL trước nên nếu không sẽ trả bản cũ mãi).
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
-          if (res.ok && res.type === 'basic') {
-            const copy = res.clone();
-            caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy)).catch(() => {});
-          }
-          return res;
-        });
-      })
+      caches.open(RUNTIME_CACHE).then((runtime) =>
+        runtime.match(req).then((rtCached) =>
+          (rtCached ? Promise.resolve(rtCached) : caches.match(req)).then((cached) => {
+            const fetched = fetch(req).then((res) => {
+              // Chỉ cache phản hồi thật (200, same-origin) — tránh ghi lỗi/opaque.
+              if (res.ok && res.type === 'basic') runtime.put(req, res.clone()).catch(() => {});
+              return res;
+            }).catch(() => cached); // mạng lỗi → dùng cache (có thể undefined khi offline chưa từng cache)
+            // Có cache thì trả ngay, revalidate chạy nền; chưa có thì chờ mạng.
+            return cached || fetched;
+          })
+        )
+      )
     );
   }
 });
