@@ -357,9 +357,9 @@ a { text-decoration: none; color: inherit; }
   gap: 3px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 18px 16px;
-  box-shadow: var(--shadow);
+  box-shadow: none; /* hairline editorial: bỏ shadow always-on, chỉ nổi khi hover */
   transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
 .l-lookup-card:hover {
@@ -805,17 +805,20 @@ a { text-decoration: none; color: inherit; }
 .hub-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: 22px;
   padding: 20px;
   box-shadow: var(--shadow);
   position: relative;
 }
+/* Inner-highlight 1px trên đỉnh (thay viền vàng đôi cũ) — khớp chrome hairline
+   editorial của widget Vận Hôm Nay kề bên. */
 .hub-card::after {
   content: '';
   position: absolute;
-  inset: 5px;
-  border: 1px solid rgba(217, 138, 10, 0.18);
-  border-radius: 19px;
+  inset: 0 0 auto;
+  height: 46%;
+  border-radius: 22px 22px 0 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.5), transparent);
   pointer-events: none;
 }
 
