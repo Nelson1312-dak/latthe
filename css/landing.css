@@ -177,155 +177,6 @@ a { text-decoration: none; color: inherit; }
   gap: 36px;
 }
 
-/* ---- Module Groups ---- */
-.l-group {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.l-group-title {
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--muted);
-  border-left: 3px solid var(--c-tuvi);
-  padding-left: 10px;
-  margin-bottom: 2px;
-  line-height: 1.2;
-}
-.l-group:nth-child(2) .l-group-title { border-left-color: var(--c-drink); }
-
-.l-modules {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ---- Cards ---- */
-.l-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-  cursor: pointer;
-  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
-              box-shadow 0.28s ease, border-color 0.28s ease;
-  -webkit-tap-highlight-color: transparent;
-  position: relative;
-}
-
-.l-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-h);
-}
-.l-card:active { transform: scale(0.99); }
-
-.l-tuvi:hover    { border-color: rgba(232, 147, 10, 0.4); }
-.l-gieoque:hover { border-color: rgba(13, 150, 104, 0.4); }
-.l-tarot:hover   { border-color: rgba(124, 58, 237, 0.4); }
-.l-drink:hover   { border-color: rgba(234, 106, 23, 0.4); }
-.l-thuvien:hover { border-color: rgba(37, 99, 235, 0.4); }
-.l-thansohoc:hover { border-color: rgba(99, 102, 241, 0.4); }
-.l-ten:hover  { border-color: rgba(192, 38, 211, 0.4); }
-.l-dua:hover  { border-color: rgba(217, 119, 6, 0.4); }
-.l-hoangdao:hover { border-color: rgba(124, 58, 237, 0.4); }
-.l-xinxam:hover   { border-color: rgba(185, 28, 28, 0.4); }
-
-/* App-icon-style colored tile */
-.l-card-icon {
-  width: 60px;
-  height: 60px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30px;
-  color: #fff;
-  border-radius: 18px;
-  line-height: 1;
-  transition: transform 0.28s ease;
-}
-.l-tuvi    .l-card-icon { background: linear-gradient(150deg, #f5ab2e, #d97706); box-shadow: 0 8px 18px rgba(217,119,6,0.3); }
-.l-gieoque .l-card-icon { background: linear-gradient(150deg, #14b884, #0d9668); box-shadow: 0 8px 18px rgba(13,150,104,0.3); }
-.l-tarot   .l-card-icon { background: linear-gradient(150deg, #9560f0, #7c3aed); box-shadow: 0 8px 18px rgba(124,58,237,0.3); }
-.l-drink   .l-card-icon { background: linear-gradient(150deg, #fb8a3c, #ea6a17); box-shadow: 0 8px 18px rgba(234,106,23,0.3); }
-.l-thuvien .l-card-icon { background: linear-gradient(150deg, #3b82f6, #2563eb); box-shadow: 0 8px 18px rgba(37,99,235,0.3); }
-.l-thansohoc .l-card-icon { background: linear-gradient(150deg, #818cf8, #4f46e5); box-shadow: 0 8px 18px rgba(79,70,229,0.3); }
-.l-ten  .l-card-icon { background: linear-gradient(150deg, #e879f9, #c026d3); box-shadow: 0 8px 18px rgba(192,38,211,0.3); }
-.l-dua  .l-card-icon { background: linear-gradient(150deg, #fbbf24, #d97706); box-shadow: 0 8px 18px rgba(217,119,6,0.3); }
-.l-hoangdao .l-card-icon { background: linear-gradient(150deg, #9560f0, #7c3aed); box-shadow: 0 8px 18px rgba(124,58,237,0.3); }
-.l-xinxam .l-card-icon   { background: linear-gradient(150deg, #dc2626, #b91c1c); box-shadow: 0 8px 18px rgba(185,28,28,0.3); }
-.l-card:hover .l-card-icon { transform: scale(1.06) rotate(-3deg); }
-
-.l-card-body { flex: 1; min-width: 0; }
-
-.l-card-label {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
-.l-tuvi    .l-card-label { color: var(--c-tuvi); }
-.l-gieoque .l-card-label { color: var(--c-gieoque); }
-.l-tarot   .l-card-label { color: var(--c-tarot); }
-.l-drink   .l-card-label { color: var(--c-drink); }
-.l-thuvien .l-card-label { color: var(--c-thuvien); }
-.l-thansohoc .l-card-label { color: var(--c-thansohoc); }
-.l-ten  .l-card-label { color: var(--c-ten); }
-.l-dua  .l-card-label { color: var(--c-dua); }
-.l-hoangdao .l-card-label { color: var(--c-hoangdao); }
-.l-xinxam .l-card-label   { color: #b91c1c; }
-
-.l-card-name {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text);
-  margin-bottom: 6px;
-  line-height: 1.2;
-}
-
-.l-card-desc {
-  font-size: 12.5px;
-  color: var(--sub);
-  line-height: 1.6;
-}
-
-.l-card-arrow {
-  font-size: 20px;
-  color: var(--muted);
-  flex-shrink: 0;
-  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.28s ease;
-}
-.l-card:hover .l-card-arrow { transform: translateX(4px); color: var(--text); }
-
-/* ---- Module badge (AI / NEW) ---- */
-.l-badge {
-  display: inline-block;
-  font-size: 8.5px;
-  font-weight: 800;
-  letter-spacing: 0.8px;
-  color: #fff;
-  background: var(--c-tuvi);
-  border-radius: 5px;
-  padding: 1px 5px;
-  margin-left: 5px;
-  vertical-align: middle;
-  text-transform: uppercase;
-  line-height: 1.6;
-}
-.l-badge-green  { background: var(--c-gieoque); }
-.l-badge-purple { background: var(--c-tarot); }
-.l-badge-blue   { background: var(--c-thuvien); }
-.l-badge-indigo { background: var(--c-thansohoc); }
-
 /* ---- Section title (shared by About & FAQ) ---- */
 .l-section-title {
   font-size: 11px;
@@ -430,12 +281,12 @@ a { text-decoration: none; color: inherit; }
   gap: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 16px;
-  box-shadow: var(--shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: none; /* hairline editorial: chỉ nổi khi hover, khớp .fg-card + .l-lookup-card */
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.l-feature:hover { transform: translateY(-2px); box-shadow: var(--shadow-h); }
+.l-feature:hover { transform: translateY(-2px); box-shadow: var(--shadow-h); border-color: rgba(217, 138, 10, 0.4); }
 
 .l-feature-icon {
   width: 38px;
@@ -514,26 +365,6 @@ a { text-decoration: none; color: inherit; }
   .l-divider { max-width: 800px; }
   .l-main-content { max-width: 800px; gap: 40px; }
 
-  /* Grid 3 cột: nhiều module (7 card nhóm 1) tự xuống hàng thay vì dồn 1 hàng flex bị bóp */
-  .l-modules {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-  }
-
-  .l-card {
-    flex: 1;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 28px 24px;
-    gap: 18px;
-    min-height: 264px;
-  }
-  .l-card-icon { width: 64px; height: 64px; font-size: 32px; border-radius: 20px; }
-  .l-card-name { font-size: 22px; margin-bottom: 8px; }
-  .l-card-desc { font-size: 13px; }
-  .l-card-arrow { display: none; }
-
   .l-about { max-width: 800px; }
   .l-features { grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .l-feature { flex-direction: column; gap: 12px; }
@@ -543,13 +374,6 @@ a { text-decoration: none; color: inherit; }
   .l-hero    { max-width: 980px; padding: 120px 0 64px; }
   .l-divider { max-width: 980px; }
   .l-main-content { max-width: 980px; }
-
-  .l-modules { gap: 28px; }
-  .l-modules.drinking-group { gap: 28px; }
-
-  .l-card-icon { width: 68px; height: 68px; font-size: 34px; }
-  .l-card-name { font-size: 24px; }
-  .l-card-desc { font-size: 13.5px; }
 
   .l-about { max-width: 980px; }
   .l-about-lead { font-size: 15px; }
@@ -719,8 +543,6 @@ a { text-decoration: none; color: inherit; }
   /* KHÔNG đặt overflow:hidden — nó ép transform-style về flat, mất hiệu ứng nổi 3D.
      Glare tự bo góc bằng border-radius: inherit. */
 }
-.fx-tilt .l-card-body { transform-style: preserve-3d; }
-
 .fx-glare {
   position: absolute;
   inset: 0;
@@ -731,15 +553,11 @@ a { text-decoration: none; color: inherit; }
 }
 
 .fx-tilting { box-shadow: var(--shadow-h); }
-.fx-tilting .l-card-icon {
-  transform: translateZ(32px) scale(1.06) rotate(-3deg);
-}
-.fx-tilting .l-card-name { transform: translateZ(20px); }
 .fx-tilting .l-lookup-big {
   transform: translateZ(28px);
   display: inline-block;
 }
-.l-card-name, .l-lookup-big { transition: transform 0.28s ease; }
+.l-lookup-big { transition: transform 0.28s ease; }
 
 /* ---- Divider tự vẽ + ✦ xoay ở giữa ---- */
 .fx-js .l-divider { position: relative; overflow: visible; }

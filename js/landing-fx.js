@@ -328,7 +328,7 @@
   /* ---------- 4. Tilt 3D + glare + nam châm ---------- */
   function initTilt() {
     if (prefersReduced || !finePointer) return;
-    const els = document.querySelectorAll('.l-card, .l-lookup-card');
+    const els = document.querySelectorAll('.l-lookup-card');
     els.forEach((el) => {
       el.classList.add('fx-tilt');
       const glare = document.createElement('span');
@@ -372,7 +372,7 @@
   /* ---------- 5. Scroll reveal 3D ---------- */
   function initReveal() {
     const els = document.querySelectorAll(
-      '.l-card, .l-lookup-card, .l-feature, .faq-item, .l-group-title, ' +
+      '.l-lookup-card, .l-feature, .faq-item, ' +
       '.l-section-title, .l-about-lead, .l-lookup-sub, .l-divider'
     );
     if (prefersReduced || !('IntersectionObserver' in window)) return;
