@@ -463,8 +463,21 @@ document.addEventListener('DOMContentLoaded', () => {
     aiSection.classList.add('hidden');
     aiChatMessages.innerHTML = '';
     if (chipsEl) chipsEl.innerHTML = '';
+    syncQuestionStep(); // câu hỏi cố ý KHÔNG bị xoá — chỉ đồng bộ lại badge bước 1
     showScreen('spread');
   }
+
+  // ---- Bước 1: đánh dấu ✓ khi đã có câu hỏi ----
+  // Thuần trang trí — KHÔNG chặn luồng. Câu hỏi vẫn tùy chọn, .spread-btn vẫn
+  // commit ngay như cũ (xem comment ở handler spread selection).
+  const stepQuestion = document.getElementById('step-question');
+  function syncQuestionStep() {
+    if (stepQuestion) {
+      stepQuestion.classList.toggle('is-done', tarotQuestion.value.trim().length > 0);
+    }
+  }
+  tarotQuestion.addEventListener('input', syncQuestionStep);
+  syncQuestionStep(); // trạng thái ban đầu (bfcache / trình duyệt khôi phục giá trị)
 
   // ---- Suggested question tags click handler ----
   document.querySelectorAll('.sq-tag').forEach(tag => {
@@ -472,6 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       tarotQuestion.value = tag.dataset.q;
       tarotQuestion.focus();
+      syncQuestionStep(); // gán .value bằng JS không bắn event 'input'
     });
   });
 
@@ -489,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedSpread = 'one';
     drawnCards = [{ card: fullCard, reversed: false, revealed: true }];
     tarotQuestion.value = '';
+    syncQuestionStep();
     showScreen('reading');
     window.scrollTo({ top: 0 });
     btnRestart.classList.remove('hidden');

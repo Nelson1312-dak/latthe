@@ -114,7 +114,7 @@
             <img src="/images/logo.svg" alt="Lật Bài Logo">
           </div>
           <h1 class="t-title">Bài Tarot</h1>
-          <p class="t-subtitle">Nhập câu hỏi, chọn kiểu rải bài,<br>và để Tarot lên tiếng.</p>
+          <p class="t-subtitle">Để Tarot soi sáng điều bạn đang băn khoăn.</p>
           <!-- BLOCK 1: [TEXT TRÊN APP] -->
           <div class="seo-app-intro">
             Bốc bài Tarot hỏi về tình duyên, sự nghiệp, tương lai. Nhận luận giải chi tiết từ chuyên gia AI.
@@ -152,50 +152,76 @@
           <p class="daily-foot" id="daily-foot"></p>
         </section>
 
-        <!-- Question input -->
-        <div class="question-box">
-          <label class="question-label" for="tarot-question"><i class="ti ti-sparkles"></i> Bước 1: Nhập câu hỏi của bạn</label>
-          <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên chuyển việc vào lúc này không?" rows="3" maxlength="200"></textarea>
-          <div class="suggested-questions">
-            <span class="sq-label">Gợi ý câu hỏi:</span>
-            <div class="sq-tags">
-              <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?"><i class="ti ti-calendar"></i> Ngày hôm nay thế nào?</button>
-              <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?"><i class="ti ti-briefcase"></i> Có nên nghỉ việc không?</button>
-              <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?"><i class="ti ti-heart-broken"></i> Có nên chia tay không?</button>
-            </div>
-          </div>
-          <p class="question-hint">AI sẽ luận giải dựa trên câu hỏi và lá bài của bạn</p>
-        </div>
+        <!-- ===== LUỒNG 3 BƯỚC (step rail) =====
+             Bước 1 CỐ Ý là tùy chọn: handler .spread-btn không đọc/validate ô này,
+             câu hỏi chỉ được lấy ở showAISection (fallback DEFAULT_Q). Bước 3 chỉ
+             để xem trước cho user hình dung hành trình — không tương tác. -->
+        <div class="t-steps">
 
-        <div class="spread-section-header">
-          <i class="ti ti-hand-finger"></i> Bước 2: Chọn kiểu rải bài để bắt đầu bốc
-        </div>
+          <!-- Bước 1 — tùy chọn -->
+          <section class="t-step" id="step-question">
+            <div class="t-step-rail"><span class="t-step-num" aria-hidden="true">1</span></div>
+            <div class="t-step-body">
+              <div class="t-step-head">
+                <label class="t-step-title" for="tarot-question">Nhập câu hỏi của bạn</label>
+                <span class="t-step-opt">không bắt buộc</span>
+              </div>
+              <textarea id="tarot-question" class="question-input" placeholder="Ví dụ: Tôi có nên chuyển việc vào lúc này không?" rows="3" maxlength="200"></textarea>
+              <div class="suggested-questions">
+                <span class="sq-label">Gợi ý câu hỏi:</span>
+                <div class="sq-tags">
+                  <button class="sq-tag" data-q="Ngày hôm nay của tôi sẽ như thế nào?"><i class="ti ti-calendar"></i> Ngày hôm nay thế nào?</button>
+                  <button class="sq-tag" data-q="Tôi có nên nghỉ việc vào lúc này không?"><i class="ti ti-briefcase"></i> Có nên nghỉ việc không?</button>
+                  <button class="sq-tag" data-q="Tôi có nên chia tay người yêu không?"><i class="ti ti-heart-broken"></i> Có nên chia tay không?</button>
+                </div>
+              </div>
+              <p class="question-hint">Bỏ trống cũng được — AI sẽ luận theo chính lá bài bạn rút.</p>
+            </div>
+          </section>
 
-        <div class="spread-options">
-          <button class="spread-btn" data-spread="one">
-            <span class="spread-icon">🃏</span>
-            <div class="spread-info">
-              <span class="spread-name">1 Lá</span>
-              <span class="spread-desc">Thông điệp hôm nay</span>
+          <!-- Bước 2 — hành động commit thật -->
+          <section class="t-step" id="step-spread">
+            <div class="t-step-rail"><span class="t-step-num" aria-hidden="true">2</span></div>
+            <div class="t-step-body">
+              <div class="t-step-head"><h2 class="t-step-title">Chọn kiểu rải bài</h2></div>
+              <div class="spread-options">
+                <button class="spread-btn" data-spread="one">
+                  <span class="spread-icon" aria-hidden="true"><i class="sc-mini"></i></span>
+                  <div class="spread-info">
+                    <span class="spread-name">1 Lá</span>
+                    <span class="spread-desc">Thông điệp hôm nay</span>
+                  </div>
+                  <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
+                </button>
+                <button class="spread-btn" data-spread="three">
+                  <span class="spread-icon" aria-hidden="true"><i class="sc-mini"></i><i class="sc-mini"></i><i class="sc-mini"></i></span>
+                  <div class="spread-info">
+                    <span class="spread-name">3 Lá</span>
+                    <span class="spread-desc">Quá khứ · Hiện tại · Tương lai</span>
+                  </div>
+                  <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
+                </button>
+                <button class="spread-btn" data-spread="five">
+                  <span class="spread-icon" aria-hidden="true"><i class="sc-mini"></i><i class="sc-mini"></i><i class="sc-mini"></i><i class="sc-mini"></i><i class="sc-mini"></i></span>
+                  <div class="spread-info">
+                    <span class="spread-name">5 Lá</span>
+                    <span class="spread-desc">Tình huống phức tạp</span>
+                  </div>
+                  <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
+                </button>
+              </div>
             </div>
-            <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
-          </button>
-          <button class="spread-btn" data-spread="three">
-            <span class="spread-icon">🃏🃏🃏</span>
-            <div class="spread-info">
-              <span class="spread-name">3 Lá</span>
-              <span class="spread-desc">Quá khứ · Hiện tại · Tương lai</span>
+          </section>
+
+          <!-- Bước 3 — xem trước, không tương tác -->
+          <section class="t-step is-next">
+            <div class="t-step-rail"><span class="t-step-num" aria-hidden="true">3</span></div>
+            <div class="t-step-body">
+              <div class="t-step-head"><span class="t-step-title">Xáo bài &amp; rút</span></div>
+              <p class="t-step-preview">Chạm bộ bài để xáo, rồi rút — AI luận giải ngay sau đó.</p>
             </div>
-            <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
-          </button>
-          <button class="spread-btn" data-spread="five">
-            <span class="spread-icon">🃏🃏🃏🃏🃏</span>
-            <div class="spread-info">
-              <span class="spread-name">5 Lá</span>
-              <span class="spread-desc">Tình huống phức tạp</span>
-            </div>
-            <div class="spread-cta-btn">Bắt đầu <i class="ti ti-arrow-right"></i></div>
-          </button>
+          </section>
+
         </div>
 
         <!-- Trigger for BLOCK 2 Guide Popup -->

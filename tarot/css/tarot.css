@@ -97,8 +97,8 @@ a { text-decoration: none; color: inherit; }
 .spread-btn {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: 12px;
+  padding: 16px 14px;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--bg-glass);
@@ -114,12 +114,30 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 0 20px rgba(192,132,252,0.2);
   transform: translateY(-2px);
 }
-.spread-icon { font-size: 24px; flex-shrink: 0; }
+/* Mini-card vẽ bằng CSS thay chuỗi emoji 🃏: emoji render khác nhau giữa
+   Windows/iOS/Android VÀ ở desktop 5 lá bị xuống dòng (không nowrap) làm tiêu đề
+   "5 Lá" tụt thấp hơn "1 Lá"/"3 Lá". Hình chữ nhật CSS thì cố định bề ngang. */
+.spread-icon {
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px; flex-shrink: 0; white-space: nowrap;
+}
+.sc-mini {
+  display: block; flex-shrink: 0;
+  width: 13px; height: 20px;
+  border-radius: 3px;
+  background: linear-gradient(150deg, #ffffff, #f3ecfb);
+  border: 1.5px solid var(--purple);
+  box-shadow: 0 2px 5px rgba(124,58,237,0.22);
+}
+/* min-width:0 — mặc định flex item là min-width:auto (không co dưới min-content),
+   nên chuỗi dài "Quá khứ · Hiện tại · Tương lai" đẩy nút CTA tràn khỏi thẻ trên
+   máy hẹp. Cột rail của step lấy thêm ~40px nên phải cho phép co. */
 .spread-info {
   display: flex;
   flex-direction: column;
   gap: 3px;
   flex: 1;
+  min-width: 0;
   text-align: left;
 }
 .spread-name { font-family: var(--font-heading); font-size: 17px; font-weight: 800; color: var(--text); }
@@ -143,19 +161,120 @@ a { text-decoration: none; color: inherit; }
   border-color: var(--purple);
   box-shadow: 0 0 10px rgba(124, 58, 237, 0.35);
 }
-.spread-section-header {
+/* ---- Luồng 3 bước (step rail) ----
+   Mục tiêu: 2 khối rời rạc trước đây (label "Bước 1" + header "Bước 2") thành 1
+   chuỗi NHÌN THẤY ĐƯỢC, và nói thật rằng bước 1 tùy chọn + còn bước 3 phía sau.
+   Bước 3 thuần trang trí (không tương tác) nên để user hình dung trọn hành trình. */
+.t-steps { display: flex; flex-direction: column; }
+.t-step {
+  display: grid;
+  /* minmax(0,1fr) chứ KHÔNG phải 1fr: `1fr` = minmax(auto,1fr) nên track không co
+     dưới min-content của con → thẻ rải bài (flex ngang, icon flex-shrink:0 + CTA)
+     làm cả cột phình ra và tràn ngang trên máy hẹp. */
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 22px;
+}
+.t-step-body { min-width: 0; }
+.t-step:last-child { padding-bottom: 0; }
+
+.t-step-rail { position: relative; display: flex; justify-content: center; }
+/* đường nối dọc giữa các badge — nhạt dần xuống dưới */
+.t-step:not(:last-child) .t-step-rail::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 32px;
+  bottom: -22px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, var(--purple-dim), transparent);
+}
+.t-step-num {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--purple);
+  background: var(--bg-glass);
+  border: 1.5px solid var(--purple-dim);
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.t-step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 26px;
+  margin-bottom: 10px;
+}
+.t-step-title {
   font-family: var(--font-heading);
   font-size: 14px;
   font-weight: 800;
-  color: var(--purple, #7c3aed);
-  margin: 28px 0 12px;
+  color: var(--purple);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
+  line-height: 1.2;
 }
+.t-step-opt {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 2px 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* Bước 1 đã có câu hỏi → badge thành ✓ vàng, chip "không bắt buộc" tự ẩn */
+.t-step.is-done .t-step-num {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: transparent;
+}
+.t-step.is-done .t-step-num::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+}
+.t-step.is-done .t-step-opt { display: none; }
+
+/* Bước 3 — xem trước, mờ và không tương tác */
+.t-step.is-next { opacity: 0.55; }
+.t-step.is-next .t-step-num {
+  color: var(--muted);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border);
+}
+.t-step.is-next .t-step-title { color: var(--muted); }
+.t-step-preview { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+/* Máy hẹp: rail thu lại để nhường bề ngang cho nội dung (thẻ rải bài có icon +
+   mô tả + nút CTA nằm ngang, rất dễ tràn khi mất 40px cho cột rail). */
+@media (max-width: 420px) {
+  .t-step { grid-template-columns: 22px minmax(0, 1fr); gap: 9px; }
+  .t-step-num { width: 22px; height: 22px; font-size: 11.5px; }
+  .t-step:not(:last-child) .t-step-rail::after { top: 27px; }
+  .t-step.is-done .t-step-num::after { font-size: 12px; }
+  .t-step-title { font-size: 13px; letter-spacing: 0.3px; }
+}
+
 .t-footer-note { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
 
 /* ---- Shuffle screen ---- */
@@ -547,19 +666,8 @@ a { text-decoration: none; color: inherit; }
 .detail-element { font-size: 12px; color: var(--muted); text-align: right; }
 
 /* ---- Question input ---- */
-.question-box {
-  width: 100%;
-  margin-bottom: 20px;
-}
-.question-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--purple);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
+/* .question-box / .question-label đã bỏ — khối câu hỏi giờ nằm trong .t-step
+   (step rail), tiêu đề dùng .t-step-title. */
 .question-input {
   width: 100%;
   background: rgba(192,132,252,0.06);
@@ -890,16 +998,16 @@ a { text-decoration: none; color: inherit; }
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 24px 16px;
+    padding: 18px 14px;
     gap: 10px;
   }
   .spread-info {
     align-items: center;
     text-align: center;
   }
-  .spread-icon {
-    font-size: 36px;
-  }
+  /* 5 mini = 5×17 + 4×4 = 101px, thừa chỗ trong cột ~194px ⇒ hết xuống dòng */
+  .spread-icon { gap: 4px; }
+  .sc-mini { width: 17px; height: 26px; }
   .spread-name {
     font-size: 20px;
   }
