@@ -64,7 +64,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* ---- Hero (spread chooser) ---- */
-.t-hero { text-align: center; margin-bottom: 32px; }
+.t-hero { text-align: center; margin-bottom: 22px; }
 .t-orb {
   font-size: 72px;
   display: block;
@@ -77,13 +77,13 @@ a { text-decoration: none; color: inherit; }
 }
 .t-title {
   font-family: var(--font-heading);
-  font-size: clamp(36px, 10vw, 56px);
+  font-size: clamp(32px, 8vw, 46px);
   font-weight: 900;
   background: linear-gradient(135deg, var(--text) 18%, var(--purple) 62%, var(--gold) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin: 8px 0 10px;
+  margin: 4px 0 8px;
 }
 .t-subtitle { font-size: 14px; color: var(--muted); line-height: 1.6; }
 
@@ -877,7 +877,7 @@ a { text-decoration: none; color: inherit; }
 @media (min-width: 768px) {
   .screen-inner {
     max-width: 720px;
-    padding: 32px 24px 60px;
+    padding: 22px 24px 60px;
   }
   
   /* Spread choices row */
@@ -1036,6 +1036,12 @@ a { text-decoration: none; color: inherit; }
   }
 }
 
+/* Màn CHỌN TRẢI BÀI: giữ cột hẹp, tập trung — ô nhập câu hỏi là chính, không
+   để form loãng ra 1000–1160px. Cột hẹp cũng chừa lane cho dock trái (dock
+   fixed top:50% sẽ đè nội dung nếu cột quá rộng, gutter < bề ngang dock). Chỉ
+   áp cho #screen-spread; màn đọc bài (#screen-reading) vẫn rộng để bày lá. */
+#screen-spread .screen-inner { max-width: 760px; }
+
 /* ---- History modal — tarot theme overrides (structure in common.css) ---- */
 .history-backdrop { background: rgba(40, 20, 60, 0.35); backdrop-filter: blur(8px); }
 .history-modal {
@@ -1174,8 +1180,8 @@ a { text-decoration: none; color: inherit; }
 /* ---- Lá Bài Hôm Nay (daily card) ---- */
 .daily-card {
   width: 100%;
-  margin: 0 0 24px;
-  padding: 16px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid var(--border);
   background:
@@ -1186,7 +1192,7 @@ a { text-decoration: none; color: inherit; }
 }
 /* flex-wrap: ở 360px thì eyebrow (~110px) + badge (~95px) + ngày (~85px) là sát mép
    → cho ngày rơi xuống dòng 2 thay vì ép chữ. 2 con như trước vẫn giữ bố cục cũ. */
-.daily-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; margin-bottom: 14px; }
+.daily-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; margin-bottom: 10px; }
 .daily-eyebrow {
   font-family: var(--font-heading);
   font-size: 12px; font-weight: 800; letter-spacing: 0.5px;
@@ -1219,11 +1225,11 @@ a { text-decoration: none; color: inherit; }
   background: linear-gradient(150deg, #a855f7, var(--purple));
 }
 .daily-streak.is-legend i { color: #ffe29a; }
-.daily-body { display: flex; gap: 16px; align-items: center; }
+.daily-body { display: flex; gap: 14px; align-items: center; }
 
 .daily-flip {
   flex-shrink: 0;
-  width: 96px; height: 154px;
+  width: 84px; height: 134px;
   perspective: 900px;
   border: none; background: none; padding: 0; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -1303,9 +1309,9 @@ a { text-decoration: none; color: inherit; }
 .daily-foot:empty { display: none; }
 
 @media (min-width: 768px) {
-  .daily-flip { width: 120px; height: 192px; }
-  .daily-name { font-size: 19px; }
-  .daily-msg { font-size: 14px; }
+  .daily-flip { width: 100px; height: 160px; }
+  .daily-name { font-size: 18px; }
+  .daily-msg { font-size: 13.5px; }
   /* Cân lại desktop: GIỮ card full-width (mép thẳng hàng form nhập bên dưới — cap
      hẹp hơn thì lệch mép nhìn kì), nhưng nội dung ngắn dồn về trái để trống lệch
      phải. Gom body/push/foot vào cột GIỮA ~660px cho cân đối đối xứng (đẹp cả lúc

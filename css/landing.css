@@ -87,7 +87,7 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   max-width: 520px;
   text-align: center;
-  padding: 72px 0 40px;
+  padding: 44px 0 32px;
 }
 
 /* Brand icon mark — animated floating mystical seal/astrolabe */
@@ -97,7 +97,7 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 22px;
+  margin: 0 auto 16px;
   border-radius: 28px;
   background: linear-gradient(135deg, #ffffff 0%, #fbf3e4 100%);
   border: 1.5px solid rgba(217, 138, 10, 0.45);
@@ -361,7 +361,7 @@ a { text-decoration: none; color: inherit; }
    Desktop Layouts
    ============================================================ */
 @media (min-width: 768px) {
-  .l-hero    { max-width: 800px; padding: 100px 0 52px; }
+  .l-hero    { max-width: 800px; padding: 60px 0 40px; }
   .l-divider { max-width: 800px; }
   .l-main-content { max-width: 800px; gap: 40px; }
 
@@ -371,7 +371,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 @media (min-width: 1024px) {
-  .l-hero    { max-width: 980px; padding: 120px 0 64px; }
+  .l-hero    { max-width: 980px; padding: 72px 0 48px; }
   .l-divider { max-width: 980px; }
   .l-main-content { max-width: 980px; }
 

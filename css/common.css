@@ -941,15 +941,17 @@ body.drinking-theme {
   --logo-shadow-hover: 0 14px 32px rgba(234, 106, 23, 0.35);
 }
 
-/* Brand icon element - floats and spins slightly */
+/* Brand icon element - floats and spins slightly.
+   Module hero mark: giữ gọn để icon + tiêu đề không chiếm hết màn đầu.
+   (Trang chủ override lên 96px trong landing.css.) */
 .l-brand-icon {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
-  border-radius: 24px;
+  margin: 0 auto 14px;
+  border-radius: 20px;
   background: var(--logo-bg);
   border: 1.5px solid var(--logo-border);
   box-shadow: var(--logo-shadow);
