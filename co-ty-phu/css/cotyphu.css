@@ -1,0 +1,482 @@
+/* ============================================================
+   cotyphu.css — Cờ Tỷ Phú: shell trang, stage, rail người chơi, action bar,
+   bottom sheet, ticker, màn setup/kết quả.
+   Bàn cờ nằm ở board.css.
+
+   Chủ đề "sơn mài": hue trầm ngả ấm để ngồi được trên nền kem #fbf3e4.
+   Màu nguyên bản của thể loại (đỏ tươi/xanh chói) sẽ gào lên trên nền này.
+   ============================================================ */
+
+:root {
+  --mb-bg:        #fbf3e4;
+  --mb-bg-2:      #f6e8cf;
+  --mb-face:      #fffdf8;   /* ấm hơn trắng tinh — #fff trông như lỗ khoét */
+  --mb-rule:      #e6d4b4;   /* đường kẻ bàn (gap của grid) */
+  --mb-ink:       #2b1d0e;
+  --mb-ink-soft:  #6b563d;
+  --mb-muted:     #a7937a;
+  --mb-gold:      #d98a0a;
+  --mb-border:    rgba(120, 80, 25, 0.14);
+  --mb-accent:    #b91c1c;   /* đỏ sơn mài — chrome của module */
+  --mb-accent-2:  #dc2626;
+  --mb-ok:        #059669;
+  --mb-bad:       #dc2626;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button, input, select, a { touch-action: manipulation; }
+html { font-size: 16px; }
+
+body.cotyphu-theme {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  background: var(--mb-bg);
+  background-image: radial-gradient(ellipse 90% 55% at 50% -8%, var(--mb-bg-2) 0%, transparent 70%);
+  color: var(--mb-ink);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+
+/* Tắt ambient glow của dark theme từ common.css */
+.gemini-glow-1, .gemini-glow-2, .gemini-glow-3 { display: none !important; }
+
+/* Outfit trong /css/fonts.css là LATIN-ONLY — dùng cho tiếng Việt có dấu sẽ
+   fallback giữa chuỗi và trông vỡ. Chỉ dùng cho CHỮ SỐ và wordmark ASCII. */
+.mb-num { font-family: 'Outfit', 'Be Vietnam Pro', sans-serif; font-variant-numeric: tabular-nums; }
+
+.mb-screen { display: none; }
+.mb-screen.is-on { display: flex; flex-direction: column; }
+
+/* ============================================================
+   Topbar
+   ============================================================ */
+.mb-top {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(255, 253, 248, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--mb-border);
+  position: relative;
+  z-index: 20;
+}
+.mb-brand { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 13px; color: var(--mb-ink-soft); }
+.mb-brand img { width: 22px; height: 22px; display: block; }
+.mb-top-title {
+  margin-left: auto;
+  margin-right: auto;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mb-accent);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.mb-top-actions { display: flex; gap: 4px; }
+.mb-iconbtn {
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border: 1px solid var(--mb-border);
+  border-radius: 10px;
+  background: var(--mb-face);
+  color: var(--mb-ink-soft);
+  font-size: 17px;
+  cursor: pointer;
+  transition: color .18s, border-color .18s, background .18s;
+}
+.mb-iconbtn:hover { color: var(--mb-accent); border-color: var(--mb-accent); }
+.mb-iconbtn.is-on { color: #fff; background: var(--mb-accent); border-color: var(--mb-accent); }
+
+/* ============================================================
+   Màn CHƠI — cao đúng 100dvh, KHÔNG scroll trang.
+   Mọi thứ cần scroll thì scroll TRONG sheet. Lý do: iOS Safari co giãn URL bar
+   làm bàn resize giữa ván và toạ độ quân bị lệch; khoá scroll là cách chặn gọn.
+   ============================================================ */
+.mb-play {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* .mb-playcol PHẢI là flex column có chiều cao xác định ở MỌI khổ, không chỉ
+   trong media query — nếu không thì `.mb-stage{flex:1}` vô tác dụng, stage co
+   về content và bàn rơi về fallback 88vmin (bug đã cắn ở lần dựng đầu). */
+.mb-playcol {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* <768px dock là THANH NGANG nổi ở đáy: bottom:16px + cao 56px ⇒ chiếm 72px
+   dưới cùng. Phải chừa chỗ BÊN TRONG cột 100dvh (không phải padding trên body —
+   body padding vô dụng vì .mb-play là height:100dvh; overflow:hidden). Thiếu cái
+   này thì dock đè lên xúc xắc + ticker. */
+@media (max-width: 767px) {
+  .mb-play.is-on { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+}
+
+/* ≥768px dock là rail DỌC fixed left:20px rộng 60px (x≈20–80) nổi giữa
+   viewport. Chừa lane 96px y như css/landing.css:89 cho trang chủ. */
+@media (min-width: 768px) {
+  .mb-play { padding-left: 96px; }
+}
+
+/* Sân khấu của bàn: ô vuông lớn nhất vừa được.
+   `min(100cqw,100cqh)` là dòng đòn bẩy cao nhất cả file — nó tự lo portrait,
+   landscape, desktop và dải 768–900px (nơi lane dock bóp mạnh nhất) mà KHÔNG
+   cần một breakpoint nào. Bàn size TỪ container đã trừ lane ⇒ toán học không
+   thể đè dock. */
+.mb-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  container-type: size;
+}
+.mb-board { --side: min(100%, 88vmin); }      /* fallback cho engine cũ */
+.mb-board { --side: min(100cqw, 100cqh); }    /* bản chuẩn */
+
+/* ---- Rail người chơi (TRÊN) ----
+   Đáy màn mobile đã bị 3 thứ tranh: dock (bottom:16px, cao 56, z1000), gốc
+   slide của sheet, và nút tung. Trạng thái người chơi là thứ 4 ⇒ đặt ở trên
+   là chỗ duy nhất không xung đột. Không scroll ngang ⇒ không có ai bị ẩn. */
+.mb-rail {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px 10px;
+}
+.mb-pl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  min-width: 0;
+  border: 1px solid var(--mb-border);
+  border-radius: 12px;
+  background: var(--mb-face);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: box-shadow .2s, background .2s;
+}
+.mb-pl.is-turn {
+  box-shadow: 0 0 0 2px var(--mb-gold);
+  background: rgba(217, 138, 10, 0.07);
+}
+.mb-pl.is-out { opacity: 0.45; filter: grayscale(1); }
+.mb-pl-top { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.mb-pl-dot {
+  width: 12px; height: 12px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--tk);
+  box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px rgba(120, 80, 25, .18);
+}
+.mb-pl-name {
+  font-size: 11.5px; font-weight: 800; color: var(--mb-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.mb-pl-bot {
+  font-size: 8.5px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--mb-muted);
+  border: 1px solid var(--mb-border); border-radius: 4px;
+  padding: 0 3px; flex-shrink: 0;
+}
+.mb-pl-cash { font-size: 12.5px; font-weight: 800; color: var(--mb-ink); }
+.mb-pl-strip { display: flex; gap: 2px; margin-top: 1px; }
+.mb-pl-seg { flex: 1; height: 3px; border-radius: 2px; background: rgba(120, 80, 25, .13); }
+.mb-pl-seg.is-on { background: var(--sg); }
+/* 4 người trên 360px: mỗi chip ~80px ⇒ nén tối đa */
+.mb-rail[data-n="4"] .mb-pl-name { font-size: 10.5px; }
+.mb-rail[data-n="4"] .mb-pl-cash { font-size: 11.5px; }
+.mb-rail[data-n="4"] .mb-pl-bot { display: none; }
+
+/* ---- Action bar ----
+   Ở NORMAL FLOW ngay dưới bàn, KHÔNG position:fixed. Đó chính là điều bảo đảm
+   nó không bao giờ đè dock. */
+.mb-act {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px calc(10px + env(safe-area-inset-bottom));
+}
+.mb-act-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.mb-btn {
+  min-height: 48px;                 /* mọi QUYẾT ĐỊNH đều ≥48px */
+  padding: 0 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid var(--mb-border);
+  border-radius: 13px;
+  background: var(--mb-face);
+  color: var(--mb-ink);
+  font: inherit; font-size: 14px; font-weight: 800;
+  cursor: pointer;
+  transition: transform .16s, box-shadow .16s, background .16s;
+}
+.mb-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px -6px rgba(120, 75, 25, .4); }
+.mb-btn:active:not(:disabled) { transform: scale(.98); }
+.mb-btn:disabled { opacity: .42; cursor: not-allowed; }
+.mb-btn--go {
+  background: linear-gradient(135deg, var(--mb-accent-2), var(--mb-accent));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 6px 18px -6px rgba(185, 28, 28, .55);
+}
+.mb-btn--ok { background: linear-gradient(135deg, #10b981, var(--mb-ok)); color: #fff; border-color: transparent; }
+.mb-btn--ghost { background: none; }
+
+/* ---- Xúc xắc: vẽ bằng CSS, pip đặt bằng grid-area. KHÔNG emoji 🎲 ---- */
+.mb-dice { display: flex; gap: 10px; }
+.mb-die {
+  width: 52px; aspect-ratio: 1;
+  border-radius: 22%;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  gap: 8%;
+  padding: 12%;
+  border: 1px solid rgba(120, 80, 25, .22);
+  background: linear-gradient(150deg, #fffdf8, #f1e3c8);
+  /* mép trong dưới là thứ làm nó đọc ra KHỐI, không phải cái thẻ */
+  box-shadow: 0 6px 14px -4px rgba(120, 75, 25, .42),
+              inset 0 -3px 0 rgba(120, 80, 25, .10);
+  cursor: pointer;
+  transition: transform .18s;
+}
+.mb-die:disabled { cursor: not-allowed; opacity: .55; }
+.mb-pip { border-radius: 50%; background: var(--mb-ink); box-shadow: inset 0 -1px 1px rgba(255,255,255,.35); }
+/* 6 bố cục pip tĩnh, chọn theo data-v */
+.mb-die[data-v="1"] .mb-pip:nth-child(1) { grid-area: 2/2; }
+.mb-die[data-v="2"] .mb-pip:nth-child(1) { grid-area: 1/1; }
+.mb-die[data-v="2"] .mb-pip:nth-child(2) { grid-area: 3/3; }
+.mb-die[data-v="3"] .mb-pip:nth-child(1) { grid-area: 1/1; }
+.mb-die[data-v="3"] .mb-pip:nth-child(2) { grid-area: 2/2; }
+.mb-die[data-v="3"] .mb-pip:nth-child(3) { grid-area: 3/3; }
+.mb-die[data-v="4"] .mb-pip:nth-child(1) { grid-area: 1/1; }
+.mb-die[data-v="4"] .mb-pip:nth-child(2) { grid-area: 1/3; }
+.mb-die[data-v="4"] .mb-pip:nth-child(3) { grid-area: 3/1; }
+.mb-die[data-v="4"] .mb-pip:nth-child(4) { grid-area: 3/3; }
+.mb-die[data-v="5"] .mb-pip:nth-child(1) { grid-area: 1/1; }
+.mb-die[data-v="5"] .mb-pip:nth-child(2) { grid-area: 1/3; }
+.mb-die[data-v="5"] .mb-pip:nth-child(3) { grid-area: 2/2; }
+.mb-die[data-v="5"] .mb-pip:nth-child(4) { grid-area: 3/1; }
+.mb-die[data-v="5"] .mb-pip:nth-child(5) { grid-area: 3/3; }
+.mb-die[data-v="6"] .mb-pip:nth-child(1) { grid-area: 1/1; }
+.mb-die[data-v="6"] .mb-pip:nth-child(2) { grid-area: 1/3; }
+.mb-die[data-v="6"] .mb-pip:nth-child(3) { grid-area: 2/1; }
+.mb-die[data-v="6"] .mb-pip:nth-child(4) { grid-area: 2/3; }
+.mb-die[data-v="6"] .mb-pip:nth-child(5) { grid-area: 3/1; }
+.mb-die[data-v="6"] .mb-pip:nth-child(6) { grid-area: 3/3; }
+/* pip thừa (data-v nhỏ) bị ẩn */
+.mb-die[data-v="1"] .mb-pip:nth-child(n+2),
+.mb-die[data-v="2"] .mb-pip:nth-child(n+3),
+.mb-die[data-v="3"] .mb-pip:nth-child(n+4),
+.mb-die[data-v="4"] .mb-pip:nth-child(n+5),
+.mb-die[data-v="5"] .mb-pip:nth-child(n+6) { display: none; }
+
+.mb-roll-total {
+  font-size: 13px; font-weight: 800; color: var(--mb-ink-soft);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.mb-dbl {
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: #fff; background: linear-gradient(135deg, #f5ab2e, var(--mb-gold));
+  padding: 3px 9px; border-radius: 99px;
+}
+
+/* ---- Ticker ---- */
+.mb-tick {
+  flex: 0 0 auto;
+  height: 34px;
+  overflow: hidden;
+  padding: 0 12px;
+  display: flex; flex-direction: column; justify-content: center;
+  border-top: 1px solid var(--mb-border);
+  background: rgba(255, 253, 248, .7);
+}
+.mb-tick-line {
+  font-size: 11.5px; line-height: 1.5; color: var(--mb-ink-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: mb-tick-in .3s ease;
+}
+@keyframes mb-tick-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ============================================================
+   Bottom sheet
+   ⚠️ z-index 1100: .floating-dock là 1000 và .history-backdrop cũng 1000.
+   Thấp hơn 1100 thì viên dock đen nổi TRÊN nút Mua/Bỏ đúng lúc quan trọng nhất.
+   ============================================================ */
+.mb-sheet-back {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(60, 40, 20, .34);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s ease;
+}
+.mb-sheet-back.is-on { opacity: 1; pointer-events: auto; }
+.mb-sheet {
+  width: 100%; max-width: 520px;
+  max-height: 86dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--mb-bg);
+  border: 1px solid var(--mb-border);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+  transform: translateY(14px);
+  transition: transform .24s cubic-bezier(.2, .9, .2, 1);
+  box-shadow: 0 -10px 40px -12px rgba(120, 75, 25, .45);
+}
+.mb-sheet-back.is-on .mb-sheet { transform: none; }
+@media (min-width: 640px) {
+  .mb-sheet-back { align-items: center; }
+  .mb-sheet { border-bottom: 1px solid var(--mb-border); border-radius: 20px; }
+}
+.mb-sheet-grip { width: 40px; height: 4px; border-radius: 99px; background: var(--mb-rule); margin: 0 auto 12px; }
+.mb-sheet-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+.mb-sheet-sub { font-size: 12.5px; color: var(--mb-ink-soft); line-height: 1.55; }
+.mb-sheet-actions { display: flex; gap: 8px; margin-top: 14px; }
+.mb-sheet-actions .mb-btn { flex: 1; }
+
+/* ---- Thẻ nhà đất (deed) ----
+   Viền vàng ĐÔI cố ý echo strokeRect(28)+strokeRect(44) của js/share-card.js
+   để deed và ảnh chia sẻ đọc ra cùng một họa hệ. */
+.mb-deed {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mb-face);
+  box-shadow: 0 0 0 1px var(--mb-gold), 0 0 0 4px var(--mb-face), 0 0 0 5px rgba(217,138,10,.45);
+  margin: 4px 2px 2px;
+}
+.mb-deed-head { padding: 12px 14px; background: var(--grp); color: #fff; }
+.mb-deed-kind { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+.mb-deed-name { font-size: 17px; font-weight: 800; line-height: 1.15; text-wrap: balance; }
+.mb-deed-rows { padding: 6px 14px 12px; }
+.mb-deed-row {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 5px 0; font-size: 12.5px;
+  border-bottom: 1px solid rgba(120, 80, 25, .12);
+}
+.mb-deed-row:last-child { border-bottom: none; }
+.mb-deed-row b { font-variant-numeric: tabular-nums; }
+.mb-deed-row.is-now { color: var(--mb-accent); font-weight: 800; }
+
+/* ---- Danh sách 40 ô: đường đi ĐỌC ĐƯỢC thay cho bàn cờ chữ nhỏ ---- */
+.mb-list { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; }
+.mb-list-it {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; min-height: 44px;
+  border: 1px solid var(--mb-border); border-radius: 10px;
+  background: var(--mb-face); text-align: left; font: inherit; cursor: pointer;
+}
+.mb-list-sw { width: 5px; align-self: stretch; border-radius: 3px; background: var(--grp, var(--mb-rule)); flex-shrink: 0; }
+.mb-list-nm { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; }
+.mb-list-meta { font-size: 11px; color: var(--mb-muted); }
+
+/* ============================================================
+   Màn SETUP
+   ============================================================ */
+.mb-setup { min-height: 100dvh; padding: 0 18px 40px; align-items: center; }
+@media (min-width: 768px) { .mb-setup { padding-left: 106px; padding-right: 22px; } }
+.mb-setup-in { width: 100%; max-width: 460px; margin: 0 auto; }
+.mb-hero { text-align: center; padding: 26px 0 18px; }
+.mb-hero .l-brand-icon { margin-bottom: 12px; }
+.mb-title {
+  font-size: clamp(30px, 9vw, 44px);
+  font-weight: 900; line-height: 1.1; letter-spacing: -.01em;
+  background: linear-gradient(135deg, #1a0a00 25%, #7a3800 60%, var(--mb-gold) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.mb-tagline { font-size: 13.5px; color: var(--mb-ink-soft); margin-top: 6px; line-height: 1.55; }
+
+.mb-card {
+  background: var(--mb-face);
+  border: 1px solid var(--mb-border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.mb-card-t {
+  font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--mb-muted); margin-bottom: 10px;
+  border-left: 3px solid var(--mb-accent); padding-left: 9px;
+}
+.mb-seats { display: flex; flex-direction: column; gap: 8px; }
+.mb-seat { display: flex; align-items: center; gap: 8px; }
+.mb-seat-dot { width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: var(--tk); box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(120,80,25,.16); }
+.mb-input {
+  flex: 1; min-width: 0;
+  border: 1px solid var(--mb-border); border-radius: 10px;
+  padding: 10px 12px; font: inherit; font-size: 14px;
+  background: var(--mb-bg); color: var(--mb-ink);
+}
+.mb-input:focus { outline: none; border-color: var(--mb-accent); }
+.mb-select {
+  border: 1px solid var(--mb-border); border-radius: 10px;
+  padding: 10px 8px; font: inherit; font-size: 12.5px; font-weight: 700;
+  background: var(--mb-bg); color: var(--mb-ink-soft); flex-shrink: 0;
+}
+.mb-seg { display: flex; gap: 6px; }
+.mb-seg-b {
+  flex: 1; min-height: 44px; padding: 8px 6px;
+  border: 1px solid var(--mb-border); border-radius: 11px;
+  background: var(--mb-bg); font: inherit; font-size: 12.5px; font-weight: 800;
+  color: var(--mb-ink-soft); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.mb-seg-b small { font-size: 10px; font-weight: 600; color: var(--mb-muted); }
+.mb-seg-b.is-on {
+  background: var(--mb-accent); border-color: var(--mb-accent); color: #fff;
+  box-shadow: 0 5px 14px -5px rgba(185, 28, 28, .55);
+}
+.mb-seg-b.is-on small { color: rgba(255, 255, 255, .8); }
+.mb-start { width: 100%; margin-top: 4px; }
+
+.mb-resume {
+  border: 1px dashed rgba(217, 138, 10, .55);
+  background: rgba(217, 138, 10, .07);
+  border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
+}
+.mb-resume[hidden] { display: none; }
+.mb-resume-t { font-size: 13.5px; font-weight: 800; }
+.mb-resume-s { font-size: 12px; color: var(--mb-ink-soft); margin-top: 2px; }
+.mb-resume-row { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ============================================================
+   Desktop: bàn bên trái, cột thông tin bên phải
+   ============================================================ */
+@media (min-width: 900px) {
+  /* PHẢI viết `.mb-play.is-on` (0,2,0) chứ không phải `.mb-play` (0,1,0):
+     `.mb-screen.is-on{flex-direction:column}` có specificity cao hơn nên sẽ
+     thắng bất kể thứ tự. Viết sai làm .mb-play vẫn là column ⇒ .mb-side
+     (flex:0 0 320px) ăn 320px CHIỀU CAO, bàn cờ teo còn 223px. */
+  .mb-play.is-on { flex-direction: row; align-items: stretch; gap: 18px; padding-right: 18px; }
+  /* flex:0 0 320px (KHÔNG phải bare 1fr) để bàn nhường chỗ chứ không đẩy tràn ngang */
+  .mb-side {
+    flex: 0 0 320px; min-width: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: 12px 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+}
+@media (max-width: 899px) { .mb-side { display: none; } }
+
+/* Landscape điện thoại: bàn tự thành height-bound, không cần làm gì thêm */
+@media (orientation: landscape) and (max-height: 520px) {
+  /* cùng lý do specificity như query ≥900px ở trên */
+  .mb-play.is-on { flex-direction: row; padding-left: 0; }
+  .mb-rail { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mb-btn, .mb-die, .mb-sheet, .mb-sheet-back, .mb-tick-line { transition: none; animation: none; }
+}

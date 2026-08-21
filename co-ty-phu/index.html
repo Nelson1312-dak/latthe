@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cờ Tỷ Phú — Board Game Địa Danh Việt Cho Nhóm Bạn | latbai.vn</title>
+  <meta name="description" content="Cờ Tỷ Phú online: mua đất, xây nhà, thu tiền thuê trên bàn cờ 40 ô địa danh Việt Nam. 2-4 người chơi chung 1 điện thoại hoặc đấu với bot AI. Miễn phí, không cần tải.">
+  <meta name="keywords" content="cờ tỷ phú, cờ tỷ phú online, board game việt nam, game bàn cờ nhóm bạn, cờ tỷ phú miễn phí, game mua đất xây nhà">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#fbf3e4">
+  <link rel="canonical" href="https://latbai.vn/co-ty-phu/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Cờ Tỷ Phú — Board Game Địa Danh Việt Cho Nhóm Bạn">
+  <meta property="og:description" content="Mua đất, xây nhà, thu tiền thuê trên bàn cờ 40 ô địa danh Việt Nam. 2-4 người chung 1 máy hoặc đấu bot AI. Miễn phí.">
+  <meta property="og:url" content="https://latbai.vn/co-ty-phu/">
+  <meta property="og:image" content="https://latbai.vn/images/og-main.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="latbai.vn">
+  <meta property="og:locale" content="vi_VN">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Cờ Tỷ Phú — Board Game Địa Danh Việt Cho Nhóm Bạn">
+  <meta name="twitter:description" content="Mua đất, xây nhà, thu tiền thuê trên bàn cờ 40 ô địa danh Việt. 2-4 người chung 1 máy hoặc đấu bot AI.">
+  <meta name="twitter:image" content="https://latbai.vn/images/og-main.png">
+
+  <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+  <link rel="apple-touch-icon" href="/images/icon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Cờ Tỷ Phú">
+
+  <link rel="stylesheet" href="/css/fonts.css">
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/co-ty-phu/css/cotyphu.css">
+  <link rel="stylesheet" href="/co-ty-phu/css/board.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Cờ Tỷ Phú",
+    "description": "Board game mua đất - xây nhà - thu tiền thuê trên bàn cờ 40 ô địa danh Việt Nam. 2-4 người chơi chung một thiết bị hoặc đấu với bot AI.",
+    "url": "https://latbai.vn/co-ty-phu/",
+    "applicationCategory": "Game",
+    "genre": "Board game",
+    "operatingSystem": "Any",
+    "inLanguage": "vi",
+    "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 4 },
+    "playMode": "SinglePlayer",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "VND" }
+  }
+  </script>
+
+  <!-- Shared shell: floating dock, service worker, Vercel analytics -->
+  <script src="/js/shell.js" defer></script>
+</head>
+<body class="light-theme cotyphu-theme">
+
+  <!-- ===================== MÀN SETUP ===================== -->
+  <section id="mb-screen-setup" class="mb-screen mb-setup is-on">
+    <div class="mb-setup-in">
+      <header class="mb-hero">
+        <div class="l-brand-icon" aria-hidden="true"><img src="/images/logo.svg" alt=""></div>
+        <h1 class="mb-title">Cờ Tỷ Phú</h1>
+        <p class="mb-tagline">Mua đất, xây nhà, thu tiền thuê<br>trên 40 ô địa danh Việt Nam.</p>
+      </header>
+
+      <div class="mb-resume" id="mb-resume" hidden>
+        <p class="mb-resume-t">Có ván đang chơi</p>
+        <p class="mb-resume-s" id="mb-resume-info"></p>
+        <div class="mb-resume-row">
+          <button type="button" class="mb-btn mb-btn--ok" id="mb-resume-go">Tiếp tục</button>
+          <button type="button" class="mb-btn mb-btn--ghost" id="mb-resume-drop">Bỏ ván</button>
+        </div>
+      </div>
+
+      <div class="mb-card">
+        <p class="mb-card-t">Người chơi</p>
+        <div class="mb-seats" id="mb-seats"></div>
+      </div>
+
+      <div class="mb-card">
+        <p class="mb-card-t">Độ dài ván</p>
+        <div class="mb-seg" id="mb-mode">
+          <button type="button" class="mb-seg-b is-on" data-mode="nhanh">Nhanh<small>20 vòng · ~15 phút</small></button>
+          <button type="button" class="mb-seg-b" data-mode="codien">Cổ điển<small>tới khi còn 1 người</small></button>
+        </div>
+      </div>
+
+      <button type="button" class="mb-btn mb-btn--go mb-start" id="mb-start">Bắt đầu ván</button>
+    </div>
+  </section>
+
+  <!-- ===================== MÀN CHƠI ===================== -->
+  <section id="mb-screen-play" class="mb-screen mb-play">
+    <div class="mb-playcol">
+      <header class="mb-top">
+        <a href="/game/" class="mb-brand"><img src="/images/icon.svg" alt=""><span>Trò chơi</span></a>
+        <span class="mb-top-title"><i class="ti ti-building-store"></i> Cờ Tỷ Phú</span>
+        <div class="mb-top-actions">
+          <button type="button" class="mb-iconbtn" id="mb-speed" title="Tăng tốc lượt bot" aria-label="Tăng tốc lượt bot"><i class="ti ti-refresh"></i></button>
+          <button type="button" class="mb-iconbtn" id="mb-menu" title="Danh sách ô &amp; tuỳ chọn" aria-label="Danh sách ô và tuỳ chọn"><i class="ti ti-cards"></i></button>
+        </div>
+      </header>
+
+      <div class="mb-rail" id="mb-rail" style="--n:2"></div>
+
+      <div class="mb-stage">
+        <div class="mb-board" id="mb-board" data-size="md"></div>
+      </div>
+
+      <div class="mb-act" id="mb-act">
+        <div class="mb-act-row">
+          <div class="mb-dice" id="mb-dice">
+            <button type="button" class="mb-die" data-v="1" id="mb-die-1" aria-label="Tung xúc xắc">
+              <span class="mb-pip"></span><span class="mb-pip"></span><span class="mb-pip"></span>
+              <span class="mb-pip"></span><span class="mb-pip"></span><span class="mb-pip"></span>
+            </button>
+            <button type="button" class="mb-die" data-v="1" id="mb-die-2" aria-label="Tung xúc xắc">
+              <span class="mb-pip"></span><span class="mb-pip"></span><span class="mb-pip"></span>
+              <span class="mb-pip"></span><span class="mb-pip"></span><span class="mb-pip"></span>
+            </button>
+          </div>
+          <span class="mb-roll-total" id="mb-total"></span>
+        </div>
+        <div class="mb-act-row" id="mb-buttons"></div>
+      </div>
+
+      <div class="mb-tick" id="mb-tick" aria-live="polite"></div>
+    </div>
+
+    <aside class="mb-side" id="mb-side"></aside>
+  </section>
+
+  <!-- ===================== BOTTOM SHEET ===================== -->
+  <div class="mb-sheet-back" id="mb-sheet-back">
+    <div class="mb-sheet" id="mb-sheet" role="dialog" aria-modal="true" aria-label="Chi tiết">
+      <div class="mb-sheet-grip"></div>
+      <div id="mb-sheet-body"></div>
+    </div>
+  </div>
+
+  <script src="/co-ty-phu/js/board-data.js"></script>
+  <script src="/co-ty-phu/js/render.js" defer></script>
+  <script src="/co-ty-phu/js/app.js" defer></script>
+</body>
+</html>

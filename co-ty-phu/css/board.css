@@ -1,0 +1,385 @@
+/* ============================================================
+   board.css — Bàn cờ 11×11 của Cờ Tỷ Phú
+   Tách riêng khỏi cotyphu.css vì đây là CSS khó nhất module, sẽ sửa độc lập.
+
+   ⚠️ HAI LUẬT TUYỆT ĐỐI, đọc trước khi sửa file này:
+
+   1. KHÔNG BAO GIỜ cho .mb-tile một `border`.
+      40 ô có bề rộng phân số (1fr chia 9) — border trên chúng tạo seam 0.5px
+      và mép đôi ở mọi zoom. Đường kẻ của bàn được vẽ bằng `gap:1px` +
+      background của .mb-board. Sở hữu vẽ bằng `box-shadow: inset`.
+
+   2. KHÔNG transform .mb-tile — chỉ transform .mb-tile-in.
+      transform trên .mb-tile tạo containing block mới và phá vị trí
+      absolute của inner.
+   ============================================================ */
+
+/* ---- Khung bàn ---- */
+.mb-board {
+  /* --side do .mb-stage quyết định (xem cotyphu.css). Mọi kích thước bên trong
+     suy ra từ nó, nên bàn tự vừa mọi khổ mà không cần breakpoint. */
+  --gap: 1px;
+  --d: calc(var(--side) * 0.128);                                  /* độ sâu vành */
+  --e: calc((var(--side) - 2 * var(--d) - 10 * var(--gap)) / 9);   /* bề rộng ô cạnh */
+
+  position: relative;
+  width: var(--side);
+  height: var(--side);
+
+  display: grid;
+  grid-template-columns: var(--d) repeat(9, minmax(0, 1fr)) var(--d);
+  grid-template-rows:    var(--d) repeat(9, minmax(0, 1fr)) var(--d);
+  /* gap CHÍNH LÀ đường kẻ in của bàn — xem luật 1 ở đầu file */
+  gap: var(--gap);
+  background: var(--mb-rule);
+
+  border-radius: 14px;
+  overflow: hidden;
+  /* viền ngoài đặt trên .mb-board (1 element) thì an toàn — luật 1 chỉ cấm
+     border trên từng ô */
+  box-shadow:
+    0 18px 50px -18px rgba(120, 75, 25, 0.32),
+    inset 0 0 0 1px rgba(217, 138, 10, 0.28);
+}
+
+/* ---- Ô ---- */
+.mb-tile {
+  position: relative;
+  overflow: hidden;             /* chặn nội dung đã rotate của ô tràn qua gap */
+  border: 0;                    /* xem luật 1 */
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  background: var(--mb-face);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease;
+}
+/* KHÔNG nới vùng chạm bằng ::before inset âm: .mb-tile có overflow:hidden nên
+   nó bị cắt ngay, mà các ô lại kề nhau (gap 1px) nên có nới cũng chồng ô cạnh.
+   Ô 28px là affordance "xem", mọi QUYẾT ĐỊNH nằm trên nút ≥48px ở action bar,
+   kèm danh sách 40 ô trong sheet làm đường đi thay thế (WCAG 2.5.8). */
+.mb-tile:hover { background: #fff8e8; }
+.mb-tile:focus-visible {
+  outline: 2px solid var(--mb-gold);
+  outline-offset: -2px;
+  z-index: 7;
+}
+
+/* Inner LUÔN --e rộng × --d cao (toạ độ local của ô cạnh DƯỚI), rồi rotate.
+   Nhờ vậy 4 cạnh dùng CHUNG một ruleset thay vì 4 bộ layout riêng. */
+.mb-tile-in {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--e);
+  height: var(--d);
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+  display: flex;
+  flex-direction: column;       /* dải màu ở TRÊN = hướng vào tâm bàn */
+  align-items: stretch;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mb-tile[data-side="b"] { --rot:   0deg; }
+.mb-tile[data-side="l"] { --rot:  90deg; }
+.mb-tile[data-side="t"] { --rot: 180deg; }
+.mb-tile[data-side="r"] { --rot: -90deg; }
+
+/* Cạnh TRÊN: inner xoay 180° để dải màu hướng vào tâm bàn (đúng dáng bàn cờ),
+   NHƯNG chữ thì phải xoay lại cho đọc được. Bàn cờ giấy in ngược ở cạnh xa vì
+   người chơi ngồi đối diện — trên 1 màn hình chỉ có 1 người xem, chữ lộn ngược
+   là thù địch. Giữ cấu trúc thật, lật chữ về xuôi. */
+.mb-tile[data-side="t"] .mb-body { transform: rotate(180deg); }
+
+/* ---- Dải màu nhóm ---- */
+.mb-band {
+  flex: 0 0 26%;
+  min-height: 0;
+  background: var(--grp, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8%;
+  position: relative;
+}
+/* Độc quyền cả nhóm: hairline TRẮNG trong dải — tín hiệu "sắp đau".
+   KHÔNG dùng vàng: nhóm Lúa Vàng có dải #d98a0a nên vàng-trên-vàng tàng hình.
+   Trắng đọc được trên cả 8 màu nhóm vì cả 8 đều mid-dark. */
+.mb-tile.is-mono .mb-band { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.92); }
+
+/* ---- Thân ô ---- */
+.mb-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2%;
+  padding: 3% 4%;
+  text-align: center;
+}
+
+.mb-name {
+  /* CHỈ khai báo display 1 lần ở đây (none), bản -webkit-box nằm trong rule
+     [data-size="lg"]. Viết cả 2 trong cùng rule thì cái sau thắng ⇒ tên luôn
+     hiện, sai ở khổ sm/md. */
+  display: none;
+  font-size: clamp(6.5px, calc(var(--e) * 0.19), 9.5px);
+  font-weight: 800;
+  /* 1.28 chứ KHÔNG phải 1.08: chữ HOA tiếng Việt có dấu xếp tầng (Ế, Ộ, Ỷ) bị
+     cắt mất dấu khi line-height quá chặt — đúng loại lỗi .l-brand-name từng mắc
+     ("Increased to prevent accent cutting"). */
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--mb-ink);
+  text-wrap: balance;
+  /* Lưới an toàn: 1 TỪ đơn dài hơn bề rộng ô (vd "LANDMARK" ~62px trên ô 43px)
+     không có điểm ngắt nên sẽ bị CẮT NGANG mất chữ đầu. Cho phép ngắt trong từ
+     để thà xuống dòng còn hơn mất chữ. Tên nên đặt ≤2 từ ngắn để không phải dùng. */
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.mb-price {
+  display: none;                /* hiện từ data-size="md" */
+  font-size: clamp(7px, calc(var(--e) * 0.30), 11px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--mb-ink-soft);
+}
+.mb-ticon {
+  font-size: clamp(9px, calc(var(--e) * 0.42), 20px);
+  line-height: 1;
+  color: var(--grp, var(--mb-ink-soft));
+}
+
+/* Thang hiển thị — JS đo rồi set board.dataset.size.
+   Media query KHÔNG làm được việc này vì cạnh bàn phụ thuộc CẢ vw LẪN dvh. */
+.mb-board[data-size="sm"] .mb-name  { display: none; }
+.mb-board[data-size="sm"] .mb-price { display: none; }
+.mb-board[data-size="md"] .mb-price { display: block; }
+.mb-board[data-size="md"] .mb-name  { display: none; }
+.mb-board[data-size="lg"] .mb-price { display: block; }
+.mb-board[data-size="lg"] .mb-name  { display: -webkit-box; }
+/* ở lg, ô đất có tên rồi thì icon thu nhỏ nhường chỗ */
+.mb-board[data-size="lg"] .mb-tile[data-kind="dat"] .mb-ticon { display: none; }
+
+/* ---- Ô góc: vuông --d × --d, nội dung xoay 45° ---- */
+.mb-tile.is-corner .mb-tile-in {
+  width: var(--d);
+  height: var(--d);
+  transform: translate(-50%, -50%);   /* góc KHÔNG dùng --rot */
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(217, 138, 10, 0.10), transparent 70%),
+    var(--mb-face);
+}
+.mb-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6%;
+  transform: rotate(var(--crot, -45deg));
+}
+.mb-tile[data-i="0"]  .mb-corner { --crot: -45deg; }
+.mb-tile[data-i="10"] .mb-corner { --crot:  45deg; }
+.mb-tile[data-i="20"] .mb-corner { --crot: -45deg; }
+.mb-tile[data-i="30"] .mb-corner { --crot:  45deg; }
+.mb-corner-icon {
+  font-size: clamp(11px, calc(var(--d) * 0.30), 26px);
+  line-height: 1;
+  color: var(--mb-gold);
+}
+.mb-corner-label {
+  font-size: clamp(5.5px, calc(var(--d) * 0.135), 9px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--mb-ink);
+  white-space: nowrap;
+}
+/* góc để artwork PHẲNG hơn có chủ ý — 4 quân dồn ở Xuất Phát lúc mở ván
+   phải đọc được TRÊN nền góc */
+.mb-tile.is-corner:hover { background: var(--mb-face); }
+
+/* ---- Sở hữu: 4 tín hiệu DƯ THỪA để sống ở 28px + an toàn mù màu ---- */
+/* (1) tint nền theo màu chủ */
+.mb-tile[data-owner] .mb-tile-in {
+  background: color-mix(in srgb, var(--own) 12%, var(--mb-face));
+}
+/* (2) ring trong — đọc được ở 28px, khác với 1 dấu chấm góc thì không */
+.mb-tile[data-owner] { box-shadow: inset 0 0 0 2px var(--own); }
+/* (3) cờ góc dạng HÌNH — tín hiệu shape, không phụ thuộc màu */
+.mb-flag {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 30%;
+  aspect-ratio: 1;
+  background: var(--own);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  display: none;
+}
+.mb-tile[data-owner] .mb-flag { display: block; }
+
+/* (4) nhà = pip vuông CSS, khách sạn = 1 khối to. KHÔNG BAO GIỜ emoji 🏠
+   (iOS ép emoji màu, bỏ qua fillStyle/màu CSS — xem js/mystic-fx.js:29) */
+.mb-house {
+  width: 22%;
+  max-width: 5px;
+  aspect-ratio: 1;
+  border-radius: 1px;
+  background: #166534;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.7);
+}
+.mb-hotel {
+  width: 58%;
+  max-width: 11px;
+  height: 46%;
+  border-radius: 2px;
+  background: #9f1239;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.8);
+}
+
+/* ---- Ô đang được chọn: phóng to TẠI CHỖ thay cho pinch-zoom ----
+   Lấy được cái hay của zoom mà không phải viết ~200 dòng xử lý gesture. */
+.mb-tile.is-focus {
+  overflow: visible;            /* cho phép inner tràn ra ngoài khi scale */
+  z-index: 6;
+}
+.mb-tile.is-focus .mb-tile-in {
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1.75);
+  box-shadow: 0 12px 30px -8px rgba(120, 75, 25, 0.5);
+  border-radius: 3px;
+  background: var(--mb-face);
+}
+.mb-tile.is-corner.is-focus .mb-tile-in {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+/* ---- Ô của lượt hiện tại ---- */
+.mb-tile.is-here { z-index: 5; }
+.mb-tile.is-here::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  outline: 2px solid var(--mb-gold);
+  outline-offset: -2px;
+  pointer-events: none;
+}
+/* bloom báo trước ô đích — chạy TRƯỚC khi quân tới, làm cú tung có sức nặng */
+.mb-tile.is-target::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(217, 138, 10, 0.45), transparent 70%);
+  animation: mb-bloom 0.42s ease-out;
+  pointer-events: none;
+}
+@keyframes mb-bloom {
+  from { opacity: 0; transform: scale(0.6); }
+  50%  { opacity: 1; }
+  to   { opacity: 0; transform: scale(1.15); }
+}
+
+/* ============================================================
+   Tâm bàn
+   ============================================================ */
+.mb-centre {
+  grid-column: 2 / 11;
+  grid-row: 2 / 11;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 42%, #f8efdc, #f2e5c9);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.mb-centre-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.mb-centre-live {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4%;
+  pointer-events: none;
+}
+
+/* vòng astrolabe quay — cùng ngôn ngữ với /images/logo.svg */
+.mb-ring-spin { animation: mb-spin 60s linear infinite; transform-origin: 50% 50%; }
+@keyframes mb-spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   Quân (token)
+   ============================================================ */
+.mb-tokens {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+.mb-token {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--tok, 18px);
+  height: var(--tok, 18px);
+  margin: calc(var(--tok, 18px) / -2) 0 0 calc(var(--tok, 18px) / -2);
+  will-change: transform;
+}
+/* Bóng nằm ở element NGOÀI nên nó Ở LẠI mặt đất khi thân bay lên.
+   Chi tiết này là khác biệt giữa "một chấm trượt" và "một quân nhảy". */
+.mb-token::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -12%;
+  width: 78%;
+  height: 22%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(90, 60, 20, 0.42), transparent 72%);
+}
+.mb-token-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--tk);
+  box-shadow:
+    0 0 0 2px #fff,
+    0 2px 5px rgba(90, 60, 20, 0.45),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.22),
+    inset 0 2px 3px rgba(255, 255, 255, 0.4);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: calc(var(--tok, 18px) * 0.5);
+  will-change: transform;
+}
+/* quân của người đang đi: vành vàng thở */
+.mb-token.is-turn .mb-token-body { animation: mb-tok-turn 1.8s ease-in-out infinite; }
+@keyframes mb-tok-turn {
+  0%, 100% { box-shadow: 0 0 0 2px #fff, 0 0 0 2px var(--mb-gold), 0 2px 5px rgba(90,60,20,.45); }
+  50%      { box-shadow: 0 0 0 2px #fff, 0 0 0 5px rgba(217,138,10,.55), 0 2px 8px rgba(90,60,20,.5); }
+}
+.mb-token.is-out { opacity: 0.35; filter: grayscale(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mb-ring-spin,
+  .mb-token.is-turn .mb-token-body,
+  .mb-tile.is-target::after { animation: none; }
+}
