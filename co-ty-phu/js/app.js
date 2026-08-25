@@ -435,15 +435,22 @@
     }
   }
 
-  /* Refresh dùng chung sau MỌI thay đổi state không kèm animate quân
-     (mua/trả/xây/tù) — có animate quân (roll) thì doRoll tự lo trong `finish`. */
-  function afterEngineChange() {
+  /* Vẽ lại toàn bộ từ state, KHÔNG kích lượt bot kế tiếp. Tách ra khỏi
+     afterEngineChange vì bot xây nhiều căn trong cùng một lượt — mỗi căn gọi
+     maybeBotTurn thì sẽ đặt hẹn chồng nhau. */
+  function refreshAll() {
     R.paintAllTiles(boardEl, state);
     R.layoutTokens(boardEl, state);
     setHere(state.players[state.turn].pos);
     renderRail();
     renderCentre();
     renderActions();
+  }
+
+  /* Refresh dùng chung sau MỌI thay đổi state không kèm animate quân
+     (mua/trả/xây/tù) — có animate quân (roll) thì doRoll tự lo trong `finish`. */
+  function afterEngineChange() {
+    refreshAll();
     maybeBotTurn();
   }
 
@@ -535,23 +542,27 @@
     });
   }
 
-  /* ---------- bot: quyết định ĐƠN GIẢN (placeholder cho increment 3) ---------- */
+  /* ---------- bot: quyết định do CTP.Bot lo (increment 3) ----------
+     app.js chỉ THI HÀNH, không chứa chiến thuật — muốn sửa cách bot chơi thì
+     sửa bot.js. Nếu bot.js không nạp được thì tụt về hành vi tối thiểu (luôn
+     trả nợ, mua khi còn dư nhiều) để ván không bị treo. */
   function maybeBotTurn() {
     if (!state || state.over) return;
     const p = state.players[state.turn];
     if (p.kind !== 'bot' || p.bankrupt) return;
     setTimeout(botAct, fastBots ? 150 : 700);
   }
+
   function botAct() {
     if (!state || state.over) return;
     const p = state.players[state.turn];
     if (p.kind !== 'bot' || p.bankrupt) return;
+    const Bot = CTP.Bot;
 
     if (state.phase === 'awaiting' && state.pending) {
       if (state.pending.kind === 'buy') {
-        const t = CTP_BOARD[state.pending.tile];
-        // đệm an toàn thô — increment 3 sẽ dùng CTP_LAND_FREQ để tính ROI thật
-        const accept = p.cash - t.gia >= 150;
+        const accept = Bot ? Bot.wantBuy(state)
+          : p.cash - CTP_BOARD[state.pending.tile].gia >= 150;
         pushTicks(E.buy(state, accept));
       } else {
         pushTicks(E.settlePending(state));
@@ -559,12 +570,33 @@
       afterEngineChange();
       return;
     }
+
     if (p.jail) {
-      if (p.jailCards > 0) { pushTicks(E.useJailCard(state)); afterEngineChange(); return; }
-      if (p.cash >= CTP_DEFAULTS.jailFine * 3) { pushTicks(E.payJailFine(state)); afterEngineChange(); return; }
-      // không đủ dư để trả phạt thoải mái — thử ăn may tung đôi thay vì đứng im
-      doRoll();
+      const plan = Bot ? Bot.jailPlan(state)
+        : (p.jailCards > 0 ? 'card' : p.cash >= CTP_DEFAULTS.jailFine * 3 ? 'pay' : 'roll');
+      if (plan === 'card' && p.jailCards > 0) { pushTicks(E.useJailCard(state)); afterEngineChange(); return; }
+      if (plan === 'pay' && p.cash >= CTP_DEFAULTS.jailFine) { pushTicks(E.payJailFine(state)); afterEngineChange(); return; }
+      doRoll();   // 'roll': chịu ngồi tù, thử tung đôi (về cuối ván tù là chỗ an toàn)
       return;
+    }
+
+    /* Xây TRƯỚC khi tung, và xây gọn trong MỘT lần vào hàm này (tối đa 4 căn)
+       thay vì mỗi căn một vòng hẹn giờ — nếu không, một lượt bot có thể kéo
+       thành 5 nhịp chờ và người chơi tưởng game treo. Vòng lặp chắc chắn dừng:
+       mỗi căn trừ tiền và tăng level, canBuild chặn ở level 5. */
+    if (Bot) {
+      let built = 0;
+      while (built < 4) {
+        const tile = Bot.chooseBuild(state);
+        if (tile == null) break;
+        pushTicks(E.build(state, tile));
+        built++;
+      }
+      if (built) {
+        refreshAll();                                   // cho thấy nhà mới trước khi tung
+        setTimeout(doRoll, fastBots ? 120 : 520);
+        return;
+      }
     }
     doRoll();
   }

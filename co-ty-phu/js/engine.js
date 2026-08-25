@@ -17,6 +17,9 @@
   const W = window;
   const CTP = (W.CTP = W.CTP || {});
 
+  // Trần cứng số vòng cho MỌI chế độ — xem giải thích ở advanceTurn()
+  const HARD_ROUND_CAP = 150;
+
   function shuffle(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -88,9 +91,44 @@
       case 'gotojail':
         sendToJail(state, p, events);
         return;
+      /* Thẻ trả/thu với TỪNG người chơi khác.
+         ⚠️ Bản đầu cộng trừ thẳng vào cash mà không kiểm đủ tiền, nên thẻ
+         "tặng mỗi người 50" với 3 đối thủ (150tr) làm người nghèo mang số dư
+         ÂM rồi vẫn chơi tiếp — phá sản không bao giờ được kích. Bắt được nhờ
+         assertion cash < 0 trong mô phỏng, không phải nhờ đọc code.
+         Không dùng đường `pending` như các khoản khác được vì ở đây có NHIỀU
+         chủ nợ, mà pending chỉ mang đúng một `to`. */
       case 'perplayer': {
         const others = state.players.filter((x) => x.idx !== p.idx && !x.bankrupt);
-        others.forEach((o) => { p.cash += card.amount; o.cash -= card.amount; });
+        if (!others.length) return;
+        if (card.amount >= 0) {
+          // Mình THU của mỗi người — nhưng ĐỐI THỦ cũng có thể không đủ tiền,
+          // cùng đúng lớp lỗi. Ai không trả nổi thì đưa hết những gì còn có,
+          // phá sản, và tài sản sang tay mình (ở đây mình là chủ nợ duy nhất).
+          others.forEach((o) => {
+            if (o.cash >= card.amount) { o.cash -= card.amount; p.cash += card.amount; return; }
+            p.cash += o.cash;
+            o.cash = 0;
+            o.bankrupt = true;
+            state.tiles.forEach((ts) => { if (ts && ts.owner === o.idx) { ts.owner = p.idx; ts.level = 0; } });
+            events.push({ msg: o.name + ' không trả nổi thẻ — phá sản! Tài sản sang ' + p.name + '.' });
+          });
+          return;
+        }
+        const each = -card.amount;
+        const total = each * others.length;
+        if (p.cash >= total) {
+          others.forEach((o) => { p.cash -= each; o.cash += each; });
+          return;
+        }
+        // Không đủ trả: phá sản. Nhiều chủ nợ nên chia đều phần tiền còn lại,
+        // dư ra thì người đầu nhận; tài sản trả về ngân hàng (không ai thừa kế).
+        const share = Math.floor(p.cash / others.length);
+        others.forEach((o, k) => { o.cash += share + (k === 0 ? p.cash - share * others.length : 0); });
+        p.cash = 0;
+        p.bankrupt = true;
+        state.tiles.forEach((ts) => { if (ts && ts.owner === p.idx) { ts.owner = null; ts.level = 0; } });
+        events.push({ msg: p.name + ' không đủ tiền trả thẻ — phá sản! Tài sản trả lại ngân hàng.' });
         return;
       }
     }
@@ -332,6 +370,13 @@
     state.pending = null;
     state.players[next].doublesCount = 0;
     if (state.mode === 'nhanh' && state.round > state.roundCap) { finishGame(state, events); return; }
+    /* Lưới an toàn cho chế độ "cổ điển" (chơi tới khi còn 1 người). ĐO ĐƯỢC:
+       khi 2 bot cùng có kinh tế vững, không ai phá sản nổi ai — 14–70/250 ván
+       chạy tới mốc 300.000 lượt mà chưa xong, tức trên thực tế là VÔ HẠN. Một
+       chế độ không thể kết thúc là lỗi, nên chốt cứng ở 150 vòng rồi phân
+       thắng bằng tổng tài sản (giống chế độ nhanh). Người thật gần như không
+       bao giờ chạm mốc này — 150 vòng đã là vài giờ. */
+    if (state.round > HARD_ROUND_CAP) { finishGame(state, events); return; }
   }
 
   function netWorth(state, p) {

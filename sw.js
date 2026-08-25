@@ -7,10 +7,10 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-// Bump v149→v150: thêm 8 URL của /co-ty-phu/ vào SHELL. Đây đúng là 1 trong 2
-// trường hợp BẮT BUỘC bump (đổi mảng SHELL) — sửa CSS/JS module thì không cần
-// vì same-origin đã là stale-while-revalidate.
-const CACHE_VERSION = 'v150-2026-08-25';
+// Bump v149→v150: thêm URL của /co-ty-phu/ vào SHELL. v150→v151: thêm
+// co-ty-phu/js/bot.js. Đổi mảng SHELL là 1 trong 2 trường hợp BẮT BUỘC bump —
+// sửa CSS/JS module thì không cần vì same-origin đã là stale-while-revalidate.
+const CACHE_VERSION = 'v151-2026-08-25';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -133,6 +133,7 @@ const SHELL = [
   '/co-ty-phu/js/board-data.js',
   '/co-ty-phu/js/render.js',
   '/co-ty-phu/js/engine.js',
+  '/co-ty-phu/js/bot.js',
   '/co-ty-phu/js/app.js',
 ];
 
