@@ -169,3 +169,35 @@ const CTP_TIENICH_TILES = CTP_BOARD.filter(t => t.kind === 'tienich').map(t => t
 const CTP_GO = 0;
 const CTP_JAIL = 10;
 const CTP_GOTO_JAIL = 30;
+
+/* ------------------------------------------------------------
+   CTP_CARDS — bộ thẻ Cơ Hội / Vận Mệnh (increment 2).
+   Cố ý KHÔNG có thẻ "gần nhất" (nearest sân bay/dịch vụ) của bản gốc — logic
+   "tới ô X gần nhất theo chiều đi" chỉ để tiết kiệm 2 loại thẻ, đổi lại thêm
+   một lớp truy vết vị trí không cần thiết cho increment này.
+   t: 'cash' (+/- ngân hàng) | 'move' (tới ô cố định, go=nhận lương nếu đi qua
+   Xuất Phát) | 'moverel' (lùi/tiến tương đối) | 'jailfree' | 'gotojail' |
+   'perplayer' (mỗi người chơi khác trả/nhận amount).
+   ------------------------------------------------------------ */
+const CTP_CARDS = {
+  cohoi: [
+    { t: 'cash',     amount: 200,  text: 'Trúng số tuần! Nhận 200 triệu từ ngân hàng.' },
+    { t: 'cash',     amount: -150, text: 'Phạt vi phạm hợp đồng! Nộp 150 triệu.' },
+    { t: 'move',     to: 0,  go: true,  text: 'Về thẳng Xuất Phát, nhận lương.' },
+    { t: 'move',     to: 24, go: true,  text: 'Đi du lịch tới Đà Nẵng.' },
+    { t: 'move',     to: 11, go: true,  text: 'Đi công tác tới Huế.' },
+    { t: 'jailfree', text: 'Nhận thẻ "Miễn Vào Tù" — giữ lại tới khi cần.' },
+    { t: 'gotojail', text: 'Bị thanh tra đột xuất! Vào thẳng Trạm Giam.' },
+    { t: 'moverel',  delta: -3, text: 'Quay xe — lùi lại 3 ô.' },
+    { t: 'perplayer', amount: -50, text: 'Sinh nhật bạn bè! Tặng mỗi người 50 triệu.' },
+  ],
+  vanmenh: [
+    { t: 'cash',     amount: 500,  text: 'Trúng thầu lớn! Nhận 500 triệu.' },
+    { t: 'cash',     amount: -100, text: 'Đóng phí bảo trì. Nộp 100 triệu.' },
+    { t: 'cash',     amount: -200, text: 'Làm từ thiện — nộp 200 triệu.' },
+    { t: 'move',     to: 39, go: true, text: 'Đầu tư vào Nguyễn Huệ.' },
+    { t: 'jailfree', text: 'Nhận thẻ "Miễn Vào Tù" — giữ lại tới khi cần.' },
+    { t: 'gotojail', text: 'Trốn thuế bị phát hiện! Vào thẳng Trạm Giam.' },
+    { t: 'perplayer', amount: 50, text: 'Cổ tức công ty! Mỗi người trả bạn 50 triệu.' },
+  ],
+};

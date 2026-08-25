@@ -1,6 +1,8 @@
 /* ============================================================
-   app.js — Wiring. Increment 1: dựng bàn + màn setup + đo lại khi resize.
-   Engine/bot/anim sẽ cắm vào ở increment 2-3.
+   app.js — Wiring. Increment 2: cắm Engine vào UI (tung xúc xắc, mua/trả,
+   xây nhà, tù, kết thúc ván). Bot chỉ có quyết định ĐƠN GIẢN (mua nếu còn dư
+   dả, luôn trả nợ, ra tù sớm nếu đủ tiền) — AI thật (dùng CTP_LAND_FREQ để
+   định giá ROI) là increment 3. Đăng ký sw.js/sitemap/trang chủ là increment 4.
    ============================================================ */
 
 (() => {
@@ -9,13 +11,18 @@
   const W = window;
   const CTP = (W.CTP = W.CTP || {});
   const R = CTP.Render;
+  const E = CTP.Engine;
   const $ = (id) => document.getElementById(id);
 
   const boardEl = $('mb-board');
   const railEl = $('mb-rail');
   const tickEl = $('mb-tick');
 
-  /* ---------- cấu hình ván (increment 2 sẽ chuyển vào engine) ---------- */
+  let state = null;      // state ván hiện tại (null ở màn setup)
+  let rolling = false;   // khoá double-click trong lúc quân đang bay
+  let fastBots = false;  // nút "Tăng tốc lượt bot"
+
+  /* ---------- cấu hình ván (setup) ---------- */
   const cfg = {
     mode: CTP_DEFAULTS.mode,
     seats: [
@@ -95,74 +102,53 @@
     $('mb-screen-play').classList.toggle('is-on', which === 'play');
   }
 
-  function pushTick(txt) {
+  /* ---------- ticker: xếp hàng, hiện lần lượt để đọc kịp luồng sự kiện ---------- */
+  let tickQueue = [];
+  let tickTimer = null;
+  function drainTick() {
+    if (!tickQueue.length) { if (tickTimer) { clearInterval(tickTimer); tickTimer = null; } return; }
+    const msg = tickQueue.shift();
     tickEl.textContent = '';
-    tickEl.appendChild(R.el('div', 'mb-tick-line', txt));
+    tickEl.appendChild(R.el('div', 'mb-tick-line', msg));
+  }
+  function pushTicks(events) {
+    if (!events || !events.length) return;
+    const wasIdle = !tickQueue.length && !tickTimer;
+    events.forEach((e) => tickQueue.push(e.msg));
+    if (wasIdle) { drainTick(); tickTimer = setInterval(drainTick, 950); }
   }
 
-  /* ---------- rail người chơi (bản tĩnh cho increment 1) ---------- */
+  /* ---------- rail người chơi ---------- */
   function renderRail() {
-    const seats = cfg.seats.filter(Boolean);
-    railEl.style.setProperty('--n', String(seats.length));
-    railEl.dataset.n = String(seats.length);
+    if (!state) return;
+    const players = state.players;
+    railEl.style.setProperty('--n', String(players.length));
+    railEl.dataset.n = String(players.length);
     railEl.textContent = '';
-    seats.forEach((s, i) => {
-      const b = R.el('button', 'mb-pl' + (i === 0 ? ' is-turn' : ''));
+    const groupKeys = Object.keys(CTP_GROUPS);
+    players.forEach((p, i) => {
+      const b = R.el('button', 'mb-pl' + (i === state.turn ? ' is-turn' : '') + (p.bankrupt ? ' is-out' : ''));
       b.type = 'button';
       const top = R.el('div', 'mb-pl-top');
       const dot = R.el('span', 'mb-pl-dot');
       dot.style.setProperty('--tk', CTP_TOKENS[i].mau);
       top.appendChild(dot);
-      top.appendChild(R.el('span', 'mb-pl-name', s.name));
-      if (s.kind === 'bot') top.appendChild(R.el('span', 'mb-pl-bot', 'bot'));
+      top.appendChild(R.el('span', 'mb-pl-name', p.name + (p.jail ? ' 🔒' : '')));
+      if (p.kind === 'bot') top.appendChild(R.el('span', 'mb-pl-bot', 'bot'));
       b.appendChild(top);
-      b.appendChild(R.el('div', 'mb-pl-cash mb-num', R.fmtMoney(CTP_DEFAULTS.startCash)));
+      b.appendChild(R.el('div', 'mb-pl-cash mb-num', R.fmtMoney(p.cash)));
       const strip = R.el('div', 'mb-pl-strip');
-      Object.keys(CTP_GROUPS).forEach(() => strip.appendChild(R.el('span', 'mb-pl-seg')));
+      groupKeys.forEach((g) => {
+        const seg = R.el('span', 'mb-pl-seg');
+        if (CTP_GROUP_TILES[g].some((ti) => state.tiles[ti].owner === i)) {
+          seg.classList.add('is-on');
+          seg.style.setProperty('--sg', CTP_GROUPS[g].mau);
+        }
+        strip.appendChild(seg);
+      });
       b.appendChild(strip);
+      b.addEventListener('click', () => sheetPlayer(i));
       railEl.appendChild(b);
-    });
-  }
-
-  /* Đo toạ độ tâm 40 ô. PHẢI đo thật, không tính công thức: track `1fr`
-     chia có làm tròn sub-pixel mà công thức không khớp. */
-  function measureSpots() {
-    const b = boardEl.getBoundingClientRect();
-    if (!b.width) return [];
-    const out = [];
-    for (let i = 0; i < 40; i++) {
-      const t = boardEl.querySelector('.mb-tile[data-i="' + i + '"]');
-      if (!t) return [];
-      const r = t.getBoundingClientRect();
-      out.push({ x: r.left - b.left + r.width / 2, y: r.top - b.top + r.height / 2 });
-    }
-    return out;
-  }
-  CTP.measureSpots = measureSpots;
-
-  /* ---------- quân (bản tĩnh cho increment 1) ---------- */
-  function placeTokensStatic() {
-    const layer = $('mb-tokens');
-    if (!layer) return;
-    const spots = measureSpots();
-    if (!spots.length) return;
-    const seats = cfg.seats.filter(Boolean);
-    const FAN = [[0, 0], [-0.22, -0.18], [0.22, -0.18], [-0.22, 0.18], [0.22, 0.18]];
-    const base = parseFloat(getComputedStyle(boardEl).getPropertyValue('--tok')) || 16;
-    // ≥3 quân chung 1 ô: thu nhỏ để còn đọc được trên ô góc
-    const tok = seats.length >= 3 ? base * 0.58 : base;
-    layer.textContent = '';
-    seats.forEach((s, i) => {
-      const t = R.el('div', 'mb-token' + (i === 0 ? ' is-turn' : ''));
-      t.style.setProperty('--tok', tok + 'px');
-      const body = R.el('div', 'mb-token-body');
-      body.style.setProperty('--tk', CTP_TOKENS[i].mau);
-      body.appendChild(R.el('i', 'ti ' + CTP_TOKENS[i].icon));
-      t.appendChild(body);
-      const f = FAN[Math.min(i, FAN.length - 1)];
-      const sp = spots[0];   // mọi quân bắt đầu ở Xuất Phát
-      t.style.transform = 'translate(' + (sp.x + f[0] * tok * 1.7) + 'px,' + (sp.y + f[1] * tok * 1.7) + 'px)';
-      layer.appendChild(t);
     });
   }
 
@@ -194,12 +180,18 @@
       deed.appendChild(head);
 
       const rows = R.el('div', 'mb-deed-rows');
-      const add = (k, v) => {
-        const r = R.el('div', 'mb-deed-row');
+      const add = (k, v, isNow) => {
+        const r = R.el('div', 'mb-deed-row' + (isNow ? ' is-now' : ''));
         r.appendChild(R.el('span', null, k));
         r.appendChild(R.el('b', 'mb-num', v));
         rows.appendChild(r);
       };
+      if (state && (t.kind === 'dat' || t.kind === 'sanbay' || t.kind === 'tienich')) {
+        const st = state.tiles[i];
+        add('Hiện tại', st.owner != null
+          ? state.players[st.owner].name + (st.level > 0 ? ' · ' + (st.level === 5 ? 'khách sạn' : st.level + ' nhà') : '')
+          : 'Chưa ai sở hữu', true);
+      }
       if (t.kind === 'dat') {
         add('Giá mua', R.fmtFull(t.gia));
         add('Thuê (đất trống)', R.fmtFull(t.rent[0]));
@@ -249,24 +241,243 @@
     });
   }
 
-  /* ---------- khởi động ---------- */
+  function sheetPlayer(i) {
+    const p = state.players[i];
+    openSheet((body) => {
+      body.appendChild(R.el('p', 'mb-sheet-title', p.name + (p.kind === 'bot' ? ' · Bot' : '')));
+      body.appendChild(R.el('p', 'mb-sheet-sub',
+        'Tiền mặt: ' + R.fmtFull(p.cash) + ' · Tổng tài sản: ' + R.fmtFull(E.netWorth(state, p))
+        + (p.bankrupt ? ' · Đã phá sản' : '')));
+      const owned = CTP_BOARD.filter((t) => state.tiles[t.i] && state.tiles[t.i].owner === i);
+      if (!owned.length) { body.appendChild(R.el('p', 'mb-sheet-sub', 'Chưa sở hữu ô nào.')); return; }
+      const list = R.el('div', 'mb-list');
+      owned.forEach((t) => {
+        const st = state.tiles[t.i];
+        const it = R.el('button', 'mb-list-it');
+        it.type = 'button';
+        const sw = R.el('span', 'mb-list-sw');
+        sw.style.setProperty('--grp', R.tileColor(t));
+        it.appendChild(sw);
+        it.appendChild(R.el('span', 'mb-list-nm', t.ten));
+        it.appendChild(R.el('span', 'mb-list-meta', st.level > 0 ? (st.level === 5 ? 'khách sạn' : st.level + ' nhà') : ''));
+        it.addEventListener('click', () => sheetTile(t.i));
+        list.appendChild(it);
+      });
+      body.appendChild(list);
+    });
+  }
+
+  function sheetBuild() {
+    openSheet((body) => {
+      body.appendChild(R.el('p', 'mb-sheet-title', 'Xây nhà'));
+      const ids = E.buildableTiles(state);
+      if (!ids.length) { body.appendChild(R.el('p', 'mb-sheet-sub', 'Không có ô nào đủ điều kiện xây lúc này.')); return; }
+      const list = R.el('div', 'mb-list');
+      ids.forEach((idx) => {
+        const t = CTP_BOARD[idx];
+        const st = state.tiles[idx];
+        const it = R.el('button', 'mb-list-it');
+        it.type = 'button';
+        const sw = R.el('span', 'mb-list-sw');
+        sw.style.setProperty('--grp', R.tileColor(t));
+        it.appendChild(sw);
+        it.appendChild(R.el('span', 'mb-list-nm', t.ten));
+        it.appendChild(R.el('span', 'mb-list-meta',
+          R.fmtFull(t.xay) + ' · ' + (st.level + 1 === 5 ? 'khách sạn' : 'nhà ' + (st.level + 1))));
+        it.addEventListener('click', () => {
+          pushTicks(E.build(state, idx));
+          closeSheet();
+          R.paintAllTiles(boardEl, state);
+          renderRail();
+          renderActions();
+        });
+        list.appendChild(it);
+      });
+      body.appendChild(list);
+    });
+  }
+
+  /* ---------- action bar: nút bấm theo state.phase/pending hiện tại ---------- */
+  function updateDiceEnabled() {
+    const p = state && !state.over ? state.players[state.turn] : null;
+    const can = !!p && state.phase === 'idle' && p.kind === 'human' && !p.bankrupt;
+    $('mb-die-1').disabled = !can;
+    $('mb-die-2').disabled = !can;
+  }
+
+  function renderActions() {
+    updateDiceEnabled();
+    const box = $('mb-buttons');
+    box.textContent = '';
+    if (!state) return;
+    if (state.over) {
+      const btn = R.el('button', 'mb-btn mb-btn--go', 'Ván mới');
+      btn.type = 'button';
+      btn.addEventListener('click', () => showScreen('setup'));
+      box.appendChild(btn);
+      return;
+    }
+    const p = state.players[state.turn];
+    if (p.kind !== 'human') return; // bot tự chạy — xem maybeBotTurn/botAct
+
+    if (p.jail && state.phase === 'idle') {
+      const payBtn = R.el('button', 'mb-btn', 'Đóng ' + CTP_DEFAULTS.jailFine + ' tr ra tù');
+      payBtn.type = 'button';
+      payBtn.disabled = p.cash < CTP_DEFAULTS.jailFine;
+      payBtn.addEventListener('click', () => { pushTicks(E.payJailFine(state)); afterEngineChange(); });
+      box.appendChild(payBtn);
+      if (p.jailCards > 0) {
+        const cardBtn = R.el('button', 'mb-btn', 'Dùng thẻ miễn tù');
+        cardBtn.type = 'button';
+        cardBtn.addEventListener('click', () => { pushTicks(E.useJailCard(state)); afterEngineChange(); });
+        box.appendChild(cardBtn);
+      }
+    }
+
+    if (state.phase === 'awaiting' && state.pending) {
+      const pend = state.pending;
+      if (pend.kind === 'buy') {
+        const t = CTP_BOARD[pend.tile];
+        const buyBtn = R.el('button', 'mb-btn mb-btn--ok', 'Mua · ' + t.gia + ' tr');
+        buyBtn.type = 'button';
+        buyBtn.disabled = p.cash < t.gia;
+        buyBtn.addEventListener('click', () => { pushTicks(E.buy(state, true)); afterEngineChange(); });
+        const skipBtn = R.el('button', 'mb-btn mb-btn--ghost', 'Bỏ qua');
+        skipBtn.type = 'button';
+        skipBtn.addEventListener('click', () => { pushTicks(E.buy(state, false)); afterEngineChange(); });
+        box.appendChild(buyBtn);
+        box.appendChild(skipBtn);
+      } else if (pend.kind === 'pay') {
+        const payBtn = R.el('button', 'mb-btn mb-btn--go', 'Đóng ' + pend.amount + ' tr');
+        payBtn.type = 'button';
+        payBtn.addEventListener('click', () => { pushTicks(E.settlePending(state)); afterEngineChange(); });
+        box.appendChild(payBtn);
+      }
+    } else if (state.phase === 'idle') {
+      const buildable = E.buildableTiles(state);
+      if (buildable.length) {
+        const buildBtn = R.el('button', 'mb-btn', 'Xây nhà (' + buildable.length + ')');
+        buildBtn.type = 'button';
+        buildBtn.addEventListener('click', sheetBuild);
+        box.appendChild(buildBtn);
+      }
+    }
+  }
+
+  /* Refresh dùng chung sau MỌI thay đổi state không kèm animate quân
+     (mua/trả/xây/tù) — có animate quân (roll) thì doRoll tự lo trong `finish`. */
+  function afterEngineChange() {
+    R.paintAllTiles(boardEl, state);
+    R.layoutTokens(boardEl, state);
+    renderRail();
+    renderActions();
+    maybeBotTurn();
+  }
+
+  /* ---------- tung xúc xắc + animate quân từng ô một ---------- */
+  function updateDiceUI() {
+    if (!state.lastRoll) return;
+    $('mb-die-1').dataset.v = String(state.lastRoll.d1);
+    $('mb-die-2').dataset.v = String(state.lastRoll.d2);
+    $('mb-total').textContent = 'Tổng: ' + state.lastRoll.sum + (state.lastRoll.isDouble ? ' · Đôi!' : '');
+  }
+
+  function stepAnimate(playerIdx, fromPos, steps, onDone) {
+    let cur = fromPos;
+    let left = steps;
+    const stepMs = fastBots && state.players[playerIdx].kind === 'bot' ? 30 : 90;
+    (function tick() {
+      if (left <= 0) { onDone(); return; }
+      cur = (cur + 1) % 40;
+      left--;
+      R.moveTokenStep(boardEl, playerIdx, cur);
+      setTimeout(tick, stepMs);
+    })();
+  }
+
+  function doRoll() {
+    if (rolling || !state || state.over || state.phase !== 'idle') return;
+    const p = state.players[state.turn];
+    if (p.bankrupt) return;
+    rolling = true;
+    const oldPos = p.pos;
+    const wasJail = p.jail;
+    const events = E.roll(state);
+    if (!events.length) { rolling = false; return; }
+    updateDiceUI();
+    pushTicks(events);
+    const finish = () => {
+      R.paintAllTiles(boardEl, state);
+      R.layoutTokens(boardEl, state);
+      renderRail();
+      renderActions();
+      rolling = false;
+      maybeBotTurn();
+    };
+    if (wasJail && p.jail) { finish(); return; }        // vẫn còn trong tù, không di chuyển
+    stepAnimate(p.idx, oldPos, state.lastRoll.sum, finish);
+  }
+
+  /* ---------- bot: quyết định ĐƠN GIẢN (placeholder cho increment 3) ---------- */
+  function maybeBotTurn() {
+    if (!state || state.over) return;
+    const p = state.players[state.turn];
+    if (p.kind !== 'bot' || p.bankrupt) return;
+    setTimeout(botAct, fastBots ? 150 : 700);
+  }
+  function botAct() {
+    if (!state || state.over) return;
+    const p = state.players[state.turn];
+    if (p.kind !== 'bot' || p.bankrupt) return;
+
+    if (state.phase === 'awaiting' && state.pending) {
+      if (state.pending.kind === 'buy') {
+        const t = CTP_BOARD[state.pending.tile];
+        // đệm an toàn thô — increment 3 sẽ dùng CTP_LAND_FREQ để tính ROI thật
+        const accept = p.cash - t.gia >= 150;
+        pushTicks(E.buy(state, accept));
+      } else {
+        pushTicks(E.settlePending(state));
+      }
+      afterEngineChange();
+      return;
+    }
+    if (p.jail) {
+      if (p.jailCards > 0) { pushTicks(E.useJailCard(state)); afterEngineChange(); return; }
+      if (p.cash >= CTP_DEFAULTS.jailFine * 3) { pushTicks(E.payJailFine(state)); afterEngineChange(); return; }
+      // không đủ dư để trả phạt thoải mái — thử ăn may tung đôi thay vì đứng im
+      doRoll();
+      return;
+    }
+    doRoll();
+  }
+
+  /* ---------- khởi động ván ---------- */
   function startGame() {
     const seats = cfg.seats.filter(Boolean);
     if (seats.length < 2) return;
     seats.forEach((s, i) => { if (!String(s.name).trim()) s.name = 'Người ' + (i + 1); });
+    state = E.newGame(cfg);
     showScreen('play');
     R.buildBoard(boardEl);
+    R.buildTokens(boardEl, state);
     renderRail();
     // chờ 1 frame cho layout xong rồi mới đo toạ độ ô
-    requestAnimationFrame(() => { R.fitBoard(boardEl); placeTokensStatic(); });
-    pushTick('🎲 Ván mới — ' + seats.map(s => s.name).join(' · '));
+    requestAnimationFrame(() => {
+      R.fitBoard(boardEl);
+      R.paintAllTiles(boardEl, state);
+      R.layoutTokens(boardEl, state);
+      renderActions();
+    });
+    pushTicks([{ msg: '🎲 Ván mới — ' + seats.map(s => s.name).join(' · ') }]);
+    maybeBotTurn();
   }
 
   /* Đo lại khi bàn đổi kích thước: iOS co giãn URL bar, quay ngang máy… */
   new ResizeObserver(() => {
     if (!$('mb-screen-play').classList.contains('is-on')) return;
     R.fitBoard(boardEl);
-    placeTokensStatic();
+    if (state) R.layoutTokens(boardEl, state);
   }).observe(boardEl);
 
   boardEl.addEventListener('click', (e) => {
@@ -283,12 +494,18 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
   $('mb-start').addEventListener('click', startGame);
   $('mb-menu').addEventListener('click', sheetList);
+  $('mb-die-1').addEventListener('click', doRoll);
+  $('mb-die-2').addEventListener('click', doRoll);
+  $('mb-speed').addEventListener('click', () => {
+    fastBots = !fastBots;
+    $('mb-speed').classList.toggle('is-on', fastBots);
+  });
 
   renderSeats();
   bindMode();
 
-  /* API cho increment 2 (khôi phục ván đã lưu) — và để kiểm thử render bàn
-     mà không phải bấm qua màn setup. */
+  /* API để kiểm thử ngoài UI (console) */
   CTP.startGame = startGame;
   CTP.cfg = cfg;
+  CTP.getState = () => state;
 })();

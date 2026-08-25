@@ -341,6 +341,9 @@
   height: var(--tok, 18px);
   margin: calc(var(--tok, 18px) / -2) 0 0 calc(var(--tok, 18px) / -2);
   will-change: transform;
+  /* Bước nhảy tile-by-tile (app.js) đổi transform mỗi ~140ms — transition ngắn
+     hơn khoảng đó thì mượt mà không trễ nhịp lượt kế tiếp. */
+  transition: transform .16s ease-out;
 }
 /* Bóng nằm ở element NGOÀI nên nó Ở LẠI mặt đất khi thân bay lên.
    Chi tiết này là khác biệt giữa "một chấm trượt" và "một quân nhảy". */
@@ -382,4 +385,5 @@
   .mb-ring-spin,
   .mb-token.is-turn .mb-token-body,
   .mb-tile.is-target::after { animation: none; }
+  .mb-token { transition: none; }
 }

@@ -203,8 +203,94 @@
 </svg>`;
   }
 
+  /* ---------- increment 2: sơn trạng thái sở hữu/nhà lên ô ---------- */
+  function paintTile(boardEl, i, state) {
+    const t = CTP_BOARD[i];
+    const btn = boardEl.querySelector('.mb-tile[data-i="' + i + '"]');
+    if (!btn) return;
+    const st = state.tiles[i];
+    if (st && st.owner != null) {
+      btn.dataset.owner = String(st.owner);
+      btn.style.setProperty('--own', CTP_TOKENS[st.owner].mau);
+    } else {
+      delete btn.dataset.owner;
+      btn.style.removeProperty('--own');
+    }
+    if (t.kind === 'dat') {
+      const band = btn.querySelector('.mb-band[data-houses]');
+      if (band) {
+        band.textContent = '';
+        if (st && st.level > 0) {
+          if (st.level === 5) band.appendChild(el('div', 'mb-hotel'));
+          else for (let k = 0; k < st.level; k++) band.appendChild(el('div', 'mb-house'));
+        }
+      }
+    }
+    const ownerSt = st && st.owner != null ? { owner: st.owner, ownerName: state.players[st.owner].name, level: st.level } : null;
+    btn.setAttribute('aria-label', ariaFor(t, ownerSt));
+  }
+  function paintAllTiles(boardEl, state) {
+    for (let i = 0; i < 40; i++) paintTile(boardEl, i, state);
+  }
+
+  /* ---------- increment 2: quân — element BỀN VỮNG, chỉ đổi transform ----------
+     Tạo 1 lần lúc vào ván; di chuyển = đổi transform (CSS transition lo phần
+     mượt). Rebuild bằng innerHTML sẽ hủy element giữa lúc đang bay = quân
+     teleport thay vì trượt (xem cảnh báo đầu file). */
+  function buildTokens(boardEl, state) {
+    const layer = boardEl.querySelector('.mb-tokens');
+    if (!layer) return;
+    layer.textContent = '';
+    state.players.forEach((p, i) => {
+      const t = el('div', 'mb-token');
+      t.id = 'mb-tok-' + i;
+      const body = el('div', 'mb-token-body');
+      body.style.setProperty('--tk', CTP_TOKENS[i].mau);
+      body.appendChild(el('i', 'ti ' + CTP_TOKENS[i].icon));
+      t.appendChild(body);
+      layer.appendChild(t);
+    });
+  }
+  /* Đặt 1 quân vào TÂM một ô cụ thể, không tính fan — dùng cho bước nhảy
+     trung gian lúc animate; layoutTokens() mới lo fan lúc quân đứng yên. */
+  function moveTokenStep(boardEl, playerIdx, tileIdx) {
+    const spots = CTP.measureSpots ? CTP.measureSpots() : [];
+    const sp = spots[tileIdx];
+    const tEl = document.getElementById('mb-tok-' + playerIdx);
+    if (!sp || !tEl) return;
+    tEl.style.transform = 'translate(' + sp.x + 'px,' + sp.y + 'px)';
+  }
+  /* Xếp lại toàn bộ quân theo state.pos hiện tại (fan khi ≥2 quân chung ô) */
+  function layoutTokens(boardEl, state) {
+    const spots = CTP.measureSpots ? CTP.measureSpots() : [];
+    if (!spots.length) return;
+    const groups = {};
+    state.players.forEach((p, i) => { if (!p.bankrupt) (groups[p.pos] || (groups[p.pos] = [])).push(i); });
+    const FAN = [[0, 0], [-0.22, -0.18], [0.22, -0.18], [-0.22, 0.18], [0.22, 0.18]];
+    const base = parseFloat(getComputedStyle(boardEl).getPropertyValue('--tok')) || 16;
+    Object.keys(groups).forEach((posKey) => {
+      const idxs = groups[posKey];
+      const sp = spots[Number(posKey)];
+      const tok = idxs.length >= 3 ? base * 0.58 : base;
+      idxs.forEach((pi, k) => {
+        const tEl = document.getElementById('mb-tok-' + pi);
+        if (!tEl || !sp) return;
+        tEl.style.setProperty('--tok', tok + 'px');
+        const f = FAN[Math.min(k, FAN.length - 1)];
+        tEl.style.transform = 'translate(' + (sp.x + f[0] * tok * 1.7) + 'px,' + (sp.y + f[1] * tok * 1.7) + 'px)';
+      });
+    });
+    state.players.forEach((p, i) => {
+      const tEl = document.getElementById('mb-tok-' + i);
+      if (!tEl) return;
+      tEl.classList.toggle('is-turn', i === state.turn && !p.bankrupt);
+      tEl.classList.toggle('is-out', p.bankrupt);
+    });
+  }
+
   CTP.Render = {
     buildBoard, fitBoard, cellOf, isCorner, tileColor,
     fmtMoney, fmtFull, ariaFor, el,
+    paintTile, paintAllTiles, buildTokens, moveTokenStep, layoutTokens,
   };
 })();
