@@ -7,7 +7,10 @@
  * Bump CACHE_VERSION whenever the shell changes meaningfully.
  */
 
-const CACHE_VERSION = 'v149-2026-08-18';
+// Bump v149→v150: thêm 8 URL của /co-ty-phu/ vào SHELL. Đây đúng là 1 trong 2
+// trường hợp BẮT BUỘC bump (đổi mảng SHELL) — sửa CSS/JS module thì không cần
+// vì same-origin đã là stale-while-revalidate.
+const CACHE_VERSION = 'v150-2026-08-25';
 const SHELL_CACHE = `latthe-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `latthe-runtime-${CACHE_VERSION}`;
 
@@ -122,6 +125,15 @@ const SHELL = [
   '/xin-xam/css/xinxam.css',
   '/xin-xam/js/xam-data.js',
   '/xin-xam/js/app.js',
+  // Co Ty Phu module (board game, khong co AI)
+  '/co-ty-phu/',
+  '/co-ty-phu/index.html',
+  '/co-ty-phu/css/cotyphu.css',
+  '/co-ty-phu/css/board.css',
+  '/co-ty-phu/js/board-data.js',
+  '/co-ty-phu/js/render.js',
+  '/co-ty-phu/js/engine.js',
+  '/co-ty-phu/js/app.js',
 ];
 
 self.addEventListener('install', (event) => {
