@@ -21,6 +21,8 @@
   let state = null;      // state ván hiện tại (null ở màn setup)
   let rolling = false;   // khoá double-click trong lúc quân đang bay
   let fastBots = false;  // nút "Tăng tốc lượt bot"
+  let prevCash = [];     // để biết tiền tăng hay giảm mà flash đúng màu
+  let hopFlip = false;   // luân phiên class nảy a/b (xem .mb-token.is-hop-* )
 
   /* ---------- cấu hình ván (setup) ---------- */
   const cfg = {
@@ -105,17 +107,27 @@
   /* ---------- ticker: xếp hàng, hiện lần lượt để đọc kịp luồng sự kiện ---------- */
   let tickQueue = [];
   let tickTimer = null;
+
+  /* Nhịp rút hàng ĐỘNG, không phải setInterval cố định 950ms.
+     Lý do (đo được, không phải phòng xa): 4 bot đánh liên tục sinh 1–3 dòng mỗi
+     lượt trong khi lượt bot chỉ mất ~700ms + 380ms lắc, tức sinh nhanh hơn
+     tiêu thụ ⇒ queue phình vô hạn và ticker tụt hậu càng lúc càng xa bàn. Đã
+     bắt tận tay: xúc xắc hiện 3-5 "Tổng: 8" mà ticker còn đọc "Bạn tung 4-5"
+     của lượt TRƯỚC. Queue dài thì rút nhanh, và cắt bớt phần cũ nếu quá dài —
+     dòng cũ đã lỡ thì không còn giá trị gì. */
   function drainTick() {
-    if (!tickQueue.length) { if (tickTimer) { clearInterval(tickTimer); tickTimer = null; } return; }
+    if (!tickQueue.length) { tickTimer = null; return; }
     const msg = tickQueue.shift();
     tickEl.textContent = '';
     tickEl.appendChild(R.el('div', 'mb-tick-line', msg));
+    const n = tickQueue.length;
+    tickTimer = setTimeout(drainTick, n > 4 ? 260 : n > 1 ? 520 : 900);
   }
   function pushTicks(events) {
     if (!events || !events.length) return;
-    const wasIdle = !tickQueue.length && !tickTimer;
     events.forEach((e) => tickQueue.push(e.msg));
-    if (wasIdle) { drainTick(); tickTimer = setInterval(drainTick, 950); }
+    if (tickQueue.length > 8) tickQueue = tickQueue.slice(-8);
+    if (!tickTimer) drainTick();
   }
 
   /* ---------- rail người chơi ---------- */
@@ -129,6 +141,7 @@
     players.forEach((p, i) => {
       const b = R.el('button', 'mb-pl' + (i === state.turn ? ' is-turn' : '') + (p.bankrupt ? ' is-out' : ''));
       b.type = 'button';
+      b.style.setProperty('--tk', CTP_TOKENS[i].mau);   // nhuốm cả chip, xem CSS
       const top = R.el('div', 'mb-pl-top');
       const dot = R.el('span', 'mb-pl-dot');
       dot.style.setProperty('--tk', CTP_TOKENS[i].mau);
@@ -136,7 +149,10 @@
       top.appendChild(R.el('span', 'mb-pl-name', p.name + (p.jail ? ' 🔒' : '')));
       if (p.kind === 'bot') top.appendChild(R.el('span', 'mb-pl-bot', 'bot'));
       b.appendChild(top);
-      b.appendChild(R.el('div', 'mb-pl-cash mb-num', R.fmtMoney(p.cash)));
+      // renderRail dựng lại DOM mỗi lần nên chỉ cần GẮN class là animation chạy
+      const dir = prevCash[i] == null || p.cash === prevCash[i] ? ''
+        : p.cash > prevCash[i] ? ' is-up' : ' is-down';
+      b.appendChild(R.el('div', 'mb-pl-cash mb-num' + dir, R.fmtMoney(p.cash)));
       const strip = R.el('div', 'mb-pl-strip');
       groupKeys.forEach((g) => {
         const seg = R.el('span', 'mb-pl-seg');
@@ -150,6 +166,61 @@
       b.addEventListener('click', () => sheetPlayer(i));
       railEl.appendChild(b);
     });
+    prevCash = players.map((p) => p.cash);
+  }
+
+  /* ---------- tâm bàn: ai đang đi + đang chờ gì ---------- */
+  function renderCentre() {
+    const live = $('mb-centre-live');
+    if (!live) return;
+    live.textContent = '';
+    if (!state) return;
+    if (state.over) {
+      const w = state.players[state.winner];
+      const who = R.el('div', 'mb-cl-who');
+      const dot = R.el('span', 'mb-cl-dot');
+      dot.style.setProperty('--tk', CTP_TOKENS[w.idx].mau);
+      who.appendChild(dot);
+      who.appendChild(R.el('span', 'mb-cl-name', w.name));
+      live.appendChild(who);
+      live.appendChild(R.el('div', 'mb-cl-what is-money', '🏆 thắng ván'));
+      return;
+    }
+    const p = state.players[state.turn];
+    const who = R.el('div', 'mb-cl-who');
+    const dot = R.el('span', 'mb-cl-dot');
+    dot.style.setProperty('--tk', CTP_TOKENS[p.idx].mau);
+    who.appendChild(dot);
+    who.appendChild(R.el('span', 'mb-cl-name', p.name));
+    live.appendChild(who);
+
+    let what = 'đang tới lượt', money = false;
+    const pend = state.pending;
+    if (pend && pend.kind === 'buy') { what = 'mua ' + CTP_BOARD[pend.tile].ten + '?'; money = true; }
+    else if (pend && pend.kind === 'pay') { what = 'phải trả ' + pend.amount + ' tr'; money = true; }
+    else if (p.jail) what = 'đang trong tù';
+    else if (p.kind === 'bot') what = 'bot đang tính…';
+    const w = R.el('div', 'mb-cl-what' + (money ? ' is-money' : ''), what);
+    live.appendChild(w);
+  }
+
+  /* Viền vàng ở ô người đang đi đứng. CSS .is-here có từ increment 1 nhưng
+     chưa ai set — bàn vì thế không có mốc "tôi đang ở đâu". */
+  function setHere(pos) {
+    boardEl.querySelectorAll('.mb-tile.is-here').forEach((x) => x.classList.remove('is-here'));
+    const t = boardEl.querySelector('.mb-tile[data-i="' + pos + '"]');
+    if (t) t.classList.add('is-here');
+  }
+
+  /* Bloom báo trước ô đích — chạy TRƯỚC khi quân tới để cú tung có sức nặng.
+     Cũng là CSS chết từ increment 1 (.is-target). */
+  function flashTarget(pos) {
+    const t = boardEl.querySelector('.mb-tile[data-i="' + pos + '"]');
+    if (!t) return;
+    t.classList.remove('is-target');
+    void t.offsetWidth;            // buộc reflow để animation replay
+    t.classList.add('is-target');
+    setTimeout(() => t.classList.remove('is-target'), 460);
   }
 
   /* ---------- sheet ---------- */
@@ -369,7 +440,9 @@
   function afterEngineChange() {
     R.paintAllTiles(boardEl, state);
     R.layoutTokens(boardEl, state);
+    setHere(state.players[state.turn].pos);
     renderRail();
+    renderCentre();
     renderActions();
     maybeBotTurn();
   }
@@ -379,18 +452,49 @@
     if (!state.lastRoll) return;
     $('mb-die-1').dataset.v = String(state.lastRoll.d1);
     $('mb-die-2').dataset.v = String(state.lastRoll.d2);
-    $('mb-total').textContent = 'Tổng: ' + state.lastRoll.sum + (state.lastRoll.isDouble ? ' · Đôi!' : '');
+    const box = $('mb-total');
+    box.textContent = 'Tổng: ' + state.lastRoll.sum;
+    // .mb-dbl là badge đã tạo sẵn ở increment 1 nhưng chưa ai dùng — trước đây
+    // "đôi" chỉ là chữ thường lẫn trong dòng, không ai nhận ra là biến cố
+    if (state.lastRoll.isDouble) box.appendChild(R.el('span', 'mb-dbl', 'Đôi'));
+  }
+
+  /* Lắc xúc xắc rồi mới chốt số. Quay mặt NGẪU NHIÊN trong lúc lắc (không phải
+     đứng ở số cũ) để cú tung có sức nặng — kết quả thật đã do Engine quyết,
+     đây thuần trình diễn. */
+  function shakeDice(fast, onDone) {
+    const d1 = $('mb-die-1'), d2 = $('mb-die-2');
+    if (fast) { onDone(); return; }
+    d1.classList.add('is-rolling');
+    d2.classList.add('is-rolling');
+    const spin = setInterval(() => {
+      d1.dataset.v = String(1 + Math.floor(Math.random() * 6));
+      d2.dataset.v = String(1 + Math.floor(Math.random() * 6));
+    }, 70);
+    setTimeout(() => {
+      clearInterval(spin);
+      d1.classList.remove('is-rolling');
+      d2.classList.remove('is-rolling');
+      onDone();
+    }, 380);
   }
 
   function stepAnimate(playerIdx, fromPos, steps, onDone) {
     let cur = fromPos;
     let left = steps;
-    const stepMs = fastBots && state.players[playerIdx].kind === 'bot' ? 30 : 90;
+    const stepMs = fastBots && state.players[playerIdx].kind === 'bot' ? 30 : 100;
+    const tokEl = document.getElementById('mb-tok-' + playerIdx);
     (function tick() {
       if (left <= 0) { onDone(); return; }
       cur = (cur + 1) % 40;
       left--;
       R.moveTokenStep(boardEl, playerIdx, cur);
+      // nảy 1 nhịp mỗi ô — luân phiên 2 class để animation replay được
+      if (tokEl) {
+        hopFlip = !hopFlip;
+        tokEl.classList.remove('is-hop-a', 'is-hop-b');
+        tokEl.classList.add(hopFlip ? 'is-hop-a' : 'is-hop-b');
+      }
       setTimeout(tick, stepMs);
     })();
   }
@@ -404,18 +508,31 @@
     const wasJail = p.jail;
     const events = E.roll(state);
     if (!events.length) { rolling = false; return; }
-    updateDiceUI();
-    pushTicks(events);
+
     const finish = () => {
       R.paintAllTiles(boardEl, state);
-      R.layoutTokens(boardEl, state);
+      R.layoutTokens(boardEl, state);   // snap về p.pos thật (thẻ/tù có thể đã dịch)
+      setHere(state.players[state.turn].pos);
       renderRail();
+      renderCentre();
       renderActions();
       rolling = false;
       maybeBotTurn();
     };
-    if (wasJail && p.jail) { finish(); return; }        // vẫn còn trong tù, không di chuyển
-    stepAnimate(p.idx, oldPos, state.lastRoll.sum, finish);
+
+    const fast = fastBots && p.kind === 'bot';
+    shakeDice(fast, () => {
+      updateDiceUI();
+      pushTicks(events);
+      if (wasJail && p.jail) { finish(); return; }   // còn trong tù, không di chuyển
+      // Ô ĐÍCH CỦA XÚC XẮC, không phải p.pos: p.pos lúc này đã là vị trí CUỐI
+      // (thẻ Cơ Hội/Vận Mệnh có thể đã dịch tiếp). Quân đi bộ tới đích xúc xắc
+      // rồi finish() mới snap sang vị trí cuối — chỉ nước-đi-do-xúc-xắc mới
+      // đáng "đi bộ".
+      const diceDest = (oldPos + state.lastRoll.sum) % 40;
+      flashTarget(diceDest);
+      stepAnimate(p.idx, oldPos, state.lastRoll.sum, finish);
+    });
   }
 
   /* ---------- bot: quyết định ĐƠN GIẢN (placeholder cho increment 3) ---------- */
@@ -458,6 +575,10 @@
     if (seats.length < 2) return;
     seats.forEach((s, i) => { if (!String(s.name).trim()) s.name = 'Người ' + (i + 1); });
     state = E.newGame(cfg);
+    prevCash = [];                  // ván mới: đừng flash tiền ở lần render đầu
+    // đừng để dòng ticker của ván trước chạy tiếp sang ván mới
+    if (tickTimer) { clearTimeout(tickTimer); tickTimer = null; }
+    tickQueue = [];
     showScreen('play');
     R.buildBoard(boardEl);
     R.buildTokens(boardEl, state);
@@ -467,6 +588,8 @@
       R.fitBoard(boardEl);
       R.paintAllTiles(boardEl, state);
       R.layoutTokens(boardEl, state);
+      setHere(state.players[state.turn].pos);
+      renderCentre();
       renderActions();
     });
     pushTicks([{ msg: '🎲 Ván mới — ' + seats.map(s => s.name).join(' · ') }]);

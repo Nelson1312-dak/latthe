@@ -92,7 +92,9 @@ const CTP_BOARD = [
   { i: 25, kind: 'sanbay',  ten: 'Sân Bay Cam Ranh', nhan: 'Cam Ranh', gia: 200, icon: 'ti-plane-departure' },
   { i: 26, kind: 'dat',     ten: 'Hồ Tây',         nhom: 'luavang', gia: 260,
     rent: [22, 110, 330, 800, 975, 1150], xay: 150 },
-  { i: 27, kind: 'dat',     ten: 'Phố Cổ Hà Nội',  nhom: 'luavang', gia: 260,
+  // `nhan` ngắn: 'Phố Cổ Hà Nội' (3 từ) không xếp nổi 2 dòng ở ô ~27px nên bị
+  // line-clamp cắt thành "PHỐ CỔ H…". Tên đầy đủ vẫn dùng ở deed + aria.
+  { i: 27, kind: 'dat',     ten: 'Phố Cổ Hà Nội',  nhan: 'Phố Cổ', nhom: 'luavang', gia: 260,
     rent: [22, 110, 330, 800, 975, 1150], xay: 150 },
   { i: 28, kind: 'tienich', ten: 'Nước Sạch',      gia: 150, nhan: 'NƯỚC', icon: 'ti-bolt' },
   { i: 29, kind: 'dat',     ten: 'Hoàn Kiếm',      nhom: 'luavang', gia: 280,
@@ -114,7 +116,12 @@ const CTP_BOARD = [
   { i: 37, kind: 'dat',     ten: 'Đồng Khởi',      nhom: 'demsg',   gia: 350,
     rent: [35, 175, 500, 1100, 1300, 1500], xay: 200 },
   { i: 38, kind: 'thue',    ten: 'Thuế Xa Xỉ',     tien: 100, icon: 'ti-coins' },
-  { i: 39, kind: 'dat',     ten: 'Nguyễn Huệ',     nhom: 'demsg',   gia: 400,
+  // "Nguyễn Huệ" → "Bến Thành": cùng lý do đã đổi "Landmark 81"→"Thảo Điền" ở
+  // increment 1. "NGUYỄN" (6 chữ hoa) rộng hơn ô ~27px nên bị
+  // overflow-wrap:anywhere ngắt giữa từ thành "NGUYỄ N HUỆ". "BẾN"/"THÀNH"
+  // (3+5) xếp 2 dòng vừa khít. Vẫn đúng cụm trung tâm Q1 với ô 37 Đồng Khởi,
+  // và đây là ô ĐẮT NHẤT bàn nên xứng một cái tên đọc trọn vẹn.
+  { i: 39, kind: 'dat',     ten: 'Bến Thành',      nhom: 'demsg',   gia: 400,
     rent: [50, 200, 600, 1400, 1700, 2000], xay: 200 },
 ];
 
@@ -195,7 +202,7 @@ const CTP_CARDS = {
     { t: 'cash',     amount: 500,  text: 'Trúng thầu lớn! Nhận 500 triệu.' },
     { t: 'cash',     amount: -100, text: 'Đóng phí bảo trì. Nộp 100 triệu.' },
     { t: 'cash',     amount: -200, text: 'Làm từ thiện — nộp 200 triệu.' },
-    { t: 'move',     to: 39, go: true, text: 'Đầu tư vào Nguyễn Huệ.' },
+    { t: 'move',     to: 39, go: true, text: 'Đầu tư vào Bến Thành.' },
     { t: 'jailfree', text: 'Nhận thẻ "Miễn Vào Tù" — giữ lại tới khi cần.' },
     { t: 'gotojail', text: 'Trốn thuế bị phát hiện! Vào thẳng Trạm Giam.' },
     { t: 'perplayer', amount: 50, text: 'Cổ tức công ty! Mỗi người trả bạn 50 triệu.' },

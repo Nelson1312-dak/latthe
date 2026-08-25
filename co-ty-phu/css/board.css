@@ -29,9 +29,12 @@
   display: grid;
   grid-template-columns: var(--d) repeat(9, minmax(0, 1fr)) var(--d);
   grid-template-rows:    var(--d) repeat(9, minmax(0, 1fr)) var(--d);
-  /* gap CHÍNH LÀ đường kẻ in của bàn — xem luật 1 ở đầu file */
+  /* gap CHÍNH LÀ đường kẻ in của bàn — xem luật 1 ở đầu file.
+     Màu kẻ RIÊNG, đậm hơn --mb-rule: ở 1px trên nền kem, --mb-rule (#e6d4b4)
+     gần như tàng hình nên 40 ô nhòe thành một mảng trắng. Không sửa
+     --mb-rule vì nó còn dùng cho grip sheet + swatch danh sách. */
   gap: var(--gap);
-  background: var(--mb-rule);
+  background: #c9a97a;
 
   border-radius: 14px;
   overflow: hidden;
@@ -87,17 +90,33 @@
 .mb-tile[data-side="t"] { --rot: 180deg; }
 .mb-tile[data-side="r"] { --rot: -90deg; }
 
+/* Nền ô nhuốm NHẸ màu nhóm của chính nó. Trước đây cả 36 ô cạnh đều
+   #fffdf8 nên bàn đọc ra "mảng trắng có mấy vạch màu"; 7% là đủ để mỗi cạnh
+   có thân nhiệt riêng mà chữ 7px vẫn thừa tương phản.
+   ⚠️ Cùng specificity (0,3,0) với rule tint chủ sở hữu 18% ở mục "Sở hữu" —
+   rule đó PHẢI nằm sau trong file mới thắng. Đừng đảo thứ tự 2 mục. */
+.mb-tile:not(.is-corner) .mb-tile-in {
+  background: color-mix(in srgb, var(--grp) 7%, var(--mb-face));
+}
+
 /* Cạnh TRÊN: inner xoay 180° để dải màu hướng vào tâm bàn (đúng dáng bàn cờ),
    NHƯNG chữ thì phải xoay lại cho đọc được. Bàn cờ giấy in ngược ở cạnh xa vì
    người chơi ngồi đối diện — trên 1 màn hình chỉ có 1 người xem, chữ lộn ngược
    là thù địch. Giữ cấu trúc thật, lật chữ về xuôi. */
 .mb-tile[data-side="t"] .mb-body { transform: rotate(180deg); }
 
-/* ---- Dải màu nhóm ---- */
+/* ---- Dải màu nhóm ----
+   Vẫn 26% chứ KHÔNG dày hơn: xem phép tính chỗ-chứa-chữ ở fitBoard()
+   (render.js) — dày hơn là tên ô mất chỗ ở khổ điện thoại. Độ "đậm đà" lấy từ
+   gradient + mép tối, không lấy từ bề dày.
+   background-color/-image tách riêng (KHÔNG dùng shorthand) để render.js khỏi
+   phải set inline màu — inline shorthand sẽ xoá mất lớp gradient. */
 .mb-band {
   flex: 0 0 26%;
   min-height: 0;
-  background: var(--grp, transparent);
+  background-color: var(--grp, transparent);
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.26), rgba(0, 0, 0, 0.16));
+  box-shadow: inset 0 -1px 0 rgba(60, 30, 0, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,7 +137,10 @@
   align-items: center;
   justify-content: center;
   gap: 2%;
-  padding: 3% 4%;
+  /* padding NGANG 2% chứ không 4%: padding % tính theo width của .mb-tile-in
+     (= --e ≈ 27px trên điện thoại) nên 4% ngốn ~2.2px — vừa đủ để "NGUYỄN"
+     không còn chỗ và bị overflow-wrap:anywhere ngắt giữa từ ("NGUY ỄN"). */
+  padding: 3% 2%;
   text-align: center;
 }
 
@@ -127,7 +149,10 @@
      [data-size="lg"]. Viết cả 2 trong cùng rule thì cái sau thắng ⇒ tên luôn
      hiện, sai ở khổ sm/md. */
   display: none;
-  font-size: clamp(6.5px, calc(var(--e) * 0.19), 9.5px);
+  /* min 7px (không phải 6.5): 6.5px là ngưỡng chữ Việt có dấu bắt đầu nhòe
+     thành vệt. Con số này đi kèm phép tính ngưỡng lg trong fitBoard() —
+     đổi nó thì phải tính lại ngưỡng. */
+  font-size: clamp(7px, calc(var(--e) * 0.19), 9.5px);
   font-weight: 800;
   /* 1.28 chứ KHÔNG phải 1.08: chữ HOA tiếng Việt có dấu xếp tầng (Ế, Ộ, Ỷ) bị
      cắt mất dấu khi line-height quá chặt — đúng loại lỗi .l-brand-name từng mắc
@@ -169,8 +194,22 @@
 .mb-board[data-size="lg"] .mb-name  { display: -webkit-box; }
 /* ở lg, ô đất có tên rồi thì icon thu nhỏ nhường chỗ */
 .mb-board[data-size="lg"] .mb-tile[data-kind="dat"] .mb-ticon { display: none; }
+/* …và ngược lại: ô KHÔNG phải đất thì icon đã nói hết nghĩa (máy bay, tia
+   điện, tiền thuế) nên bỏ tên đi để không phải nhồi icon + tên + giá vào
+   ~30px. Riêng 22 ô đất mới thật sự cần tên vì chúng chỉ khác nhau ở tên.
+   (0,5,0) nên thắng rule `[data-size="lg"] .mb-name` (0,3,0) ở trên. */
+.mb-board[data-size="lg"] .mb-tile:not([data-kind="dat"]) .mb-name { display: none; }
 
 /* ---- Ô góc: vuông --d × --d, nội dung xoay 45° ---- */
+/* 4 góc là 4 MỐC khác nhau về ý nghĩa nhưng increment 1 tô cả 4 giống hệt
+   (kem + icon vàng) nên chúng đọc ra như ô trống. Cho mỗi góc một thân nhiệt
+   riêng: Xuất Phát vàng (lộc), Trạm Giam xám lam (trung tính — chỉ "ghé"),
+   Bãi Đỗ xanh (an toàn), Vào Tù đỏ (nguy). */
+.mb-tile[data-i="0"]  { --cnr: #d98a0a; }
+.mb-tile[data-i="10"] { --cnr: #5b7186; }
+.mb-tile[data-i="20"] { --cnr: #0d9668; }
+.mb-tile[data-i="30"] { --cnr: #b91c1c; }
+
 .mb-tile.is-corner .mb-tile-in {
   width: var(--d);
   height: var(--d);
@@ -178,8 +217,8 @@
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at 50% 40%, rgba(217, 138, 10, 0.10), transparent 70%),
-    var(--mb-face);
+    radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--cnr, var(--mb-gold)) 30%, transparent), transparent 72%),
+    color-mix(in srgb, var(--cnr, var(--mb-gold)) 10%, var(--mb-face));
 }
 .mb-corner {
   display: flex;
@@ -196,7 +235,7 @@
 .mb-corner-icon {
   font-size: clamp(11px, calc(var(--d) * 0.30), 26px);
   line-height: 1;
-  color: var(--mb-gold);
+  color: var(--cnr, var(--mb-gold));
 }
 .mb-corner-label {
   font-size: clamp(5.5px, calc(var(--d) * 0.135), 9px);
@@ -211,9 +250,10 @@
 .mb-tile.is-corner:hover { background: var(--mb-face); }
 
 /* ---- Sở hữu: 4 tín hiệu DƯ THỪA để sống ở 28px + an toàn mù màu ---- */
-/* (1) tint nền theo màu chủ */
+/* (1) tint nền theo màu chủ — 18% (không phải 12%): giờ ô CHƯA có chủ đã
+   nhuốm 7% màu nhóm, nên 12% không còn đủ khác biệt để đọc ra "đã có chủ" */
 .mb-tile[data-owner] .mb-tile-in {
-  background: color-mix(in srgb, var(--own) 12%, var(--mb-face));
+  background: color-mix(in srgb, var(--own) 18%, var(--mb-face));
 }
 /* (2) ring trong — đọc được ở 28px, khác với 1 dấu chấm góc thì không */
 .mb-tile[data-owner] { box-shadow: inset 0 0 0 2px var(--own); }
@@ -297,8 +337,13 @@
   grid-column: 2 / 11;
   grid-row: 2 / 11;
   position: relative;
+  /* 3 chặng + vignette thay cho 2 chặng gần-như-cùng-màu: tâm bàn là mảng lớn
+     nhất trên màn nên nó phẳng là cả bàn trông nhạt */
   background:
-    radial-gradient(circle at 50% 42%, #f8efdc, #f2e5c9);
+    radial-gradient(circle at 50% 38%, #fdf7e8 0%, #f4e6c8 55%, #e9d4a9 100%);
+  box-shadow:
+    inset 0 0 26px rgba(140, 95, 30, 0.18),
+    inset 0 0 0 1px rgba(217, 138, 10, 0.34);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -310,15 +355,49 @@
   height: 100%;
   pointer-events: none;
 }
+/* Khu "đang diễn ra" ở tâm bàn. Neo ĐÁY (không phải giữa) để không đè
+   wordmark ở y≈43% và dòng LATBAI.VN ở y≈61% của viewBox 200.
+   Đây là thứ biến tâm bàn từ tranh trang trí tĩnh thành chỗ báo nhịp ván. */
 .mb-centre-live {
-  position: relative;
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 9%;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4%;
+  gap: 2px;
+  text-align: center;
   pointer-events: none;
 }
+/* cỡ chữ suy từ --side (kế thừa từ .mb-board) — tâm bàn co theo bàn */
+.mb-cl-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  font-size: clamp(8px, calc(var(--side) * 0.030), 15px);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mb-ink);
+}
+.mb-cl-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-cl-dot {
+  width: 0.72em;
+  height: 0.72em;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--tk);
+  box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px rgba(120, 80, 25, 0.22);
+}
+.mb-cl-what {
+  font-size: clamp(7px, calc(var(--side) * 0.024), 12px);
+  font-weight: 700;
+  color: var(--mb-ink-soft);
+}
+.mb-cl-what.is-money { color: var(--mb-accent); }
 
 /* vòng astrolabe quay — cùng ngôn ngữ với /images/logo.svg */
 .mb-ring-spin { animation: mb-spin 60s linear infinite; transform-origin: 50% 50%; }
@@ -381,9 +460,25 @@
 }
 .mb-token.is-out { opacity: 0.35; filter: grayscale(1); }
 
+/* Nảy từng bước khi đi. HAI class luân phiên a/b vì animation phải khởi động
+   LẠI mỗi ô — cùng một class thì trình duyệt coi là animation đang chạy và
+   không replay (mẹo thay cho hack void offsetWidth để buộc reflow).
+   Lưu ý CHỦ Ý: `animation` là shorthand nên trong 0.15s nảy, vành vàng
+   mb-tok-turn tạm dừng. Đổi được bằng cách thêm 1 lớp DOM bọc ngoài, nhưng
+   không đáng — mắt không thấy vành ngắt trong lúc quân đang bay. */
+.mb-token.is-hop-a .mb-token-body,
+.mb-token.is-hop-b .mb-token-body { animation: mb-hop 0.15s ease-out; }
+@keyframes mb-hop {
+  0%   { transform: translateY(0) scale(1); }
+  45%  { transform: translateY(-36%) scale(1.07); }
+  100% { transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mb-ring-spin,
   .mb-token.is-turn .mb-token-body,
+  .mb-token.is-hop-a .mb-token-body,
+  .mb-token.is-hop-b .mb-token-body,
   .mb-tile.is-target::after { animation: none; }
   .mb-token { transition: none; }
 }

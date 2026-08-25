@@ -155,6 +155,8 @@ a { text-decoration: none; color: inherit; }
   padding: 6px 10px;
 }
 .mb-pl {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -167,6 +169,27 @@ a { text-decoration: none; color: inherit; }
   font: inherit;
   cursor: pointer;
   transition: box-shadow .2s, background .2s;
+}
+/* Nhuốm màu người chơi vào cả chip, không chỉ cái dot 12px: 4 chip trắng
+   giống nhau thì phải đọc chữ mới biết ai là ai. Dùng ::before phủ màu để
+   không phải tính color-mix cho từng nền. */
+.mb-pl::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--tk);
+  opacity: 0.09;
+  pointer-events: none;
+}
+.mb-pl > * { position: relative; }   /* nội dung phải nằm TRÊN lớp phủ */
+.mb-pl.is-turn::before { opacity: 0.2; }
+/* vạch màu người chơi ở mép trái — tín hiệu vị trí, đọc được cả khi mù màu */
+.mb-pl::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--tk);
 }
 .mb-pl.is-turn {
   box-shadow: 0 0 0 2px var(--mb-gold);
@@ -190,10 +213,22 @@ a { text-decoration: none; color: inherit; }
   border: 1px solid var(--mb-border); border-radius: 4px;
   padding: 0 3px; flex-shrink: 0;
 }
-.mb-pl-cash { font-size: 12.5px; font-weight: 800; color: var(--mb-ink); }
-.mb-pl-strip { display: flex; gap: 2px; margin-top: 1px; }
-.mb-pl-seg { flex: 1; height: 3px; border-radius: 2px; background: rgba(120, 80, 25, .13); }
-.mb-pl-seg.is-on { background: var(--sg); }
+.mb-pl-cash { font-size: 13.5px; font-weight: 800; color: var(--mb-ink); }
+/* Tiền nhảy số là thông tin quan trọng nhất mỗi lượt nhưng đổi âm thầm thì
+   không ai thấy. Flash 1 nhịp theo chiều tăng/giảm. */
+.mb-pl-cash.is-up   { animation: mb-cash-up   .7s ease-out; }
+.mb-pl-cash.is-down { animation: mb-cash-down .7s ease-out; }
+@keyframes mb-cash-up {
+  0%  { color: var(--mb-ok); transform: translateY(-2px) scale(1.1); }
+  100%{ color: var(--mb-ink); transform: none; }
+}
+@keyframes mb-cash-down {
+  0%  { color: var(--mb-bad); transform: translateY(2px) scale(1.1); }
+  100%{ color: var(--mb-ink); transform: none; }
+}
+.mb-pl-strip { display: flex; gap: 2px; margin-top: 2px; }
+.mb-pl-seg { flex: 1; height: 4px; border-radius: 2px; background: rgba(120, 80, 25, .16); }
+.mb-pl-seg.is-on { background: var(--sg); box-shadow: 0 0 0 .5px rgba(0, 0, 0, .18); }
 /* 4 người trên 360px: mỗi chip ~80px ⇒ nén tối đa */
 .mb-rail[data-n="4"] .mb-pl-name { font-size: 10.5px; }
 .mb-rail[data-n="4"] .mb-pl-cash { font-size: 11.5px; }
@@ -236,22 +271,33 @@ a { text-decoration: none; color: inherit; }
 /* ---- Xúc xắc: vẽ bằng CSS, pip đặt bằng grid-area. KHÔNG emoji 🎲 ---- */
 .mb-dice { display: flex; gap: 10px; }
 .mb-die {
-  width: 52px; aspect-ratio: 1;
+  width: 56px; aspect-ratio: 1;
   border-radius: 22%;
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   gap: 8%;
   padding: 12%;
-  border: 1px solid rgba(120, 80, 25, .22);
-  background: linear-gradient(150deg, #fffdf8, #f1e3c8);
+  border: 1px solid rgba(120, 80, 25, .34);
+  background: linear-gradient(150deg, #fffefb, #ecdcbc);
   /* mép trong dưới là thứ làm nó đọc ra KHỐI, không phải cái thẻ */
-  box-shadow: 0 6px 14px -4px rgba(120, 75, 25, .42),
-              inset 0 -3px 0 rgba(120, 80, 25, .10);
+  box-shadow: 0 7px 16px -4px rgba(120, 75, 25, .5),
+              inset 0 -3px 0 rgba(120, 80, 25, .16);
   cursor: pointer;
   transition: transform .18s;
 }
 .mb-die:disabled { cursor: not-allowed; opacity: .55; }
 .mb-pip { border-radius: 50%; background: var(--mb-ink); box-shadow: inset 0 -1px 1px rgba(255,255,255,.35); }
+
+/* Lắc trong lúc tung: xúc xắc hiện ra kết quả tức thì thì cú tung không có
+   sức nặng nào. app.js quay mặt ngẫu nhiên trong ~380ms rồi mới chốt số thật. */
+.mb-die.is-rolling { animation: mb-shake .17s linear infinite; }
+@keyframes mb-shake {
+  0%   { transform: translateY(0) rotate(0deg); }
+  25%  { transform: translateY(-4px) rotate(-8deg); }
+  50%  { transform: translateY(0) rotate(0deg); }
+  75%  { transform: translateY(-4px) rotate(8deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
 /* 6 bố cục pip tĩnh, chọn theo data-v */
 .mb-die[data-v="1"] .mb-pip:nth-child(1) { grid-area: 2/2; }
 .mb-die[data-v="2"] .mb-pip:nth-child(1) { grid-area: 1/1; }
@@ -282,7 +328,7 @@ a { text-decoration: none; color: inherit; }
 .mb-die[data-v="5"] .mb-pip:nth-child(n+6) { display: none; }
 
 .mb-roll-total {
-  font-size: 13px; font-weight: 800; color: var(--mb-ink-soft);
+  font-size: 14px; font-weight: 800; color: var(--mb-ink);
   display: inline-flex; align-items: center; gap: 6px;
 }
 .mb-dbl {
@@ -302,7 +348,7 @@ a { text-decoration: none; color: inherit; }
   background: rgba(255, 253, 248, .7);
 }
 .mb-tick-line {
-  font-size: 11.5px; line-height: 1.5; color: var(--mb-ink-soft);
+  font-size: 12.5px; font-weight: 600; line-height: 1.5; color: var(--mb-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   animation: mb-tick-in .3s ease;
 }
@@ -479,4 +525,9 @@ a { text-decoration: none; color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   .mb-btn, .mb-die, .mb-sheet, .mb-sheet-back, .mb-tick-line { transition: none; animation: none; }
+  /* phải kể TÊN các class có specificity cao hơn, `.mb-die{animation:none}`
+     ở trên không đè được `.mb-die.is-rolling` */
+  .mb-die.is-rolling,
+  .mb-pl-cash.is-up,
+  .mb-pl-cash.is-down { animation: none; }
 }
