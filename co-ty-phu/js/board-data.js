@@ -141,10 +141,21 @@ const CTP_LAND_FREQ = [
 ];
 
 /* Cấu hình mặc định — 'nhanh' là mặc định CÓ CHỦ Ý: ván cổ điển 90-150 phút
-   trên điện thoại thì không ai chơi hết. Xem plan. */
+   trên điện thoại thì không ai chơi hết. Xem plan.
+
+   roundCap 20 → 30 (2026-08-26), CÓ SỐ ĐO chứ không phải cảm tính:
+   - Ở cap 20, kỹ năng bot gần như KHÔNG ảnh hưởng kết quả: Cá Mập chỉ thắng
+     Tay Mơ 51.1% (n=1200, sai số 1.4% ⇒ không phân biệt được với 50/50).
+     Ở cap 30 con số đó thành 61.4%. Cap 40 chỉ thêm được 64.0% ⇒ bão hoà.
+   - Lý do: vòng lặp cốt lõi (gom đủ nhóm → xây → thu thuê lớn) chưa kịp xảy
+     ra trong 20 vòng. Số nhà trên bàn lúc cắt: 2.9 (vòng 20) → 5.1 (vòng 30).
+     Tỉ lệ ván có độc quyền: 41% → 49% (rồi ngưng tăng, vì ~nửa số ván thì đất
+     bị chia đều nên không ai gom nổi nhóm nào).
+   - Ván vẫn ngắn: vòng kết thúc TRUNG BÌNH đo được là 27.0, không phải 30,
+     vì nhiều ván xong sớm do phá sản. */
 const CTP_DEFAULTS = {
   mode: 'nhanh',      // 'nhanh' | 'codien'
-  roundCap: 20,       // 0 = chơi tới khi còn 1 người
+  roundCap: 30,       // 0 = chơi tới khi còn 1 người
   startCash: 1500,
   goSalary: 200,
   jailFine: 50,
