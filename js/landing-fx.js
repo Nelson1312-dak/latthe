@@ -319,8 +319,11 @@
       const s = document.createElement('span');
       s.className = 'fx-ch';
       s.setAttribute('aria-hidden', 'true');
-      s.textContent = ch === ' ' ? ' ' : ch;
       s.style.setProperty('--i', i++);
+      const inner = document.createElement('span');
+      inner.className = 'fx-ch-inner';
+      inner.textContent = ch === ' ' ? ' ' : ch;
+      s.appendChild(inner);
       h.appendChild(s);
     }
   }

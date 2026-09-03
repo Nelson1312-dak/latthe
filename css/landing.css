@@ -535,13 +535,19 @@ a { text-decoration: none; color: inherit; }
 .fx-js .l-brand-name { perspective: 600px; }
 .l-brand-name .fx-ch {
   display: inline-block;
+  transform-origin: 50% 60%;
+  animation: fx-ch-flip 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 75ms + 150ms);
+}
+/* Gradient text-fill lives on a separate, untransformed inner span —
+   Chromium can lose the text-clip alpha mask and paint the glyph solid
+   when the SAME element also carries a 3D transform (seen on "ậ"). */
+.l-brand-name .fx-ch-inner {
+  display: inline-block;
   background: linear-gradient(135deg, #1a0a00 25%, #7a3800 60%, #e8930a 100%);
   -webkit-background-clip: text;
           background-clip: text;
   -webkit-text-fill-color: transparent;
-  transform-origin: 50% 60%;
-  animation: fx-ch-flip 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--i) * 75ms + 150ms);
 }
 @keyframes fx-ch-flip {
   0%   { transform: rotateY(95deg) translateZ(30px); opacity: 0; }
