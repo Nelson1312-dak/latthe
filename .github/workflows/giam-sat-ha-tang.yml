@@ -1,0 +1,100 @@
+# Giám sát hạ tầng AI local (Ollama + local-proxy + ngrok + PostgREST).
+#
+# VÌ SAO CẦN: khi hạ tầng local chết, site VẪN chạy bình thường (200, trang load
+# đẹp) nhưng lặng lẽ tụt xuống DeepSeek fallback + mất sạch cache/RAG. Dấu hiệu
+# duy nhất là header X-AI-Source. Đã từng âm thầm 6 ngày mới bị phát hiện.
+#
+# CƠ CHẾ BÁO ĐỘNG: workflow này FAIL khi phát hiện sự cố → GitHub tự gửi mail cho
+# chủ repo. Không cần cài thêm gì.
+#
+# PROBE DÙNG type=ngaytot CÓ CHỦ ĐÍCH: trong api/interpret.js, cacheEligible loại
+# trừ 'tuvi' và 'ngaytot' ⇒ request luôn gọi LLM THẬT (không bao giờ trả
+# cache-exact/cache-semantic) và KHÔNG ghi vào RAG. Nếu dùng type khác, lần chạy
+# thứ 2 trở đi sẽ ăn cache và probe thành vô dụng.
+#
+# Chạy tay: tab Actions → "Giam sat ha tang AI" → Run workflow.
+name: Giam sat ha tang AI
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # mỗi 30 phút
+  workflow_dispatch:
+
+# Không cần quyền ghi — workflow này chỉ đọc.
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      # Tuỳ chọn: thêm secret NGROK_PROBE_URL (URL tunnel, không có dấu / cuối)
+      # để workflow chỉ ra ĐÚNG lớp nào gãy. Không có thì vẫn chạy, chỉ kém chi tiết.
+      # Để trong secret vì repo này PUBLIC — tunnel không có xác thực.
+      NGROK_URL: ${{ secrets.NGROK_PROBE_URL }}
+    steps:
+      - name: Kiem tra dau-cuoi qua latbai.vn
+        id: e2e
+        run: |
+          echo "Gọi /api/interpret (type=ngaytot — không đụng cache, không ghi RAG)…"
+          code=$(curl -sS -m 60 -o /tmp/body.json -D /tmp/head.txt -w '%{http_code}' \
+            -X POST https://latbai.vn/api/interpret \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://latbai.vn' \
+            -d '{"type":"ngaytot","question":"Kiem tra suc khoe he thong.","context":"3 ngay tot, 1 ngay kha, hom nay hoang dao"}' \
+          ) || true
+
+          # grep -i vì tên header không phân biệt hoa thường; tr -d '\r' vì CRLF.
+          source=$(grep -i '^x-ai-source:' /tmp/head.txt | cut -d' ' -f2- | tr -d '\r' || true)
+
+          echo "HTTP=$code  X-AI-Source=${source:-<không có>}"
+          echo "http=$code"        >> "$GITHUB_OUTPUT"
+          echo "source=$source"    >> "$GITHUB_OUTPUT"
+
+      - name: Chan doan tung lop qua ngrok
+        # always() để vẫn chạy khi bước trên đã hỏng — lúc đó mới cần chẩn đoán nhất.
+        if: always() && env.NGROK_URL != ''
+        continue-on-error: true
+        run: |
+          H='ngrok-skip-browser-warning: 1'
+
+          # /api/tags CỐ TÌNH không dùng làm health-check: Ollama từng trả 200 ở
+          # đây trong khi generate/embeddings treo hoàn toàn. Phải gọi inference thật.
+          echo "— Ollama (embeddings) qua ngrok:"
+          curl -sS -m 30 -o /dev/null -w '  HTTP=%{http_code} time=%{time_total}s\n' \
+            -X POST "$NGROK_URL/api/embeddings" -H "$H" \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"nomic-embed-text","prompt":"healthcheck"}' || echo "  → TREO/LỖI (Ollama đơ hoặc proxy chết)"
+
+          echo "— PostgREST qua ngrok:"
+          curl -sS -m 20 -o /dev/null -w '  HTTP=%{http_code} time=%{time_total}s\n' \
+            "$NGROK_URL/postgrest/documents?limit=1" -H "$H" || echo "  → TREO/LỖI"
+
+      - name: Ket luan
+        if: always()
+        run: |
+          http='${{ steps.e2e.outputs.http }}'
+          source='${{ steps.e2e.outputs.source }}'
+
+          if [ "$http" != "200" ]; then
+            echo "::error::/api/interpret trả HTTP $http (mong đợi 200). Site hoặc API đang lỗi."
+            exit 1
+          fi
+
+          case "$source" in
+            ollama)
+              echo "✓ Bình thường — đang chạy Ollama local."
+              ;;
+            deepseek)
+              echo "::error::Đang chạy DeepSeek FALLBACK — hạ tầng local đã gãy (đốt quota trả phí + mất cache/RAG). Xem bước chẩn đoán phía trên để biết lớp nào chết, rồi làm theo memory 'latthe-local-proxy-silent-failure'."
+              exit 1
+              ;;
+            cache-exact|cache-semantic)
+              echo "::error::Probe ăn cache ($source) nên KHÔNG kiểm được Ollama. Nghĩa là cacheEligible trong api/interpret.js đã đổi — sửa lại payload probe (xem ghi chú đầu file)."
+              exit 1
+              ;;
+            *)
+              echo "::error::Không đọc được X-AI-Source (nhận: '${source:-rỗng}'). Có thể API đã đổi hoặc bị chặn."
+              exit 1
+              ;;
+          esac
