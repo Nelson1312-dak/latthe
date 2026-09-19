@@ -24,8 +24,13 @@ jobs:
 
       - name: Sinh trang thang moi + lastmod
         run: |
-          node scripts/build-ngaytot-pages.mjs
-          node scripts/update-sitemap-lastmod.mjs
+          npm run seo:ngaytot
+          npm run seo:lastmod
+
+      # Guard: chan push neu generator lam hong sitemap / precache / cu phap JS.
+      # Truoc 2026-09-19 script nay khong duoc goi o dau ca.
+      - name: Kiem tra ha tang tinh
+        run: npm run check
 
       - name: Commit & push
         id: push

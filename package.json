@@ -12,8 +12,10 @@
     "test:amlich": "node scripts/verify-amlich.mjs",
     "seo:xinxam": "node scripts/build-xinxam-pages.mjs",
     "seo:licham": "node scripts/build-licham-pages.mjs",
+    "seo:ngaytot": "node scripts/build-ngaytot-pages.mjs",
     "seo:lastmod": "node scripts/update-sitemap-lastmod.mjs",
-    "seo:indexnow": "node scripts/submit-indexnow.mjs"
+    "seo:indexnow": "node scripts/submit-indexnow.mjs",
+    "check": "node scripts/check-infra.mjs"
   },
   "dependencies": {
     "web-push": "^3.6.7"

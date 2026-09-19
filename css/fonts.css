@@ -123,42 +123,23 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* outfit latin 500 */
+/* outfit latin — VARIABLE font, truc wght 100-900 (xac minh qua Google Fonts
+   metadata: axes [{tag:wght,min:100,max:900}]).
+   BAY DA CAN 2026-09-19: Google Fonts tra CUNG MOT URL cho moi weight cua font
+   bien thien, nen tai theo tung weight se ra cac ban sao BYTE Y HET NHAU —
+   outfit-latin-500/700/800/900.woff2 truoc day deu la md5 fdf9c509…
+   Hau qua DUNG (da do bang CDP, dung nham lan): do dam VAN render dung, vi
+   browser ap gia tri wght theo font-weight cua tung @font-face. Cai hong la:
+   (1) moi face khop deu tai RIENG mot ban — do duoc 3/4 face cung "loaded",
+       tuc cung 32KB tai lap ~3 lan (~96KB thua);
+   (2) weight ngoai 4 moc khai bao bi SNAP ve moc gan nhat thay vi noi suy
+       (do: font-weight:300 cho ra 439.75px = y het 500, dang le 437.64px).
+   Khai bao MOT lan voi dai weight: 1 lan tai, va noi suy dung ca dai 100-900. */
 @font-face {
   font-family: 'Outfit';
   font-style: normal;
-  font-weight: 500;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/outfit-latin-500.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* outfit latin 700 */
-@font-face {
-  font-family: 'Outfit';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/outfit-latin-700.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* outfit latin 800 */
-@font-face {
-  font-family: 'Outfit';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/outfit-latin-800.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* outfit latin 900 */
-@font-face {
-  font-family: 'Outfit';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/outfit-latin-900.woff2') format('woff2');
+  src: url('/fonts/outfit-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
