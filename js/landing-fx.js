@@ -387,14 +387,12 @@
 
   /* ---------- 5. Scroll reveal 3D ---------- */
   function initReveal() {
-    // .fg-feature/.fg-group/.fg-card được thêm 2026-09-19: khối "Khám phá" là
-    // khối nội dung ĐẦU TIÊN và LỚN NHẤT trang chủ (1 banner + 3 nhóm + 11 thẻ)
-    // nhưng bị bỏ quên khỏi danh sách này khi nó ra đời — nên toàn bộ phần thân
-    // trang hiện ra phẳng lì trong khi các khối nhỏ hơn quanh nó đều có reveal.
+    // `.bt` (ô bento khối "Khám phá") được thêm 2026-09-19: khối nội dung ĐẦU
+    // TIÊN và LỚN NHẤT trang chủ trước đây bị bỏ quên khỏi danh sách này, nên
+    // hiện ra phẳng lì trong khi các khối nhỏ hơn quanh nó đều có reveal.
     const els = document.querySelectorAll(
       '.l-lookup-card, .l-feature, .faq-item, ' +
-      '.l-section-title, .l-about-lead, .l-lookup-sub, .l-divider, ' +
-      '.fg-feature, .fg-card'
+      '.l-section-title, .l-about-lead, .l-lookup-sub, .l-divider, .bt'
     );
     if (prefersReduced || !('IntersectionObserver' in window)) return;
 

@@ -181,7 +181,7 @@ a { text-decoration: none; color: inherit; }
 .l-divider--gap { margin-top: 28px; margin-bottom: 28px; }
 
 /* ---- Main Content Wrapper ----
-   KHÔNG dùng `gap` ở đây: các con (.l-fg-head/.fg-feature/.fg-group) đã tự mang
+   KHÔNG dùng `gap` ở đây: các con (.l-fg-head/.bento/.l-lookup) đã tự mang
    margin-bottom từ thời layout cũ, mà flex gap KHÔNG collapse với margin nên 2 thứ
    CỘNG DỒN (22+40=62px, 30+40=70px...) — đó là nguồn "space to" trên trang chủ.
    Giữ margin của từng con làm nguồn khoảng cách duy nhất. */
@@ -298,7 +298,7 @@ a { text-decoration: none; color: inherit; }
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
-  box-shadow: none; /* hairline editorial: chỉ nổi khi hover, khớp .fg-card + .l-lookup-card */
+  box-shadow: none; /* hairline editorial: chỉ nổi khi hover, khớp .bt + .l-lookup-card */
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .l-feature:hover { transform: translateY(-2px); box-shadow: var(--shadow-h); border-color: rgba(217, 138, 10, 0.4); }
@@ -907,75 +907,156 @@ a.hub-daily-card:hover { transform: none; box-shadow: none; border-color: transp
   .l-hub { max-width: 980px; }
 }
 /* ============================================================
-   FeatureGrid — bày hết (không tab) · Tarot featured · editorial craft
-   Mobile: card ngang gọn (icon | nội dung | arrow). Desktop: dọc, lưới 3 cột.
-   Dùng token sẵn có; accent trầm truyền qua --fg-accent trên mỗi nhóm.
+   Bento — lưới module trang chủ (redesign 2026-09-19)
+   Thay "FeatureGrid" cũ (1 banner + 3 nhóm, mỗi nhóm một lưới 3 cột
+   đều tăm tắp). Vấn đề của bản cũ: 11 thẻ TRẮNG GIỐNG HỆT NHAU, cùng
+   kích thước, nên không có điểm nhấn — mắt không biết nhìn đâu trước;
+   thêm nữa nhóm 4 thẻ để thẻ cuối trơ một mình, chừa trống 2/3 hàng.
+
+   Bento: ô to nhỏ theo mức độ quan trọng (Tarot 2×2 vì traffic cao
+   nhất), `dense` packing nên không còn lỗ hổng cuối hàng.
+   Giữ nguyên tông kem/vàng — accent trầm vẫn truyền qua biến đặt
+   INLINE trên từng ô (--bt / --bt-bg), đúng cách bản cũ dùng
+   --fg-accent, nên không cần color-mix và không đụng bảng màu.
    ============================================================ */
-/* ---- Featured card (Tarot highlight) ---- */
-.fg-feature {
-  display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden;
-  background: linear-gradient(135deg, rgba(124,58,237,.09), rgba(124,58,237,.02)), var(--surface);
-  border: 1px solid rgba(124,58,237,.22); border-radius: 20px; padding: 18px; margin-bottom: 26px;
-  color: var(--text); box-shadow: 0 10px 30px -16px rgba(124,58,237,.34);
+.bento {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-flow: row dense;
+  gap: 10px;
+}
+
+.bt {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 15px;
+  color: var(--text);
   transition: transform .3s, box-shadow .3s, border-color .3s;
 }
-.fg-feature:hover { transform: translateY(-3px); box-shadow: 0 18px 44px -18px rgba(124,58,237,.44); border-color: rgba(124,58,237,.4); }
-.fg-feature-icon { width: 58px; height: 58px; border-radius: 16px; flex-shrink: 0; display: grid; place-items: center;
-  font-size: 30px; color: #fff; background: linear-gradient(135deg, #7c3aed, #a855f7); box-shadow: 0 6px 16px -4px rgba(124,58,237,.5); }
-.fg-feature-body { flex: 1; min-width: 0; }
-.fg-feature-tag { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #7c3aed; display: inline-flex; align-items: center; gap: 5px; }
-.fg-feature h3 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; margin: 4px 0; }
-.fg-feature p { font-size: 13px; color: var(--sub); line-height: 1.5; }
-.fg-feature-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; font-weight: 700;
-  color: #fff; background: #7c3aed; padding: 9px 16px; border-radius: 99px; }
+/* Sheen nhẹ nửa trên — giữ lại nét "craft" của bản cũ (vốn chỉ có ở desktop) */
+.bt::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 52%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .5), transparent);
+  pointer-events: none;
+}
+.bt:hover {
+  transform: translateY(-3px);
+  border-color: var(--bt-bg);
+  box-shadow: 0 16px 36px -18px var(--bt-bg), var(--shadow);
+}
 
-/* ---- Nhóm ---- */
-.fg-group { margin-bottom: 24px; }
-/* nhóm cuối không đẩy thêm — .l-divider--gap phía sau đã có margin riêng */
-.fg-group:last-child { margin-bottom: 0; }
-.fg-group-title { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 800; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--sub); margin: 0 2px 12px; }
-.fg-group-title i { font-size: 16px; color: var(--fg-accent, var(--muted)); }
+.bt-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: var(--bt);
+  background: var(--bt-bg);
+  border: 1px solid var(--border);
+  transition: transform .3s;
+}
+.bt:hover .bt-ico { transform: scale(1.06) rotate(-4deg); }
 
-/* ---- Lưới + thẻ ---- */
-.fg-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.fg-card { display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 15px; color: var(--text);
-  transition: border-color .3s, transform .3s, box-shadow .3s; }
-.fg-card:hover { border-color: rgba(120,80,25,.24); transform: translateY(-2px); box-shadow: var(--shadow); }
-.fg-icon { width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center; font-size: 23px;
-  color: var(--fg-accent); background: var(--fg-accent-bg); border: 1px solid var(--border); transition: transform .3s; }
-.fg-card:hover .fg-icon { transform: scale(1.05) rotate(-3deg); }
-.fg-body { flex: 1; min-width: 0; }
-.fg-tag { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.fg-card h3 { font-size: 16px; font-weight: 800; letter-spacing: -.01em; margin: 1px 0 3px; }
-.fg-card p { font-size: 12.5px; color: var(--sub); line-height: 1.45; }
-.fg-arrow { font-size: 18px; color: var(--muted); flex-shrink: 0; transition: transform .3s, color .3s; }
-.fg-card:hover .fg-arrow { color: var(--fg-accent); transform: translateX(3px); }
+.bt-body { flex: 1; min-width: 0; }
+.bt-tag {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bt h3 {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  margin: 2px 0 3px;
+}
+.bt p {
+  font-size: 12.5px;
+  color: var(--sub);
+  line-height: 1.45;
+  /* Ô nhỏ trên mobile chỉ rộng ~165px — chặn 2 dòng để các ô cùng hàng
+     không cao lệch nhau, bento mà so le chiều cao thì vỡ nhịp lưới. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bt-arrow {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 17px;
+  color: var(--muted);
+  transition: transform .3s, color .3s;
+}
+.bt:hover .bt-arrow { color: var(--bt); transform: translateX(3px); }
+
+/* ---- Ô chủ lực (Tarot) ---- */
+.bt-hero {
+  grid-column: span 2;
+  background: linear-gradient(135deg, var(--bt-bg), transparent 62%), var(--surface);
+  border-color: var(--bt-bg);
+  box-shadow: 0 10px 30px -18px var(--bt-bg);
+}
+.bt-hero .bt-tag { color: var(--bt); font-weight: 800; font-size: 11px; }
+.bt-hero .bt-ico { width: 52px; height: 52px; font-size: 26px; border-radius: 15px; }
+.bt-hero h3 { font-size: 20px; margin: 5px 0 4px; }
+.bt-hero p { font-size: 13px; -webkit-line-clamp: 3; }
+.bt-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--bt);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  transition: gap .25s;
+}
+.bt-hero:hover .bt-cta { gap: 10px; }
 
 @media (min-width: 768px) {
-  .fg-feature { padding: 26px 30px; gap: 22px; }
-  .fg-feature-icon { width: 68px; height: 68px; font-size: 34px; }
-  .fg-feature h3 { font-size: 24px; }
-  .fg-feature p { font-size: 14px; }
-  .fg-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  /* Nhóm 4 thẻ trong lưới 3 cột để thẻ cuối trơ một mình bên trái, chừa trống
-     2/3 hàng (thấy rõ ở "Cổ Học & Luận Mệnh" và "Boardgame & Tụ Tập").
-     Đẩy thẻ lẻ vào cột GIỮA thay vì đổi nhóm sang 2 cột — đổi số cột sẽ làm
-     bề rộng thẻ lệch nhau giữa các nhóm trên cùng một trang. */
-  .fg-grid:has(> :nth-child(4):last-child) > :nth-child(4) { grid-column: 2; }
-  .fg-card { flex-direction: column; align-items: flex-start; padding: 22px; gap: 12px; }
-  .fg-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,.5), transparent); pointer-events: none; }
-  .fg-icon { width: 48px; height: 48px; }
-  .fg-card h3 { font-size: 18px; margin: 0; }
-  .fg-card p { font-size: 13px; }
-  .fg-arrow { position: absolute; top: 22px; right: 22px; opacity: 0; }
-  .fg-card:hover .fg-arrow { opacity: 1; }
-  .fg-group-title { font-size: 13px; }
+  .bento { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .bt { padding: 20px; gap: 12px; }
+  .bt h3 { font-size: 17px; }
+  .bt p { font-size: 13px; -webkit-line-clamp: 3; }
+  .bt-ico { width: 48px; height: 48px; }
+
+  /* Ô chủ lực chiếm 2×2; ô "wide" chiếm 2 cột. Tổng 20 ô-đơn vị trên
+     lưới 4 cột = đúng 5 hàng, không dư ô trống. */
+  .bt-hero { grid-column: span 2; grid-row: span 2; padding: 26px; }
+  .bt-hero .bt-ico { width: 60px; height: 60px; font-size: 30px; }
+  .bt-hero h3 { font-size: 26px; }
+  .bt-hero p { font-size: 14.5px; -webkit-line-clamp: 4; }
+  /* Ô 2×2 cao hơn nội dung của nó, để mặc thì dồn hết lên trên và hở một mảng
+     trống lớn ở đáy. Đẩy CTA xuống sát đáy để ô đầy đặn và nút dễ bấm hơn. */
+  .bt-hero .bt-cta { margin-top: auto; }
+  .bt-wide { grid-column: span 2; }
 }
+
+@media (min-width: 1024px) {
+  .bento { gap: 18px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .fg-card, .fg-icon, .fg-arrow, .fg-feature { transition: none; }
+  .bt, .bt-ico, .bt-arrow, .bt-cta { transition: none; }
 }
 .l-fg-head { text-align: center; margin-bottom: 18px; }
 /* ghi đè cả margin-bottom:20px của .l-lookup-sub — tiêu đề mục phải sát nội dung
