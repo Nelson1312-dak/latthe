@@ -110,19 +110,21 @@ a { text-decoration: none; color: inherit; }
   background: linear-gradient(135deg, #ffffff 0%, #fbf3e4 100%);
   border: 1.5px solid rgba(217, 138, 10, 0.45);
   box-shadow: 0 10px 28px rgba(120, 75, 25, 0.08);
-  animation: brand-float-spin 6s ease-in-out infinite;
+  animation: brand-float-spin-lg 6s ease-in-out infinite;
 }
-.l-brand-icon svg {
-  display: block;
-}
+/* CODE CHẾT ĐÃ XOÁ 2026-09-19: `.l-brand-icon svg { display:block }` và
+   `@keyframes brand-card-float` cùng cặp selector `.l-brand-icon svg g[...]`.
+   Chúng đòi một <svg> INLINE trong .l-brand-icon, nhưng index.html:212 ship
+   <img src="/images/logo.svg"> — SVG ngoài nạp qua <img> không thể style từ
+   document cha, nên animation này CHƯA BAO GIỜ chạy. Muốn hồi sinh thì phải
+   inline SVG vào HTML (đã cân nhắc, để dành cho đợt nâng cấp hero riêng). */
 
-/* Micro-interactions inside the custom logo SVG */
-.l-brand-icon svg g[transform*="rotate(-12)"],
-.l-brand-icon svg g[transform*="rotate(-2)"] {
-  animation: brand-card-float 4s ease-in-out infinite alternate;
-}
-
-@keyframes brand-float-spin {
+/* Đổi tên từ `brand-float-spin` 2026-09-19: common.css:972 ĐÃ có một keyframe
+   trùng y hệt tên nhưng giá trị khác (-6px/3deg, shadow qua biến). Không phải
+   trùng lặp thừa — logo trang chủ là 96px so với 64px ở module nên cố ý bay
+   mạnh hơn (-8px/4deg). Trước đây landing.css nạp sau nên lặng lẽ đè bản kia,
+   khiến ai sửa common.css sẽ không hiểu vì sao trang chủ không đổi. */
+@keyframes brand-float-spin-lg {
   0% {
     transform: translateY(0) rotate(0deg);
     box-shadow: 0 10px 28px rgba(120, 75, 25, 0.08);
@@ -957,6 +959,11 @@ a.hub-daily-card:hover { transform: none; box-shadow: none; border-color: transp
   .fg-feature h3 { font-size: 24px; }
   .fg-feature p { font-size: 14px; }
   .fg-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  /* Nhóm 4 thẻ trong lưới 3 cột để thẻ cuối trơ một mình bên trái, chừa trống
+     2/3 hàng (thấy rõ ở "Cổ Học & Luận Mệnh" và "Boardgame & Tụ Tập").
+     Đẩy thẻ lẻ vào cột GIỮA thay vì đổi nhóm sang 2 cột — đổi số cột sẽ làm
+     bề rộng thẻ lệch nhau giữa các nhóm trên cùng một trang. */
+  .fg-grid:has(> :nth-child(4):last-child) > :nth-child(4) { grid-column: 2; }
   .fg-card { flex-direction: column; align-items: flex-start; padding: 22px; gap: 12px; }
   .fg-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 50%;
     background: linear-gradient(180deg, rgba(255,255,255,.5), transparent); pointer-events: none; }

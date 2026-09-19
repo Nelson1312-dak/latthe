@@ -597,3 +597,40 @@ body {
   padding: 2px 10px;
   margin-left: auto;
 }
+
+/* ============================================================
+   View Transitions + reduced-motion — thêm 2026-09-19
+   File này là CSS DUY NHẤT mà ~1112 trang SEO nạp (chúng KHÔNG nạp
+   css/common.css), nên 2 thứ dưới đây phải lặp lại ở đây thì trang
+   SEO mới có:
+   1. `navigation: auto` — view transition chỉ chạy khi CẢ trang đi
+      lẫn trang đến cùng khai báo. Thiếu ở đây thì mọi điều hướng
+      dính trang SEO vẫn chớp trắng như cũ.
+   2. Khối prefers-reduced-motion — trước đây trang SEO KHÔNG có bất
+      kỳ rule reduced-motion nào. Hiện thời vô hại vì file này chưa
+      có @keyframes, nhưng đó là lỗ hổng chờ sẵn: thêm một animation
+      vào đây là ~1112 trang mất opt-out cùng lúc.
+   ============================================================ */
+@view-transition { navigation: auto; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

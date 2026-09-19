@@ -15,11 +15,17 @@
   const finePointer = window.matchMedia('(pointer: fine)').matches;
   const isMobile = window.matchMedia('(max-width: 767px)').matches;
 
+  // Máy yếu / tiết kiệm dữ liệu: bỏ hẳn canvas nền. mystic-fx.js đã có 2 guard
+  // này từ đầu, landing-fx.js thì không — trong khi trang chủ lại là trang NẶNG
+  // nhất (92 hạt + chòm sao O(n²) + vệt con trỏ). Phần lớn traffic là mobile VN.
+  const lowEnd = (navigator.deviceMemory && navigator.deviceMemory <= 2) ||
+                 (navigator.connection && navigator.connection.saveData);
+
   document.documentElement.classList.add('fx-js');
 
   /* ---------- 1. Mystic dust field + sparks + sao băng ---------- */
   function initField() {
-    if (prefersReduced) return;
+    if (prefersReduced || lowEnd) return;
 
     const canvas = document.createElement('canvas');
     canvas.id = 'fx-field';
@@ -28,10 +34,15 @@
     const ctx = canvas.getContext('2d');
 
     const GLYPHS = ['☰', '☱', '☲', '☳', '☴', '☵', '☶', '☷', '✦', '✧', '☾'];
-    const COUNT = isMobile ? 44 : 92;
+    // Hạ từ 44/92 (2026-09-19): ngân sách chuyển động dồn sang nội dung (scroll
+    // reveal khối "Khám phá") thay vì nền — nền gần như không ai nhìn.
+    const COUNT = isMobile ? 30 : 58;
     const DPR = Math.min(window.devicePixelRatio || 1, 2);
     const LINE_DIST = 110;
     const MAX_SPARKS = 140;
+    // Vạch chòm sao là vòng O(n²) chạy MỖI FRAME. Trên mobile màn nhỏ nên các
+    // vạch này gần như không đọc được, mà lại là phần tốn nhất → tắt hẳn.
+    const DRAW_LINES = !isMobile;
 
     let W = 0, H = 0;
     let parts = [];
@@ -157,21 +168,23 @@
         }
       }
 
-      /* --- vạch chòm sao --- */
-      ctx.lineWidth = 1;
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const ddx = pts[i].x - pts[j].x;
-          const ddy = pts[i].y - pts[j].y;
-          const dist2 = ddx * ddx + ddy * ddy;
-          if (dist2 > LINE_DIST * LINE_DIST) continue;
-          const dist = Math.sqrt(dist2);
-          const a = (1 - dist / LINE_DIST) * 0.14 * Math.min(pts[i].d, pts[j].d);
-          ctx.strokeStyle = 'rgba(200, 130, 26, ' + a.toFixed(3) + ')';
-          ctx.beginPath();
-          ctx.moveTo(pts[i].x, pts[i].y);
-          ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.stroke();
+      /* --- vạch chòm sao (desktop only, xem DRAW_LINES) --- */
+      if (DRAW_LINES) {
+        ctx.lineWidth = 1;
+        for (let i = 0; i < pts.length; i++) {
+          for (let j = i + 1; j < pts.length; j++) {
+            const ddx = pts[i].x - pts[j].x;
+            const ddy = pts[i].y - pts[j].y;
+            const dist2 = ddx * ddx + ddy * ddy;
+            if (dist2 > LINE_DIST * LINE_DIST) continue;
+            const dist = Math.sqrt(dist2);
+            const a = (1 - dist / LINE_DIST) * 0.14 * Math.min(pts[i].d, pts[j].d);
+            ctx.strokeStyle = 'rgba(200, 130, 26, ' + a.toFixed(3) + ')';
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.stroke();
+          }
         }
       }
 
@@ -374,9 +387,14 @@
 
   /* ---------- 5. Scroll reveal 3D ---------- */
   function initReveal() {
+    // .fg-feature/.fg-group/.fg-card được thêm 2026-09-19: khối "Khám phá" là
+    // khối nội dung ĐẦU TIÊN và LỚN NHẤT trang chủ (1 banner + 3 nhóm + 11 thẻ)
+    // nhưng bị bỏ quên khỏi danh sách này khi nó ra đời — nên toàn bộ phần thân
+    // trang hiện ra phẳng lì trong khi các khối nhỏ hơn quanh nó đều có reveal.
     const els = document.querySelectorAll(
       '.l-lookup-card, .l-feature, .faq-item, ' +
-      '.l-section-title, .l-about-lead, .l-lookup-sub, .l-divider'
+      '.l-section-title, .l-about-lead, .l-lookup-sub, .l-divider, ' +
+      '.fg-feature, .fg-card'
     );
     if (prefersReduced || !('IntersectionObserver' in window)) return;
 
@@ -401,7 +419,16 @@
         });
         io.unobserve(el);
       });
-    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    // rootMargin TRÊN = 9999px (sửa 2026-09-19, trước là 0px): IntersectionObserver
+    // chỉ gọi lại khi tỉ lệ giao cắt ĐỔI. Nếu người dùng nhảy một phát qua phần tử
+    // (Ctrl+End, link neo, trình duyệt khôi phục vị trí cuộn, cuộn rất nhanh) thì nó
+    // đi thẳng từ "dưới màn hình, ratio 0" sang "trên màn hình, ratio 0" — KHÔNG có
+    // callback nào, phần tử kẹt opacity:0 VĨNH VIỄN. Đo thật: cuộn thẳng xuống đáy
+    // thì 7/11 thẻ "Khám phá" không bao giờ hiện.
+    // Nới root lên trên khiến phần tử đã cuộn qua vẫn tính là giao cắt → vẫn kích
+    // hoạt. Không đổi hành vi lúc cuộn xuống bình thường: phần tử ở DƯỚI màn hình
+    // không bị lề trên ảnh hưởng, vẫn đợi tới lượt mới hiện.
+    }, { threshold: 0.15, rootMargin: '9999px 0px -40px 0px' });
 
     els.forEach((el) => io.observe(el));
   }

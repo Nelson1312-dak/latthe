@@ -1049,3 +1049,32 @@ body.drinking-theme {
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   View Transitions (MPA) — chuyển trang mượt thay vì chớp trắng
+   Site là multi-page tĩnh: mỗi lần bấm sang module là một lần tải
+   trang mới, trước đây luôn nháy trắng. `navigation: auto` để CHÍNH
+   TRÌNH DUYỆT lo cross-fade — 0 JS, 0 byte runtime, chạy trên
+   compositor nên không tốn CPU (quan trọng với mobile máy yếu).
+   Trình duyệt chưa hỗ trợ thì bỏ qua rule này, hành vi y như cũ.
+   LƯU Ý: chỉ có tác dụng khi CẢ trang đi lẫn trang đến cùng khai báo
+   — nên rule này được lặp trong thuvien/css/thuvien.css cho ~1112
+   trang SEO (chúng KHÔNG nạp common.css).
+   ============================================================ */
+@view-transition { navigation: auto; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: ease;
+}
+
+/* Tôn trọng opt-out: tắt hẳn hiệu ứng, chuyển trang tức thì.
+   Khối nuke ở trên không với tới pseudo-element của view transition. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
