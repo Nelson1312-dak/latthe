@@ -15,6 +15,7 @@
     "seo:ngaytot": "node scripts/build-ngaytot-pages.mjs",
     "seo:lastmod": "node scripts/update-sitemap-lastmod.mjs",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
+    "fix:year": "node scripts/update-copyright-year.mjs",
     "check": "node scripts/check-infra.mjs"
   },
   "dependencies": {

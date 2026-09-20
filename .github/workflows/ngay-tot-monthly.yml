@@ -7,6 +7,9 @@ name: Ngay tot thang moi
 on:
   schedule:
     - cron: '0 1 25 * *' # 01:00 UTC ngày 25 = 08:00 sáng giờ VN
+    - cron: '0 2 1 1 *'  # 02:00 UTC 01/01 = 09:00 sáng giờ VN — dịp năm mới,
+                         # để `npm run fix:year` cập nhật năm bản quyền ngay
+                         # đầu năm thay vì chờ tới 25/01.
   workflow_dispatch:
 
 permissions:
@@ -25,6 +28,11 @@ jobs:
       - name: Sinh trang thang moi + lastmod
         run: |
           npm run seo:ngaytot
+          # Nam ban quyen hardcode trong ~1114 file HTML + template cua 12
+          # generator -> 01/01 hang nam toan site sai nam cung luc. Quet o day
+          # de tu lanh; trigger 'cron 0 2 1 1 *' ben tren lo rieng dip nam moi
+          # (khong thi phai doi toi 25/01).
+          npm run fix:year
           npm run seo:lastmod
 
       # Guard: chan push neu generator lam hong sitemap / precache / cu phap JS.
