@@ -217,6 +217,12 @@ a { text-decoration: none; color: inherit; }
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+/* Mobile 2 cột: nếu tổng số thẻ LẺ thì thẻ cuối đứng trơ nửa hàng. Cho nó ăn
+   trọn hàng. Dùng :last-child:nth-child(odd) nên tự đúng khi thêm/bớt thẻ,
+   không phải nhớ sửa tay. Trên ≥768px lưới 4 cột tự lo nên chặn lại ở đây. */
+@media (max-width: 767px) {
+  .l-lookup-grid > :last-child:nth-child(odd) { grid-column: span 2; }
+}
 .l-lookup-card {
   display: flex;
   flex-direction: column;
@@ -237,19 +243,18 @@ a { text-decoration: none; color: inherit; }
   font-size: 34px;
   font-weight: 900;
   line-height: 1;
-  color: var(--c-tuvi);
   letter-spacing: -1px;
 }
 .l-lookup-name { font-size: 15px; font-weight: 800; color: var(--text); margin-top: 4px; }
 .l-lookup-desc { font-size: 12px; color: var(--muted); line-height: 1.45; }
-.l-lookup-card:nth-child(2) .l-lookup-big { color: var(--c-tarot); }
-.l-lookup-card:nth-child(3) .l-lookup-big { color: var(--c-thansohoc); }
-.l-lookup-card:nth-child(4) .l-lookup-big { color: var(--c-thuvien); }
-/* Card 6-9 giờ dùng icon Tabler (đồng bộ, bỏ emoji đa màu chỏi nền kem) — gán màu module */
-.l-lookup-card:nth-child(6) .l-lookup-big { color: var(--c-drink); }
-.l-lookup-card:nth-child(7) .l-lookup-big { color: var(--c-gieoque); }
-.l-lookup-card:nth-child(8) .l-lookup-big { color: var(--c-ten); }
-.l-lookup-card:nth-child(9) .l-lookup-big { color: var(--c-dua); }
+/* Màu số/icon theo module, truyền qua biến --lk đặt INLINE trên từng thẻ.
+   TRƯỚC 2026-09-20 dùng :nth-child(2..9) — tức màu neo theo VỊ TRÍ, nên chỉ
+   cần đổi thứ tự thẻ là mọi màu lệch sang nhầm module. Đã cắn đúng lỗi này khi
+   sắp lại lưới bento: thẻ Lịch Âm rơi vào vị trí 6 và bị var(--c-drink) đè mất
+   bản sắc cyan (nth-child nâng specificity lên 0,3,0, thắng rule 0,2,0 của
+   .l-lookup-card--feature). Biến inline thì màu đi theo ĐÚNG thẻ, sắp lại
+   thoải mái. */
+.l-lookup-big { color: var(--lk, var(--c-tuvi)); }
 
 /* ---- Featured lookup card (Lịch Âm) — nổi bật tông cyan + số ngày âm hôm nay ---- */
 .l-lookup-card--feature {
@@ -384,7 +389,12 @@ a { text-decoration: none; color: inherit; }
      section khác rộng 800/980 — 9 thẻ dồn 2 cột thành 5 hàng, thừa cả khoảng trắng
      hai bên. 9 thẻ = 3×3 vừa khít. */
   .l-lookup { max-width: 800px; }
-  .l-lookup-grid { grid-template-columns: repeat(3, 1fr); }
+  /* 4 cột + 3 thẻ rộng, khớp nhịp bento ở khối "Khám phá" phía trên thay vì
+     lại là một lưới 3×3 đều tăm tắp nữa. 9 thẻ = 6 đơn + 3 thẻ rộng(2) = 12
+     ô-đơn-vị = đúng 3 hàng, không dư ô trống. Thứ tự DOM đã sắp lại cho khớp:
+     hàng 1 bốn thẻ đơn, hàng 2 hai thẻ rộng, hàng 3 hai đơn + một rộng. */
+  .l-lookup-grid { grid-template-columns: repeat(4, 1fr); }
+  .l-lk--wide { grid-column: span 2; }
 
   .l-about { max-width: 800px; }
   .l-features { grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -924,6 +934,14 @@ a.hub-daily-card:hover { transform: none; box-shadow: none; border-color: transp
   grid-template-columns: repeat(2, 1fr);
   grid-auto-flow: row dense;
   gap: 10px;
+}
+/* Mobile 2 cột: ô chủ lực chiếm 2 ô, mỗi ô còn lại chiếm 1 → tổng ô lưới là
+   (số con + 1). Dư một ô trống khi tổng đó LẺ, tức khi SỐ CON CHẴN — nên điều
+   kiện đúng là :last-child:nth-child(even), và nó tự đúng khi thêm/bớt module.
+   Hiện tại 12 con (chẵn) nên ô cuối "Ghép Đôi" đang trơ nửa hàng.
+   ≥768px lưới 4 cột tự lo nên chặn lại ở đây. */
+@media (max-width: 767px) {
+  .bento > :last-child:nth-child(even) { grid-column: span 2; }
 }
 
 .bt {
