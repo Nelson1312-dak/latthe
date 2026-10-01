@@ -36,7 +36,11 @@ export async function callCloudLLM({ url, apiKey, model, messages, temperature, 
       }),
       signal: controller.signal,
     });
-    clearTimeout(t);
+    // KHÔNG clearTimeout ở đây: đọc body (res.text()/res.json()) cũng là I/O
+    // mạng. Hủy timeout ngay sau khi có header nghĩa là nhà cung cấp trả header
+    // rồi treo body sẽ làm function treo VÔ HẠN — đúng lúc hệ thống đã suy yếu
+    // (đây là nhánh fallback trả phí). streamOllama bên dưới làm đúng bằng
+    // `finally`; giờ nhánh này theo cùng khuôn.
     if (!res.ok) {
       const errText = await res.text();
       return { ok: false, error: `${label} ${res.status}: ${errText.slice(0, 200)}` };
@@ -45,8 +49,9 @@ export async function callCloudLLM({ url, apiKey, model, messages, temperature, 
     const content = data.choices?.[0]?.message?.content || '';
     return { ok: true, content };
   } catch (err) {
-    clearTimeout(t);
     return { ok: false, error: err.name === 'AbortError' ? `${label} timeout (>${Math.round(timeoutMs / 1000)}s)` : err.message };
+  } finally {
+    clearTimeout(t);
   }
 }
 
@@ -81,7 +86,18 @@ export async function streamOllama({ ollamaUrl, model, messages, temperature, ma
       }),
       signal: controller.signal,
     });
-    if (!res.ok) return { ok: false, error: `Ollama ${res.status}`, gotTokens: false };
+    if (!res.ok) {
+      // Đọc body lỗi: trước đây chỉ trả mã trạng thái nên mất sạch chi tiết
+      // ("model not found", OOM...) — đúng thứ cần khi chẩn đoán Ollama chết
+      // âm thầm, và còn bỏ stream không drain. callCloudLLM ở trên vốn đã làm
+      // đúng; hai nhánh cùng file mà lệch nhau.
+      const errText = await res.text().catch(() => '');
+      return {
+        ok: false,
+        error: `Ollama ${res.status}${errText ? ': ' + errText.slice(0, 200) : ''}`,
+        gotTokens: false,
+      };
+    }
 
     const reader = res.body.getReader();
     // stream:true keeps multibyte UTF-8 sequences (Vietnamese!) intact across chunk splits

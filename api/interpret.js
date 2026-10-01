@@ -61,7 +61,13 @@ export default async function handler(req, res) {
   }
 
   let { question, context, type, history = [], memory = '' } = req.body || {};
-  if (!question?.trim()) return res.status(400).json({ error: 'Thiếu câu hỏi' });
+  // Phải kiểm KIỂU, không chỉ null/undefined: `?.` vẫn cho lọt số/mảng/object,
+  // rồi `.trim()` ném TypeError không ai bắt → 500 và MẤT luôn CORS header đặt
+  // ở trên. Đã dựng lại trên production: question = 123 / ["a"] / {"a":1} đều
+  // ra 500; chỉ cần đặt Origin là gọi được. Giờ trả 400 đúng nghĩa.
+  if (typeof question !== 'string' || !question.trim()) {
+    return res.status(400).json({ error: 'Thiếu câu hỏi' });
+  }
 
   // Lazy SSE commit: the client opts in via Accept, but we only switch to SSE when
   // the first Ollama token actually arrives. Until then every path (cache hits,

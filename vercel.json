@@ -140,6 +140,10 @@
         }
       ],
       "destination": "/js/ai.js"
+    },
+    {
+      "source": "/favicon.ico",
+      "destination": "/images/icon.svg"
     }
   ],
   "headers": [

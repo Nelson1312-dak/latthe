@@ -119,7 +119,9 @@ export async function checkRateLimit(ip, bucket = 'interpret') {
       ]),
       signal: controller.signal,
     });
-    clearTimeout(t);
+    // clearTimeout chuyển xuống `finally`: res.json() bên dưới cũng là I/O mạng,
+    // hủy timer ngay tại đây thì Upstash trả header rồi treo body sẽ treo luôn
+    // function. Để timer sống thì res.json() bị abort và rơi về limiter nội bộ.
     if (!res.ok) return { ...checkRateLimitLocal(localKey), backend: `memory-http${res.status}` };
 
     const data = await res.json();
@@ -129,21 +131,29 @@ export async function checkRateLimit(ip, bucket = 'interpret') {
     if (count > RATE_LIMIT_MAX) {
       // Read remaining TTL to give the client an accurate Retry-After.
       let retryAfter = RATE_LIMIT_WINDOW_SEC;
+      // Timeout RIÊNG cho lần gọi này: trước đây nó không có giới hạn nào, nên
+      // Upstash treo sẽ làm MỌI request đã bị chặn rate-limit treo theo cho tới
+      // khi Vercel giết — tức lúc bị spam lại là lúc dễ sập nhất. Retry-After
+      // chỉ là thông tin phụ, thà lấy mặc định còn hơn giữ request lại.
+      const ttlCtrl = new AbortController();
+      const ttlTimer = setTimeout(() => ttlCtrl.abort(), 1000);
       try {
         const ttlRes = await fetch(`${UPSTASH_URL}/ttl/${encodeURIComponent(key)}`, {
           headers: { 'Authorization': `Bearer ${UPSTASH_TOKEN}` },
+          signal: ttlCtrl.signal,
         });
         if (ttlRes.ok) {
           const ttl = Number((await ttlRes.json())?.result);
           if (Number.isFinite(ttl) && ttl > 0) retryAfter = ttl;
         }
-      } catch { /* keep default */ }
+      } catch { /* keep default */ } finally { clearTimeout(ttlTimer); }
       return { allowed: false, retryAfter, backend: 'upstash' };
     }
     return { allowed: true, backend: 'upstash' };
   } catch (err) {
-    clearTimeout(t);
     return { ...checkRateLimitLocal(localKey), backend: `memory-err:${err.name || 'unknown'}` };
+  } finally {
+    clearTimeout(t);
   }
 }
 
