@@ -747,10 +747,17 @@ const slugSet = seen;
 //    An toàn vì trang ngày không chứa TODAY ⇒ ghi lại cho ra byte y hệt.
 const urls = [];
 const curKey = TODAY_VN.y * 12 + TODAY_VN.m;
+// Trang THÁNG ĐÃ QUA: vẫn GHI FILE (link cũ, bookmark, kết quả tìm kiếm còn vào
+// được, và sửa template thì trang cũ tự lành) nhưng KHÔNG đưa vào sitemap nữa.
+// Sitemap là danh sách "mời Google lập chỉ mục", không phải kho lưu trữ: tới
+// 2026-10-01 đã có 92/1153 URL là ngày đã qua (8%) và tăng ~30 URL/tháng.
+// Hạ priority xuống 0.3 như trước là chưa đủ — vẫn tốn ngân sách thu thập.
+let skippedPast = 0;
 for (const x of allDays) {
   fs.writeFileSync(path.join(OUT, dayFile(x.d, x.m, x.y)), buildDayPage(x.d, x.m, x.y, slugSet), 'utf8');
   const isPast = x.y * 12 + x.m < curKey;
-  urls.push({ loc: `https://latbai.vn${dayPath(x.d, x.m, x.y)}`, priority: isPast ? '0.3' : '0.5', freq: isPast ? 'yearly' : 'monthly' });
+  if (isPast) { skippedPast++; continue; }
+  urls.push({ loc: `https://latbai.vn${dayPath(x.d, x.m, x.y)}`, priority: '0.5', freq: 'monthly' });
 }
 for (const t of D.TIET_KHI) {
   fs.writeFileSync(path.join(OUT, `tiet-khi-${t.slug}.html`), buildTietKhiPage(t, slugSet), 'utf8');
@@ -761,7 +768,8 @@ urls.push({ loc: `https://latbai.vn${HUB_VN}`, priority: '0.7', freq: 'monthly' 
 fs.writeFileSync(path.join(OUT, '24-tiet-khi.html'), buildHubTietKhi(), 'utf8');
 urls.push({ loc: `https://latbai.vn${HUB_TK}`, priority: '0.7', freq: 'yearly' });
 
-console.log(`Generated ${allDays.length} trang ngày + 24 tiết khí + 2 hub = ${urls.length} trang trong /lich-am/`);
+console.log(`Generated ${allDays.length} trang ngày + 24 tiết khí + 2 hub trong /lich-am/`);
+console.log(`Sitemap: ${urls.length} URL (bỏ ${skippedPast} trang ngày đã qua — file vẫn giữ)`);
 
 // ---- Sitemap block (idempotent) ----
 // /lich-am/ (trang tool) nằm ở đầu sitemap ngoài mọi marker — không emit lại.
