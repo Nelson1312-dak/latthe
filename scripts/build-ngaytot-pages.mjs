@@ -424,8 +424,13 @@ for (const key of Object.keys(EVENTS)) {
 // vẫn dẫn tháng 7 + 8/2026 đã qua trong khi thiếu hẳn tháng 2 + 3/2027 đã sinh.
 {
   const idxPath = path.join(OUT, 'index.html');
-  const firstYear = MONTH_LIST[0].y;
-  const links = MONTH_LIST.map(({ m, y }) => {
+  // Dùng CÙNG mốc HUB_START với 4 trang hub. Lần sửa 2026-09-19 chỉ áp mốc này
+  // cho hub mà bỏ sót danh sách đây, nên cron 25/09 sinh ra danh sách vẫn mở
+  // đầu bằng "tháng 9" — tới 01/10 đọc lại thì đó là tháng ĐÃ QUA, đúng lại cái
+  // lỗi vừa đi vá. Hub và danh sách phải cùng một mốc thì mới nhất quán.
+  const months = MONTH_LIST.slice(HUB_START);
+  const firstYear = months[0].y;
+  const links = months.map(({ m, y }) => {
     // Kèm năm khi sang năm khác, hoặc ở tháng 12 để đánh dấu ranh giới năm.
     const label = (y !== firstYear || m === 12) ? `tháng ${m}/${y}` : `tháng ${m}`;
     return `<a href="${monthPath(m, y)}">${label}</a>`;
@@ -443,7 +448,9 @@ for (const key of Object.keys(EVENTS)) {
   const out = src.slice(0, a) + block + src.slice(b + END.length);
   if (out !== src) {
     fs.writeFileSync(idxPath, out, 'utf8');
-    console.log(`Updated month list in ngay-tot/index.html (${MONTH_LIST.length} tháng)`);
+    // Đếm `months` (đã cắt theo HUB_START), không phải MONTH_LIST — hai số này
+    // lệch nhau đúng vào lần cron cuối tháng, tức lúc cần đọc log nhất.
+    console.log(`Updated month list in ngay-tot/index.html (${months.length} tháng)`);
   }
 }
 
