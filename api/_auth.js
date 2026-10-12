@@ -80,3 +80,6 @@ export function validCredentials({ username, password }) {
   }
   return null;
 }
+
+/** Băm một mã dùng một lần (lời mời...) trước khi lưu: DB không giữ mã gốc. */
+export const hashToken = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');

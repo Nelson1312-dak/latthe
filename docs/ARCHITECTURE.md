@@ -122,13 +122,13 @@ RLS: môi giới chỉ thấy dữ liệu khách của mình; khách chỉ thấ
 
 ## 8. Lộ trình
 
-| Giai đoạn | Nội dung |
-|---|---|
-| 1 | Danh sách khách (care-by), xem tài sản từng khách, phiếu lệnh + gửi lệnh có kiểm tra quyền, nhật ký |
-| 2 | Cổng khách: link mời, khách xác nhận phiếu lệnh, khuyến nghị |
-| 3 | Realtime worker (WebSocket broker), đồng bộ trạng thái lệnh |
-| 4 | Bảng giá, thông tin thị trường dùng Market Data của DNSE |
-| 5 | Chuyển API về máy local cùng DB, Cloudflare Tunnel |
+| Giai đoạn | Nội dung | Trạng thái |
+|---|---|---|
+| 1 | Danh sách khách (care-by), tài sản từng khách, phiếu lệnh + gửi lệnh có kiểm tra quyền, nhật ký | Xong |
+| 2 | Cổng khách: link mời, khách xác nhận phiếu lệnh, khuyến nghị, xem tài sản | Xong |
+| 3 | Worker realtime (WebSocket broker), đồng bộ trạng thái lệnh | Xong, chưa chạy với DNSE thật |
+| 4 | Bảng giá, thông tin thị trường dùng Market Data của DNSE | Chưa làm |
+| 5 | Chuyển API về máy local cùng DB, Cloudflare Tunnel | Chưa làm |
 
 ## 9. Thay đổi so với bản trước
 

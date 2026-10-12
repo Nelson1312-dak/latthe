@@ -429,7 +429,7 @@ function renderChat(){
 function chatPush(a,t,role){CHAT.push({a,t,role,at:new Date().toTimeString().slice(0,5)}); if(CHAT.length>80)CHAT.shift(); renderChat(); renderTrend();}
 function livePrices(){ document.querySelectorAll("[data-live]").forEach(el=>{const m=M[el.dataset.live];el.textContent=fP(m.lastU);el.className=cls(m,m.lastU);}); }
 
-const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#cong-dong"],chat:["view-chat","#tin-nhan"],desk:["view-desk","#khach-hang"]};
+const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#cong-dong"],chat:["view-chat","#tin-nhan"],desk:["view-desk","#khach-hang"],portal:["view-portal","#tai-khoan"]};
 function setView(v){
   if(!UNIVERSE.length) return;
   CS.view=v; Object.entries(VIEWS).forEach(([k,[id]])=>$(id).hidden=k!==v);

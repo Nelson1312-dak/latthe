@@ -23,7 +23,8 @@
   };
   const SOURCE = { app: 'Khách xác nhận trong app', phone: 'Điện thoại', chat: 'Tin nhắn', in_person: 'Gặp trực tiếp' };
 
-  const D = { broker: false, clients: [], sel: null, tickets: [], side: 'B', trading: { active: false, realTrading: false }, q: '', armed: null };
+  const D = { broker: false, clients: [], sel: null, tickets: [], side: 'B', trading: { active: false, realTrading: false }, q: '', armed: null,
+    invite: null, links: [], advice: [], rt: null };
 
   async function api(url, opts = {}) {
     const r = await fetch(url, { method: opts.method || 'GET', headers: opts.body ? { 'Content-Type': 'application/json' } : undefined, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -75,7 +76,12 @@
     const { client: c, balance, positions, orders, loading } = D.sel;
     const head = `<div class="dt-head"><div><h1>${esc(c.name || c.accountNo)}</h1>
       <p>Tiểu khoản ${esc(c.accountNo)}${c.custodyCode ? ' · Lưu ký ' + esc(c.custodyCode) : ''} · ${c.canTrade ? '<span class="role trade">Ủy quyền giao dịch</span>' : '<span class="role view">Chỉ theo dõi</span>'}</p></div>
-      <button class="ghost" data-refresh-client style="height:32px;padding:0 12px">Làm mới</button></div>`;
+      <div style="display:flex;gap:6px;flex:0 0 auto"><button class="ghost" data-invite style="height:32px;padding:0 12px;white-space:nowrap">Mời khách</button><button class="ghost" data-refresh-client style="height:32px;padding:0 12px;white-space:nowrap">Làm mới</button></div></div>`;
+    const linked = D.links.some((l) => l.account_no === c.accountNo);
+    const inv = D.invite && D.invite.account === c.accountNo
+      ? `<div class="dt-invite"><b>Link mời cho ${esc(c.name || c.accountNo)}</b><small>Gửi riêng cho khách (Zalo, SMS). Dùng được một lần, hết hạn ${esc(hhmm(D.invite.expiresAt))}. Link này chỉ hiện ở đây một lần.</small>
+          <div class="copy-box"><input class="inp" readonly value="${esc(D.invite.link)}" id="invite-link" aria-label="Link mời"><button type="button" data-copy>Sao chép</button></div></div>`
+      : linked ? '<div class="dt-invite"><small><span class="role trade">Đã liên kết Lật Bài</span> Khách thấy khuyến nghị và xác nhận phiếu lệnh trong app.</small></div>' : '';
     if (loading) { box.innerHTML = head + '<div class="empty">Đang tải dữ liệu từ DNSE…</div>'; return; }
 
     const st = balance?.stock || balance || {};
@@ -102,8 +108,10 @@
           <td class="r">${o.orderType === 'LO' ? px(o.price) : esc(o.orderType)}</td><td class="r">${(num(o.quantity) || 0).toLocaleString('vi-VN')}</td><td class="r">${(num(o.fillQuantity) || 0).toLocaleString('vi-VN')}</td><td>${esc(o.orderStatus)}</td></tr>`).join('')}</tbody></table>`;
 
     const mine = D.tickets.filter((t) => t.account_no === c.accountNo);
-    box.innerHTML = head + kv + `<div class="dt-sec">Danh mục</div>${posHtml}<div class="dt-sec">Sổ lệnh trong ngày (DNSE)</div>${ordHtml}`
-      + `<div class="dt-sec">Phiếu lệnh của khách trên Lật Bài</div>${mine.length ? mine.map(ticketHtml).join('') : '<div class="empty">Chưa có phiếu lệnh.</div>'}`;
+    const evs = (D.rt?.events || []).filter((x) => x.account_no === c.accountNo).slice(0, 8);
+    const evHtml = evs.length ? `<table><thead><tr><th>Giờ</th><th>Mã</th><th>Lệnh</th><th class="r">Khớp / KL</th><th>Trạng thái</th></tr></thead><tbody>${evs.map((x) => `<tr><td>${esc(hhmm(x.event_at))}</td><td><b>${esc(x.symbol)}</b></td><td class="${x.side === 'NB' ? 'up' : 'down'}">${x.side === 'NB' ? 'Mua' : 'Bán'}</td><td class="r">${(x.fill_quantity || 0).toLocaleString('vi-VN')} / ${(x.quantity || 0).toLocaleString('vi-VN')}</td><td>${esc(x.status)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Chưa nhận sự kiện lệnh realtime nào của khách này.</div>';
+    box.innerHTML = head + inv + kv + `<div class="dt-sec">Danh mục</div>${posHtml}<div class="dt-sec">Sổ lệnh trong ngày (DNSE)</div>${ordHtml}`
+      + `<div class="dt-sec">Sự kiện lệnh realtime (DNSE WebSocket)</div>${evHtml}<div class="dt-sec">Phiếu lệnh của khách trên Lật Bài</div>${mine.length ? mine.map(ticketHtml).join('') : '<div class="empty">Chưa có phiếu lệnh.</div>'}`;
   }
 
   /* ---------- Phiếu lệnh ---------- */
@@ -148,6 +156,25 @@
       $('desk-clients').innerHTML = `<div class="empty"><b>Không tải được danh sách khách</b>${esc(e.message)}</div>`;
     }
     await loadTickets();
+    loadExtras();
+  }
+  async function loadExtras() {
+    const [inv, adv, rt] = await Promise.allSettled([api('/api/broker/invites'), api('/api/broker/advice'), api('/api/broker/realtime')]);
+    if (inv.status === 'fulfilled') D.links = inv.value.links;
+    if (adv.status === 'fulfilled') D.advice = adv.value.advice;
+    if (rt.status === 'fulfilled') D.rt = rt.value;
+    renderRealtime(); renderAdvice();
+    if (D.sel && !D.sel.loading) renderDetail();
+  }
+  function renderRealtime() {
+    const w = D.rt?.worker;
+    $('desk-rt').innerHTML = !w ? '' : w.alive
+      ? `<span class="dot"></span>Realtime: ${w.live ?? 0}/${w.connections ?? 0} khách đang kết nối, ${w.events ?? 0} sự kiện lệnh đã nhận.`
+      : '<span class="dot off"></span>Worker realtime chưa chạy, trạng thái lệnh chỉ cập nhật khi bạn bấm Làm mới.';
+  }
+  function renderAdvice() {
+    $('advice-list').innerHTML = D.advice.length ? D.advice.slice(0, 15).map((a) => `<div class="tk"><div class="tk-top"><b class="${a.side === 'S' ? 'down' : a.side === 'B' ? 'up' : ''}">${esc(a.symbol)} ${a.side === 'B' ? 'Mua' : a.side === 'S' ? 'Bán' : 'Theo dõi'}</b><small>${esc(hhmm(a.created_at))}</small></div>
+      <small>Mục tiêu ${a.target ? Number(a.target).toFixed(2) : '–'} · Cắt lỗ ${a.stop ? Number(a.stop).toFixed(2) : '–'} · đã xem ${a.seen}/${a.sent} khách</small></div>`).join('') : '<div class="empty">Chưa gửi khuyến nghị nào.</div>';
   }
   async function loadTickets() {
     try { D.tickets = (await api('/api/broker/tickets')).tickets; } catch (e) { D.tickets = []; }
@@ -207,6 +234,28 @@
     if (D.sel) selectClient(D.sel.client.accountNo);
   }
 
+  async function invite() {
+    const c = D.sel?.client; if (!c) return;
+    try {
+      const r = await api('/api/broker/invites', { method: 'POST', body: { account: c.accountNo } });
+      D.invite = { account: c.accountNo, link: r.link, expiresAt: r.expiresAt };
+      renderDetail();
+    } catch (e) { say(e.message); }
+  }
+  async function sendAdvice(e) {
+    e.preventDefault();
+    const n = (id) => { const v = $(id).value.trim().replace(',', '.'); return v ? parseFloat(v) : null; };
+    const body = { symbol: $('av-sym').value.trim().toUpperCase(), side: $('av-side').value || null, entryLow: n('av-lo'), entryHigh: n('av-hi'),
+      target: n('av-tp'), stop: n('av-sl'), thesis: $('av-note').value.trim(), validDays: parseInt($('av-days').value, 10) || 7 };
+    $('av-submit').disabled = true; msg($('av-msg'), '');
+    try {
+      const r = await api('/api/broker/advice', { method: 'POST', body });
+      msg($('av-msg'), `Đã gửi cho ${r.sentTo} khách.`, 'warn');
+      $('av-note').value = ''; loadExtras();
+    } catch (err) { msg($('av-msg'), err.message); }
+    finally { $('av-submit').disabled = false; }
+  }
+
   async function otp(action) {
     try {
       if (action === 'send') { await api('/api/dnse/otp', { method: 'POST', body: { action: 'send' } }); say('Đã gửi OTP về email đăng ký với DNSE.'); return; }
@@ -224,6 +273,11 @@
   document.addEventListener('click', (e) => {
     const t = e.target.closest('button'); if (!t || !t.closest('#view-desk')) return;
     if (t.hasAttribute('data-refresh-list')) return loadDesk(true);
+    if (t.hasAttribute('data-invite')) return invite();
+    if (t.hasAttribute('data-copy')) {
+      const el = $('invite-link'); el.select();
+      return navigator.clipboard?.writeText(el.value).then(() => say('Đã sao chép link mời.')).catch(() => { document.execCommand('copy'); say('Đã sao chép link mời.'); });
+    }
     if (t.dataset.client) return selectClient(t.dataset.client);
     if (t.dataset.dside) { D.side = t.dataset.dside; return renderForm(); }
     if (t.hasAttribute('data-refresh-client') && D.sel) return selectClient(D.sel.client.accountNo);
@@ -234,7 +288,7 @@
     }
     if (t.dataset.otp) return otp(t.dataset.otp);
   });
-  document.addEventListener('submit', (e) => { if (e.target.id === 'desk-form') createTicket(e); });
+  document.addEventListener('submit', (e) => { if (e.target.id === 'desk-form') createTicket(e); if (e.target.id === 'advice-form') sendAdvice(e); });
   document.addEventListener('input', (e) => {
     if (e.target.id === 'desk-q') { D.q = e.target.value; renderClients(); }
     if (e.target.id === 'dk-sym') { // gợi ý giá theo giá khớp hiện tại nếu mã có trên bảng giá
@@ -266,5 +320,5 @@
   });
 
   // Làm mới danh sách phiếu mỗi 20 giây khi đang ở màn khách hàng
-  setInterval(() => { if (D.broker && !$('view-desk').hidden) loadTickets(); }, 20000);
+  setInterval(() => { if (D.broker && !$('view-desk').hidden) { loadTickets(); loadExtras(); } }, 15000);
 })();

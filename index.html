@@ -19,6 +19,7 @@
       <a href="#cong-dong" data-view="community">Cộng đồng</a>
       <a href="#tin-nhan" data-view="chat">Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
       <a href="#khach-hang" data-view="desk" id="nav-desk" hidden>Khách hàng</a>
+      <a href="#tai-khoan" data-view="portal" id="nav-portal" hidden>Tài khoản của tôi<span class="nbadge" id="portal-badge"></span></a>
       <a href="#" aria-disabled="true" title="Sắp có">Backtest</a>
     </nav>
     <div class="search">
@@ -171,6 +172,10 @@
     <aside class="ctx" id="ctx" aria-label="Thông tin"></aside>
   </main>
 
+  <main class="portal" id="view-portal" hidden>
+    <div class="portal-wrap" id="portal-body"></div>
+  </main>
+
   <main class="desk" id="view-desk" hidden>
     <section class="desk-list" aria-label="Danh sách khách hàng">
       <div class="pane-title"><span>Khách hàng <span class="online" id="desk-count"></span></span><button class="link" data-refresh-list>Làm mới</button></div>
@@ -182,6 +187,7 @@
     <aside class="desk-side" aria-label="Phiếu lệnh">
       <div class="pane-title">Phiên giao dịch</div>
       <div class="desk-otp" id="desk-otp"></div>
+      <div class="desk-rt" id="desk-rt"></div>
       <div class="pane-title">Tạo phiếu lệnh</div>
       <form class="desk-form" id="desk-form" autocomplete="off" novalidate>
         <div class="desk-for" id="desk-for">Chọn khách ở cột bên trái.</div>
@@ -209,6 +215,26 @@
       </form>
       <div class="pane-title">Phiếu lệnh gần đây</div>
       <div class="desk-tickets" id="desk-tickets"></div>
+      <div class="pane-title">Khuyến nghị cho khách</div>
+      <form class="desk-form" id="advice-form" autocomplete="off" novalidate>
+        <div class="desk-row">
+          <label>Mã<input class="inp" id="av-sym" maxlength="10" placeholder="HPG"></label>
+          <label>Chiều<select class="inp" id="av-side"><option value="B">Mua</option><option value="S">Bán</option><option value="">Theo dõi</option></select></label>
+        </div>
+        <div class="desk-row">
+          <label>Vùng vào, từ<input class="inp" id="av-lo" inputmode="decimal" placeholder="20.0"></label>
+          <label>đến<input class="inp" id="av-hi" inputmode="decimal" placeholder="20.5"></label>
+        </div>
+        <div class="desk-row">
+          <label>Mục tiêu<input class="inp" id="av-tp" inputmode="decimal" placeholder="23.0"></label>
+          <label>Cắt lỗ<input class="inp" id="av-sl" inputmode="decimal" placeholder="19.0"></label>
+        </div>
+        <label>Luận điểm<textarea class="inp" id="av-note" rows="3" maxlength="2000" placeholder="Lý do, rủi ro, thời hạn nắm giữ dự kiến"></textarea></label>
+        <label>Hiệu lực (ngày)<input class="inp" id="av-days" inputmode="numeric" value="7"></label>
+        <div class="msgs" id="av-msg"></div>
+        <button type="submit" class="cta buy" id="av-submit">Gửi cho khách đã liên kết</button>
+      </form>
+      <div class="desk-tickets" id="advice-list"></div>
     </aside>
   </main>
 
@@ -289,6 +315,7 @@
 <script src="/js/vendor/lightweight-charts.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/desk.js"></script>
+<script src="/js/portal.js"></script>
 <script src="/js/account.js"></script>
 </body>
 </html>

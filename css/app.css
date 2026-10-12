@@ -526,3 +526,38 @@ dialog::backdrop{background:rgba(0,0,0,.72)}
   .desk-list{max-height:380px}.desk-main{max-height:none}
 }
 .dt-head .ghost{white-space:nowrap;flex:0 0 auto}
+
+/* ---------- Cổng khách hàng ---------- */
+.portal{min-height:0;overflow-y:auto;background:var(--black)}
+.portal-wrap{max-width:860px;margin:0 auto;padding:22px 18px 40px;display:flex;flex-direction:column;gap:22px}
+.portal h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.01em}
+.portal h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--faint)}
+.portal .lead{margin:4px 0 0;color:var(--muted);line-height:1.55;max-width:62ch}
+.pcard{border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);overflow:hidden}
+.pcard+.pcard{margin-top:10px}
+.pcard-body{padding:14px 16px}
+.pcard.attn{border-color:var(--ref)}
+.ticket-big{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.pmeta{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.5}
+.pnote{margin:10px 0 0;padding:9px 11px;border-radius:var(--radius-s);background:var(--black);border:1px solid var(--line-soft);color:var(--muted);font-size:12px;line-height:1.55}
+.pactions{display:flex;gap:8px;margin-top:12px}
+.pactions button{height:40px;padding:0 18px;border-radius:var(--radius-s);border:1px solid var(--line);background:none;color:var(--text);font-weight:600}
+.pactions .yes{background:var(--up);border-color:var(--up);color:#00170d;flex:1}
+.pactions .no{color:var(--muted)}
+.pactions button:disabled{opacity:.5;cursor:not-allowed}
+.adv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border-top:1px solid var(--line-soft)}
+.adv-grid div{padding:9px 16px;border-right:1px solid var(--line-soft)}
+.adv-grid span{display:block;color:var(--faint);font-size:11px}
+.adv-grid b{font-weight:600}
+.new-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--brand-ink);margin-right:6px;vertical-align:1px}
+.invite-box{display:flex;flex-direction:column;gap:8px}
+.invite-box .row{display:flex;gap:8px}
+.invite-box .inp{height:38px}
+.copy-box{display:flex;gap:6px;margin-top:8px}
+.copy-box input{flex:1;min-width:0;height:34px;font-size:12px}
+.copy-box button{height:34px;padding:0 12px;border:1px solid var(--line);border-radius:var(--radius-s);background:none;color:var(--text);font-weight:600;white-space:nowrap}
+.desk-rt{padding:0 12px 10px;font-size:12px;color:var(--muted);line-height:1.5}
+.desk-rt .dot{display:inline-block;margin-right:6px;vertical-align:1px}
+.desk-rt .dot.off{background:var(--faint)}
+.dt-invite{padding:12px 18px;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:6px}
+@media (max-width:720px){.pactions{flex-direction:column}.pactions button{width:100%}}
