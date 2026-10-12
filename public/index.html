@@ -17,12 +17,10 @@
     <nav class="nav" aria-label="Chính">
       <a href="#giao-dich" data-view="trade" aria-current="page">Giao dịch</a>
       <a href="#bang-gia" data-view="board">Bảng giá</a>
-      <a href="#cong-dong" data-view="community">Cộng đồng</a>
-      <a href="#tin-nhan" data-view="chat">Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
+      <a href="#cong-dong" data-view="community" data-social hidden>Cộng đồng</a>
+      <a href="#tin-nhan" data-view="chat" data-social hidden>Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
       <a href="#khach-hang" data-view="desk" id="nav-desk" hidden>Khách hàng</a>
-      <a href="#tu-van" data-view="advisory" id="nav-adv" hidden>Tư vấn</a>
       <a href="#tai-khoan" data-view="portal" id="nav-portal" hidden>Tài khoản của tôi<span class="nbadge" id="portal-badge"></span></a>
-      <a href="#" aria-disabled="true" title="Sắp có">Backtest</a>
     </nav>
     <div class="search">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -200,6 +198,7 @@
   <main class="portal" id="view-portal" hidden>
     <div class="portal-wrap" id="portal-body"></div>
     <div class="portal-wrap av-portal" id="portal-adv"></div>
+    <div class="portal-wrap av-portal" id="portal-more"></div>
   </main>
 
   <main class="adv" id="view-advisory" hidden>
@@ -207,6 +206,11 @@
   </main>
 
   <main class="desk" id="view-desk" hidden>
+    <nav class="subnav" aria-label="Khách hàng">
+      <button type="button" data-subnav="desk" aria-current="page">Lệnh &amp; tài sản</button>
+      <button type="button" data-subnav="clients">Tư vấn &amp; danh mục</button>
+      <button type="button" data-subnav="models">Danh mục mẫu</button>
+    </nav>
     <section class="desk-list" aria-label="Danh sách khách hàng">
       <div class="pane-title"><span>Khách hàng <span class="online" id="desk-count"></span></span><button class="link" data-refresh-list>Làm mới</button></div>
       <div class="desk-sum" id="desk-sum"></div>
@@ -287,7 +291,7 @@
 
   <footer class="statusbar">
     <span class="live"><span class="dot" aria-hidden="true"></span><span id="session"></span></span>
-    <span class="hide-s">Giá và biểu đồ lấy từ DNSE. Giao dịch thử bằng tiền ảo, không gửi lệnh tới công ty chứng khoán. Cộng đồng và tin nhắn vẫn là demo.</span>
+    <span class="hide-s">Giá và biểu đồ lấy từ DNSE. Màn Giao dịch dùng tiền ảo để thử, không gửi lệnh tới công ty chứng khoán.</span>
   </footer>
 </div>
 <dialog id="dlg" aria-labelledby="dlg-title">
@@ -336,7 +340,7 @@
         <button type="submit" class="btn-primary" id="auth-submit">Đăng nhập</button>
       </div>
     </form>
-    <p class="auth-note">Tài khoản Lật Bài dùng cho danh mục thử nghiệm và cộng đồng. Kết nối tới tài khoản chứng khoán thật là bước riêng.</p>
+    <p class="auth-note">Tài khoản Lật Bài dùng để giao dịch thử và, nếu bạn là khách của môi giới, để nhận khuyến nghị và xác nhận lệnh. Lật Bài không bao giờ hỏi mật khẩu tài khoản chứng khoán của bạn.</p>
   </div>
 </dialog>
 

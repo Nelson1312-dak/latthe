@@ -12,7 +12,7 @@
   const say = (m) => (typeof toast === 'function' ? toast(m) : console.log(m));
   const num = (v) => (v == null || v === '' || !Number.isFinite(+v) ? null : +v);
   const f1 = (v) => (num(v) == null ? '–' : (+v).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-  const pct = (v, sign = true) => (num(v) == null ? '–' : (sign && v > 0 ? '+' : '') + f1(v) + '%');
+  const pct = (v, sign = true) => (num(v) == null ? '–' : Math.abs(v) < 0.05 ? '0,0%' : (sign && v > 0 ? '+' : '') + f1(v) + '%');
   const cls = (v) => (num(v) == null || Math.abs(v) < 0.05 ? '' : v > 0 ? 'up' : 'down');
   const vnd = (v) => (num(v) == null ? '–' : Math.round(+v).toLocaleString('vi-VN'));
   const big = (v) => { const n = num(v); if (n == null) return '–'; const a = Math.abs(n); return a >= 1e9 ? (n / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' tỷ' : a >= 1e6 ? (n / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' tr' : vnd(n); };
@@ -111,9 +111,10 @@
 
   function shell() {
     $('adv-body').innerHTML = `
-      <div class="av-top"><div class="av-tabs big" role="tablist">
-        <button role="tab" data-atab="clients" aria-selected="${A.tab === 'clients'}">Danh mục khách hàng</button>
-        <button role="tab" data-atab="models" aria-selected="${A.tab === 'models'}">Danh mục mẫu</button></div>
+      <div class="av-top"><nav class="subnav" aria-label="Khách hàng">
+        <button type="button" data-subnav="desk">Lệnh &amp; tài sản</button>
+        <button type="button" data-subnav="clients" ${A.tab === 'clients' ? 'aria-current="page"' : ''}>Tư vấn &amp; danh mục</button>
+        <button type="button" data-subnav="models" ${A.tab === 'models' ? 'aria-current="page"' : ''}>Danh mục mẫu</button></nav>
         <span class="av-ai-status" id="av-ai-status"></span></div>
       <div class="av-grid" id="av-grid"></div>`;
     renderAiStatus();
@@ -182,10 +183,11 @@
     if (!a.model) return '<div class="empty">Gán danh mục mẫu cho khách để có đề xuất tái phân bổ.</div>';
     if (!r?.ok) return `<div class="msg err av-m">${esc(r?.error || 'Không tính được đề xuất.')}</div>`;
     const warn = r.warnings.map((w) => `<div class="msg warn av-m">${esc(w)}</div>`).join('');
-    if (!r.trades.length) return `${warn}<div class="av-ok">Danh mục đang nằm trong ngưỡng lệch ${f1(r.drift)} điểm %. Không cần mua bán.</div>`;
+    const made = A.made?.acc === a.client.accountNo ? `<div class="msg ${A.made.errs.length ? 'warn' : 'ok'} av-m av-made"><span>Đã tạo ${A.made.ok} phiếu lệnh${A.made.errs.length ? `, ${A.made.errs.length} phiếu lỗi: ${esc(A.made.errs.join('; '))}` : ''}. Khách xác nhận trong cổng khách hàng, sau đó bạn gửi lệnh ở màn Lệnh &amp; tài sản.</span><button class="link" data-subnav="desk">Mở Lệnh &amp; tài sản</button></div>` : '';
+    if (!r.trades.length) return `${made}${warn}<div class="av-ok">Danh mục đang nằm trong ngưỡng lệch ${f1(r.drift)} điểm %. Không cần mua bán.</div>`;
     const canTrade = a.client.canTrade;
     const nOrders = r.trades.reduce((x, t) => x + t.orders.length, 0);
-    return `${warn}<div class="av-scroll"><table><thead><tr><th>Lệnh</th><th>Mã</th><th class="r">Khối lượng</th><th class="r">Giá (nghìn)</th><th class="r">Giá trị</th><th>Chia lệnh</th><th>Lý do</th></tr></thead><tbody>
+    return `${made}${warn}<div class="av-scroll"><table><thead><tr><th>Lệnh</th><th>Mã</th><th class="r">Khối lượng</th><th class="r">Giá (nghìn)</th><th class="r">Giá trị</th><th>Chia lệnh</th><th>Lý do</th></tr></thead><tbody>
       ${r.trades.map((t) => `<tr><td class="${t.side === 'B' ? 'up' : 'down'}"><b>${t.side === 'B' ? 'Mua' : 'Bán'}</b></td><td><b>${esc(t.symbol)}</b></td><td class="r">${vnd(t.qty)}</td><td class="r">${k2(t.price)}</td><td class="r">${big(t.value)}</td>
         <td>${t.orders.length > 1 ? t.orders.map(vnd).join(' + ') : '–'}</td><td><small>${esc(t.reason)}</small></td></tr>`).join('')}</tbody></table></div>
       <div class="av-kv"><div><span>Lệch lớn nhất</span><b>${f1(r.maxDeviationBefore)} → ${f1(r.maxDeviationAfter)} điểm %</b></div><div><span>Vòng quay</span><b>${f1(r.turnoverPct)}%</b></div>
@@ -219,7 +221,8 @@
     if (A.tab === 'models') { renderModels(); renderEditor(); }
   }
   async function selectClient(acc) {
-    A.sel = acc; A.loading = true; A.data = null; renderClients(); renderMain();
+    A.sel = acc; A.loading = true; A.data = null; A.made = null; renderClients(); renderMain();
+    document.dispatchEvent(new CustomEvent('lb:pick-client', { detail: { account: acc, from: 'adv' } }));
     try {
       const d = await api('/api/broker/analytics?account=' + encodeURIComponent(acc));
       if (A.sel !== acc) return;
@@ -252,7 +255,8 @@
         ok++;
       } catch (e) { errs.push(`${t.symbol}: ${e.message}`); }
     }
-    A.creating = false; renderMain();
+    A.creating = false; A.made = { acc: a.client.accountNo, ok, errs };
+    renderMain();
     say(errs.length ? `Đã tạo ${ok}/${list.length} phiếu. Lỗi: ${errs.join('; ')}` : `Đã tạo ${ok} phiếu. Khách sẽ thấy trong cổng khách hàng để xác nhận.`);
   }
 
@@ -356,7 +360,6 @@
   /* ---------- Sự kiện (môi giới) ---------- */
   document.addEventListener('click', (e) => {
     const t = e.target.closest('button'); if (!t || !t.closest('#view-advisory')) return;
-    if (t.dataset.atab) { A.tab = t.dataset.atab; return shell(); }
     if (t.dataset.aclient) return selectClient(t.dataset.aclient);
     if (t.hasAttribute('data-areload')) return selectClient(A.sel);
     if (t.dataset.perf && t.dataset.scope === 'broker') { A.perf = t.dataset.perf; return renderMain(); }
@@ -392,15 +395,30 @@
     if (e.target.id === 'av-edit') { e.preventDefault(); return saveModel(e.target); }
   });
 
-  document.addEventListener('lb:view', (e) => {
+  // Thanh chuyển trong mục "Khách hàng" (dùng chung cho màn Lệnh & tài sản và màn Tư vấn) + nút "Tư vấn & danh mục" ở bàn lệnh
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-subnav],[data-to-adv]'); if (!t) return;
+    e.preventDefault();
+    const to = t.dataset.subnav || 'clients';
+    if (to === 'desk') return setView('desk');
+    A.tab = to;
+    if ($('view-advisory').hidden) return setView('advisory');
+    shell();
+  });
+  document.addEventListener('lb:pick-client', (e) => { if (e.detail?.from !== 'adv') A.pending = e.detail.account; });
+  document.addEventListener('lb:view', async (e) => {
     if (e.detail !== 'advisory') return;
     if (!A.broker) { if (typeof setView === 'function') setView('trade'); return; }
-    shell(); loadClients();
+    shell();
+    await loadClients();
+    // Khách vừa chọn ở màn Lệnh & tài sản: mở luôn khách đó
+    if (A.tab === 'clients' && A.pending && A.pending !== A.sel && A.clients.some((c) => c.accountNo === A.pending)) selectClient(A.pending);
+    else if (A.tab === 'clients' && A.sel) renderMain();
+    A.pending = null;
   });
   document.addEventListener('lb:user', async (e) => {
     A.broker = false;
     if (e.detail) { try { A.broker = !!(await api('/api/brokers')).owner; } catch { A.broker = false; } }
-    $('nav-adv').hidden = !A.broker;
     if (!A.broker && !$('view-advisory').hidden && typeof setView === 'function') setView('trade');
     if (A.broker && location.hash === '#tu-van') {
       let n = 0; const tryOpen = () => { if (typeof UNIVERSE !== 'undefined' && UNIVERSE.length) setView('advisory'); else if (++n < 40) setTimeout(tryOpen, 250); };
@@ -503,4 +521,29 @@
   document.addEventListener('submit', (e) => { if (e.target.id === 'av-quiz') { e.preventDefault(); submitQuiz(); } });
   document.addEventListener('lb:view', (e) => { if (e.detail === 'portal' && C.user) loadLinks(); });
   document.addEventListener('lb:user', (e) => { C.user = e.detail || null; C.links = []; C.data = {}; C.quiz = null; renderClient(); });
+
+  /* ================= Giới thiệu cho người mới (chưa đăng nhập) ================= */
+  const INTRO_KEY = 'lb_intro_closed';
+  const introClosed = () => { try { return localStorage.getItem(INTRO_KEY) === '1'; } catch { return false; } };
+  function renderIntro(user) {
+    let box = $('lb-intro');
+    if (user || introClosed()) { if (box) box.remove(); return; }
+    if (box) return;
+    box = document.createElement('aside');
+    box.id = 'lb-intro'; box.className = 'intro'; box.setAttribute('aria-label', 'Giới thiệu Lật Bài');
+    box.innerHTML = `<button class="intro-x" data-intro-close aria-label="Đóng giới thiệu">×</button>
+      <b>Lật Bài: đầu tư cùng môi giới của bạn</b>
+      <ul><li>Bảng giá và biểu đồ realtime từ DNSE</li><li>Giao dịch thử bằng tiền ảo, không mất tiền thật</li>
+        <li>Khách của môi giới: nhận khuyến nghị, xác nhận lệnh trong app, theo dõi hiệu suất danh mục</li></ul>
+      <div class="intro-act"><button class="btn-primary" data-intro-login>Đăng nhập hoặc tạo tài khoản</button><button class="link" data-intro-board>Xem bảng giá</button></div>`;
+    document.body.appendChild(box);
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-intro-close],[data-intro-login],[data-intro-board]'); if (!t) return;
+    if (t.hasAttribute('data-intro-login')) { $('btn-login')?.click(); return; }
+    if (t.hasAttribute('data-intro-board') && typeof setView === 'function') setView('board');
+    try { localStorage.setItem(INTRO_KEY, '1'); } catch { /* chế độ ẩn danh: chỉ đóng lần này */ }
+    $('lb-intro')?.remove();
+  });
+  document.addEventListener('lb:user', (e) => renderIntro(e.detail));
 })();

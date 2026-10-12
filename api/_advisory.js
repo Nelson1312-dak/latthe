@@ -119,7 +119,9 @@ export function factsForAI(a) {
   const st = a.performance.holding?.stats;
   const rt = a.performance.realized?.stats;
   const ms = a.performance.model?.stats;
-  const win = (s) => s && Object.fromEntries(Object.entries(s.windows).map(([k, v]) => [k, { danh_muc: r1(v.ret), vnindex: r1(v.bench) }]));
+  // So sánh với VN-Index viết sẵn thành câu: model nhỏ hay đảo dấu nếu phải tự trừ và tự diễn đạt
+  const vs = (d) => (Math.abs(d) < 0.3 ? 'ngang VN-Index' : `${d > 0 ? 'tốt hơn' : 'kém hơn'} VN-Index ${Math.abs(d).toFixed(1).replace('.', ',')} điểm %`);
+  const win = (s) => s && Object.fromEntries(Object.entries(s.windows).map(([k, v]) => [k, { danh_muc: r1(v.ret), vnindex: r1(v.bench), so_voi_vnindex: vs(v.ret - v.bench) }]));
   return {
     khau_vi_rui_ro: a.profile?.riskLabel || 'chưa đánh giá',
     danh_muc_mau: a.model ? { ten: a.model.name, muc_rui_ro: a.model.riskLabel, ty_trong_muc_tieu: a.model.weights, tien_mat_muc_tieu: a.model.cashPct } : 'chưa gán',
@@ -134,7 +136,7 @@ export function factsForAI(a) {
     hieu_suat_thuc_te: rt ? { tu_ngay: rt.from, tong: r1(rt.total), vnindex: r1(rt.benchTotal) } : 'chưa đủ dữ liệu',
     hieu_suat_danh_muc_mau: ms ? { theo_ky: win(ms) } : null,
     tai_phan_bo: a.rebalance?.ok ? {
-      lech_lon_nhat_truoc: r1(a.rebalance.maxDeviationBefore), lech_lon_nhat_sau: r1(a.rebalance.maxDeviationAfter),
+      do_lech_lon_nhat_hien_tai: r1(a.rebalance.maxDeviationBefore), do_lech_lon_nhat_sau_khi_thuc_hien_de_xuat: r1(a.rebalance.maxDeviationAfter),
       lenh: a.rebalance.trades.map((t) => ({ ma: t.symbol, lenh: t.side === 'B' ? 'mua' : 'bán', khoi_luong: t.qty, ly_do: t.reason })),
       vong_quay_pct: r1(a.rebalance.turnoverPct), luu_y: a.rebalance.warnings,
     } : null,

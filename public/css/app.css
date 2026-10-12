@@ -733,3 +733,46 @@ td.warn{color:var(--ref);font-weight:600}
 .av-q input{accent-color:var(--brand-ink)}
 @media (max-width:1180px){.adv{overflow:visible}.adv-wrap{height:auto}.av-grid,.av-grid.models{grid-template-columns:minmax(0,1fr)}.av-list{max-height:320px}}
 @media (max-width:720px){.av-profile,.av-form{grid-template-columns:1fr}.av-top{flex-direction:column;align-items:flex-start;padding-bottom:6px}.av-ai-status{white-space:normal}}
+
+/* ---------- Thanh chuyển trong mục Khách hàng ---------- */
+.subnav{display:flex;gap:2px;flex-wrap:wrap}
+.subnav button{height:42px;padding:0 12px;border:0;background:none;color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+.subnav button:hover{color:var(--text)}
+.subnav button[aria-current="page"]{color:var(--text);box-shadow:inset 0 -2px 0 var(--brand)}
+.desk{grid-template-rows:auto minmax(0,1fr)}
+.desk>.subnav{grid-column:1/-1;background:var(--black);padding:0 12px;border-bottom:1px solid var(--line-soft)}
+.av-made{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+@media (max-width:1180px){.desk{grid-template-rows:none;grid-template-areas:"tabs tabs""list main""side side"}.desk>.subnav{grid-area:tabs}}
+@media (max-width:720px){.desk{grid-template-areas:"tabs""list""main""side"}}
+
+/* ---------- Hộp đăng nhập: tab đang chọn ---------- */
+.types .tool[aria-selected="true"]{color:var(--text);background:var(--raise)}
+
+/* ---------- Menu trên màn hẹp: cuộn ngang thay vì tràn ---------- */
+@media (max-width:720px){.nav{overflow-x:auto;scrollbar-width:none;max-width:100%}.nav::-webkit-scrollbar{display:none}}
+.pmore{color:var(--muted)}
+.pmore summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--faint);padding:4px 0 10px}
+.pmore summary:hover{color:var(--text)}
+
+/* ---------- Giới thiệu cho người mới ---------- */
+.intro{position:fixed;left:16px;bottom:40px;z-index:40;width:min(360px,calc(100vw - 32px));padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);box-shadow:0 12px 40px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:8px;line-height:1.5}
+.intro b{font-size:14px}
+.intro ul{margin:0;padding-left:18px;color:var(--muted)}
+.intro-act{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:2px}
+.intro-act .btn-primary{height:34px;padding:0 14px}
+.intro-x{position:absolute;top:6px;right:8px;width:28px;height:28px;border:0;background:none;color:var(--faint);font-size:18px;line-height:1}
+.intro-x:hover{color:var(--text)}
+@media (max-width:720px){
+  .mkt-cards{grid-template-columns:1fr 1fr;gap:8px}
+  .mc{padding:9px 11px}.mc-v{font-size:18px}.mc-sub{display:none}
+  .intro{left:8px;right:8px;bottom:34px;width:auto;padding:12px 14px}
+  .intro ul{display:none}
+}
+/* Bảng giá trên điện thoại: chỉ giữ Mã, Giá, %, KL (bấm mã để xem đủ trần/sàn, độ sâu) */
+@media (max-width:720px){
+  .bd-table th:nth-child(2),.bd-table td:nth-child(2),.bd-table th:nth-child(3),.bd-table td:nth-child(3),
+  .bd-table th:nth-child(4),.bd-table td:nth-child(4),.bd-table th:nth-child(6),.bd-table td:nth-child(6),
+  .bd-table th:nth-child(n+9),.bd-table td:nth-child(n+9){display:none}
+  .bd-table td[colspan]{display:table-cell}
+  .bd-table{min-width:0}
+}

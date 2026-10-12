@@ -82,7 +82,10 @@ Chạy trên máy nhà, cạnh Postgres và Ollama. Hai việc:
 2. **Ảnh chụp danh mục**: thứ 2 đến thứ 6, sau 15:05 giờ VN, chụp tiền + danh mục của mọi khách care-by vào `trade.portfolio_snapshots`
    để tính hiệu suất thực tế. Chụp tay: `node --env-file=.env.local worker/advisory-worker.mjs --snapshot-now`.
 
-Biến môi trường (trong `.env.local`, đều có mặc định): `ADVISORY_MODEL` (mặc định `qwen3:8b`), `ADVISORY_OLLAMA_URL` (mặc định `http://127.0.0.1:11434`), `ADVISORY_TIMEOUT_MS`.
+Biến môi trường (trong `.env.local`, đều có mặc định): `ADVISORY_MODEL` (mặc định `qwen3:8b`), `ADVISORY_OLLAMA_URL` (mặc định `http://127.0.0.1:11434`), `ADVISORY_NUM_CTX` (mặc định 3072), `ADVISORY_TIMEOUT_MS`.
 
 Ollama cài bản Windows, model lưu ở `D:\ollama-models` (biến người dùng `OLLAMA_MODELS`), tự chạy khi đăng nhập. Đổi model: `ollama pull <tên>` rồi đặt `ADVISORY_MODEL` và khởi động lại tác vụ "Latbai worker advisory".
-GTX 1660 SUPER 6 GB: `qwen3:8b` (khoảng 5,2 GB) vừa đủ; muốn nhanh hơn dùng `qwen3:4b`.
+GTX 1660 SUPER 6 GB: `qwen3:8b` không vừa trọn VRAM (khoảng 25% chạy trên CPU), mỗi nhận xét mất 25 đến 50 giây. Đã bật hai biến người dùng
+`OLLAMA_FLASH_ATTENTION=1` và `OLLAMA_KV_CACHE_TYPE=q8_0`, và worker dùng ngữ cảnh 3.072 token (`ADVISORY_NUM_CTX`), giảm từ khoảng 127 xuống 40 giây.
+Muốn nhanh hơn nữa (nằm gọn trong GPU, chất lượng thấp hơn): `ollama pull qwen3:4b` rồi đặt `ADVISORY_MODEL=qwen3:4b`.
+Dữ kiện gửi AI có sẵn câu so sánh với VN-Index ("tốt hơn VN-Index 0,5 điểm %") vì model nhỏ hay đảo dấu khi phải tự trừ.

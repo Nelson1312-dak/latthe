@@ -35,7 +35,7 @@ export async function callOllama(messages, { model, ollama, timeoutMs } = config
   try {
     const r = await fetch(`${ollama}/api/chat`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
-      body: JSON.stringify({ model, messages, stream: false, think: false, options: { temperature: 0.3, num_ctx: 6144 } }),
+      body: JSON.stringify({ model, messages, stream: false, think: false, options: { temperature: 0.3, num_ctx: Number(process.env.ADVISORY_NUM_CTX) || 3072 } }),
     });
     const text = await r.text();
     if (!r.ok) throw new Error(`Ollama HTTP ${r.status}: ${text.slice(0, 200)}`);

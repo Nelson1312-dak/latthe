@@ -14,6 +14,20 @@
   const k = (v) => { const n = num(v); return n == null ? null : n > 1000 ? n / 1000 : n; };
   const px = (v) => (k(v) == null ? '–' : k(v).toFixed(2));
   const hhmm = (s) => { const d = new Date(s); return Number.isNaN(+d) ? '' : d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }); };
+  /** Gộp các deal cùng mã thành một dòng: cộng khối lượng, giá vốn bình quân gia quyền (nghìn đồng). */
+  function groupPositions(list) {
+    const m = new Map();
+    for (const p of list) {
+      const q = num(p.openQuantity ?? p.accumulateQuantity ?? p.quantity) || 0;
+      if (!q) continue;
+      const g = m.get(p.symbol) || { symbol: p.symbol, qty: 0, costSum: 0, costQty: 0, mkt: null };
+      g.qty += q;
+      if (k(p.costPrice) != null) { g.costSum += k(p.costPrice) * q; g.costQty += q; }
+      if (k(p.marketPrice) != null) g.mkt = k(p.marketPrice);
+      m.set(p.symbol, g);
+    }
+    return [...m.values()].map((g) => ({ symbol: g.symbol, qty: g.qty, cost: g.costQty ? g.costSum / g.costQty : null, mkt: g.mkt }));
+  }
   const localNow = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 16);
 
   const STATUS = {
@@ -76,7 +90,7 @@
     const { client: c, balance, positions, orders, loading } = D.sel;
     const head = `<div class="dt-head"><div><h1>${esc(c.name || c.accountNo)}</h1>
       <p>Tiểu khoản ${esc(c.accountNo)}${c.custodyCode ? ' · Lưu ký ' + esc(c.custodyCode) : ''} · ${c.canTrade ? '<span class="role trade">Ủy quyền giao dịch</span>' : '<span class="role view">Chỉ theo dõi</span>'}</p></div>
-      <div style="display:flex;gap:6px;flex:0 0 auto"><button class="ghost" data-invite style="height:32px;padding:0 12px;white-space:nowrap">Mời khách</button><button class="ghost" data-refresh-client style="height:32px;padding:0 12px;white-space:nowrap">Làm mới</button></div></div>`;
+      <div style="display:flex;gap:6px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end"><button class="ghost" data-to-adv style="height:32px;padding:0 12px;white-space:nowrap">Tư vấn &amp; danh mục</button><button class="ghost" data-invite style="height:32px;padding:0 12px;white-space:nowrap">Mời khách</button><button class="ghost" data-refresh-client style="height:32px;padding:0 12px;white-space:nowrap">Làm mới</button></div></div>`;
     const linked = D.links.some((l) => l.account_no === c.accountNo);
     const inv = D.invite && D.invite.account === c.accountNo
       ? `<div class="dt-invite"><b>Link mời cho ${esc(c.name || c.accountNo)}</b><small>Gửi riêng cho khách (Zalo, SMS). Dùng được một lần, hết hạn ${esc(hhmm(D.invite.expiresAt))}. Link này chỉ hiện ở đây một lần.</small>
@@ -90,13 +104,13 @@
          <div><span>Có thể rút</span><b>${vnd(st.withdrawableCash)}</b></div><div><span>Dư nợ</span><b class="${num(st.totalDebt) ? 'down' : ''}">${vnd(st.totalDebt)}</b></div>
          <div><span>Tổng tài sản ròng</span><b>${vnd(c.nav.total)}</b></div></div>`;
 
-    const pos = listOf(positions, ['deals', 'positions', 'data']).filter((p) => (p.status || 'OPEN') === 'OPEN');
+    const pos = groupPositions(listOf(positions, ['deals', 'positions', 'data']).filter((p) => (p.status || 'OPEN') === 'OPEN'));
     const posHtml = positions?.error ? `<div class="msg err" style="margin:0 18px">${esc(positions.error)}</div>`
       : !pos.length ? '<div class="empty">Khách chưa nắm giữ mã nào.</div>'
       : `<table><thead><tr><th>Mã</th><th class="r">KL</th><th class="r">Giá vốn</th><th class="r">Giá TT</th><th class="r">Lãi/lỗ</th><th class="r">%</th></tr></thead><tbody>${pos.map((p) => {
-          const q = num(p.openQuantity ?? p.accumulateQuantity ?? p.quantity) || 0, cost = k(p.costPrice), mkt = k(p.marketPrice);
+          const q = p.qty, cost = p.cost, mkt = p.mkt;
           const pl = cost != null && mkt != null ? (mkt - cost) * 1000 * q : null, pct = cost ? (mkt - cost) / cost * 100 : null, cls = pl == null ? '' : pl >= 0 ? 'up' : 'down';
-          return `<tr><td><button class="link" data-goto="${esc(p.symbol)}">${esc(p.symbol)}</button></td><td class="r">${q.toLocaleString('vi-VN')}</td><td class="r">${px(p.costPrice)}</td><td class="r">${px(p.marketPrice)}</td>
+          return `<tr><td><button class="link" data-goto="${esc(p.symbol)}">${esc(p.symbol)}</button></td><td class="r">${q.toLocaleString('vi-VN')}</td><td class="r">${px(p.cost)}</td><td class="r">${px(p.mkt)}</td>
             <td class="r ${cls}">${pl == null ? '–' : (pl >= 0 ? '+' : '') + Math.round(pl).toLocaleString('vi-VN')}</td><td class="r ${cls}">${pct == null ? '–' : (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%'}</td></tr>`;
         }).join('')}</tbody></table>`;
 
@@ -184,6 +198,7 @@
     const c = D.clients.find((x) => x.accountNo === acc);
     if (!c) return;
     D.sel = { client: c, loading: true };
+    document.dispatchEvent(new CustomEvent('lb:pick-client', { detail: { account: acc, from: 'desk' } }));
     renderClients(); renderDetail(); renderForm();
     try {
       const d = await api('/api/broker/client?account=' + encodeURIComponent(acc));
@@ -298,11 +313,16 @@
   });
   document.addEventListener('change', (e) => { if (['dk-type', 'dk-src'].includes(e.target.id)) renderForm(); });
 
-  document.addEventListener('lb:view', (e) => {
+  document.addEventListener('lb:pick-client', (e) => { if (e.detail?.from !== 'desk') D.pending = e.detail.account; });
+  document.addEventListener('lb:view', async (e) => {
     if (e.detail !== 'desk') return;
     if (!D.broker) { if (typeof setView === 'function') setView('trade'); return; }
     if (!$('dk-at').value) $('dk-at').value = localNow();
-    renderDetail(); renderForm(); loadDesk();
+    renderDetail(); renderForm();
+    await loadDesk();
+    // Khách vừa chọn ở màn Tư vấn: mở luôn khách đó
+    if (D.pending && D.pending !== D.sel?.client?.accountNo && D.clients.some((x) => x.accountNo === D.pending)) selectClient(D.pending);
+    D.pending = null;
   });
 
   document.addEventListener('lb:user', async (e) => {

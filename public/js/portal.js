@@ -9,12 +9,10 @@
   const say = (m) => (typeof toast === 'function' ? toast(m) : console.log(m));
   const num = (v) => (v == null || v === '' || !Number.isFinite(+v) ? null : +v);
   const vnd = (v) => (num(v) == null ? '–' : Math.round(+v).toLocaleString('vi-VN') + ' đ');
-  const k = (v) => { const n = num(v); return n == null ? null : n > 1000 ? n / 1000 : n; };
-  const px = (v) => (k(v) == null ? '–' : k(v).toFixed(2));
   const when = (s) => { const d = new Date(s); return Number.isNaN(+d) ? '' : d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }); };
   const day = (s) => { const d = new Date(s); return Number.isNaN(+d) ? '' : d.toLocaleDateString('vi-VN'); };
 
-  const P = { user: null, data: null, port: {}, busy: false, token: null, loading: false };
+  const P = { user: null, data: null, busy: false, token: null, loading: false };
   const TOKEN_KEY = 'lb_invite';
 
   async function api(url, opts = {}) {
@@ -75,21 +73,9 @@
     return `<div class="pcard"><div class="pcard-body" style="padding:11px 16px"><div style="display:flex;justify-content:space-between;gap:10px"><b class="${t.side === 'B' ? 'up' : 'down'}">${esc(tkText(t))}</b><span class="pmeta" style="margin:0">${esc(when(t.created_at))}</span></div>
       <div class="pmeta">${esc(STATUS[t.status] || t.status)}${t.dnse_order_id ? ' · lệnh #' + esc(t.dnse_order_id) : ''}${t.dnse_status ? ' · DNSE: ' + esc(t.dnse_status) : ''}</div></div></div>`;
   }
-  function portfolioCard(acc) {
-    const p = P.port[acc];
-    if (!p) return '<div class="pmeta">Đang tải…</div>';
-    if (p.error) return `<div class="msg warn">${esc(p.error)}</div>`;
-    const st = p.balance?.stock || {};
-    const list = (Array.isArray(p.positions) ? p.positions : p.positions?.deals || []).filter((x) => (x.status || 'OPEN') === 'OPEN');
-    return `<div class="adv-grid" style="border-top:0"><div><span>Tiền khả dụng</span><b>${vnd(st.availableCash)}</b></div><div><span>Tổng tiền</span><b>${vnd(st.totalCash)}</b></div><div><span>Dư nợ</span><b>${vnd(st.totalDebt)}</b></div></div>`
-      + (list.length ? `<table><thead><tr><th>Mã</th><th class="r">KL</th><th class="r">Giá vốn</th><th class="r">Giá TT</th><th class="r">Lãi/lỗ</th></tr></thead><tbody>${list.map((x) => {
-        const q = num(x.openQuantity ?? x.accumulateQuantity) || 0, c = k(x.costPrice), m = k(x.marketPrice), pl = c != null && m != null ? (m - c) * 1000 * q : null;
-        return `<tr><td><b>${esc(x.symbol)}</b></td><td class="r">${q.toLocaleString('vi-VN')}</td><td class="r">${px(x.costPrice)}</td><td class="r">${px(x.marketPrice)}</td><td class="r ${pl == null ? '' : pl >= 0 ? 'up' : 'down'}">${pl == null ? '–' : (pl >= 0 ? '+' : '') + Math.round(pl).toLocaleString('vi-VN')}</td></tr>`;
-      }).join('')}</tbody></table>` : '<div class="pmeta" style="padding:0 16px 12px">Chưa nắm giữ mã nào.</div>');
-  }
-
   function render() {
     const box = $('portal-body'), d = P.data;
+    $('portal-more').innerHTML = '';
     if (!P.user) { box.innerHTML = '<div><h1>Tài khoản của tôi</h1><p class="lead">Đăng nhập để xem khuyến nghị và xác nhận lệnh từ môi giới của bạn.</p></div>'; return; }
     if (P.loading && !d) { box.innerHTML = '<div class="empty">Đang tải…</div>'; return; }
     const tok = savedToken();
@@ -103,9 +89,9 @@
     box.innerHTML = `<div><h1>Tài khoản của tôi</h1><p class="lead">Bạn đã liên kết ${d.links.length} tiểu khoản. Mọi lệnh môi giới đặt thay bạn đều cần bạn xác nhận ở đây trước.</p></div>
       ${d.pending.length ? `<section><h2>Cần bạn xác nhận (${d.pending.length})</h2>${d.pending.map(pendingCard).join('')}</section>` : ''}
       <section><h2>Khuyến nghị từ môi giới</h2>${d.advice.length ? d.advice.map(adviceCard).join('') : '<div class="pmeta">Chưa có khuyến nghị nào.</div>'}</section>
-      <section><h2>Tài sản của tôi</h2>${d.links.map((l) => `<div class="pcard"><div class="pcard-body" style="padding:11px 16px"><b>${esc(l.client_name || l.account_no)}</b><span class="pmeta"> · tiểu khoản ${esc(l.account_no)}</span></div>${portfolioCard(l.account_no)}</div>`).join('')}</section>
-      ${d.tickets.length ? `<section><h2>Lệnh gần đây</h2>${d.tickets.slice(0, 15).map(ticketRow).join('')}</section>` : ''}
-      <section><h2>Liên kết thêm</h2>${invite}</section>`;
+      ${d.tickets.length ? `<section><h2>Lệnh gần đây</h2>${d.tickets.slice(0, 15).map(ticketRow).join('')}</section>` : ''}`;
+    // Danh mục, tiền, hiệu suất: mục "Danh mục và hiệu suất" (js/advisory.js). Liên kết thêm tiểu khoản: cuối trang.
+    $('portal-more').innerHTML = `<details class="pmore"><summary>Liên kết thêm tiểu khoản khác</summary>${invite}</details>`;
   }
 
   /* ---------- Tải dữ liệu ---------- */
@@ -115,14 +101,8 @@
     try { P.data = await api('/api/portal/summary'); } catch (e) { P.data = { linked: false, links: [], pending: [], tickets: [], advice: [] }; say(e.message); }
     P.loading = false;
     updateBadge(); render();
-    (P.data.links || []).forEach((l) => loadPortfolio(l.account_no));
     // đánh dấu đã xem các khuyến nghị đang hiển thị
     (P.data.advice || []).filter((a) => !a.seen).forEach((a) => api('/api/portal/advice-seen', { method: 'POST', body: { id: a.id } }).catch(() => {}));
-  }
-  async function loadPortfolio(acc) {
-    try { P.port[acc] = await api('/api/portal/portfolio?account=' + encodeURIComponent(acc)); }
-    catch (e) { P.port[acc] = { error: e.message }; }
-    if (!$('view-portal').hidden) render();
   }
   function updateBadge() {
     const n = P.data?.pending?.length || 0;
@@ -160,7 +140,7 @@
 
   document.addEventListener('lb:view', (e) => { if (e.detail === 'portal') load(); });
   document.addEventListener('lb:user', async (e) => {
-    P.user = e.detail || null; P.data = null; P.port = {};
+    P.user = e.detail || null; P.data = null;
     if (!P.user) { updateBadge(); render(); if (!$('view-portal').hidden && typeof setView === 'function') setView('trade'); return; }
     const t = savedToken();
     if (t) { // vừa đăng nhập xong, nhận lời mời đang chờ

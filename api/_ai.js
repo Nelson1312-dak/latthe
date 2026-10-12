@@ -13,11 +13,13 @@ const RULES = `Quy tắc bắt buộc:
 - Viết tiếng Việt, ngắn gọn, giọng chuyên nghiệp, dành cho môi giới đọc (không phải gửi thẳng cho khách).
 - Không hứa hẹn lợi nhuận, không dự báo giá. Không viết "chắc chắn", "đảm bảo".
 - Hiệu suất "giữ nguyên" là giả định (giữ đúng danh mục hiện tại trong quá khứ), phải nói rõ khi nhắc tới.
+- Khi so với VN-Index, chép nguyên văn câu trong trường "so_voi_vnindex" của kỳ đó (không tự tính, không đổi "tốt hơn"/"kém hơn"); nhắc cả kỳ 1M và kỳ dài nhất có (1Y hoặc 6M).
+- Độ lệch hiện tại so với danh mục mẫu là "do_lech_lon_nhat_hien_tai"; đừng nhầm với độ lệch sau khi thực hiện đề xuất.
 - Số phần trăm viết dạng 12,5%.`;
 
 const TASK = {
   portfolio_review: `Viết nhận xét danh mục, tối đa 220 chữ, đúng 4 mục có tiêu đề:
-1. Tình trạng: 2-3 câu về cơ cấu và hiệu suất so với VN-Index.
+1. Tình trạng: 2-3 câu về cơ cấu và hiệu suất so với VN-Index (dùng câu so sánh có sẵn).
 2. Rủi ro chính: tối đa 3 gạch đầu dòng, ưu tiên các mục trong "canh_bao".
 3. So với khẩu vị và danh mục mẫu: độ phù hợp, độ lệch.
 4. Gợi ý trao đổi với khách: 2-3 câu hỏi hoặc điểm môi giới nên trao đổi.`,

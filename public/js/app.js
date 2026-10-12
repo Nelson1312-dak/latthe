@@ -80,7 +80,7 @@ const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
 const fP = u => P(u).toFixed(2);
-const fN = n => Math.round(n).toLocaleString("en-US");
+const fN = n => Math.round(n).toLocaleString("vi-VN");
 const fVND = n => fN(n)+" đ";
 const fVol = n => n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":String(n);
 function cls(m,u){ if(u>=m.ceilU) return "ceil"; if(u<=m.floorU) return "floor"; if(u===m.refU) return "ref"; return u>m.refU?"up":"down"; }
@@ -460,11 +460,17 @@ function renderChat(){
 function chatPush(a,t,role){CHAT.push({a,t,role,at:new Date().toTimeString().slice(0,5)}); if(CHAT.length>80)CHAT.shift(); renderChat(); renderTrend();}
 function livePrices(){ document.querySelectorAll("[data-live]").forEach(el=>{const m=M[el.dataset.live];el.textContent=fP(m.lastU);el.className=cls(m,m.lastU);}); }
 
+/* Cộng đồng và Tin nhắn hiện chỉ có dữ liệu mẫu (người dùng, bài viết, tin nhắn tự sinh), nên ẩn khỏi menu cho tới khi làm thật.
+   Bật lại để xem bản demo: SOCIAL_DEMO = true. */
+const SOCIAL_DEMO=false;
+const NAV_OF={advisory:"desk"};
 const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#cong-dong"],chat:["view-chat","#tin-nhan"],desk:["view-desk","#khach-hang"],portal:["view-portal","#tai-khoan"],board:["view-board","#bang-gia"],advisory:["view-advisory","#tu-van"]};
 function setView(v){
   if(!UNIVERSE.length) return;
+  if(!SOCIAL_DEMO&&(v==="community"||v==="chat")) v="trade";
   CS.view=v; Object.entries(VIEWS).forEach(([k,[id]])=>$(id).hidden=k!==v);
-  document.querySelectorAll(".nav a[data-view]").forEach(a=>{if(a.dataset.view===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
+  const navV=NAV_OF[v]||v; // màn Tư vấn nằm trong mục "Khách hàng"
+  document.querySelectorAll(".nav a[data-view]").forEach(a=>{if(a.dataset.view===navV)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
   if(v==="community"){renderCNav();renderFeed();renderTrend();CS.forceScroll=true;renderChat();}
   if(v==="chat"){renderInbox();renderThreadV();}
   if(history.replaceState) history.replaceState(null,"",VIEWS[v][1]);
@@ -739,7 +745,7 @@ function tick(){
     vol.update({time:m.today.time,value:m.today.value,color:m.today.close>=m.today.open?"rgba(46,189,133,.35)":"rgba(246,70,93,.35)"}); shown[shown.length-1]={...m.today}; legend(shown[shown.length-1]); }
   else if(last){ drawChart(false); }
   renderHead(); renderBook(); updateWLPrices(); renderTicket(); if(S.tab!=="cond") renderPanel();
-  communityTick(); chatTick();
+  if(SOCIAL_DEMO){ communityTick(); chatTick(); }
   document.dispatchEvent(new CustomEvent("lb:tick"));
 }
 async function poll(){
@@ -761,8 +767,9 @@ async function boot(){
   MKT.polledOnce=true;
   renderIndices(); renderWL(); selectSym(UNIVERSE.some(x=>x.s===S.sym)?S.sym:UNIVERSE[0].s); renderPanel(); setStatus(false);
   setInterval(tick, 2000); schedulePoll();
-  if(location.hash==="#cong-dong") setView("community");
-  if(location.hash==="#tin-nhan") setView("chat");
+  if(SOCIAL_DEMO){ if(location.hash==="#cong-dong") setView("community"); if(location.hash==="#tin-nhan") setView("chat"); }
+  else if(location.hash==="#cong-dong"||location.hash==="#tin-nhan") history.replaceState?.(null,"","#giao-dich");
 }
+if(SOCIAL_DEMO) document.querySelectorAll("[data-social]").forEach(a=>a.hidden=false);
 renderNavBadge();
 boot();
