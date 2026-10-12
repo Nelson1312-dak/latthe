@@ -28,7 +28,7 @@ export function route(methods, fn, { auth = false } = {}) {
       const out = await fn({ req, res, uid, body: bodyOf(req) });
       if (!res.writableEnded) res.status(200).json(out ?? { ok: true });
     } catch (e) {
-      if (e?.status && e.status < 500) return res.status(e.status).json({ error: e.message });
+      if (e?.status && (e.status < 500 || e.expose)) return res.status(e.status).json({ error: e.message, code: e.code });
       console.error('[api]', req.url, e?.code || '', e?.message);
       const down = e instanceof DbError && (e.code === 'unreachable' || e.code === 'config');
       return res.status(down ? 503 : 500).json({ error: down ? 'Hệ thống dữ liệu đang tạm gián đoạn, thử lại sau ít phút.' : 'Lỗi hệ thống, thử lại sau.' });
