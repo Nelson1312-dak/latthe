@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lật Bài — Giao dịch</title>
+<meta name="description" content="Bản demo màn hình giao dịch chứng khoán của Lật Bài: biểu đồ, bước giá, đặt lệnh, cộng đồng và trợ lý AI.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/giao-dich/giao-dich.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="logo"><div class="logo-card" aria-hidden="true"></div><span class="logo-text">Lật Bài</span></div>
+    <nav class="nav" aria-label="Chính">
+      <a href="#giao-dich" data-view="trade" aria-current="page">Giao dịch</a>
+      <a href="#cong-dong" data-view="community">Cộng đồng</a>
+      <a href="#tin-nhan" data-view="chat">Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
+      <a href="#" aria-disabled="true" title="Sắp có">Backtest</a>
+    </nav>
+    <div class="search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" placeholder="Tìm mã, ví dụ HPG" aria-label="Tìm mã chứng khoán" autocomplete="off">
+    </div>
+    <div class="indices" id="indices"></div>
+    <div class="acct"><span class="acct-name">0001 234 567</span><span class="avatar" aria-hidden="true">H</span></div>
+  </header>
+
+  <main class="workspace" id="view-trade">
+    <section class="wl" aria-label="Danh sách theo dõi">
+      <div class="pane-title">Theo dõi <span id="wl-count"></span></div>
+      <div class="wl-list" id="wl"></div>
+    </section>
+
+    <section class="head" aria-live="polite">
+      <div class="head-sym"><h1 id="h-sym">HPG</h1><small id="h-name"></small></div>
+      <div class="head-px"><strong id="h-px"></strong><span id="h-ch"></span></div>
+      <div class="head-stats">
+        <div><span>Trần</span><b class="ceil" id="h-ceil"></b></div>
+        <div><span>TC</span><b class="ref" id="h-ref"></b></div>
+        <div><span>Sàn</span><b class="floor" id="h-floor"></b></div>
+        <div><span>Cao / Thấp</span><b id="h-hl"></b></div>
+        <div><span>Tổng KL</span><b id="h-vol"></b></div>
+      </div>
+    </section>
+
+    <section class="chart-pane" aria-label="Biểu đồ">
+      <div class="chart-tools">
+        <div class="seg" role="group" aria-label="Khung thời gian">
+          <button class="tool" data-tf="D" aria-pressed="true">1D</button>
+          <button class="tool" data-tf="W" aria-pressed="false">1W</button>
+          <button class="tool" data-tf="M" aria-pressed="false">1M</button>
+        </div>
+        <div class="seg" role="group" aria-label="Kiểu biểu đồ">
+          <button class="tool" data-style="candle" aria-pressed="true">Nến</button>
+          <button class="tool" data-style="line" aria-pressed="false">Đường</button>
+        </div>
+        <div class="seg" role="group" aria-label="Chỉ báo">
+          <button class="tool" data-ind="ma20" aria-pressed="true">MA20</button>
+          <button class="tool" data-ind="ma50" aria-pressed="true">MA50</button>
+          <button class="tool" data-ind="vol" aria-pressed="true">Khối lượng</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="legend" id="legend"></div>
+        <div id="chart"></div>
+        <a class="chart-credit" href="https://www.tradingview.com/" target="_blank" rel="noopener">Charts by TradingView</a>
+      </div>
+    </section>
+
+    <section class="book" aria-label="Sổ lệnh thị trường">
+      <div class="pane-title">Bước giá</div>
+      <div class="ob-head"><span>Giá</span><span>KL</span></div>
+      <div class="ob" id="ob"></div>
+      <div class="tape">
+        <div class="tape-head"><span>Giờ</span><span>Giá</span><span>KL</span></div>
+        <div class="tape-list" id="tape"></div>
+      </div>
+    </section>
+
+    <section class="ticket" aria-label="Đặt lệnh">
+      <div class="card" id="card">
+        <div class="face front">
+          <div class="sides">
+            <button class="side-btn buy" data-side="B" aria-pressed="true">Mua</button>
+            <button class="side-btn sell" data-side="S" aria-pressed="false">Bán</button>
+          </div>
+          <div class="types" role="group" aria-label="Loại lệnh">
+            <button class="tool" data-type="LO" aria-pressed="true">LO</button>
+            <button class="tool" data-type="MTL" aria-pressed="false">MTL</button>
+            <button class="tool" data-type="ATO" aria-pressed="false">ATO</button>
+            <button class="tool" data-type="ATC" aria-pressed="false">ATC</button>
+          </div>
+          <div class="form">
+            <div class="field">
+              <label for="f-px"><span>Giá (nghìn đồng)</span><span id="tick-note"></span></label>
+              <div class="stepper"><button type="button" data-step="px" data-d="-1" aria-label="Giảm giá">−</button><input id="f-px" inputmode="decimal"><button type="button" data-step="px" data-d="1" aria-label="Tăng giá">+</button></div>
+              <div class="band"><span class="floor" id="b-floor"></span><span class="ref" id="b-ref"></span><span class="ceil" id="b-ceil"></span></div>
+            </div>
+            <div class="field">
+              <label for="f-qty"><span>Khối lượng</span><span id="max-note"></span></label>
+              <div class="stepper"><button type="button" data-step="qty" data-d="-1" aria-label="Giảm khối lượng">−</button><input id="f-qty" inputmode="numeric" value="1000"><button type="button" data-step="qty" data-d="1" aria-label="Tăng khối lượng">+</button></div>
+              <div class="chips"><button data-pct="25">25%</button><button data-pct="50">50%</button><button data-pct="75">75%</button><button data-pct="100">Tối đa</button></div>
+            </div>
+            <div class="summary">
+              <span>Giá trị lệnh</span><b id="s-val"></b>
+              <span>Phí ước tính</span><b id="s-fee"></b>
+              <span id="s-tax-l">Thuế bán</span><b id="s-tax"></b>
+            </div>
+            <div class="msgs" id="msgs"></div>
+            <button class="cta buy" id="cta">Mua HPG</button>
+          </div>
+          <div class="acct-box">
+            <span>Sức mua</span><b id="a-pp"></b>
+            <span>Khả dụng bán</span><b id="a-sell"></b>
+          </div>
+        </div>
+        <div class="face back" aria-hidden="true">
+          <div class="back-inner">
+            <div><div class="back-kicker">Kiểm tra lại trước khi gửi</div><p class="back-title" id="c-title"></p></div>
+            <div class="back-grid" id="c-grid"></div>
+            <div class="msgs" id="c-msgs"></div>
+            <div class="back-actions">
+              <button class="ghost" id="c-back">Sửa lệnh</button>
+              <button class="cta" id="c-ok">Gửi lệnh</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Tài khoản">
+      <div class="tabs" role="tablist">
+        <button class="tool" role="tab" data-tab="orders" aria-selected="true">Sổ lệnh</button>
+        <button class="tool" role="tab" data-tab="pos" aria-selected="false">Danh mục</button>
+        <button class="tool" role="tab" data-tab="cond" aria-selected="false">Lệnh điều kiện</button>
+      </div>
+      <div class="tab-body" id="tab-body"></div>
+    </section>
+  </main>
+
+  <main class="msgv" id="view-chat" hidden>
+    <section class="inbox" aria-label="Hộp thư">
+      <div class="pane-title">Tin nhắn</div>
+      <div class="inbox-list" id="inbox"></div>
+    </section>
+    <section class="thread-v" aria-label="Cuộc trò chuyện">
+      <div class="th-head" id="th-head"></div>
+      <div class="th-body" id="th-body" aria-live="polite"></div>
+      <div class="prompts" id="prompts"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <textarea class="inp" id="m-in" rows="1" aria-label="Nhập tin nhắn"></textarea>
+        <button type="submit">Gửi</button>
+      </form>
+      <div class="composer-note" id="m-note"></div>
+    </section>
+    <aside class="ctx" id="ctx" aria-label="Thông tin"></aside>
+  </main>
+
+  <main class="community" id="view-community" hidden>
+    <section class="cnav" id="cnav" aria-label="Chuyên mục"></section>
+    <section class="feed" id="feed" aria-label="Bài viết"></section>
+    <section class="cside" aria-label="Phòng chung">
+      <div class="pane-title">Mã được bàn nhiều <span class="online">24 giờ qua</span></div>
+      <div class="trend" id="trend"></div>
+      <div class="chat">
+        <div class="pane-title">Phòng chung <span class="online"><span class="dot" aria-hidden="true"></span><span id="online"></span></span></div>
+        <div class="chat-list" id="chat" aria-live="polite"></div>
+        <form class="chat-form" id="chat-form" autocomplete="off">
+          <input class="inp" id="chat-in" placeholder="Nhắn vào phòng chung, gõ $ để gắn mã" aria-label="Tin nhắn" maxlength="300">
+          <button type="submit">Gửi</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live"><span class="dot" aria-hidden="true"></span><span id="session"></span></span>
+    <span class="hide-s">Bản demo. Giá HPG là dữ liệu thật đến 09/10/2026 (nguồn DNSE), các mã khác, phiên hiện tại, cộng đồng và tin nhắn là mô phỏng. Lệnh không được gửi đi đâu.</span>
+  </footer>
+</div>
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <form class="dlg" id="dlg-form" method="dialog" novalidate>
+    <h2 id="dlg-title">Viết bài mới</h2>
+    <label>Đăng vào<select class="inp" id="d-where"></select></label>
+    <label>Tiêu đề<input class="inp" id="d-title" maxlength="140" placeholder="Ví dụ: $HPG có giữ được vùng 20 không?"></label>
+    <label>Nội dung<textarea id="d-body" rows="6" placeholder="Chia sẻ số liệu, lập luận và nguồn. Gõ $MÃ để gắn giá trực tiếp."></textarea></label>
+    <label class="check"><input type="checkbox" id="d-hold"> Tôi đang nắm giữ mã được nhắc trong bài</label>
+    <div class="msgs" id="d-err"></div>
+    <div class="dlg-actions"><button type="button" class="ghost" id="d-cancel">Hủy</button><button type="submit" class="btn-primary" id="d-submit">Đăng bài</button></div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/giao-dich/lightweight-charts.standalone.production.js"></script>
+<script src="/giao-dich/app.js"></script>
+</body>
+</html>
