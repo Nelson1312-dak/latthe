@@ -25,7 +25,7 @@ export const INDICES = ['VNINDEX', 'VN30', 'HNX', 'UPCOM'];
 // Giá làm việc theo đơn vị 10 đồng (số nguyên) để không lệch số thực.
 const U = (p) => Math.round(p * 100);
 const P = (u) => u / 100;
-const tickU = (u, ex) => (ex !== 'HOSE' ? 10 : u < 1000 ? 1 : u < 5000 ? 5 : 10);
+export const tickU = (u, ex) => (ex !== 'HOSE' ? 10 : u < 1000 ? 1 : u < 5000 ? 5 : 10);
 
 export function limits(ref, ex) {
   const refU = U(ref), t = tickU(refU, ex);
@@ -51,10 +51,9 @@ export function sessionState(ts = Date.now()) {
   return 'closed';
 }
 
-export async function fetchBars(symbol, days, resolution = '1D', kind = 'stock') {
-  const to = Math.floor(Date.now() / 1000);
-  const from = to - Math.ceil(days * 1.6 + 7) * 86400; // dư để bù cuối tuần/lễ
-  const url = `${FEED}/${kind}?from=${from}&to=${to}&symbol=${symbol}&resolution=${resolution}`;
+/** Nến thô theo khoảng thời gian (giây epoch). resolution: '1' (phút), '1D' (ngày). */
+export async function fetchRange(symbol, from, to, resolution = '1D', kind = 'stock') {
+  const url = `${FEED}/${kind}?from=${Math.floor(from)}&to=${Math.floor(to)}&symbol=${symbol}&resolution=${resolution}`;
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 8000);
   try {
@@ -67,10 +66,17 @@ export async function fetchBars(symbol, days, resolution = '1D', kind = 'stock')
       if ([j.o[i], j.h[i], j.l[i], j.c[i]].some((x) => !Number.isFinite(x))) continue;
       bars.push({ t: j.t[i], o: j.o[i], h: j.h[i], l: j.l[i], c: j.c[i], v: j.v[i] || 0 });
     }
-    return bars.slice(-days);
+    return bars;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** `days` nến gần nhất (mặc định nến ngày). */
+export async function fetchBars(symbol, days, resolution = '1D', kind = 'stock') {
+  const to = Math.floor(Date.now() / 1000);
+  const from = to - Math.ceil(days * 1.6 + 7) * 86400; // dư để bù cuối tuần/lễ
+  return (await fetchRange(symbol, from, to, resolution, kind)).slice(-days);
 }
 
 /**
