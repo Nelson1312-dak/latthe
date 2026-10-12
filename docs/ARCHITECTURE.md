@@ -38,6 +38,11 @@ Mọi lệnh và mọi lần gửi đều nằm trong nhật ký kiểm toán kh
 
 ## 3. Sơ đồ thành phần
 
+> **Giới hạn Vercel Hobby: tối đa 12 serverless function mỗi lần deploy, và mỗi file trong `api/` là một function.**
+> Toàn bộ API vì vậy chạy qua MỘT function duy nhất `api/router.js`; các endpoint nằm ở `server/routes/` và được
+> đăng ký trong bảng ROUTES. `vercel.json` viết lại `/api/<đường dẫn>` thành `/api/router?p=<đường dẫn>`.
+> Không đặt file handler mới trực tiếp vào `api/` (file bắt đầu bằng `_` là helper, không tính là function).
+
 ```
 Trình duyệt (môi giới / khách)
    │  HTTPS, cookie phiên HttpOnly

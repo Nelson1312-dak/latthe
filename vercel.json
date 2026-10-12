@@ -51,5 +51,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/router?p=:path*"
+    }
   ]
 }
