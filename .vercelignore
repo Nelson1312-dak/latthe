@@ -8,3 +8,7 @@ local-proxy.js
 *.vbs
 *.bat
 db/
+docs/
+worker/
+deploy/
+infra/
