@@ -2,3 +2,9 @@ supabase/
 node_modules/
 assets-src/
 *.ps1
+
+# Ha tang chay tren may local (DB + tunnel), khong deploy
+local-proxy.js
+*.vbs
+*.bat
+db/
