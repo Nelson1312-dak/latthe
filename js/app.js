@@ -1,62 +1,67 @@
-const HPG = {"c":[25.89,25.31,25.22,25.22,25,23.25,23.93,23.84,23.65,23.57,23.44,23.93,24.33,24.02,23.84,23.25,23.88,23.48,23.3,23.25,23.62,23.75,24.11,23.7,24.02,24.37,24.55,24.64,24.33,24.46,24.19,24.02,24.19,24.02,23.7,23.65,23.65,23.93,24.37,24.11,23.88,23.57,23.79,23.7,23.21,23.44,23.84,23.57,23.57,23.84,24.02,23.88,23.7,23.44,24.02,23.84,23.65,23.57,23.16,23.16,23.75,23.57,23.39,24.55,24.33,24.33,24.64,24.64,24.73,24.33,23.93,23.97,23.88,23.48,23.62,23.84,24.19,23.93,23.7,23.88,25.26,24.6,23.93,23.88,23.7,23.97,24.02,23.97,24.55,25.26,26.15,26.25,25.71,25.45,24.73,24.73,24.33,24.33,22.63,24.19,24.46,23.93,23.79,23.88,24.02,23.93,23.84,23.13,22.76,23.16,23.53,23.13,23.65,24.02,24.02,24.24,24.42,23.79,23.97,23.93,25,25.22,25,24.82,25.49,25.05,24.95,25,25.4,25.49,25.17,24.82,24.91,24.77,24.77,24.64,24.37,24.64,24.77,24.86,24.55,24.45,24.64,24.59,24.14,24.05,23.86,23.82,24.14,23.95,24.1,24.25,24.15,24,24,24.05,23.7,24.15,23.95,23.75,23.3,23.55,23.6,23.3,23.2,24.35,24.2,24,23.65,23.6,23.6,23.3,23.5,23.4,23.5,23.65,23.3,23.45,23.4,23.25,23.1,23.1,23.2,23.2,22.95,22.4,22.5,22.4,22.2,21.85,20.6,20.8,20.7,20.8,20.8,20.35,21,21.65,21.8,21.7,22.55,22.15,22,21.85,22,22.1,22.05,22.1,21.7,21.25,21.2,21,21.2,21.15,21.7,22.25,21.8,22.05,22.2,22.1,21.6,21.7,21.55,21.85,22.05,21.85,21.3,20.9,21.2,20.95,21.2,21.55,21.1,21.15,21.05,20.8,20.65,20.2,20.3,20.15,20.05,20.05,20.5,20.5,20.35,20.15,20.1],"h":[26.11,26.11,25.62,25.71,25.58,25.22,24.11,24.02,24.11,23.84,23.97,23.93,24.6,24.46,24.19,24.02,23.97,23.88,23.65,23.7,23.88,24.02,24.19,24.15,24.06,24.42,24.64,25.31,24.82,24.51,24.6,24.42,24.28,24.37,24.15,23.88,23.79,23.97,24.51,24.42,24.19,24.02,24.11,24.02,23.84,23.57,24.06,23.84,23.7,23.84,24.19,24.28,23.97,23.79,24.73,24.11,23.97,23.75,23.7,23.39,23.88,23.93,23.93,24.64,24.91,24.64,24.91,25.22,25.17,24.95,24.33,24.37,24.24,23.93,23.7,24.19,24.19,24.55,23.93,24.19,25.54,25.31,25.09,24.37,24.06,24.19,24.19,24.24,24.55,25.35,26.52,26.38,26.25,26.11,25.75,24.86,25.13,24.64,23.35,24.19,24.68,24.24,24.28,24.06,24.42,24.24,23.97,23.7,23.39,23.48,23.57,23.53,23.84,24.19,24.33,24.51,24.55,24.46,24.19,24.19,25.05,25.54,25.54,25.13,25.71,25.66,25.17,25.22,25.4,26.29,25.62,25.31,24.95,25,24.91,24.95,24.73,24.82,24.91,24.91,25,24.73,24.77,24.91,24.64,24.27,24.23,24,24.27,24.23,24.35,24.25,24.5,24.25,24.2,24.15,24.05,24.15,24.15,24.05,23.75,23.55,23.7,23.55,23.55,24.35,24.35,24.3,24.15,23.9,23.85,23.7,23.6,23.6,23.5,23.65,23.7,23.55,23.65,23.5,23.6,23.25,23.4,23.25,23.25,22.95,22.5,22.6,22.4,22.35,21.75,21.15,21.05,21,21,21,21,21.65,22.05,21.85,22.65,22.6,22.6,22.3,22.3,22.3,22.25,22.35,22.25,21.8,21.45,21.4,21.2,21.45,21.75,22.3,22.3,22.1,22.4,22.35,22,21.8,22.15,21.9,22.2,22.05,21.8,21.4,21.2,21.25,21.4,21.55,21.6,21.25,21.2,21.1,20.95,20.8,20.4,20.5,20.25,20.15,20.8,20.5,20.55,20.5,20.25],"l":[25.75,25.26,25.17,25,25,23.25,23.21,23.35,23.65,23.3,23.44,23.35,24.02,24.02,23.84,23.25,23.16,23.44,23.3,23.21,23.3,23.62,23.79,23.7,23.65,24.15,24.24,24.51,24.24,24.02,24.19,24.02,23.97,24.02,23.7,23.65,23.39,23.62,24.02,24.11,23.88,23.57,23.75,23.65,23.21,23.25,23.44,23.57,23.44,23.57,23.75,23.79,23.65,23.44,23.79,23.79,23.65,23.53,22.95,22.63,23.16,23.57,23.39,23.53,24.11,24.11,24.33,24.37,24.68,24.19,23.79,23.97,23.88,23.35,23.39,23.7,23.93,23.88,23.44,23.79,23.97,24.6,23.93,23.84,23.57,23.65,23.88,23.93,24.19,24.42,25.35,25.71,25.71,25.05,24.64,23.93,24.19,23.97,22.63,23.35,24.06,23.79,23.65,23.7,24.02,23.79,23.53,23.13,22.55,23.08,23.3,23.13,23.08,23.16,23.93,24.19,23.88,23.75,23.75,23.88,24.46,24.68,25,24.82,24.95,25.05,24.77,24.91,25.05,25.45,25.05,24.64,24.55,24.73,24.64,24.46,24.28,24.37,24.64,24.6,24.55,24.41,24.36,24.59,24.05,23.86,23.86,23.41,23.91,23.95,24.1,24,24.15,24,23.9,23.95,23.7,23.6,23.9,23.75,23.3,23.3,23.45,23.3,23.2,23.55,24.1,24,23.65,23.6,23.6,23.3,23.3,23.4,23.35,23.45,23.25,23.35,23.35,23.25,23,23,23.05,23.1,22.95,22.35,22,22.15,21.8,21.85,20.5,20.5,20.5,20.15,20.6,20.3,20.1,20.9,21.5,21.4,21.65,22.1,21.95,21.85,21.75,21.95,22.05,21.95,21.7,21.2,21.05,21,20.9,21.15,21.05,21.85,21.8,21.75,22.05,22.05,21.55,21.6,21.55,21.55,21.85,21.8,21.3,20.85,21,20.95,20.75,21.3,21.1,21.1,21.05,20.8,20.65,20.15,20.15,20.15,20.05,19.6,20.35,20.15,20.3,20.15,19.85],"o":[25.94,25.94,25.35,25.22,25.26,24.91,23.48,24.02,23.88,23.65,23.88,23.53,24.02,24.46,24.02,23.88,23.35,23.62,23.53,23.35,23.39,23.75,23.79,24.11,23.65,24.15,24.33,24.55,24.73,24.24,24.46,24.24,24.06,24.28,24.02,23.79,23.7,23.75,24.06,24.42,24.02,23.84,23.79,23.84,23.75,23.44,23.53,23.84,23.57,23.57,23.84,24.15,23.97,23.7,24.19,24.11,23.84,23.62,23.57,23.21,23.16,23.84,23.93,23.53,24.77,24.51,24.33,24.82,24.91,24.86,24.24,24.02,24.19,23.88,23.53,23.7,23.93,24.37,23.93,23.79,23.97,25.26,24.42,24.15,24.02,23.79,24.11,24.02,24.19,24.55,25.35,26.34,26.2,25.17,25.71,24.64,24.95,24.11,22.76,23.93,24.24,24.11,23.84,23.79,24.11,24.02,23.65,23.65,22.9,23.21,23.48,23.48,23.16,23.35,24.15,24.42,24.11,24.42,23.79,23.93,24.55,24.91,25.54,24.86,25.09,25.62,25.05,24.95,25.13,26.03,25.49,25.17,24.91,24.82,24.68,24.77,24.68,24.46,24.82,24.77,25,24.55,24.5,24.82,24.59,24.09,24.09,23.91,23.95,24.18,24.25,24.1,24.4,24.15,24.05,24,24,23.7,24.15,23.95,23.65,23.35,23.55,23.5,23.55,23.55,24.25,24.2,24.05,23.8,23.7,23.65,23.4,23.5,23.4,23.55,23.7,23.4,23.5,23.4,23.4,23.2,23.15,23.2,23.2,22.95,22.3,22.5,22.3,22.2,21.75,20.5,20.9,20.7,20.7,20.9,20.15,21.05,21.65,21.8,21.7,22.55,22.35,22.25,21.9,22.25,22.2,22,22.2,21.7,21.25,21.15,21.1,21.25,21.15,22,22.25,21.8,22.05,22.25,22,21.75,21.8,21.55,21.9,22,21.75,21.3,21,21.2,20.8,21.45,21.55,21.15,21.15,21.05,20.8,20.75,20.2,20.3,20.15,20.1,20.4,20.5,20.5,20.3,20.15],"t":[1760320800,1760407200,1760493600,1760580000,1760666400,1760925600,1761012000,1761098400,1761184800,1761271200,1761530400,1761616800,1761703200,1761789600,1761876000,1762135200,1762221600,1762308000,1762394400,1762480800,1762740000,1762826400,1762912800,1762999200,1763085600,1763344800,1763431200,1763517600,1763604000,1763690400,1763949600,1764036000,1764122400,1764208800,1764295200,1764554400,1764640800,1764727200,1764813600,1764900000,1765159200,1765245600,1765332000,1765418400,1765504800,1765764000,1765850400,1765936800,1766023200,1766109600,1766368800,1766455200,1766541600,1766628000,1766714400,1766973600,1767060000,1767146400,1767578400,1767664800,1767751200,1767837600,1767924000,1768183200,1768269600,1768356000,1768442400,1768528800,1768788000,1768874400,1768960800,1769047200,1769133600,1769392800,1769479200,1769565600,1769652000,1769738400,1769997600,1770084000,1770170400,1770256800,1770343200,1770602400,1770688800,1770775200,1770861600,1770948000,1771812000,1771898400,1771984800,1772071200,1772157600,1772416800,1772503200,1772589600,1772676000,1772762400,1773021600,1773108000,1773194400,1773280800,1773367200,1773626400,1773712800,1773799200,1773885600,1773972000,1774231200,1774317600,1774404000,1774490400,1774576800,1774836000,1774922400,1775008800,1775095200,1775181600,1775440800,1775527200,1775613600,1775700000,1775786400,1776045600,1776132000,1776218400,1776304800,1776391200,1776650400,1776736800,1776823200,1776909600,1776996000,1777341600,1777428000,1777860000,1777946400,1778032800,1778119200,1778205600,1778464800,1778551200,1778637600,1778724000,1778810400,1779069600,1779156000,1779242400,1779328800,1779415200,1779674400,1779760800,1779847200,1779933600,1780020000,1780279200,1780365600,1780452000,1780538400,1780624800,1780884000,1780970400,1781056800,1781143200,1781229600,1781488800,1781575200,1781661600,1781748000,1781834400,1782093600,1782180000,1782266400,1782352800,1782439200,1782698400,1782784800,1782871200,1782957600,1783044000,1783303200,1783389600,1783476000,1783562400,1783648800,1783908000,1783994400,1784080800,1784167200,1784253600,1784512800,1784599200,1784685600,1784772000,1784858400,1785117600,1785204000,1785290400,1785376800,1785463200,1785722400,1785808800,1785895200,1785981600,1786068000,1786327200,1786413600,1786500000,1786586400,1786672800,1786932000,1787018400,1787104800,1787191200,1787277600,1787536800,1787623200,1787709600,1787796000,1787882400,1788400800,1788487200,1788746400,1788832800,1788919200,1789005600,1789092000,1789351200,1789437600,1789524000,1789610400,1789696800,1789956000,1790042400,1790128800,1790215200,1790301600,1790560800,1790647200,1790733600,1790820000,1790906400,1791165600,1791252000,1791338400,1791424800,1791511200],"v":[80237696,84307904,34623200,44715300,46508200,102963104,74275800,37268800,23443400,30587700,27390800,28512100,39448900,23693500,19779100,28356600,37767100,20835300,21207600,55100200,48017900,31332100,30662900,18927500,22112200,32158300,35028300,56320700,23049300,22607900,14707800,24346200,19022200,13956200,20789300,19747100,26073200,21527600,35081200,17662100,21455600,39911800,19708000,17142200,37088200,23939400,29329900,16546600,18777900,29580600,54880900,29588500,23136900,29780000,94035000,16525200,24581900,20149700,46487900,39616600,37249700,37518600,35089300,83534896,45777400,53908300,61937700,65577000,40465900,44169600,37234300,27732600,24233600,33759300,21014200,29982700,27608700,40558400,44024300,32029900,145418096,32887100,67073000,24310400,32543400,26495200,13137000,24069800,36086500,99498304,136409200,54496800,47306500,86907000,69294096,68275504,47998900,44351700,120981904,91236600,49913200,44045900,28666500,19880400,24176300,23058500,36837300,60885800,44362900,27778800,22967100,18424200,26863700,41276100,23553000,31503700,50005700,31383300,19748100,13164600,67646600,51607600,35473400,23005200,61934200,29753200,27972100,21399500,26441700,99647296,27745600,41133900,23402000,14071500,17239200,32374300,30692800,27672000,20348100,20678200,23658100,19170900,21544700,14047100,75838200,27485500,25111900,40983800,30562500,25794000,26989100,20723700,23114500,15668300,16365900,9668300,25529600,20573500,10065300,13891200,22769900,12441700,7505500,10177700,13271400,30695200,14145800,19039000,18040500,20055700,10684400,29071800,12927300,7659100,15468600,14158200,30593200,14937400,13367500,15935100,21299300,13839600,12499500,11643400,11906800,32309000,22481900,21464500,22880600,17006300,53245200,27198700,43471900,36967600,17632000,18166800,29151700,36250000,29968000,24111500,44448000,22694000,27963700,14369400,13018100,16732700,13694600,15925100,25702700,27443600,18455500,16367500,15312500,15156400,25138400,28790200,25844100,19394800,19201900,17126700,26985600,13920900,19957800,13387600,22432800,13391400,22031700,24046000,11937200,12277500,17574100,31124900,15824000,8104500,10766000,15528500,14623900,24184800,18773900,13350300,11097100,35378700,31964600,17171100,13395100,12877800,15779800]};
-
-/* ---------------- Market model ---------------- */
-const BAND = {HOSE:.07, HNX:.10, UPCOM:.15};
-const UNIVERSE = [
-  {s:"HPG",ex:"HOSE",name:"Tập đoàn Hòa Phát",real:true},
-  {s:"FPT",ex:"HOSE",name:"Công ty CP FPT",base:104},
-  {s:"MWG",ex:"HOSE",name:"Thế Giới Di Động",base:71},
-  {s:"VCB",ex:"HOSE",name:"Ngân hàng Vietcombank",base:63},
-  {s:"TCB",ex:"HOSE",name:"Ngân hàng Techcombank",base:24.5},
-  {s:"SSI",ex:"HOSE",name:"Chứng khoán SSI",base:33},
-  {s:"VHM",ex:"HOSE",name:"Vinhomes",base:47},
-  {s:"DGC",ex:"HOSE",name:"Hóa chất Đức Giang",base:97},
-  {s:"PVS",ex:"HNX",name:"Dịch vụ Kỹ thuật Dầu khí",base:34},
-  {s:"BSR",ex:"UPCOM",name:"Lọc hóa dầu Bình Sơn",base:21}
-];
+/* ---------------- Market model: giá thật từ /api/market và /api/history (nguồn DNSE) ---------------- */
 // giá tính theo đơn vị 10 đồng (số nguyên) để không lệch số thực
 const U = p => Math.round(p*100), P = u => u/100;
 function tickU(u,ex){ if(ex!=="HOSE") return 10; return u<1000?1:u<5000?5:10; }
-const floorTo=(u,t)=>Math.floor(u/t)*t, ceilTo=(u,t)=>Math.ceil(u/t)*t, roundTo=(u,t)=>Math.round(u/t)*t;
+const roundTo=(u,t)=>Math.round(u/t)*t;
 
 function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-function synth(base,seed){
-  const r=rng(seed), bars=[]; let c=base*(.85+r()*.2);
-  HPG.t.forEach(t=>{const o=c, ch=(r()-.49)*.034*o; c=Math.max(1,o+ch);
-    const h=Math.max(o,c)*(1+r()*.012), l=Math.min(o,c)*(1-r()*.012);
-    bars.push({time:t,open:+o.toFixed(2),high:+h.toFixed(2),low:+l.toFixed(2),close:+c.toFixed(2),value:Math.round(2e6+r()*9e6)});});
-  return bars;
-}
-const SESSION_TIME = HPG.t[HPG.t.length-1] + 3*86400; // phiên mô phỏng kế tiếp (thứ Hai 12/10)
+const vnDay = t => new Date((t+7*3600)*1000).toISOString().slice(0,10);
+const toBar = b => ({time:b.t,open:b.o,high:b.h,low:b.l,close:b.c,value:b.v});
 
+const UNIVERSE = [];                 // nạp từ API
 const M = {};
-UNIVERSE.forEach((x,i)=>{
-  const bars = x.real ? HPG.t.map((t,k)=>({time:t,open:HPG.o[k],high:HPG.h[k],low:HPG.l[k],close:HPG.c[k],value:HPG.v[k]})) : synth(x.base,i*977+13);
-  const c0 = U(bars[bars.length-1].close), refU = roundTo(c0, tickU(c0,x.ex));
-  const ceilU = floorTo(Math.round(refU*(1+BAND[x.ex])), tickU(refU,x.ex));
-  const floorU = ceilTo(Math.round(refU*(1-BAND[x.ex])), tickU(refU,x.ex));
-  const r = rng(i*31+7);
-  const openU = roundTo(refU + Math.round((r()-.5)*refU*.012), tickU(refU,x.ex));
-  M[x.s] = {...x, bars, refU, ceilU, floorU, lastU:openU, hiU:openU, loU:openU, vol:0, rnd:r,
-    today:{time:SESSION_TIME, open:P(openU), high:P(openU), low:P(openU), close:P(openU), value:0}, tape:[]};
-});
+const MKT = {session:"closed", asof:null, indices:[], polledOnce:false};
 
-function stepMarket(m){
-  const t = tickU(m.lastU,m.ex), r=m.rnd();
-  let moves = r<.42?-1:r<.84?1:0; if(m.rnd()<.12) moves*=2;
-  m.lastU = Math.min(m.ceilU, Math.max(m.floorU, m.lastU + moves*t));
-  const q = Math.round((m.rnd()**3)*400+1)*100;
-  m.vol += q; m.hiU=Math.max(m.hiU,m.lastU); m.loU=Math.min(m.loU,m.lastU);
-  Object.assign(m.today,{close:P(m.lastU),high:P(m.hiU),low:P(m.loU),value:m.vol});
-  const now=new Date(); m.tape.unshift({t:now.toTimeString().slice(0,8),u:m.lastU,q,side:moves>=0?"M":"B"});
-  m.tape.length=Math.min(m.tape.length,40);
+async function getJSON(url){
+  const r = await fetch(url, {headers:{Accept:"application/json"}});
+  if(!r.ok) throw new Error(url+" HTTP "+r.status);
+  return r.json();
 }
+function setQuote(m,q){ m.refU=U(q.ref); m.ceilU=U(q.ceil); m.floorU=U(q.floor); m.lastU=U(q.last); }
+
+/* Nến cuối cùng của lịch sử là phiên hiện tại (đang chạy) hoặc phiên gần nhất (ngoài giờ): tách ra làm `today`. */
+function buildSymbol(q,hist){
+  const bars = hist.map(toBar), today = bars.pop();
+  const m = {s:q.s, ex:q.ex, name:q.name, bars, today:{...today}, session:vnDay(hist[hist.length-1].t), rnd:rng(q.s.charCodeAt(0)*131+q.s.charCodeAt(2)), tape:[]};
+  setQuote(m,q);
+  m.hiU=U(today.high); m.loU=U(today.low); m.vol=today.value;
+  return m;
+}
+async function loadMarket(){
+  const [mk,hs] = await Promise.all([getJSON("/api/market"), getJSON("/api/history?days=260")]);
+  MKT.session = mk.session; MKT.asof = mk.asof; MKT.indices = mk.indices||[];
+  UNIVERSE.length = 0;
+  Object.values(mk.quotes).forEach(q=>{
+    if(!hs.bars[q.s]) return;
+    UNIVERSE.push({s:q.s,ex:q.ex,name:q.name}); M[q.s] = buildSymbol(q,hs.bars[q.s]);
+  });
+  if(!UNIVERSE.length) throw new Error("Không có mã nào đủ dữ liệu");
+  MKT.polledOnce = false;
+  // Tài khoản demo: giá vốn đặt lệch quanh giá thật để màn Danh mục có lãi/lỗ để xem
+  [["HPG",1.04],["FPT",.93]].forEach(([s,k])=>{ if(M[s]&&ACC.hold[s]) ACC.hold[s].avg = +(P(M[s].refU)*k).toFixed(2); });
+}
+/* Áp báo giá mới. Trả false nếu đã sang phiên mới (cần nạp lại lịch sử). */
+function applyQuote(m,q){
+  if(q.lastSession!==m.session) return false;
+  const prevLast=m.lastU, prevVol=m.vol;
+  setQuote(m,q);
+  if(q.vol>0){ // phiên đang chạy
+    m.hiU=U(q.high); m.loU=U(q.low); m.vol=q.vol;
+    Object.assign(m.today,{open:q.open,high:q.high,low:q.low,close:q.last,value:q.vol});
+    if(MKT.polledOnce && q.vol>prevVol){
+      m.tape.unshift({t:new Date().toTimeString().slice(0,8),u:m.lastU,q:q.vol-prevVol,side:m.lastU>=prevLast?"M":"B"});
+      m.tape.length=Math.min(m.tape.length,40);
+    }
+  }
+  return true;
+}
+/* Độ sâu thị trường (khối lượng chờ mua/bán) không có trong nguồn dữ liệu công khai, nên chỉ hiển thị các bước giá liền kề giá khớp. */
 function book(m){
-  const t=tickU(m.lastU,m.ex), r=rng(m.lastU+m.vol), asks=[], bids=[];
+  const t=tickU(m.lastU,m.ex), asks=[], bids=[];
   for(let i=1;i<=3;i++){
-    const a=m.lastU+i*t, b=m.lastU-(i-1)*t-t;
-    if(a<=m.ceilU) asks.push({u:a,q:Math.round(r()*3000+200)*100});
-    if(b>=m.floorU) bids.push({u:b,q:Math.round(r()*3000+200)*100});
+    const a=m.lastU+i*t, b=m.lastU-i*t;
+    if(a<=m.ceilU) asks.push({u:a});
+    if(b>=m.floorU) bids.push({u:b});
   }
   return {asks,bids};
 }
@@ -128,10 +133,6 @@ chart.subscribeCrosshairMove(p=>{ if(!p.time||!p.seriesData.size){legend(shown[s
   legend(p.seriesData.get(candle)||shown.find(b=>b.time===p.time), p.seriesData); });
 
 /* ---------------- Renderers ---------------- */
-function renderIndices(){
-  const base=[["VNINDEX",1622.4,.0042],["VN30",1781.9,.0055],["HNX",268.3,-.0021],["UPCOM",109.6,.0013]];
-  $("indices").innerHTML=base.map(([n,v,c])=>`<span class="idx"><b>${n}</b><span class="${c>=0?"up":"down"}">${v.toFixed(2)} ${(c>=0?"+":"")+(c*100).toFixed(2)}%</span></span>`).join("");
-}
 function renderWL(){
   $("wl-count").textContent=UNIVERSE.length+" mã";
   $("wl").innerHTML=UNIVERSE.map(x=>{const m=M[x.s],ch=(m.lastU-m.refU)/m.refU*100,c=cls(m,m.lastU);
@@ -154,8 +155,8 @@ function renderHead(){
   $("h-vol").textContent=fN(m.vol);
 }
 function renderBook(){
-  const m=M[S.sym], {asks,bids}=book(m), mx=Math.max(...asks.map(a=>a.q),...bids.map(b=>b.q),1);
-  const row=(o,k)=>`<button class="ob-row ${k}" data-fill="${o.u}" aria-label="Chọn giá ${fP(o.u)}"><span class="bar" style="width:${o.q/mx*100}%"></span><span class="${cls(m,o.u)}">${fP(o.u)}</span><span class="q">${fN(o.q)}</span></button>`;
+  const m=M[S.sym], {asks,bids}=book(m);
+  const row=(o,k)=>`<button class="ob-row ${k}" data-fill="${o.u}" aria-label="Chọn giá ${fP(o.u)}"><span class="${cls(m,o.u)}">${fP(o.u)}</span><span class="q">${(P(o.u)-P(m.lastU)>=0?"+":"")+((o.u-m.lastU)/m.lastU*100).toFixed(2)}%</span></button>`;
   const ch=(m.lastU-m.refU)/m.refU*100;
   $("ob").innerHTML=asks.slice().reverse().map(a=>row(a,"ask")).join("")+
     `<div class="ob-mid"><span class="${cls(m,m.lastU)}">${fP(m.lastU)}</span><small>${(ch>=0?"+":"")+ch.toFixed(2)}%</small></div>`+
@@ -193,7 +194,7 @@ function validate(){
   return {errs,warns};
 }
 function renderTicket(){
-  const m=M[S.sym];
+  const m=M[S.sym]; if(!m) return;
   if(S.pxU==null) S.pxU=m.lastU;
   document.querySelectorAll(".side-btn").forEach(b=>b.setAttribute("aria-pressed",b.dataset.side===S.side));
   document.querySelectorAll("[data-type]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.type===S.type));
@@ -230,11 +231,11 @@ function placeOrder(){
   const o={id:ACC.seq++,time:new Date().toTimeString().slice(0,8),sym:m.s,side:S.side,type:S.type,u,qty:S.qty,filled:0,status:"wait",avgU:null};
   if(o.side==="B") ACC.cash -= P(u)*1000*o.qty*(1+FEE); // phong tỏa tiền
   ACC.orders.unshift(o); tryMatch(o, true);
-  toast(`Đã gửi lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym}${o.status==="ok"?" và khớp ngay":""}.`);
+  toast(`Đã gửi lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym}${o.status==="ok"?" và khớp ngay":""}.${MKT.session==="closed"?" Thị trường đang đóng cửa, lệnh chờ đến phiên sau.":""}`);
   flip(false); renderTicket(); renderPanel();
 }
 function tryMatch(o, initial){
-  if(o.status!=="wait"||o.type==="ATO"||o.type==="ATC") return;
+  if(o.status!=="wait"||o.type==="ATO"||o.type==="ATC"||MKT.session==="closed") return;
   const m=M[o.sym], {asks,bids}=book(m);
   let fillU=null;
   if(o.type==="MTL") fillU = o.side==="B" ? (asks[0]?.u??m.lastU) : (bids[0]?.u??m.lastU);
@@ -430,6 +431,7 @@ function livePrices(){ document.querySelectorAll("[data-live]").forEach(el=>{con
 
 const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#cong-dong"],chat:["view-chat","#tin-nhan"]};
 function setView(v){
+  if(!UNIVERSE.length) return;
   CS.view=v; Object.entries(VIEWS).forEach(([k,[id]])=>$(id).hidden=k!==v);
   document.querySelectorAll(".nav a[data-view]").forEach(a=>{if(a.dataset.view===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
   if(v==="community"){renderCNav();renderFeed();renderTrend();CS.forceScroll=true;renderChat();}
@@ -545,7 +547,7 @@ function renderCtx(c){
   const ctx=$("ctx");
   if(c.kind==="ai"){
     ctx.innerHTML=`<h3>Trợ lý đang dùng dữ liệu</h3><ul>
-      <li class="on"><span><b>Giá và lịch sử giao dịch</b><br>HPG là dữ liệu thật từ DNSE, mã khác mô phỏng</span></li>
+      <li class="on"><span><b>Giá và lịch sử giao dịch</b><br>Giá thật từ DNSE (trễ vài giây)</span></li>
       <li class="on"><span><b>Tài khoản demo của bạn</b><br>Danh mục, sức mua, sổ lệnh</span></li>
       <li class="on"><span><b>Bộ máy backtest</b><br>Chạy trên nến ngày, đã trừ phí và thuế</span></li>
       <li><span><b>Tin tức, BCTC</b><br>Bản sau, qua MCP của DNSE</span></li></ul>
@@ -577,7 +579,7 @@ function seriesOf(s){const m=M[s];return [...m.bars,{...m.today}];}
 function smaAt(arr,i,n){if(i<n-1)return null;let t=0;for(let k=i-n+1;k<=i;k++)t+=arr[k];return t/n;}
 const pct=(a,b)=>(a/b-1)*100, sg=x=>(x>=0?"+":"")+x.toFixed(2)+"%";
 const dmy=t=>{const d=new Date(t*1000);return `${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${String(d.getUTCFullYear()).slice(2)}`;};
-const srcNote=s=>M[s].real?"Dữ liệu: giá thật từ DNSE đến 09/10/2026, cộng phiên mô phỏng hôm nay.":"Dữ liệu: mô phỏng trong bản demo.";
+const srcNote=s=>`Dữ liệu: giá thật từ DNSE, phiên ${dmyFull(M[s].session)}.`;
 const actBtns=s=>`<div class="ai-actions"><button data-goto="${s}">Mở biểu đồ ${s}</button><button data-prompt="Backtest MA20/MA50 cho ${s}">Backtest ${s}</button></div>`;
 function aiAnalyze(s){
   const m=M[s], b=seriesOf(s), cl=b.map(x=>x.close), i=cl.length-1, px=P(m.lastU);
@@ -613,7 +615,7 @@ function aiBacktest(s){
      <div><span>Sụt giảm tối đa</span><b class="down">${(mdd*100).toFixed(2)}%</b></div></div>
      ${trades.length?`<div style="overflow-x:auto"><table><thead><tr><th>Mua</th><th class="r">Giá</th><th>Bán</th><th class="r">Giá</th><th class="r">Lãi/lỗ</th></tr></thead><tbody>${rows}</tbody></table></div>`:""}</div>
    <p>${trades.length?(eq-1>bh?(eq-1<0?"Chiến thuật vẫn lỗ nhưng lỗ ít hơn mua và giữ, chủ yếu nhờ đứng ngoài trong các nhịp giảm.":"Chiến thuật tốt hơn mua và giữ trong giai đoạn này."):"Chiến thuật kém hơn mua và giữ trong giai đoạn này."):"Không có lệnh nào được đóng trong giai đoạn này."} ${open}</p>
-   <p class="ai-note">${M[s].real?"Dữ liệu: giá thật từ DNSE đến 09/10/2026.":"Dữ liệu: mô phỏng trong bản demo."} Kết quả quá khứ không đảm bảo cho tương lai. Màn Backtest đầy đủ (nhiều chiến thuật, tối ưu tham số) sẽ có ở bản sau.</p>
+   <p class="ai-note">Dữ liệu: giá thật từ DNSE đến ${dmyFull(M[s].session)}. Kết quả quá khứ không đảm bảo cho tương lai. Màn Backtest đầy đủ (nhiều chiến thuật, tối ưu tham số) sẽ có ở bản sau.</p>
    <div class="ai-actions"><button data-goto="${s}">Mở biểu đồ ${s}</button></div>`;
 }
 function aiPortfolio(){
@@ -686,10 +688,20 @@ function chatTick(){
 }
 
 /* ---------------- Live loop ---------------- */
+const SESSION_LABEL = {open:"Đang khớp lệnh liên tục", ato:"Khớp lệnh định kỳ mở cửa", atc:"Khớp lệnh định kỳ đóng cửa", closed:"Ngoài giờ giao dịch"};
+const dmyFull = ymd => ymd.split("-").reverse().join("/");
+function setStatus(err){
+  const dot=document.querySelector(".statusbar .dot"), live=!err&&MKT.session!=="closed";
+  dot.style.background = err?"var(--down)":live?"var(--up)":"var(--faint)";
+  const ses = UNIVERSE.length ? M[UNIVERSE[0].s].session : null;
+  $("session").textContent = err ? "Mất kết nối nguồn giá, đang thử lại"
+    : `${SESSION_LABEL[MKT.session]}${ses?`, số liệu phiên ${dmyFull(ses)}`:""}, cập nhật ${new Date(MKT.asof).toTimeString().slice(0,8)}`;
+}
+function renderIndices(){
+  $("indices").innerHTML=MKT.indices.map(i=>`<span class="idx"><b>${i.s}</b><span class="${i.pct>=0?"up":"down"}">${i.last.toFixed(2)} ${(i.pct>=0?"+":"")+i.pct.toFixed(2)}%</span></span>`).join("");
+}
 function tick(){
-  UNIVERSE.forEach(x=>{ if(x.s===S.sym||Math.random()<.45) stepMarket(M[x.s]); });
-  const m=M[S.sym];
-  const last=shown[shown.length-1];
+  const m=M[S.sym], last=shown[shown.length-1];
   if(S.tf==="D"){ candle.update({...m.today}); line.update({time:m.today.time,value:m.today.close});
     vol.update({time:m.today.time,value:m.today.value,color:m.today.close>=m.today.open?"rgba(46,189,133,.35)":"rgba(246,70,93,.35)"}); shown[shown.length-1]={...m.today}; legend(shown[shown.length-1]); }
   else if(last){ drawChart(false); }
@@ -697,10 +709,26 @@ function tick(){
   renderHead(); renderBook(); updateWLPrices(); renderTicket(); if(S.tab!=="cond") renderPanel();
   communityTick(); chatTick();
 }
-for(let i=0;i<25;i++) UNIVERSE.forEach(x=>stepMarket(M[x.s]));
-$("session").textContent="Phiên mô phỏng 12/10/2026, khớp lệnh liên tục";
-renderIndices(); renderWL(); selectSym("HPG"); renderPanel();
-setInterval(tick, 2000);
+async function poll(){
+  try{
+    const mk=await getJSON("/api/market");
+    MKT.session=mk.session; MKT.asof=mk.asof; MKT.indices=mk.indices||MKT.indices;
+    const stale=Object.values(mk.quotes).some(q=>M[q.s]&&!applyQuote(M[q.s],q));
+    MKT.polledOnce=true;
+    if(stale){ await loadMarket(); renderWL(); selectSym(S.sym); }
+    renderIndices(); setStatus(false); tick();
+  }catch(e){ setStatus(true); }
+}
+function schedulePoll(){ setTimeout(async()=>{ await poll(); schedulePoll(); }, MKT.session==="closed"?30000:5000); }
+
+async function boot(){
+  try{ await loadMarket(); }
+  catch(e){ $("session").textContent="Không kết nối được nguồn giá, đang thử lại"; setTimeout(boot,8000); return; }
+  MKT.polledOnce=true;
+  renderIndices(); renderWL(); selectSym(UNIVERSE.some(x=>x.s===S.sym)?S.sym:UNIVERSE[0].s); renderPanel(); setStatus(false);
+  setInterval(tick, 2000); schedulePoll();
+  if(location.hash==="#cong-dong") setView("community");
+  if(location.hash==="#tin-nhan") setView("chat");
+}
 renderNavBadge();
-if(location.hash==="#cong-dong") setView("community");
-if(location.hash==="#tin-nhan") setView("chat");
+boot();
