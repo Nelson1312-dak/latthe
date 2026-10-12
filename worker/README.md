@@ -19,9 +19,6 @@ Cần Node 22 trở lên và các biến trong `.env.local`:
 - Giới hạn `WORKER_MAX_CONNECTIONS` (mặc định 50). Hỏi DNSE về số kết nối tối đa của gói API.
 - Trạng thái ghi vào `trade.worker_status`; màn Khách hàng hiện "Realtime: n/m khách đang kết nối".
 
-## Tự khởi động cùng Windows
-Tạo tác vụ trong Task Scheduler: Trigger "At log on", Action `node`, Arguments
-`--env-file=.env.local worker/broker-stream.mjs`, Start in `D:\Claude projects\Project\latthe`, bật "Restart on failure".
 
 ---
 
@@ -34,9 +31,37 @@ Nhận giá realtime và độ sâu sổ lệnh thật từ DNSE, ghi vào `trad
 npm run worker:market
 ```
 
+## Chạy tự động trên Windows (khuyên dùng)
+
+```
+powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name market          # worker giá
+powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name broker          # worker lệnh của khách
+powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name market -Remove  # gỡ
+```
+
+- Tạo tác vụ "Latbai worker <tên>" trong Task Scheduler: chạy mỗi lần đăng nhập và nhắc lại mỗi 10 phút. Chỉ chạy khi bạn đã đăng nhập Windows, nên không lưu mật khẩu ở đâu cả.
+- `worker/supervise.ps1` giữ đúng một bản worker chạy ẩn và dựng lại khi nó chết (chờ 5 giây; chết nhanh liên tiếp thì lùi dần tới 5 phút để không dồn dập gọi DNSE khi sai key).
+- Log ở `worker/logs/<tên>.log` (tự cắt khi quá 1 MB, nằm trong .gitignore), không chứa key hay secret.
+- Key và secret chỉ nằm trong `.env.local`. Đổi key thì sửa file đó rồi `Stop-ScheduledTask` và `Start-ScheduledTask` tác vụ tương ứng.
+
 - Một kết nối cho cả rổ mã (DNSE cho tối đa 10 kết nối/user, 200 stream/kết nối).
 - Kênh: `tick.G1`, `top_price.G1` (3 mức mua/bán với HOSE), `security_definition.G1`, `market_index.{VNINDEX,VN30,HNX,UPCOM}`.
 - Giá khớp ngoài biên độ trần/sàn bị coi là dữ liệu hỏng và bị bỏ qua.
 - Ghi DB lỗi thì giữ lại hàng đợi để ghi lại lần sau, không mất cập nhật.
 - Cần chạy trên cùng máy với DB, giống worker broker. Hai worker dùng chung phần kết nối ở `worker/_socket.mjs`.
 - Trình duyệt vẫn lấy giá bằng cách hỏi `/api/market` mỗi 2,5 giây (giây thứ 5 khi dùng nguồn dự phòng), chưa phải đẩy trực tiếp.
+
+---
+
+# Chạy tự động trên Windows
+
+```
+powershell -ExecutionPolicy Bypass -File workeregister-worker.ps1 -Name market    # worker giá
+powershell -ExecutionPolicy Bypass -File workeregister-worker.ps1 -Name broker    # worker lệnh của khách
+powershell -ExecutionPolicy Bypass -File workeregister-worker.ps1 -Name market -Remove   # gỡ
+```
+
+- Tạo tác vụ "Latbai worker <tên>" trong Task Scheduler: chạy mỗi lần đăng nhập và nhắc lại mỗi 10 phút. Chỉ chạy khi bạn đã đăng nhập Windows, nên không lưu mật khẩu ở đâu cả.
+- `worker/supervise.ps1` giữ đúng một bản worker chạy ẩn và dựng lại khi nó chết (chờ 5 giây; chết nhanh liên tiếp thì lùi dần tới 5 phút để không dồn dập gọi DNSE khi sai key).
+- Log: `worker/logs/<tên>.log` (tự cắt khi quá 1 MB, đã nằm trong .gitignore). Log không chứa key hay secret.
+- Key/secret chỉ nằm trong `.env.local`. Đổi key thì sửa file đó rồi khởi động lại tác vụ (Stop-ScheduledTask rồi Start-ScheduledTask).
