@@ -1,0 +1,50 @@
+# Lat Bai backend: Postgres + PostgREST (chi 2 dich vu, khong chua bi mat).
+# Bi mat nam ngoai repo: ../../latthe-secrets/stack.env (do infra/setup-stack.ps1 tao).
+# Khoi dong:  powershell -ExecutionPolicy Bypass -File infra\setup-stack.ps1
+#
+# - Cong chi lang nghe 127.0.0.1 (khong ra mang LAN). Muon ra Internet: dung tunnel -> local-proxy.js, khong mo cong.
+# - Du lieu Postgres nam o D:\Claude projects\Project\latthe-pgdata (ngoai Docker): xoa/dung lai Docker khong mat du lieu.
+# - Log container bi gioi han de dia khong phinh.
+name: latthe
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres_latthe
+    restart: unless-stopped
+    env_file: ../../latthe-secrets/stack.env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ../../latthe-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d latthe"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  postgrest:
+    image: postgrest/postgrest:latest
+    container_name: postgrest_trade
+    restart: unless-stopped
+    env_file: ../../latthe-secrets/stack.env
+    environment:
+      PGRST_SERVER_HOST: "0.0.0.0"
+      PGRST_SERVER_PORT: "3000"
+      PGRST_ADMIN_SERVER_PORT: "3001"   # chi trong container, khong publish
+    ports:
+      - "127.0.0.1:3002:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "postgrest", "--ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging

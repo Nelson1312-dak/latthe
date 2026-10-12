@@ -5,11 +5,26 @@
 | Phần | Chạy ở đâu | Ghi chú |
 |---|---|---|
 | Giao diện + API | Vercel (một function duy nhất `api/router.js`) | Gói Hobby giới hạn 12 function, nên mọi endpoint nằm ở `server/routes/` |
-| Database | Postgres trong Docker trên máy của bạn | Vercel gọi qua tunnel ngrok → `local-proxy.js` → PostgREST (cổng 3002), luôn kèm JWT |
+| Database | Postgres + PostgREST trong Docker trên máy của bạn (`infra/docker-compose.yml`) | Vercel gọi qua tunnel ngrok → `local-proxy.js` → PostgREST (127.0.0.1:3002), luôn kèm JWT. Dữ liệu nằm ở `latthe-pgdata/` (ngoài Docker) |
 | Worker giá + worker lệnh khách | Máy của bạn (Task Scheduler) | Vercel không giữ được WebSocket |
 | Sao lưu DB | Máy của bạn, 03:00 mỗi ngày | `latthe-db-backup/` (ngoài repo) |
 
 Nếu máy tắt hoặc ngrok rớt: giá quay về nguồn dự phòng (trễ khoảng 1 phút), còn đăng nhập, bàn môi giới, giao dịch thử báo "hệ thống tạm gián đoạn".
+
+## Dựng (hoặc dựng lại) backend và database
+
+```
+powershell -ExecutionPolicy Bypass -File infra\setup-stack.ps1
+```
+Chạy lại nhiều lần đều an toàn. Script:
+1. tạo `..\latthe-secrets\stack.env` một lần (mật khẩu DB ngẫu nhiên, chỉ tài khoản Windows của bạn đọc được; JWT lấy từ `DB_JWT_SECRET` trong `.env.local`);
+2. dựng Postgres (`postgres_latthe`) và PostgREST (`postgrest_trade`), chỉ lắng nghe `127.0.0.1`, log bị giới hạn;
+3. nếu DB trống thì áp dụng `db/001`, `004`–`011` (`002`/`003` chỉ dọn bảng RAG cũ nên bỏ qua);
+4. kiểm tra API bằng `deploy/check-local-db.mjs` (không token 401, token giả 401, token hợp lệ 200, bảng cũ không lộ).
+
+Dữ liệu Postgres nằm ở `D:\Claude projects\Project\latthe-pgdata`, **ngoài Docker**, nên xóa hoặc dựng lại Docker không mất dữ liệu.
+Muốn nạp lại từ một bản sao lưu vào DB trống: xóa thư mục `latthe-pgdata` (khi container đã dừng), rồi chạy
+`infra\setup-stack.ps1 -Restore "D:\Claude projects\Project\latthe-db-backup\<tệp>.dump"` (chỉ nạp dữ liệu schema `trade`).
 
 ## Danh sách biến môi trường trên Vercel
 

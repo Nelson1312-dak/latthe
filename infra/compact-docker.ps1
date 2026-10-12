@@ -16,7 +16,7 @@
 #
 # NOTE: ASCII-only on purpose (Windows PowerShell 5.1 reads .ps1 files as ANSI without a BOM).
 
-param([switch]$Yes, [switch]$DryRun, [switch]$DisableHibernate, [switch]$Elevated)
+param([switch]$Yes, [switch]$DryRun, [switch]$DisableHibernate, [switch]$Elevated, [switch]$SkipBackup)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $vhdx = Join-Path $env:LOCALAPPDATA 'Docker\wsl\disk\docker_data.vhdx'
@@ -56,14 +56,18 @@ try {
         Log 'Asking Windows for Administrator rights (UAC prompt)...'
         $a = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", '-Yes', '-Elevated')
         if ($DisableHibernate) { $a += '-DisableHibernate' }
+        if ($SkipBackup) { $a += '-SkipBackup' }
         Start-Process powershell -Verb RunAs -ArgumentList $a
         exit 0
     }
 
     # ---------- 2. backup ----------
-    Log 'Step 2/7: database backup'
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo 'db\backup.ps1')
-    if ($LASTEXITCODE -ne 0) { throw 'Database backup FAILED - aborting before touching Docker.' }
+    if ($SkipBackup) { Log 'Step 2/7: database backup SKIPPED (-SkipBackup)' }
+    else {
+        Log 'Step 2/7: database backup'
+        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo 'db\backup.ps1')
+        if ($LASTEXITCODE -ne 0) { throw 'Database backup FAILED - aborting before touching Docker.' }
+    }
 
     # ---------- 3. remember + stop databases cleanly ----------
     Log 'Step 3/7: remember running containers, stop the databases cleanly'
@@ -100,8 +104,9 @@ try {
     for ($i = 0; $i -lt 90; $i++) { Start-Sleep -Seconds 5; docker info 2>$null | Out-Null; if ($LASTEXITCODE -eq 0) { $ok = $true; break } }
     if (-not $ok) { throw 'Docker did not come back within 7 minutes. Open Docker Desktop manually, then run: docker start <names> (list in compact-docker.containers.txt).' }
     Start-Sleep -Seconds 10
-    $want = Get-Content $state
-    $order = @('postgres_latthe') + ($want | Where-Object { $_ -ne 'postgres_latthe' })
+    $want = @(Get-Content $state | Where-Object { $_ })
+    $order = @()
+    if ($want.Count -gt 0) { $order = @('postgres_latthe') + ($want | Where-Object { $_ -ne 'postgres_latthe' }) }
     foreach ($n in $order) {
         $st = docker inspect -f '{{.State.Running}}' $n 2>$null
         if ($st -ne 'true') { docker start $n | Out-Null; Log "  started $n" }
@@ -110,8 +115,8 @@ try {
     # ---------- 7. verify ----------
     Log 'Step 7/7: verification'
     Start-Sleep -Seconds 8
-    $pg = docker exec postgres_latthe pg_isready -U postgres 2>&1
-    Log "  postgres: $pg"
+    if ($want.Count -gt 0) { $pg = docker exec postgres_latthe pg_isready -U postgres 2>&1; Log "  postgres: $pg" }
+    else { Log '  no containers to restore (Docker is empty)' }
     $now = @(docker ps --format '{{.Names}}')
     $missing = $want | Where-Object { $now -notcontains $_ }
     Log ("  containers running: {0}/{1}" -f $now.Count, @($want).Count)

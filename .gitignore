@@ -7,3 +7,5 @@ package-lock.json
 watchdog-proxy.log
 
 worker/logs/
+infra/*.log
+infra/*.containers.txt
