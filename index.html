@@ -16,6 +16,7 @@
     <div class="logo"><div class="logo-card" aria-hidden="true"></div><span class="logo-text">Lật Bài</span></div>
     <nav class="nav" aria-label="Chính">
       <a href="#giao-dich" data-view="trade" aria-current="page">Giao dịch</a>
+      <a href="#bang-gia" data-view="board">Bảng giá</a>
       <a href="#cong-dong" data-view="community">Cộng đồng</a>
       <a href="#tin-nhan" data-view="chat">Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
       <a href="#khach-hang" data-view="desk" id="nav-desk" hidden>Khách hàng</a>
@@ -172,6 +173,29 @@
     <aside class="ctx" id="ctx" aria-label="Thông tin"></aside>
   </main>
 
+  <main class="board" id="view-board" hidden>
+    <div class="board-wrap">
+      <section class="mkt-cards" id="mkt-cards" aria-label="Chỉ số thị trường"></section>
+      <div class="board-grid">
+        <section class="bd-main" aria-label="Bảng giá">
+          <div class="bd-tools">
+            <div class="seg" role="group" aria-label="Nhóm mã" id="bd-groups">
+              <button class="tool" data-bgroup="vn30" aria-pressed="true">VN30</button>
+              <button class="tool" data-bgroup="watch" aria-pressed="false">Theo dõi</button>
+              <button class="tool" data-bgroup="all" aria-pressed="false">Tất cả</button>
+            </div>
+            <select class="inp bd-sector" id="bd-sector" aria-label="Lọc theo ngành"><option value="">Mọi ngành</option></select>
+            <input class="inp bd-q" id="bd-q" placeholder="Tìm mã" aria-label="Tìm mã" autocomplete="off">
+            <span class="bd-src" id="bd-src"></span>
+          </div>
+          <div class="bd-scroll"><table class="bd-table" id="bd-table"></table></div>
+          <p class="bd-note">Giá theo nghìn đồng. Bấm một mã để mở biểu đồ và đặt lệnh. Nhóm ngành chỉ để tham khảo.</p>
+        </section>
+        <aside class="bd-side" id="bd-side" aria-label="Thông tin thị trường"></aside>
+      </div>
+    </div>
+  </main>
+
   <main class="portal" id="view-portal" hidden>
     <div class="portal-wrap" id="portal-body"></div>
   </main>
@@ -314,6 +338,7 @@
 
 <script src="/js/vendor/lightweight-charts.js"></script>
 <script src="/js/app.js"></script>
+<script src="/js/board.js"></script>
 <script src="/js/desk.js"></script>
 <script src="/js/portal.js"></script>
 <script src="/js/account.js"></script>

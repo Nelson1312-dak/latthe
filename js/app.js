@@ -22,8 +22,8 @@ function setQuote(m,q){ m.refU=U(q.ref); m.ceilU=U(q.ceil); m.floorU=U(q.floor);
 /* Nến cuối cùng của lịch sử là phiên hiện tại (đang chạy) hoặc phiên gần nhất (ngoài giờ): tách ra làm `today`. */
 function buildSymbol(q,hist){
   const bars = hist.map(toBar), today = bars.pop();
-  const m = {s:q.s, ex:q.ex, name:q.name, bars, today:{...today}, session:vnDay(hist[hist.length-1].t), rnd:rng(q.s.charCodeAt(0)*131+q.s.charCodeAt(2)), tape:[]};
-  setQuote(m,q);
+  const m = {s:q.s, ex:q.ex, name:q.name, sector:q.sector, vn30:q.vn30, watch:q.watch, bars, today:{...today}, session:vnDay(hist[hist.length-1].t), rnd:rng(q.s.charCodeAt(0)*131+q.s.charCodeAt(2)), tape:[]};
+  setQuote(m,q); setDepth(m,q);
   m.hiU=U(today.high); m.loU=U(today.low); m.vol=today.value;
   return m;
 }
@@ -33,7 +33,7 @@ async function loadMarket(){
   UNIVERSE.length = 0;
   Object.values(mk.quotes).forEach(q=>{
     if(!hs.bars[q.s]) return;
-    UNIVERSE.push({s:q.s,ex:q.ex,name:q.name}); M[q.s] = buildSymbol(q,hs.bars[q.s]);
+    UNIVERSE.push({s:q.s,ex:q.ex,name:q.name,sector:q.sector,vn30:q.vn30,watch:q.watch}); M[q.s] = buildSymbol(q,hs.bars[q.s]);
   });
   if(!UNIVERSE.length) throw new Error("Không có mã nào đủ dữ liệu");
   MKT.polledOnce = false;
@@ -142,8 +142,9 @@ chart.subscribeCrosshairMove(p=>{ if(!p.time||!p.seriesData.size){legend(shown[s
 
 /* ---------------- Renderers ---------------- */
 function renderWL(){
-  $("wl-count").textContent=UNIVERSE.length+" mã";
-  $("wl").innerHTML=UNIVERSE.map(x=>{const m=M[x.s],ch=(m.lastU-m.refU)/m.refU*100,c=cls(m,m.lastU);
+  const WL=UNIVERSE.filter(x=>x.watch);
+  $("wl-count").textContent=WL.length+" mã";
+  $("wl").innerHTML=WL.map(x=>{const m=M[x.s],ch=(m.lastU-m.refU)/m.refU*100,c=cls(m,m.lastU);
     return `<button class="wl-row" data-sym="${x.s}" aria-pressed="${x.s===S.sym}">
       <span class="wl-sym">${x.s}</span><span class="wl-px ${c}" data-px="${x.s}">${fP(m.lastU)}</span>
       <span class="wl-name">${x.name}</span><span class="wl-ch ${c}" data-ch="${x.s}">${(ch>=0?"+":"")+ch.toFixed(2)}%</span></button>`;}).join("");
@@ -459,7 +460,7 @@ function renderChat(){
 function chatPush(a,t,role){CHAT.push({a,t,role,at:new Date().toTimeString().slice(0,5)}); if(CHAT.length>80)CHAT.shift(); renderChat(); renderTrend();}
 function livePrices(){ document.querySelectorAll("[data-live]").forEach(el=>{const m=M[el.dataset.live];el.textContent=fP(m.lastU);el.className=cls(m,m.lastU);}); }
 
-const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#cong-dong"],chat:["view-chat","#tin-nhan"],desk:["view-desk","#khach-hang"],portal:["view-portal","#tai-khoan"]};
+const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#cong-dong"],chat:["view-chat","#tin-nhan"],desk:["view-desk","#khach-hang"],portal:["view-portal","#tai-khoan"],board:["view-board","#bang-gia"]};
 function setView(v){
   if(!UNIVERSE.length) return;
   CS.view=v; Object.entries(VIEWS).forEach(([k,[id]])=>$(id).hidden=k!==v);
@@ -739,6 +740,7 @@ function tick(){
   else if(last){ drawChart(false); }
   renderHead(); renderBook(); updateWLPrices(); renderTicket(); if(S.tab!=="cond") renderPanel();
   communityTick(); chatTick();
+  document.dispatchEvent(new CustomEvent("lb:tick"));
 }
 async function poll(){
   try{

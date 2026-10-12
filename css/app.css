@@ -561,3 +561,62 @@ dialog::backdrop{background:rgba(0,0,0,.72)}
 .desk-rt .dot.off{background:var(--faint)}
 .dt-invite{padding:12px 18px;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:6px}
 @media (max-width:720px){.pactions{flex-direction:column}.pactions button{width:100%}}
+
+/* ---------- Bảng giá và thông tin thị trường ---------- */
+.board{min-height:0;overflow-y:auto;background:var(--black)}
+.board-wrap{padding:16px 16px 28px;display:flex;flex-direction:column;gap:14px;max-width:1500px;margin:0 auto;width:100%}
+.mkt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.mc{border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);padding:11px 14px}
+.mc-n{color:var(--muted);font-size:12px;font-weight:600}
+.mc-n small{color:var(--faint);font-weight:400}
+.mc-v{font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.mc-d{font-size:13px;font-weight:600}
+.mc-sub{margin-top:5px;color:var(--faint);font-size:11px;line-height:1.5}
+.mc-sub b{color:var(--text);font-weight:600}
+.breadth{display:flex;height:5px;border-radius:3px;overflow:hidden;background:var(--line);margin-top:8px}
+.breadth.big{height:9px;border-radius:4px}
+.breadth i{display:block;height:100%}
+.breadth .u{background:var(--up)}.breadth .d{background:var(--down)}.breadth .f{background:var(--ref)}
+.breadth .c{background:var(--ceil)}.breadth .fl{background:var(--floor)}
+.board-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+.bd-main{border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);overflow:hidden;min-width:0}
+.bd-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line-soft)}
+.bd-tools .seg{border:0;padding:0;margin:0}
+.bd-sector{width:auto;height:30px;padding:0 8px}
+.bd-q{width:120px;height:30px}
+.bd-src{margin-left:auto;color:var(--faint);font-size:12px}
+.bd-src.on{color:var(--up)}
+.bd-scroll{overflow-x:auto}
+.bd-table{min-width:760px}
+.bd-table th{padding:0;background:var(--surface);border-bottom:1px solid var(--line)}
+.bd-table th.r{text-align:right}
+.bd-table .th{width:100%;padding:8px 10px;border:0;background:none;color:var(--faint);font-size:11px;font-weight:600;text-align:inherit;white-space:nowrap}
+.bd-table .th:hover{color:var(--text)}
+.bd-table th:first-child .th{text-align:left}
+.bd-table td{padding:6px 10px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
+.bd-table td.r{text-align:right}
+.bd-table td.sym{white-space:nowrap}
+.bd-table td.sym .link{font-weight:700;font-size:13px;color:var(--text)}
+.bd-table td.sym small{display:block;color:var(--faint);font-size:10px;font-weight:400}
+.bd-table td.px{font-weight:700}
+.bd-table tr:hover td{background:var(--raise)}
+.bd-table th:first-child,.bd-table td:first-child{position:sticky;left:0;background:var(--surface);z-index:1}
+.bd-table tr:hover td:first-child{background:var(--raise)}
+.bd-note{margin:0;padding:8px 12px;color:var(--faint);font-size:11px}
+.bd-side{display:flex;flex-direction:column;gap:12px}
+.bd-card{border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);padding:12px 14px}
+.bd-card h3{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--faint)}
+.mv{display:grid;grid-template-columns:52px 1fr auto;gap:8px;width:100%;padding:6px 0;border:0;border-bottom:1px solid var(--line-soft);background:none;color:var(--text);text-align:left}
+.mv:last-child{border-bottom:0}
+.mv b{font-weight:700}
+.mv span{text-align:right;font-variant-numeric:tabular-nums}
+.mv:hover{background:var(--raise)}
+.bd-none{margin:6px 0 0;color:var(--faint);font-size:11px}
+.hm-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.hm{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid var(--line-soft);border-radius:var(--radius-s);color:var(--text);text-align:left}
+.hm b{font-size:12px;font-weight:600;line-height:1.25}
+.hm span{font-size:15px;font-weight:700}
+.hm small{color:var(--muted);font-size:10px}
+.hm:hover{border-color:var(--muted)}
+@media (max-width:1100px){.board-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:720px){.board-wrap{padding:12px 10px 24px}.bd-src{margin-left:0;width:100%}.hm-grid{grid-template-columns:1fr}}

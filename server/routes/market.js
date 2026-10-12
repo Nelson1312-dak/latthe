@@ -40,14 +40,14 @@ export default async function handler(req, res) {
       const wsOk = usable(w, session) && Number.isFinite(w.last) && Number.isFinite(w.vol);
       const [daily, live] = await Promise.all([
         cached('d:' + x.s, 600_000, () => fetchBars(x.s, 8)),
-        wsOk ? { o: w.open ?? w.last, h: w.high ?? w.last, l: w.low ?? w.last, c: w.last, v: w.vol, asof: w.tickAt ? Math.floor(Date.parse(w.tickAt) / 1000) : null } : orNull(liveBar(x.s)),
+        wsOk ? { o: w.open ?? w.last, h: w.high ?? w.last, l: w.low ?? w.last, c: w.last, v: w.vol, asof: w.tickAt ? Math.floor(Date.parse(w.tickAt) / 1000) : null } : orNull(cached('l:' + x.s, 12_000, () => liveBar(x.s))),
       ]);
       const q = quoteFromBars(x, daily, live);
       if (!q) return null;
       q.source = wsOk ? 'ws' : 'poll';
       // Giá khớp ngoài biên độ là dữ liệu hỏng: bỏ WebSocket, dùng nguồn dự phòng
       if (wsOk && (q.last > q.ceil + 1e-9 || q.last < q.floor - 1e-9)) {
-        const alt = quoteFromBars(x, daily, await orNull(liveBar(x.s)));
+        const alt = quoteFromBars(x, daily, await orNull(cached('l:' + x.s, 12_000, () => liveBar(x.s))));
         if (alt) { alt.source = 'poll'; return alt; }
       }
       if (wsOk && usable({ at: w.depthAt }, session) && (w.bid?.length || w.offer?.length)) {

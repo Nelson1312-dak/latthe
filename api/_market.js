@@ -4,17 +4,44 @@
  * Đơn vị giá: nghìn đồng (20.1 = 20.100 đ), như nguồn trả về.
  */
 
+/**
+ * Danh mục hỗ trợ: rổ VN30 (nguồn: DNSE, 12/10/2026, cập nhật khi quỹ cơ cấu lại rổ) + mã đang theo dõi.
+ * sector là nhóm ngành tham khảo để gom nhóm trên bảng giá, không phải phân loại chính thức.
+ * watch = có trong danh sách theo dõi mặc định bên trái màn giao dịch.
+ */
 export const UNIVERSE = [
-  { s: 'HPG', ex: 'HOSE',  name: 'Tập đoàn Hòa Phát' },
-  { s: 'FPT', ex: 'HOSE',  name: 'Công ty CP FPT' },
-  { s: 'MWG', ex: 'HOSE',  name: 'Thế Giới Di Động' },
-  { s: 'VCB', ex: 'HOSE',  name: 'Ngân hàng Vietcombank' },
-  { s: 'TCB', ex: 'HOSE',  name: 'Ngân hàng Techcombank' },
-  { s: 'SSI', ex: 'HOSE',  name: 'Chứng khoán SSI' },
-  { s: 'VHM', ex: 'HOSE',  name: 'Vinhomes' },
-  { s: 'DGC', ex: 'HOSE',  name: 'Hóa chất Đức Giang' },
-  { s: 'PVS', ex: 'HNX',   name: 'Dịch vụ Kỹ thuật Dầu khí' },
-  { s: 'BSR', ex: 'UPCOM', name: 'Lọc hóa dầu Bình Sơn' },
+  { s: 'ACB', ex: 'HOSE', name: 'Ngân hàng Á Châu', sector: 'Ngân hàng', vn30: true },
+  { s: 'BID', ex: 'HOSE', name: 'Ngân hàng BIDV', sector: 'Ngân hàng', vn30: true },
+  { s: 'CTG', ex: 'HOSE', name: 'Ngân hàng VietinBank', sector: 'Ngân hàng', vn30: true },
+  { s: 'HDB', ex: 'HOSE', name: 'Ngân hàng HDBank', sector: 'Ngân hàng', vn30: true },
+  { s: 'LPB', ex: 'HOSE', name: 'Ngân hàng LPBank', sector: 'Ngân hàng', vn30: true },
+  { s: 'MBB', ex: 'HOSE', name: 'Ngân hàng MB', sector: 'Ngân hàng', vn30: true },
+  { s: 'SHB', ex: 'HOSE', name: 'Ngân hàng SHB', sector: 'Ngân hàng', vn30: true },
+  { s: 'SSB', ex: 'HOSE', name: 'Ngân hàng SeABank', sector: 'Ngân hàng', vn30: true },
+  { s: 'STB', ex: 'HOSE', name: 'Ngân hàng Sacombank', sector: 'Ngân hàng', vn30: true },
+  { s: 'TCB', ex: 'HOSE', name: 'Ngân hàng Techcombank', sector: 'Ngân hàng', vn30: true, watch: true },
+  { s: 'VCB', ex: 'HOSE', name: 'Ngân hàng Vietcombank', sector: 'Ngân hàng', vn30: true, watch: true },
+  { s: 'VIB', ex: 'HOSE', name: 'Ngân hàng VIB', sector: 'Ngân hàng', vn30: true },
+  { s: 'VPB', ex: 'HOSE', name: 'Ngân hàng VPBank', sector: 'Ngân hàng', vn30: true },
+  { s: 'SSI', ex: 'HOSE', name: 'Chứng khoán SSI', sector: 'Chứng khoán', vn30: true, watch: true },
+  { s: 'TCX', ex: 'HOSE', name: 'Chứng khoán Techcom', sector: 'Chứng khoán', vn30: true },
+  { s: 'VHM', ex: 'HOSE', name: 'Vinhomes', sector: 'Bất động sản', vn30: true, watch: true },
+  { s: 'VIC', ex: 'HOSE', name: 'Vingroup', sector: 'Bất động sản', vn30: true },
+  { s: 'VRE', ex: 'HOSE', name: 'Vincom Retail', sector: 'Bất động sản', vn30: true },
+  { s: 'BSR', ex: 'HOSE', name: 'Lọc hóa dầu Bình Sơn', sector: 'Dầu khí & năng lượng', vn30: true, watch: true },
+  { s: 'GAS', ex: 'HOSE', name: 'PV GAS', sector: 'Dầu khí & năng lượng', vn30: true },
+  { s: 'HPG', ex: 'HOSE', name: 'Tập đoàn Hòa Phát', sector: 'Thép & vật liệu', vn30: true, watch: true },
+  { s: 'FPT', ex: 'HOSE', name: 'Công ty CP FPT', sector: 'Công nghệ', vn30: true, watch: true },
+  { s: 'MWG', ex: 'HOSE', name: 'Thế Giới Di Động', sector: 'Tiêu dùng & bán lẻ', vn30: true, watch: true },
+  { s: 'MSN', ex: 'HOSE', name: 'Masan Group', sector: 'Tiêu dùng & bán lẻ', vn30: true },
+  { s: 'MCH', ex: 'HOSE', name: 'Masan Consumer', sector: 'Tiêu dùng & bán lẻ', vn30: true },
+  { s: 'SAB', ex: 'HOSE', name: 'Sabeco', sector: 'Tiêu dùng & bán lẻ', vn30: true },
+  { s: 'VNM', ex: 'HOSE', name: 'Vinamilk', sector: 'Tiêu dùng & bán lẻ', vn30: true },
+  { s: 'VJC', ex: 'HOSE', name: 'Vietjet', sector: 'Hàng không & du lịch', vn30: true },
+  { s: 'VPL', ex: 'HOSE', name: 'Vinpearl', sector: 'Hàng không & du lịch', vn30: true },
+  { s: 'GVR', ex: 'HOSE', name: 'Tập đoàn Cao su Việt Nam', sector: 'Cao su & KCN', vn30: true },
+  { s: 'DGC', ex: 'HOSE', name: 'Hóa chất Đức Giang', sector: 'Hóa chất', watch: true },
+  { s: 'PVS', ex: 'HNX', name: 'Dịch vụ Kỹ thuật Dầu khí', sector: 'Dầu khí & năng lượng', watch: true },
 ];
 export const BY_SYMBOL = Object.fromEntries(UNIVERSE.map((x) => [x.s, x]));
 
@@ -116,6 +143,8 @@ export async function liveBar(symbol, kind = 'stock') {
  * Có live: tham chiếu = đóng cửa phiên liền trước, giá hiện tại = giá khớp gần nhất.
  * Không có live (ngoài giờ): tham chiếu = đóng cửa phiên gần nhất, thay đổi 0%.
  */
+const meta = (i) => ({ s: i.s, ex: i.ex, name: i.name, sector: i.sector, vn30: !!i.vn30, watch: !!i.watch });
+
 export function quoteFromBars(info, daily, live = null) {
   const today = vnNow().ymd;
   const past = daily.filter((b) => vnNow(b.t * 1000).ymd !== today);
@@ -124,12 +153,12 @@ export function quoteFromBars(info, daily, live = null) {
   if (bar && past.length) {
     const ref = past[past.length - 1].c;
     const { ceil, floor } = limits(ref, info.ex);
-    return { s: info.s, ex: info.ex, name: info.name, ref, ceil, floor, last: bar.c, open: bar.o, high: bar.h, low: bar.l, vol: bar.v, lastSession: today, asof: bar.asof || null };
+    return { ...meta(info), ref, ceil, floor, last: bar.c, open: bar.o, high: bar.h, low: bar.l, vol: bar.v, lastSession: today, asof: bar.asof || null };
   }
   const last = past[past.length - 1];
   if (!last) return null;
   const { ceil, floor } = limits(last.c, info.ex);
-  return { s: info.s, ex: info.ex, name: info.name, ref: last.c, ceil, floor, last: last.c, open: last.c, high: last.c, low: last.c, vol: 0, lastSession: vnNow(last.t * 1000).ymd, asof: null };
+  return { ...meta(info), ref: last.c, ceil, floor, last: last.c, open: last.c, high: last.c, low: last.c, vol: 0, lastSession: vnNow(last.t * 1000).ymd, asof: null };
 }
 
 /** Chỉ số: so với đóng cửa phiên liền trước. Trong phiên dùng điểm của nến 1 phút mới nhất. */
