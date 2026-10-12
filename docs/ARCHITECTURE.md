@@ -102,6 +102,14 @@ Môi giới tạo khuyến nghị (mã, chiều, vùng giá, mục tiêu, cắt 
 
 Worker đọc danh sách khách có liên kết, mở một kết nối WebSocket mỗi khách (kênh order + position), lưu sự kiện vào `trade.order_events`, đồng bộ trạng thái phiếu lệnh theo `id` lệnh DNSE. Giao diện đọc qua API (poll ngắn hoặc SSE).
 
+### 5.4 Tư vấn danh mục, tái phân bổ, AI local
+- **Danh mục mẫu** (`model_portfolios`, `model_weights`): môi giới tạo theo mức rủi ro (Thận trọng, Cân bằng, Tăng trưởng, Mạo hiểm), tỷ trọng cổ phiếu + tiền mặt = 100%, kèm ngưỡng lệch.
+- **Khẩu vị rủi ro** (`client_profiles`): khách tự trả lời 7 câu trong cổng khách hàng (chấm điểm ở máy chủ, `api/_risk.js`), hoặc môi giới đặt. Hệ thống cảnh báo khi danh mục mẫu rủi ro cao hơn khẩu vị.
+- **Hiệu suất** (`api/_portfolio.js`): (a) danh mục hiện tại giữ nguyên trong quá khứ (có ngay, là giả định), (b) thực tế từ ảnh chụp cuối ngày `portfolio_snapshots` (tính theo cổ phiếu nắm giữ nên nạp/rút tiền không làm sai), (c) danh mục mẫu. So với VN-Index theo kỳ 1T/3T/6T/YTD/1N, biến động, sụt giảm tối đa, beta. Giá lịch sử tự điều chỉnh các bước nhảy ngoài biên độ (quyền, chia tách).
+- **Tái phân bổ** (`api/_rebalance.js`): đưa danh mục về tỷ trọng mục tiêu, bỏ qua mã lệch ít hơn ngưỡng, bán trước mua sau, không dùng thêm ký quỹ, lô 100, chỉ bán phần đã về, chia lệnh theo hạn mức. Đề xuất thành **phiếu lệnh nguồn "app"**: khách xác nhận trong cổng, môi giới gửi lệnh như luồng 5.1.
+- **AI local**: Vercel xếp việc vào `ai_jobs`; worker trên máy nhà gọi Qwen (Ollama). AI chỉ diễn giải số liệu hệ thống đã tính, viết bản nháp cho môi giới, không gửi thẳng cho khách. Số % lạ trong câu trả lời bị đánh dấu.
+- Phân quyền: môi giới đọc ảnh chụp bằng `app_worker` sau khi đã `assertOwner` + kiểm tra care-by trong code (khách care-by chưa chắc có tài khoản Lật Bài); khách chỉ đọc dữ liệu tiểu khoản đã liên kết qua RLS.
+
 ## 6. Dữ liệu (schema `trade`)
 
 | Bảng | Nội dung |

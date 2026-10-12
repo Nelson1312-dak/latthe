@@ -20,6 +20,7 @@
       <a href="#cong-dong" data-view="community">Cộng đồng</a>
       <a href="#tin-nhan" data-view="chat">Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
       <a href="#khach-hang" data-view="desk" id="nav-desk" hidden>Khách hàng</a>
+      <a href="#tu-van" data-view="advisory" id="nav-adv" hidden>Tư vấn</a>
       <a href="#tai-khoan" data-view="portal" id="nav-portal" hidden>Tài khoản của tôi<span class="nbadge" id="portal-badge"></span></a>
       <a href="#" aria-disabled="true" title="Sắp có">Backtest</a>
     </nav>
@@ -198,6 +199,11 @@
 
   <main class="portal" id="view-portal" hidden>
     <div class="portal-wrap" id="portal-body"></div>
+    <div class="portal-wrap av-portal" id="portal-adv"></div>
+  </main>
+
+  <main class="adv" id="view-advisory" hidden>
+    <div class="adv-wrap" id="adv-body"></div>
   </main>
 
   <main class="desk" id="view-desk" hidden>
@@ -351,6 +357,7 @@
 <script src="/js/board.js"></script>
 <script src="/js/desk.js"></script>
 <script src="/js/portal.js"></script>
+<script src="/js/advisory.js"></script>
 <script src="/js/account.js"></script>
 </body>
 </html>

@@ -36,6 +36,7 @@ npm run worker:market
 ```
 powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name market          # worker giá
 powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name broker          # worker lệnh của khách
+powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name advisory        # AI local + ảnh chụp danh mục
 powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name market -Remove  # gỡ
 ```
 
@@ -56,12 +57,32 @@ powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name market
 # Chạy tự động trên Windows
 
 ```
-powershell -ExecutionPolicy Bypass -File workeregister-worker.ps1 -Name market    # worker giá
-powershell -ExecutionPolicy Bypass -File workeregister-worker.ps1 -Name broker    # worker lệnh của khách
-powershell -ExecutionPolicy Bypass -File workeregister-worker.ps1 -Name market -Remove   # gỡ
+powershell -ExecutionPolicy Bypass -File worker
+egister-worker.ps1 -Name market    # worker giá
+powershell -ExecutionPolicy Bypass -File worker
+egister-worker.ps1 -Name broker    # worker lệnh của khách
+powershell -ExecutionPolicy Bypass -File worker
+egister-worker.ps1 -Name market -Remove   # gỡ
 ```
 
 - Tạo tác vụ "Latbai worker <tên>" trong Task Scheduler: chạy mỗi lần đăng nhập và nhắc lại mỗi 10 phút. Chỉ chạy khi bạn đã đăng nhập Windows, nên không lưu mật khẩu ở đâu cả.
 - `worker/supervise.ps1` giữ đúng một bản worker chạy ẩn và dựng lại khi nó chết (chờ 5 giây; chết nhanh liên tiếp thì lùi dần tới 5 phút để không dồn dập gọi DNSE khi sai key).
 - Log: `worker/logs/<tên>.log` (tự cắt khi quá 1 MB, đã nằm trong .gitignore). Log không chứa key hay secret.
 - Key/secret chỉ nằm trong `.env.local`. Đổi key thì sửa file đó rồi khởi động lại tác vụ (Stop-ScheduledTask rồi Start-ScheduledTask).
+
+---
+
+# Worker tư vấn (`worker/advisory-worker.mjs`)
+
+Chạy trên máy nhà, cạnh Postgres và Ollama. Hai việc:
+
+1. **AI local**: API trên Vercel chỉ xếp việc vào bảng `trade.ai_jobs`; worker lấy việc, gọi Qwen qua Ollama ở `127.0.0.1:11434`
+   (không đi qua tunnel, không ra Internet), ghi kết quả. Mọi số % trong câu trả lời được đối chiếu với dữ kiện đầu vào; số lạ được đánh dấu cho môi giới.
+   Dữ kiện gửi AI chỉ có số liệu đã tính (tỷ trọng, hiệu suất, cảnh báo), không có tên, số tài khoản hay giá trị tài sản tuyệt đối của khách.
+2. **Ảnh chụp danh mục**: thứ 2 đến thứ 6, sau 15:05 giờ VN, chụp tiền + danh mục của mọi khách care-by vào `trade.portfolio_snapshots`
+   để tính hiệu suất thực tế. Chụp tay: `node --env-file=.env.local worker/advisory-worker.mjs --snapshot-now`.
+
+Biến môi trường (trong `.env.local`, đều có mặc định): `ADVISORY_MODEL` (mặc định `qwen3:8b`), `ADVISORY_OLLAMA_URL` (mặc định `http://127.0.0.1:11434`), `ADVISORY_TIMEOUT_MS`.
+
+Ollama cài bản Windows, model lưu ở `D:\ollama-models` (biến người dùng `OLLAMA_MODELS`), tự chạy khi đăng nhập. Đổi model: `ollama pull <tên>` rồi đặt `ADVISORY_MODEL` và khởi động lại tác vụ "Latbai worker advisory".
+GTX 1660 SUPER 6 GB: `qwen3:8b` (khoảng 5,2 GB) vừa đủ; muốn nhanh hơn dùng `qwen3:4b`.

@@ -9,7 +9,7 @@
 # launches exit at once. Runs only while this user is logged on, so no password is stored anywhere.
 
 param(
-    [Parameter(Mandatory = $true)][ValidateSet('market', 'broker')][string]$Name,
+    [Parameter(Mandatory = $true)][ValidateSet('market', 'broker', 'advisory')][string]$Name,
     [switch]$Remove
 )
 $ErrorActionPreference = 'Stop'

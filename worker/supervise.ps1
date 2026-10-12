@@ -1,6 +1,6 @@
 # worker/supervise.ps1
 # Keeps one DNSE worker running: starts it, waits, restarts it if it exits.
-# Usage: powershell -File supervise.ps1 -Name market    (or: -Name broker)
+# Usage: powershell -File supervise.ps1 -Name market    (or: -Name broker, -Name advisory)
 #
 # NOTE: ASCII-only on purpose. Windows PowerShell 5.1 reads .ps1 files as ANSI without a BOM.
 #
@@ -9,11 +9,11 @@
 # - Secrets stay in .env.local (node reads it via --env-file). Nothing secret is printed or logged here.
 # - Log: worker\logs\<name>.log, trimmed when it grows past 1 MB.
 
-param([Parameter(Mandatory = $true)][ValidateSet('market', 'broker')][string]$Name)
+param([Parameter(Mandatory = $true)][ValidateSet('market', 'broker', 'advisory')][string]$Name)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$script = if ($Name -eq 'market') { 'worker\market-stream.mjs' } else { 'worker\broker-stream.mjs' }
+$script = @{ market = 'worker\market-stream.mjs'; broker = 'worker\broker-stream.mjs'; advisory = 'worker\advisory-worker.mjs' }[$Name]
 $logDir = Join-Path $PSScriptRoot 'logs'
 $log = Join-Path $logDir ("$Name.log")
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
