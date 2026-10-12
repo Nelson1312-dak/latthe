@@ -10,50 +10,16 @@
 import crypto from 'node:crypto';
 import { route } from '../_http.js';
 import * as dnse from '../_dnse.js';
-
-const TYPES = ['LO', 'MTL', 'ATO', 'ATC'];
-const fmt = (n) => Math.round(n).toLocaleString('vi-VN');
+import { buildOrder } from '../_desk.js';
 
 async function preview(uid, b) {
-  const symbol = String(b.symbol || '').toUpperCase();
-  if (!/^[A-Z0-9]{3,10}$/.test(symbol)) throw new dnse.DnseError('Mã chứng khoán không hợp lệ.', 400);
-  if (b.side !== 'B' && b.side !== 'S') throw new dnse.DnseError('Lệnh phải là mua hoặc bán.', 400);
-  if (!TYPES.includes(b.type)) throw new dnse.DnseError('Loại lệnh không hợp lệ.', 400);
-  const qty = Number(b.qty);
-  if (!Number.isInteger(qty) || qty <= 0 || qty % 100 !== 0) throw new dnse.DnseError('Khối lượng phải là bội số của 100.', 400);
-
   const info = await dnse.accounts();
   const acc = (info?.accounts || []).find((a) => a.id === String(b.account || ''));
   if (!acc) throw new dnse.DnseError('Tiểu khoản không thuộc tài khoản của bạn.', 400);
-
-  const sec = await dnse.securityDef(symbol);
-  if (!sec?.ceilingPrice || !sec?.floorPrice) throw new dnse.DnseError(`Không lấy được trần/sàn của ${symbol} từ DNSE.`, 502);
-  // Giá gửi lên dùng cùng đơn vị với secdef. Tự nhận biết: trần > 1000 nghĩa là đơn vị đồng.
-  const unitVnd = sec.ceilingPrice > 1000;
-  const toVnd = (p) => (unitVnd ? p : p * 1000);
-
-  let apiPrice;
-  if (b.type === 'LO') {
-    const k = Number(b.price); // người dùng nhập nghìn đồng, như bảng giá
-    if (!Number.isFinite(k) || k <= 0) throw new dnse.DnseError('Nhập giá đặt.', 400);
-    apiPrice = unitVnd ? Math.round(k * 1000) : Math.round(k * 100) / 100;
-    if (apiPrice < sec.floorPrice || apiPrice > sec.ceilingPrice) {
-      throw new dnse.DnseError(`Giá phải trong khoảng sàn ${fmt(toVnd(sec.floorPrice))} đ đến trần ${fmt(toVnd(sec.ceilingPrice))} đ.`, 400);
-    }
-  }
-  const estValue = toVnd(b.type === 'LO' ? apiPrice : sec.ceilingPrice) * qty; // lệnh thị trường: ước tính theo giá trần
-  if (estValue > dnse.maxOrderVnd()) {
-    throw new dnse.DnseError(`Giá trị lệnh khoảng ${fmt(estValue)} đ vượt hạn mức ${fmt(dnse.maxOrderVnd())} đ mỗi lệnh.`, 400);
-  }
-
-  const order = { accountNo: acc.id, symbol, side: b.side === 'B' ? 'NB' : 'NS', orderType: b.type, quantity: qty, ...(b.type === 'LO' ? { price: apiPrice } : {}) };
+  const built = await buildOrder({ accountNo: acc.id, symbol: b.symbol, side: b.side, type: b.type, price: b.price, qty: b.qty });
   return {
-    summary: {
-      text: `${b.side === 'B' ? 'MUA' : 'BÁN'} ${qty.toLocaleString('vi-VN')} ${symbol} ${b.type === 'LO' ? `giá ${fmt(toVnd(apiPrice))} đ` : `lệnh ${b.type}`}, tiểu khoản ${acc.id}`,
-      estValueVnd: Math.round(estValue),
-      ceilingVnd: toVnd(sec.ceilingPrice), floorVnd: toVnd(sec.floorPrice), referenceVnd: sec.basicPrice ? toVnd(sec.basicPrice) : null,
-    },
-    confirm: dnse.makeConfirm(uid, order),
+    summary: { text: `${built.text}, tiểu khoản ${acc.id}`, estValueVnd: built.estValueVnd, ceilingVnd: built.ceilingVnd, floorVnd: built.floorVnd },
+    confirm: dnse.makeConfirm(uid, built.order),
     expiresInSec: 90,
     realTrading: dnse.realTradingEnabled(),
   };

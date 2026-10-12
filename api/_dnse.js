@@ -79,6 +79,8 @@ async function call(method, path, { query, body, tradingToken } = {}) {
 
 // ---------- Đọc tài khoản ----------
 export const accounts = () => call('GET', '/accounts');
+/** Môi giới/SACO: các tiểu khoản khách đã ủy quyền, kèm permissions[] (ADVISOR | BROKER) theo sản phẩm. */
+export const careBy = () => call('GET', '/brokers/accounts/care-by');
 export const balances = (acc) => call('GET', `/accounts/${encodeURIComponent(acc)}/balances`);
 export const positions = (acc) => call('GET', `/accounts/${encodeURIComponent(acc)}/positions`, { query: { marketType: 'STOCK' } });
 export const orderBook = (acc) => call('GET', `/accounts/${encodeURIComponent(acc)}/orders`, { query: { marketType: 'STOCK', orderCategory: 'NORMAL' } });
