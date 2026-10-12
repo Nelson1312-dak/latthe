@@ -1,573 +1,200 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="Lật Bài — nền tảng luận mệnh & giải trí miễn phí: Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot, Thần Số Học, Giải Mã Tên, Drinking Game & Đua Thú. AI luận giải tiếng Việt chuyên sâu, không quảng cáo, không cần đăng ký.">
-  <meta name="keywords" content="gieo quẻ online, lá số tử vi, xem tarot online, bói bài tarot, tử vi đẩu số, kinh dịch online, thần số học, giải mã tên, ghép đôi tên, đua ngựa online, drinking game, bộ bài uống rượu, lật bài, bói dịch online, tử vi ai, gieo quẻ kinh dịch, cờ tỷ phú, board game việt nam">
-  <meta name="robots" content="index, follow, max-image-preview:large">
-  <meta name="author" content="Lật Bài">
-  <meta name="theme-color" content="#fbf3e4">
-  <link rel="canonical" href="https://latbai.vn/">
-  <title>Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Tarot, Thần Số Học & Game Vui</title>
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://latbai.vn/">
-  <meta property="og:site_name" content="Lật Bài">
-  <meta property="og:locale" content="vi_VN">
-  <meta property="og:title" content="Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Tarot, Thần Số Học & Game Vui">
-  <meta property="og:description" content="Nền tảng luận mệnh & giải trí miễn phí: Tử Vi AI, Gieo Quẻ Kinh Dịch, Tarot, Thần Số Học, Giải Mã Tên, Drinking Game & Đua Thú. AI luận giải tiếng Việt, không quảng cáo.">
-  <meta property="og:image" content="https://latbai.vn/images/og-main.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Lật Bài — luận mệnh & giải trí AI miễn phí">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Lật Bài — Tử Vi AI, Gieo Quẻ Kinh Dịch, Tarot, Thần Số Học & Game Vui">
-  <meta name="twitter:description" content="Luận mệnh & giải trí miễn phí: Tử Vi, Gieo Quẻ, Tarot, Thần Số Học, Giải Mã Tên, Drinking Game, Đua Thú. AI tiếng Việt chuyên sâu.">
-  <meta name="twitter:image" content="https://latbai.vn/images/og-main.png">
-  <link rel="manifest" href="/manifest.webmanifest">
-      <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
-  <link rel="apple-touch-icon" href="/images/icon.svg">
-  
-  
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Lật Bài">
-  <link rel="stylesheet" href="/css/fonts.css">
-  <link rel="stylesheet" href="css/common.css">
-  <link rel="stylesheet" href="css/landing.css">
-
-  <!-- Shared shell: floating dock, service worker, Vercel analytics -->
-  <script src="/js/shell.js" defer></script>
-  <!-- 3D mystic FX: canvas bụi vàng, halo thiên văn, tilt card, scroll reveal -->
-  <script src="/js/landing-fx.js" defer></script>
-  <!-- Hồ Sơ Huyền Học + Vận Hôm Nay + nhắc hằng ngày -->
-  <script src="/js/profile.js" defer></script>
-  <script src="/js/daily-data.js" defer></script>
-  <script src="/js/amlich.js" defer></script>
-  <script src="/js/push.js" defer></script>
-  <script src="/js/home-hub.js" defer></script>
-
-  <!-- Structured Data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://latbai.vn/#website",
-        "name": "Lật Bài",
-        "url": "https://latbai.vn",
-        "description": "Nền tảng luận mệnh và giải trí trực tuyến miễn phí: Lá Số Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot và Drinking Game.",
-        "inLanguage": "vi",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": { "@type": "EntryPoint", "urlTemplate": "https://latbai.vn/?q={search_term_string}" },
-          "query-input": "required name=search_term_string"
-        }
-      },
-      {
-        "@type": "Organization",
-        "@id": "https://latbai.vn/#organization",
-        "name": "Lật Bài",
-        "url": "https://latbai.vn",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://latbai.vn/images/icon.svg"
-        },
-        "description": "Nền tảng luận mệnh & giải trí trực tuyến thuần Việt. Miễn phí, không quảng cáo.",
-        "areaServed": "VN",
-        "availableLanguage": "vi"
-      },
-      {
-        "@type": "ItemList",
-        "name": "Các module của Lật Bài",
-        "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Xem Tarot Online", "description": "Bốc 3 lá Tarot Quá Khứ – Hiện Tại – Tương Lai", "url": "https://latbai.vn/tarot/" },
-          { "@type": "ListItem", "position": 2, "name": "Lá Số Tử Vi AI", "description": "Dựng và luận giải lá số Tử Vi Đẩu Số bằng AI", "url": "https://latbai.vn/tuvi/" },
-          { "@type": "ListItem", "position": 3, "name": "Gieo Quẻ Kinh Dịch Online", "description": "Gieo quẻ Kinh Dịch cổ truyền, AI luận 64 quẻ", "url": "https://latbai.vn/gieoque/" },
-          { "@type": "ListItem", "position": 4, "name": "Thần Số Học AI", "description": "Biểu đồ ngày sinh Pythagoras & các con số cốt lõi", "url": "https://latbai.vn/thansohoc/" },
-          { "@type": "ListItem", "position": 5, "name": "Giải Mã Tên", "description": "Ngũ Hành, linh vật, điểm vận mệnh & ghép đôi theo tên", "url": "https://latbai.vn/ten/" },
-          { "@type": "ListItem", "position": 6, "name": "Drinking Game", "description": "Bộ bài uống rượu cho nhóm bạn", "url": "https://latbai.vn/drinking/" },
-          { "@type": "ListItem", "position": 7, "name": "Đua Thú", "description": "Đua ngựa & đua vịt mini game cho nhóm bạn", "url": "https://latbai.vn/dua/" },
-          { "@type": "ListItem", "position": 8, "name": "Thư Viện Kiến Thức", "description": "Bài viết chuyên sâu về Kinh Dịch, Tử Vi, Tarot", "url": "https://latbai.vn/thuvien/" },
-          { "@type": "ListItem", "position": 9, "name": "Xin Xăm Online", "description": "Lắc ống xăm rút quẻ trong 100 quẻ xăm cổ truyền, AI luận giải", "url": "https://latbai.vn/xin-xam/" },
-          { "@type": "ListItem", "position": 10, "name": "Lịch Âm — Lịch Vạn Niên", "description": "Đổi ngày âm dương, can chi, 12 Trực, giờ hoàng đạo, 24 tiết khí", "url": "https://latbai.vn/lich-am/" },
-          { "@type": "ListItem", "position": 11, "name": "Cờ Tỷ Phú", "description": "Board game mua đất, xây nhà, thu tiền thuê trên 40 ô địa danh Việt, 2-4 người hoặc đấu bot", "url": "https://latbai.vn/co-ty-phu/" }
-        ]
-      }
-    ]
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Lật Bài là trang web gì?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Lật Bài là nền tảng luận mệnh và giải trí trực tuyến miễn phí thuần Việt, gồm 4 module: Lá Số Tử Vi AI (dựng và luận giải lá số Tử Vi Đẩu Số), Gieo Quẻ Kinh Dịch Online, Xem Tarot Online và Drinking Game. Mỗi module đều tích hợp AI luận giải tiếng Việt chuyên sâu."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Gieo quẻ Kinh Dịch online trên Lật Bài có chính xác không?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Gieo quẻ Kinh Dịch trên Lật Bài được tính toán theo đúng phương pháp cổ truyền — gieo 3 đồng xu 6 lần để tạo Quẻ Dịch theo phương pháp Ngọc Kinh, xác định quẻ chính và hào biến theo đúng 64 quẻ Kinh Dịch truyền thống. AI sau đó phân tích và luận giải theo câu hỏi cụ thể của bạn bằng tiếng Việt."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Lá số Tử Vi AI được tính toán như thế nào?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Lá số Tử Vi được dựng theo phương pháp Tử Vi Đẩu Số Bắc Phái cổ truyền — tính toán 12 cung, an sao chính tinh và phụ tinh dựa trên ngày tháng năm sinh âm lịch và giờ sinh. Hệ thống hiển thị đầy đủ chất lượng sao (Miếu/Vượng/Đắc/Hãm) và đại hạn. AI luận giải vận mệnh theo từng câu hỏi cụ thể bằng tiếng Việt thuần túy."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Xem Tarot online trên Lật Bài hoạt động như thế nào?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Trang Xem Tarot sử dụng bộ bài 78 lá Rider-Waite-Smith chuẩn. Bạn chọn chủ đề (sự nghiệp, tình duyên, tài lộc) và bốc 3 lá đại diện cho Quá Khứ – Hiện Tại – Tương Lai. AI phân tích ý nghĩa từng lá và luận giải tổng thể theo câu hỏi của bạn. Không cần kinh nghiệm xem bài, AI sẽ giải thích toàn bộ."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Lật Bài có hoàn toàn miễn phí không?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Có. Lật Bài hoàn toàn miễn phí — không phí đăng ký, không gói cao cấp, không quảng cáo. Tất cả tính năng từ Tử Vi AI, Gieo Quẻ, Xem Tarot đến Drinking Game đều mở toàn bộ và miễn phí mãi mãi."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Dữ liệu cá nhân và lịch sử xem bài có được lưu không?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Lịch sử xem bài được lưu ngay trên trình duyệt của bạn (localStorage) — không gửi lên máy chủ, không chia sẻ với bên thứ ba. Bạn không cần tạo tài khoản hay cung cấp bất kỳ thông tin cá nhân nào. Dữ liệu chỉ tồn tại trên thiết bị của bạn."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Drinking Game trên Lật Bài là gì?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Đây là bộ bài uống rượu (drinking game) thiết kế cho các buổi tụ tập nhóm bạn. Mỗi lượt lật bài sẽ xuất hiện thử thách, sự thật hay câu hỏi bình chọn hài hước — phù hợp cho tiệc, tất niên, hay những đêm vui cùng bạn bè. Chỉ dành cho người trên 18 tuổi."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Lật Bài có ứng dụng điện thoại không?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Lật Bài là Progressive Web App (PWA) — bạn có thể cài thẳng lên màn hình chính điện thoại từ trình duyệt mà không cần App Store hay Google Play. Trang web hoạt động mượt mà trên cả điện thoại Android, iPhone và máy tính."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Thần Số Học trên Lật Bài tính theo phương pháp nào?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Thần Số Học trên Lật Bài sử dụng phương pháp Pythagoras phương Tây — tính các con số cốt lõi từ ngày tháng năm sinh và tên của bạn: Số Chủ Đạo (Life Path), Số Sứ Mệnh, Số Linh Hồn và Số Nhân Cách. AI luận giải ưu khuyết điểm, tính cách và sứ mệnh đời người bằng tiếng Việt."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Giải Mã Tên và Ghép Đôi tên hoạt động ra sao?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Giải Mã Tên phân tích năng lượng ẩn sau cái tên: Ngũ Hành (Kim Mộc Thủy Hỏa Thổ), linh vật hộ mệnh, điểm vận mệnh, con số và màu sắc may mắn. Tính năng Ghép Đôi cho phép nhập 2 tên để xem độ hợp theo phần trăm cùng phân tích tương sinh – tương khắc Ngũ Hành. Cùng một tên luôn cho cùng kết quả. Tính năng mang tính giải trí, miễn phí."
-        }
-      }
-    ]
-  }
-  </script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lật Bài — Giao dịch</title>
+<meta name="description" content="Bản demo màn hình giao dịch chứng khoán của Lật Bài: biểu đồ, bước giá, đặt lệnh, cộng đồng và trợ lý AI.">
+<meta name="robots" content="index, follow">
+<link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/app.css">
 </head>
-<body class="light-theme home-theme">
-  <div class="l-clouds" aria-hidden="true">
-    <svg viewBox="0 0 1400 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g stroke="#d99a3a" stroke-width="2" stroke-linecap="round" opacity="0.6">
-        <path d="M80 70c40-26 96-22 120 8 18-30 78-34 104-6 30-10 64 6 70 34"/>
-        <path d="M150 96c30 8 70 6 96-10"/>
-        <path d="M1320 60c-40-26-96-22-120 8-18-30-78-34-104-6-30-10-64 6-70 34"/>
-        <path d="M1250 86c-30 8-70 6-96-10"/>
-        <path d="M520 40c34-22 84-18 106 8 16-26 70-30 92-6 26-8 56 6 62 30"/>
-        <path d="M700 150c40-24 96-20 120 8 18-28 78-32 104-6"/>
-      </g>
-    </svg>
-  </div>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="logo"><div class="logo-card" aria-hidden="true"></div><span class="logo-text">Lật Bài</span></div>
+    <nav class="nav" aria-label="Chính">
+      <a href="#giao-dich" data-view="trade" aria-current="page">Giao dịch</a>
+      <a href="#cong-dong" data-view="community">Cộng đồng</a>
+      <a href="#tin-nhan" data-view="chat">Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
+      <a href="#" aria-disabled="true" title="Sắp có">Backtest</a>
+    </nav>
+    <div class="search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" placeholder="Tìm mã, ví dụ HPG" aria-label="Tìm mã chứng khoán" autocomplete="off">
+    </div>
+    <div class="indices" id="indices"></div>
+    <div class="acct"><span class="acct-name">0001 234 567</span><span class="avatar" aria-hidden="true">H</span></div>
+  </header>
 
-  <div class="l-page">
+  <main class="workspace" id="view-trade">
+    <section class="wl" aria-label="Danh sách theo dõi">
+      <div class="pane-title">Theo dõi <span id="wl-count"></span></div>
+      <div class="wl-list" id="wl"></div>
+    </section>
 
-    <!-- ===== HERO ===== -->
-    <header class="l-hero">
-      <div class="l-brand-icon" aria-hidden="true">
-        <img src="/images/logo.svg" alt="Lật Bài Logo">
-      </div>
-      <h1 class="l-brand-name">lật bài</h1>
-      <p class="l-hero-tagline">Luận mệnh & Giải trí AI miễn phí</p>
-    </header>
-
-    <div class="l-divider"></div>
-
-    <!-- ===== HỒ SƠ HUYỀN HỌC + VẬN HÔM NAY (JS render, không ảnh hưởng SEO tĩnh) ===== -->
-    <section id="hub-profile" class="l-hub" aria-label="Hồ sơ huyền học"></section>
-    <section id="hub-daily" class="l-hub" aria-label="Vận hôm nay"></section>
-
-    <!-- ===== MODULE CARDS ===== -->
-    <main class="l-main-content" aria-label="Các tính năng chính">
-
-      <div class="l-fg-head">
-        <h2 class="l-section-title">Khám phá</h2>
-        <p class="l-lookup-sub">Công cụ luận mệnh, chiêm tinh và giải trí nhóm — tất cả trong tầm tay.</p>
-      </div>
-
-      <div class="bento">
-
-        <a class="bt bt-hero" href="/tarot/" style="--bt:#7c3aed; --bt-bg:rgba(124,58,237,.10)">
-          <span class="bt-tag"><i class="ti ti-star-filled" aria-hidden="true"></i> Nổi bật · Xem nhiều nhất</span>
-          <div class="bt-ico"><i class="ti ti-wand" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <h3>Xem Tarot Online</h3>
-            <p>Bốc bài Tarot 1 · 3 · 5 lá, AI luận tình duyên, sự nghiệp, tài lộc — kèm "Lá bài hôm nay" miễn phí mỗi ngày.</p>
-          </div>
-          <span class="bt-cta">Bốc bài ngay <i class="ti ti-arrow-right" aria-hidden="true"></i></span>
-        </a>
-
-        <a class="bt bt-wide" href="/gieoque/" style="--bt:#a9762b; --bt-bg:rgba(169,118,43,.12)">
-          <div class="bt-ico"><i class="ti ti-yin-yang" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Kinh Dịch · AI</span>
-            <h3>Gieo Quẻ</h3>
-            <p>Gieo quẻ đồng xu cổ truyền, AI luận 64 quẻ và hào biến tức thì.</p>
-          </div>
-          <i class="ti ti-arrow-right bt-arrow" aria-hidden="true"></i>
-        </a>
-
-        <a class="bt bt-wide" href="/tuvi/" style="--bt:#a9762b; --bt-bg:rgba(169,118,43,.12)">
-          <div class="bt-ico"><i class="ti ti-stars" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Đông Phương · AI</span>
-            <h3>Lá Số Tử Vi</h3>
-            <p>Dựng lá số Đẩu Số chuẩn Bắc Phái, AI luận vận hạn, sự nghiệp, tình duyên.</p>
-          </div>
-          <i class="ti ti-arrow-right bt-arrow" aria-hidden="true"></i>
-        </a>
-
-        <a class="bt" href="/thansohoc/" style="--bt:#55519e; --bt-bg:rgba(85,81,158,.12)">
-          <div class="bt-ico"><i class="ti ti-hash" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Pythagoras · AI</span>
-            <h3>Thần Số Học</h3>
-            <p>Biểu đồ ngày sinh và các con số cốt lõi định hình con người bạn.</p>
-          </div>
-        </a>
-
-        <a class="bt bt-wide" href="/hoang-dao/" style="--bt:#55519e; --bt-bg:rgba(85,81,158,.12)">
-          <div class="bt-ico"><i class="ti ti-zodiac-leo" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Chiêm Tinh · AI</span>
-            <h3>Cung Hoàng Đạo</h3>
-            <p>12 chòm sao: tính cách, tử vi hằng ngày, độ hợp cặp đôi.</p>
-          </div>
-          <i class="ti ti-arrow-right bt-arrow" aria-hidden="true"></i>
-        </a>
-
-        <a class="bt" href="/xin-xam/" style="--bt:#55519e; --bt-bg:rgba(85,81,158,.12)">
-          <div class="bt-ico"><i class="ti ti-flame" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Nghi Thức · Mới</span>
-            <h3>Xin Xăm</h3>
-            <p>Lắc điện thoại rút quẻ trong 100 quẻ xăm, Thầy Xăm AI giải điển cố.</p>
-          </div>
-        </a>
-
-        <a class="bt" href="/ten/" style="--bt:#a9762b; --bt-bg:rgba(169,118,43,.12)">
-          <div class="bt-ico"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Huyền học theo tên</span>
-            <h3>Giải Mã Tên</h3>
-            <p>Ngũ Hành, linh vật và điểm vận mệnh ẩn sau cái tên của bạn.</p>
-          </div>
-        </a>
-
-        <a class="bt bt-wide" href="/thuvien/" style="--bt:#a9762b; --bt-bg:rgba(169,118,43,.12)">
-          <div class="bt-ico"><i class="ti ti-books" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Cổ Học</span>
-            <h3>Thư Viện Kiến Thức</h3>
-            <p>Bài phân tích chuyên sâu về Kinh Dịch, Tử Vi, Tarot và gieo quẻ.</p>
-          </div>
-          <i class="ti ti-arrow-right bt-arrow" aria-hidden="true"></i>
-        </a>
-
-        <a class="bt bt-wide" href="/co-ty-phu/" style="--bt:#c0475c; --bt-bg:rgba(192,71,92,.12)">
-          <div class="bt-ico"><i class="ti ti-building-store" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Mới · 2-4 người</span>
-            <h3>Cờ Tỷ Phú</h3>
-            <p>Mua đất, xây nhà, thu tiền thuê trên 40 ô địa danh Việt Nam.</p>
-          </div>
-          <i class="ti ti-arrow-right bt-arrow" aria-hidden="true"></i>
-        </a>
-
-        <a class="bt" href="/drinking/" style="--bt:#c0475c; --bt-bg:rgba(192,71,92,.12)">
-          <div class="bt-ico"><i class="ti ti-beer" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Nhóm bạn · 18+</span>
-            <h3>Drinking Game</h3>
-            <p>Bộ bài Sự Thật · Thử Thách · Bình Chọn cho các buổi tụ tập.</p>
-          </div>
-        </a>
-
-        <a class="bt" href="/dua/" style="--bt:#c0475c; --bt-bg:rgba(192,71,92,.12)">
-          <div class="bt-ico"><i class="ti ti-trophy" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Mini Game</span>
-            <h3>Đua Thú</h3>
-            <p>Đua ngựa và đua vịt, thêm bạn bè không giới hạn xem ai về nhất.</p>
-          </div>
-        </a>
-
-        <a class="bt" href="/ghep-doi/" style="--bt:#c0475c; --bt-bg:rgba(192,71,92,.12)">
-          <div class="bt-ico"><i class="ti ti-hearts" aria-hidden="true"></i></div>
-          <div class="bt-body">
-            <span class="bt-tag">Vui vẻ</span>
-            <h3>Ghép Đôi</h3>
-            <p>So độ hợp 2 người theo tên và ngày sinh, kèm ảnh khoe.</p>
-          </div>
-        </a>
-
-      </div>
-    </main>
-
-    <div class="l-divider l-divider--gap"></div>
-
-    <!-- ===== QUICK REFERENCE (internal links to programmatic SEO pages) ===== -->
-    <section class="l-lookup" aria-labelledby="lookup-heading">
-      <h2 id="lookup-heading" class="l-section-title">Tra Cứu Nhanh</h2>
-      <p class="l-lookup-sub">Kho tra cứu miễn phí — ý nghĩa đầy đủ từng quẻ, từng lá bài và từng con số.</p>
-      <div class="l-lookup-grid">
-        <a class="l-lookup-card" href="/kinh-dich/">
-          <span class="l-lookup-big">64</span>
-          <span class="l-lookup-name">Quẻ Kinh Dịch</span>
-          <span class="l-lookup-desc">Ý nghĩa, lời khuyên &amp; hào biến từng quẻ</span>
-        </a>
-        <a class="l-lookup-card" href="/la-bai-tarot/" style="--lk:var(--c-tarot)">
-          <span class="l-lookup-big">78</span>
-          <span class="l-lookup-name">Lá Bài Tarot</span>
-          <span class="l-lookup-desc">Ý nghĩa xuôi – ngược &amp; lời khuyên từng lá</span>
-        </a>
-        <a class="l-lookup-card" href="/thansohoc/so-chu-dao" style="--lk:var(--c-thansohoc)">
-          <span class="l-lookup-big">12</span>
-          <span class="l-lookup-name">Số Chủ Đạo</span>
-          <span class="l-lookup-desc">Luận giải đầy đủ từng con số đường đời</span>
-        </a>
-        <a class="l-lookup-card" href="/ngay-tot/" style="--lk:var(--c-drink)">
-          <span class="l-lookup-big"><i class="ti ti-calendar-star"></i></span>
-          <span class="l-lookup-name">Xem Ngày Tốt</span>
-          <span class="l-lookup-desc">Chọn ngày cưới, khai trương, động thổ theo tuổi</span>
-        </a>
-        <a class="l-lookup-card l-lk--wide" href="/thuvien/" style="--lk:var(--c-thuvien)">
-          <span class="l-lookup-big"><i class="ti ti-books"></i></span>
-          <span class="l-lookup-name">Thư Viện</span>
-          <span class="l-lookup-desc">Bài viết chuyên sâu về cổ học &amp; huyền học</span>
-        </a>
-        <a class="l-lookup-card l-lookup-card--feature l-lk--wide" href="/lich-am/">
-          <span class="l-lookup-badge">Hôm nay</span>
-          <span class="l-lookup-big" id="lookupLunar"><i class="ti ti-moon"></i></span>
-          <span class="l-lookup-name">Lịch Âm</span>
-          <span class="l-lookup-desc">Lịch vạn niên, đổi ngày âm dương, 24 tiết khí</span>
-        </a>
-        <a class="l-lookup-card" href="/sim/" style="--lk:var(--c-gieoque)">
-          <span class="l-lookup-big"><i class="ti ti-device-mobile"></i></span>
-          <span class="l-lookup-name">Phong Thủy Sim</span>
-          <span class="l-lookup-desc">Chấm điểm số điện thoại theo 81 linh số</span>
-        </a>
-        <a class="l-lookup-card" href="/ghep-doi/" style="--lk:var(--c-ten)">
-          <span class="l-lookup-big"><i class="ti ti-hearts"></i></span>
-          <span class="l-lookup-name">Ghép Đôi Thần Số</span>
-          <span class="l-lookup-desc">Độ hợp 2 người theo tên &amp; ngày sinh — có ảnh khoe</span>
-        </a>
-        <a class="l-lookup-card l-lk--wide" href="/bao-cao/" style="--lk:var(--c-dua)">
-          <span class="l-lookup-big"><i class="ti ti-report"></i></span>
-          <span class="l-lookup-name">Báo Cáo Vận Mệnh</span>
-          <span class="l-lookup-desc">Gộp thần số, con giáp, ngũ hành, hoàng đạo — 1 báo cáo</span>
-        </a>
+    <section class="head" aria-live="polite">
+      <div class="head-sym"><h1 id="h-sym">HPG</h1><small id="h-name"></small></div>
+      <div class="head-px"><strong id="h-px"></strong><span id="h-ch"></span></div>
+      <div class="head-stats">
+        <div><span>Trần</span><b class="ceil" id="h-ceil"></b></div>
+        <div><span>TC</span><b class="ref" id="h-ref"></b></div>
+        <div><span>Sàn</span><b class="floor" id="h-floor"></b></div>
+        <div><span>Cao / Thấp</span><b id="h-hl"></b></div>
+        <div><span>Tổng KL</span><b id="h-vol"></b></div>
       </div>
     </section>
 
-    <div class="l-divider l-divider--gap"></div>
+    <section class="chart-pane" aria-label="Biểu đồ">
+      <div class="chart-tools">
+        <div class="seg" role="group" aria-label="Khung thời gian">
+          <button class="tool" data-tf="D" aria-pressed="true">1D</button>
+          <button class="tool" data-tf="W" aria-pressed="false">1W</button>
+          <button class="tool" data-tf="M" aria-pressed="false">1M</button>
+        </div>
+        <div class="seg" role="group" aria-label="Kiểu biểu đồ">
+          <button class="tool" data-style="candle" aria-pressed="true">Nến</button>
+          <button class="tool" data-style="line" aria-pressed="false">Đường</button>
+        </div>
+        <div class="seg" role="group" aria-label="Chỉ báo">
+          <button class="tool" data-ind="ma20" aria-pressed="true">MA20</button>
+          <button class="tool" data-ind="ma50" aria-pressed="true">MA50</button>
+          <button class="tool" data-ind="vol" aria-pressed="true">Khối lượng</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="legend" id="legend"></div>
+        <div id="chart"></div>
+        <a class="chart-credit" href="https://www.tradingview.com/" target="_blank" rel="noopener">Charts by TradingView</a>
+      </div>
+    </section>
 
-    <!-- ===== ABOUT ===== -->
-    <section class="l-about" aria-labelledby="about-heading">
-      <h2 id="about-heading" class="l-section-title">Về Lật Bài</h2>
-      <p class="l-about-lead">
-        Lật Bài là nền tảng luận mệnh và giải trí trực tuyến thuần Việt — kết hợp tri thức cổ học phương Đông với trí tuệ nhân tạo hiện đại. Dù bạn muốn khám phá vận mệnh qua <strong>Tử Vi Đẩu Số</strong>, <strong>Kinh Dịch</strong>, <strong>Tarot</strong>, hay đơn giản là quẩy cùng bạn bè với <strong>Drinking Game</strong> — Lật Bài đều có tất cả, hoàn toàn miễn phí và không quảng cáo.
-      </p>
-      <div class="l-features" role="list">
-        <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-gift"></i></span>
-          <div>
-            <strong>Miễn phí vĩnh viễn</strong>
-            <p>Không phí ẩn, không gói premium, không quảng cáo — mãi mãi.</p>
+    <section class="book" aria-label="Sổ lệnh thị trường">
+      <div class="pane-title">Bước giá</div>
+      <div class="ob-head"><span>Giá</span><span>KL</span></div>
+      <div class="ob" id="ob"></div>
+      <div class="tape">
+        <div class="tape-head"><span>Giờ</span><span>Giá</span><span>KL</span></div>
+        <div class="tape-list" id="tape"></div>
+      </div>
+    </section>
+
+    <section class="ticket" aria-label="Đặt lệnh">
+      <div class="card" id="card">
+        <div class="face front">
+          <div class="sides">
+            <button class="side-btn buy" data-side="B" aria-pressed="true">Mua</button>
+            <button class="side-btn sell" data-side="S" aria-pressed="false">Bán</button>
+          </div>
+          <div class="types" role="group" aria-label="Loại lệnh">
+            <button class="tool" data-type="LO" aria-pressed="true">LO</button>
+            <button class="tool" data-type="MTL" aria-pressed="false">MTL</button>
+            <button class="tool" data-type="ATO" aria-pressed="false">ATO</button>
+            <button class="tool" data-type="ATC" aria-pressed="false">ATC</button>
+          </div>
+          <div class="form">
+            <div class="field">
+              <label for="f-px"><span>Giá (nghìn đồng)</span><span id="tick-note"></span></label>
+              <div class="stepper"><button type="button" data-step="px" data-d="-1" aria-label="Giảm giá">−</button><input id="f-px" inputmode="decimal"><button type="button" data-step="px" data-d="1" aria-label="Tăng giá">+</button></div>
+              <div class="band"><span class="floor" id="b-floor"></span><span class="ref" id="b-ref"></span><span class="ceil" id="b-ceil"></span></div>
+            </div>
+            <div class="field">
+              <label for="f-qty"><span>Khối lượng</span><span id="max-note"></span></label>
+              <div class="stepper"><button type="button" data-step="qty" data-d="-1" aria-label="Giảm khối lượng">−</button><input id="f-qty" inputmode="numeric" value="1000"><button type="button" data-step="qty" data-d="1" aria-label="Tăng khối lượng">+</button></div>
+              <div class="chips"><button data-pct="25">25%</button><button data-pct="50">50%</button><button data-pct="75">75%</button><button data-pct="100">Tối đa</button></div>
+            </div>
+            <div class="summary">
+              <span>Giá trị lệnh</span><b id="s-val"></b>
+              <span>Phí ước tính</span><b id="s-fee"></b>
+              <span id="s-tax-l">Thuế bán</span><b id="s-tax"></b>
+            </div>
+            <div class="msgs" id="msgs"></div>
+            <button class="cta buy" id="cta">Mua HPG</button>
+          </div>
+          <div class="acct-box">
+            <span>Sức mua</span><b id="a-pp"></b>
+            <span>Khả dụng bán</span><b id="a-sell"></b>
           </div>
         </div>
-        <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-sparkles"></i></span>
-          <div>
-            <strong>AI luận giải tiếng Việt</strong>
-            <p>Phân tích chuyên sâu bằng AI, không dịch máy, không câu trả lời cố định.</p>
-          </div>
-        </div>
-        <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-lock"></i></span>
-          <div>
-            <strong>Riêng tư tuyệt đối</strong>
-            <p>Không yêu cầu đăng ký. Dữ liệu chỉ lưu trên thiết bị của bạn.</p>
-          </div>
-        </div>
-        <div class="l-feature" role="listitem">
-          <span class="l-feature-icon" aria-hidden="true"><i class="ti ti-device-mobile"></i></span>
-          <div>
-            <strong>Mọi thiết bị</strong>
-            <p>Hoạt động mượt trên điện thoại và máy tính. Cài được như app.</p>
+        <div class="face back" aria-hidden="true">
+          <div class="back-inner">
+            <div><div class="back-kicker">Kiểm tra lại trước khi gửi</div><p class="back-title" id="c-title"></p></div>
+            <div class="back-grid" id="c-grid"></div>
+            <div class="msgs" id="c-msgs"></div>
+            <div class="back-actions">
+              <button class="ghost" id="c-back">Sửa lệnh</button>
+              <button class="cta" id="c-ok">Gửi lệnh</button>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <div class="l-divider l-divider--gap"></div>
+    <section class="panel" aria-label="Tài khoản">
+      <div class="tabs" role="tablist">
+        <button class="tool" role="tab" data-tab="orders" aria-selected="true">Sổ lệnh</button>
+        <button class="tool" role="tab" data-tab="pos" aria-selected="false">Danh mục</button>
+        <button class="tool" role="tab" data-tab="cond" aria-selected="false">Lệnh điều kiện</button>
+      </div>
+      <div class="tab-body" id="tab-body"></div>
+    </section>
+  </main>
 
-    <!-- ===== FAQ ===== -->
-    <section class="faq-section" aria-labelledby="faq-heading">
-      <h2 id="faq-heading" class="l-section-title">Câu Hỏi Thường Gặp</h2>
-      <div class="faq-list">
+  <main class="msgv" id="view-chat" hidden>
+    <section class="inbox" aria-label="Hộp thư">
+      <div class="pane-title">Tin nhắn</div>
+      <div class="inbox-list" id="inbox"></div>
+    </section>
+    <section class="thread-v" aria-label="Cuộc trò chuyện">
+      <div class="th-head" id="th-head"></div>
+      <div class="th-body" id="th-body" aria-live="polite"></div>
+      <div class="prompts" id="prompts"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <textarea class="inp" id="m-in" rows="1" aria-label="Nhập tin nhắn"></textarea>
+        <button type="submit">Gửi</button>
+      </form>
+      <div class="composer-note" id="m-note"></div>
+    </section>
+    <aside class="ctx" id="ctx" aria-label="Thông tin"></aside>
+  </main>
 
-        <details class="faq-item">
-          <summary class="faq-question">Lật Bài là trang web gì?</summary>
-          <p class="faq-answer">Lật Bài là nền tảng luận mệnh và giải trí trực tuyến miễn phí thuần Việt, gồm 4 module: <strong>Lá Số Tử Vi AI</strong> (dựng và luận giải lá số Tử Vi Đẩu Số), <strong>Gieo Quẻ Kinh Dịch Online</strong>, <strong>Xem Tarot Online</strong> và <strong>Drinking Game</strong>. Mỗi module đều tích hợp AI luận giải tiếng Việt chuyên sâu, không quảng cáo, không cần đăng ký.</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Gieo quẻ Kinh Dịch online trên Lật Bài có chính xác không?</summary>
-          <p class="faq-answer">Gieo quẻ trên Lật Bài được tính toán theo đúng phương pháp cổ truyền — gieo 3 đồng xu 6 lần để tạo Quẻ Dịch theo phương pháp Ngọc Kinh, xác định quẻ chính và hào biến từ 64 quẻ Kinh Dịch. AI sau đó phân tích và luận giải theo câu hỏi cụ thể của bạn, không có câu trả lời cố định hay sao chép từ từ điển.</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Lá số Tử Vi AI được tính toán như thế nào?</summary>
-          <p class="faq-answer">Lá số Tử Vi được dựng theo phương pháp <strong>Tử Vi Đẩu Số Bắc Phái</strong> cổ truyền — tính toán 12 cung, an sao chính tinh (14 sao chính) và phụ tinh dựa trên ngày tháng năm sinh âm lịch và giờ sinh. Hệ thống hiển thị đầy đủ chất lượng sao (Miếu/Vượng/Đắc/Bình hòa/Hãm), đại hạn và tam phương tứ chính. AI luận giải vận mệnh tiếng Việt thuần túy theo từng câu hỏi cụ thể.</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Xem Tarot online trên Lật Bài hoạt động như thế nào?</summary>
-          <p class="faq-answer">Trang Xem Tarot sử dụng bộ bài 78 lá Rider-Waite-Smith chuẩn quốc tế. Bạn chọn chủ đề (sự nghiệp, tình duyên, tài lộc) và bốc 3 lá đại diện cho Quá Khứ – Hiện Tại – Tương Lai. AI phân tích ý nghĩa từng lá và luận giải tổng thể theo câu hỏi. Không cần kinh nghiệm xem bài trước — AI sẽ giải thích toàn bộ bằng tiếng Việt.</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Lật Bài có hoàn toàn miễn phí không?</summary>
-          <p class="faq-answer">Có. Lật Bài hoàn toàn miễn phí — không phí đăng ký, không gói cao cấp (premium), không quảng cáo. Toàn bộ tính năng từ Tử Vi AI, Gieo Quẻ Kinh Dịch, Xem Tarot đến Drinking Game đều mở hoàn toàn và miễn phí mãi mãi.</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Dữ liệu cá nhân và lịch sử xem bài có được lưu không?</summary>
-          <p class="faq-answer">Lịch sử xem bài được lưu ngay trên trình duyệt của bạn (localStorage) — không gửi lên máy chủ bên ngoài, không chia sẻ với bên thứ ba. Bạn không cần tạo tài khoản hay cung cấp bất kỳ thông tin cá nhân nào để sử dụng Lật Bài.</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Drinking Game trên Lật Bài là gì?</summary>
-          <p class="faq-answer">Đây là bộ bài uống rượu (drinking game) được thiết kế riêng cho các buổi tụ tập nhóm bạn. Mỗi lượt lật bài sẽ xuất hiện thử thách, câu hỏi sự thật hay bình chọn hài hước — phù hợp cho tiệc tất niên, sinh nhật, hay những đêm vui cùng bạn bè. <em>Chỉ dành cho người từ 18 tuổi trở lên. Uống có trách nhiệm.</em></p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Lật Bài có ứng dụng điện thoại không?</summary>
-          <p class="faq-answer">Lật Bài là Progressive Web App (PWA) — bạn có thể cài thẳng lên màn hình chính điện thoại từ trình duyệt Chrome hoặc Safari mà không cần qua App Store hay Google Play. Trang web hoạt động mượt mà trên cả Android, iPhone và máy tính, kể cả khi mất mạng (offline shell).</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Thần Số Học trên Lật Bài tính theo phương pháp nào?</summary>
-          <p class="faq-answer">Thần Số Học trên Lật Bài dùng phương pháp <strong>Pythagoras</strong> phương Tây — tính các con số cốt lõi từ ngày sinh và tên: Số Chủ Đạo (Life Path), Số Sứ Mệnh, Số Linh Hồn và Số Nhân Cách. AI luận giải ưu khuyết điểm, tính cách và sứ mệnh đời người bằng tiếng Việt.</p>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-question">Giải Mã Tên và Ghép Đôi tên hoạt động ra sao?</summary>
-          <p class="faq-answer"><strong>Giải Mã Tên</strong> phân tích năng lượng ẩn sau cái tên: Ngũ Hành, linh vật hộ mệnh, điểm vận mệnh, con số và màu sắc may mắn. Tính năng <strong>Ghép Đôi</strong> cho nhập 2 tên để xem độ hợp theo phần trăm cùng phân tích tương sinh – tương khắc Ngũ Hành. Cùng một tên luôn cho cùng kết quả — mang tính giải trí, miễn phí.</p>
-        </details>
-
+  <main class="community" id="view-community" hidden>
+    <section class="cnav" id="cnav" aria-label="Chuyên mục"></section>
+    <section class="feed" id="feed" aria-label="Bài viết"></section>
+    <section class="cside" aria-label="Phòng chung">
+      <div class="pane-title">Mã được bàn nhiều <span class="online">24 giờ qua</span></div>
+      <div class="trend" id="trend"></div>
+      <div class="chat">
+        <div class="pane-title">Phòng chung <span class="online"><span class="dot" aria-hidden="true"></span><span id="online"></span></span></div>
+        <div class="chat-list" id="chat" aria-live="polite"></div>
+        <form class="chat-form" id="chat-form" autocomplete="off">
+          <input class="inp" id="chat-in" placeholder="Nhắn vào phòng chung, gõ $ để gắn mã" aria-label="Tin nhắn" maxlength="300">
+          <button type="submit">Gửi</button>
+        </form>
       </div>
     </section>
+  </main>
 
-    <div class="l-divider l-divider--gap"></div>
+  <footer class="statusbar">
+    <span class="live"><span class="dot" aria-hidden="true"></span><span id="session"></span></span>
+    <span class="hide-s">Bản demo. Giá HPG là dữ liệu thật đến 09/10/2026 (nguồn DNSE), các mã khác, phiên hiện tại, cộng đồng và tin nhắn là mô phỏng. Lệnh không được gửi đi đâu.</span>
+  </footer>
+</div>
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <form class="dlg" id="dlg-form" method="dialog" novalidate>
+    <h2 id="dlg-title">Viết bài mới</h2>
+    <label>Đăng vào<select class="inp" id="d-where"></select></label>
+    <label>Tiêu đề<input class="inp" id="d-title" maxlength="140" placeholder="Ví dụ: $HPG có giữ được vùng 20 không?"></label>
+    <label>Nội dung<textarea id="d-body" rows="6" placeholder="Chia sẻ số liệu, lập luận và nguồn. Gõ $MÃ để gắn giá trực tiếp."></textarea></label>
+    <label class="check"><input type="checkbox" id="d-hold"> Tôi đang nắm giữ mã được nhắc trong bài</label>
+    <div class="msgs" id="d-err"></div>
+    <div class="dlg-actions"><button type="button" class="ghost" id="d-cancel">Hủy</button><button type="submit" class="btn-primary" id="d-submit">Đăng bài</button></div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
 
-    <!-- ===== FOOTER ===== -->
-    <footer class="l-footer">
-      <div class="l-footer-inner">
-        <p class="l-footer-brand">Lật Bài</p>
-        <nav class="l-footer-nav" aria-label="Các module">
-          <a href="/tuvi/">Tử Vi AI</a>
-          <span aria-hidden="true">·</span>
-          <a href="/gieoque/">Gieo Quẻ</a>
-          <span aria-hidden="true">·</span>
-          <a href="/tarot/">Tarot</a>
-          <span aria-hidden="true">·</span>
-          <a href="/drinking/">Drinking Game</a>
-          <span aria-hidden="true">·</span>
-          <a href="/thuvien/">Thư Viện Kiến Thức</a>
-        </nav>
-        <nav class="l-footer-nav" aria-label="Module mới">
-          <a href="/xin-xam/">Xin Xăm</a>
-          <span aria-hidden="true">·</span>
-          <a href="/hoang-dao/">Cung Hoàng Đạo</a>
-          <span aria-hidden="true">·</span>
-          <a href="/thansohoc/">Thần Số Học</a>
-          <span aria-hidden="true">·</span>
-          <a href="/ten/">Giải Mã Tên</a>
-          <span aria-hidden="true">·</span>
-          <a href="/dua/">Đua Thú</a>
-          <span aria-hidden="true">·</span>
-          <a href="/co-ty-phu/">Cờ Tỷ Phú</a>
-        </nav>
-        <nav class="l-footer-nav" aria-label="Tra cứu">
-          <a href="/kinh-dich/">64 Quẻ Kinh Dịch</a>
-          <span aria-hidden="true">·</span>
-          <a href="/la-bai-tarot/">78 Lá Bài Tarot</a>
-          <span aria-hidden="true">·</span>
-          <a href="/thansohoc/so-chu-dao">12 Số Chủ Đạo</a>
-          <span aria-hidden="true">·</span>
-          <a href="/sinh-ngay/">Tra Cứu Ngày Sinh</a>
-          <span aria-hidden="true">·</span>
-          <a href="/sim/bang-linh-so">81 Linh Số</a>
-          <span aria-hidden="true">·</span>
-          <a href="/lich-am/">Lịch Âm</a>
-          <span aria-hidden="true">·</span>
-          <a href="/ngay-tot/">Xem Ngày Tốt</a>
-          <span aria-hidden="true">·</span>
-          <a href="/sim/">Phong Thủy Sim</a>
-          <span aria-hidden="true">·</span>
-          <a href="/ghep-doi/">Ghép Đôi</a>
-          <span aria-hidden="true">·</span>
-          <a href="/bao-cao/">Báo Cáo Vận Mệnh</a>
-        </nav>
-        <nav class="l-footer-nav" aria-label="Thông tin">
-          <a href="/gioi-thieu">Giới Thiệu</a>
-          <span aria-hidden="true">·</span>
-          <a href="/chinh-sach-bao-mat">Chính Sách Bảo Mật</a>
-          <span aria-hidden="true">·</span>
-          <a href="/lien-he">Liên Hệ</a>
-        </nav>
-        <p class="l-footer-note">Vui vẻ có trách nhiệm · Không dành cho người dưới 18 tuổi</p>
-        <p class="l-footer-copy">© 2026 latbai.vn · Miễn phí · Bảo mật dữ liệu</p>
-      </div>
-    </footer>
-
-  </div>
-
+<script src="/js/vendor/lightweight-charts.js"></script>
+<script src="/js/app.js"></script>
 </body>
 </html>
