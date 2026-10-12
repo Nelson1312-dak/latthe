@@ -25,7 +25,18 @@
       <input id="search" placeholder="Tìm mã, ví dụ HPG" aria-label="Tìm mã chứng khoán" autocomplete="off">
     </div>
     <div class="indices" id="indices"></div>
-    <div class="acct"><span class="acct-name">0001 234 567</span><span class="avatar" aria-hidden="true">H</span></div>
+    <div class="acct">
+      <button class="btn-primary" id="btn-login" hidden>Đăng nhập</button>
+      <button class="acct-btn" id="acct-btn" hidden aria-haspopup="menu" aria-expanded="false">
+        <span class="avatar" id="acct-avatar" aria-hidden="true"></span>
+        <span class="acct-name" id="acct-name"></span>
+      </button>
+      <div class="acct-menu" id="acct-menu" role="menu" hidden>
+        <div class="acct-head"><b id="menu-name"></b><small id="menu-sub"></small></div>
+        <button role="menuitem" data-open-brokers id="menu-brokers">Tài khoản chứng khoán</button>
+        <button role="menuitem" id="menu-logout">Đăng xuất</button>
+      </div>
+    </div>
   </header>
 
   <main class="workspace" id="view-trade">
@@ -192,9 +203,49 @@
     <div class="dlg-actions"><button type="button" class="ghost" id="d-cancel">Hủy</button><button type="submit" class="btn-primary" id="d-submit">Đăng bài</button></div>
   </form>
 </dialog>
+<dialog id="dlg-auth" aria-labelledby="auth-title">
+  <div class="dlg">
+    <div class="auth-head">
+      <div class="logo"><div class="logo-card" aria-hidden="true"></div><span>Lật Bài</span></div>
+      <h2 id="auth-title">Đăng nhập để lưu danh mục và sổ lệnh</h2>
+    </div>
+    <button class="btn-google" id="btn-google">
+      <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+      Tiếp tục với Google
+    </button>
+    <div class="auth-or"><span>hoặc dùng tài khoản Lật Bài</span></div>
+    <div class="types" role="tablist" id="auth-tabs">
+      <button class="tool" role="tab" data-auth-tab="login" aria-selected="true">Đăng nhập</button>
+      <button class="tool" role="tab" data-auth-tab="register" aria-selected="false">Tạo tài khoản</button>
+    </div>
+    <form id="auth-form" autocomplete="on">
+      <label>Tên đăng nhập<input class="inp" id="auth-user" name="username" autocomplete="username" maxlength="24" placeholder="vd: hien_latbai"></label>
+      <label id="auth-display-wrap" hidden>Tên hiển thị<input class="inp" id="auth-display" maxlength="40" placeholder="Tên bạn muốn hiện trên cộng đồng"></label>
+      <label>Mật khẩu<input class="inp" id="auth-pass" type="password" name="password" autocomplete="current-password" maxlength="72" placeholder="Ít nhất 8 ký tự"></label>
+      <div class="msgs" id="auth-msg"></div>
+      <div class="dlg-actions">
+        <button type="button" class="ghost" id="auth-cancel">Để sau</button>
+        <button type="submit" class="btn-primary" id="auth-submit">Đăng nhập</button>
+      </div>
+    </form>
+    <p class="auth-note">Tài khoản Lật Bài dùng cho danh mục thử nghiệm và cộng đồng. Kết nối tới tài khoản chứng khoán thật là bước riêng.</p>
+  </div>
+</dialog>
+
+<dialog id="dlg-brokers" aria-labelledby="brokers-title">
+  <div class="dlg">
+    <h2 id="brokers-title">Tài khoản chứng khoán</h2>
+    <p class="dlg-sub">Chọn công ty chứng khoán để xem tài khoản thật của bạn ngay trong Lật Bài.</p>
+    <div id="broker-list" class="broker-list"></div>
+    <div class="msgs" id="broker-msg"></div>
+    <div class="dlg-actions"><button type="button" class="ghost" id="brokers-close">Đóng</button></div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script src="/js/vendor/lightweight-charts.js"></script>
 <script src="/js/app.js"></script>
+<script src="/js/account.js"></script>
 </body>
 </html>

@@ -10,7 +10,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 export const ALLOWED_ORIGINS = new Set([
   'https://latbai.vn',
   'https://www.latbai.vn',
-  ...(IS_PROD ? [] : ['http://localhost:5005', 'http://localhost:3000']),
+  ...(IS_PROD ? [] : ['http://localhost:5005', 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173']),
 ]);
 
 /**

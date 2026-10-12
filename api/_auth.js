@@ -38,16 +38,23 @@ function sign(data) {
   return crypto.createHmac('sha256', secret).update(data).digest('base64url');
 }
 
+/** Thêm cookie mà không ghi đè cookie khác đã đặt trước đó trong cùng response. */
+export function addCookie(res, value) {
+  const prev = res.getHeader('Set-Cookie');
+  const list = prev ? (Array.isArray(prev) ? [...prev] : [prev]) : [];
+  list.push(value);
+  res.setHeader('Set-Cookie', list);
+}
+
 export function startSession(res, uid) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_DAYS * 86400;
   const data = `${uid}.${exp}`;
   const token = `${data}.${sign(data)}`;
-  res.setHeader('Set-Cookie',
-    `${COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}${IS_PROD ? '; Secure' : ''}`);
+  addCookie(res, `${COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}${IS_PROD ? '; Secure' : ''}`);
 }
 
 export function endSession(res) {
-  res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${IS_PROD ? '; Secure' : ''}`);
+  addCookie(res, `${COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${IS_PROD ? '; Secure' : ''}`);
 }
 
 /** @returns {string|null} user id nếu cookie hợp lệ và chưa hết hạn */

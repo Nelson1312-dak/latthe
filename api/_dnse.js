@@ -12,6 +12,7 @@
  */
 import crypto from 'node:crypto';
 import { rest } from './_db.js';
+import { assertOwner as assertBrokerOwner } from './_broker.js';
 
 export class DnseError extends Error {
   constructor(message, status = 502, code = 'dnse') { super(message); this.status = status; this.code = code; this.expose = true; }
@@ -23,13 +24,10 @@ export const maxOrderVnd = () => parseInt(process.env.DNSE_MAX_ORDER_VND || '', 
 
 /** Chỉ user chủ sở hữu (đã đăng nhập site) mới được chạm vào tài khoản DNSE thật. */
 export async function assertOwner(uid) {
-  const owner = (process.env.DNSE_OWNER_USERNAME || '').trim().toLowerCase();
-  if (!owner || !process.env.DNSE_API_KEY || !process.env.DNSE_API_SECRET) {
-    throw new DnseError('Kết nối DNSE chưa được cấu hình.', 503, 'config');
+  if (!process.env.DNSE_API_KEY || !process.env.DNSE_API_SECRET) {
+    throw new DnseError('Kết nối DNSE chưa được cấu hình (thiếu API key).', 503, 'config');
   }
-  if (!uid) throw new DnseError('Bạn cần đăng nhập.', 401, 'auth');
-  const rows = await rest(`/users?id=eq.${uid}&select=username&limit=1`, { sub: uid });
-  if (rows?.[0]?.username !== owner) throw new DnseError('Tài khoản này không có quyền dùng kết nối DNSE.', 403, 'forbidden');
+  await assertBrokerOwner(uid);
 }
 
 // ---------- Ký request (HTTP Signature, HMAC-SHA256) ----------

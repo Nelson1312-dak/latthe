@@ -416,3 +416,46 @@ dialog::backdrop{background:rgba(0,0,0,.72)}
   .bub{max-width:85%}
 }
 @media (max-width:420px){.logo-text{display:none}.nav a{padding:6px 7px}}
+
+/* ---------- Tài khoản: nút, menu, đăng nhập ---------- */
+.acct-btn{display:flex;align-items:center;gap:8px;padding:3px 8px 3px 3px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--text);font-weight:500}
+.acct-btn:hover{border-color:var(--muted)}
+.acct{position:relative}
+.acct .avatar{overflow:hidden}
+.acct .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.acct-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:208px;padding:5px;border:1px solid var(--line);border-radius:var(--radius-m);background:var(--raise);box-shadow:0 12px 32px rgba(0,0,0,.55)}
+.acct-menu button{display:block;width:100%;padding:8px 10px;border:0;border-radius:var(--radius-s);background:none;color:var(--text);text-align:left;font-weight:500}
+.acct-menu button:hover{background:var(--surface)}
+.acct-head{padding:8px 10px;border-bottom:1px solid var(--line-soft);margin-bottom:4px;line-height:1.35}
+.acct-head b{display:block;font-weight:600}
+.acct-head small{color:var(--faint);word-break:break-all}
+
+.auth-head{text-align:center;margin-bottom:2px}
+.auth-head .logo{justify-content:center;margin-bottom:10px}
+.auth-head h2{margin:0;font-size:16px;font-weight:600;color:var(--muted);line-height:1.45}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:42px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--text);color:#17120f;font-weight:600}
+.btn-google:hover{background:#fff}
+.auth-or{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:12px}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:var(--line)}
+#auth-form{display:flex;flex-direction:column;gap:12px}
+#auth-form label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:12px}
+.auth-note{margin:0;color:var(--faint);font-size:11px;line-height:1.5}
+.dlg-sub{margin:-4px 0 0;color:var(--muted);line-height:1.5}
+
+.broker-list{display:flex;flex-direction:column;gap:8px}
+.broker{border:1px solid var(--line);border-radius:var(--radius-m);padding:12px;background:var(--black)}
+.broker-top{display:flex;align-items:flex-start;gap:10px}
+.broker-logo{flex:0 0 auto;width:38px;height:38px;border-radius:9px;display:grid;place-items:center;background:var(--raise);border:1px solid var(--line);font-weight:700;font-size:12px}
+.broker-info{flex:1;min-width:0;line-height:1.4}
+.broker-info b{font-weight:600}
+.broker-info p{margin:2px 0 0;color:var(--faint);font-size:12px}
+.broker-acc{margin-top:6px;color:var(--muted);font-size:12px}
+.broker-acc b{color:var(--text)}
+.broker-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.broker-actions button{height:30px;padding:0 11px;border:1px solid var(--line);border-radius:var(--radius-s);background:none;color:var(--text);font-weight:500;font-size:12px}
+.broker-actions button:hover{border-color:var(--muted)}
+.broker-actions .primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.broker-actions .primary:hover{background:#c91631}
+.broker form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.broker form label{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:12px}
+.broker .inp{height:34px}
