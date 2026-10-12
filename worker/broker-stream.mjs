@@ -12,29 +12,16 @@
  * Biến môi trường: DNSE_API_KEY, DNSE_API_SECRET, SUPABASE_URL, DB_JWT_SECRET
  *   tùy chọn: DNSE_WS_URL (mặc định wss://ws-openapi.dnse.com.vn), WORKER_MAX_CONNECTIONS (mặc định 50)
  */
-import crypto from 'node:crypto';
 import { rest } from '../api/_db.js';
 import { listClients } from '../api/_desk.js';
+import { DnseSocket, isControl, buildAuth } from './_socket.mjs';
 
-const WS_BASE = (process.env.DNSE_WS_URL || 'wss://ws-openapi.dnse.com.vn').replace(/\/+$/, '');
 const MAX_CONNECTIONS = parseInt(process.env.WORKER_MAX_CONNECTIONS || '', 10) || 50;
 const REFRESH_MS = 60_000;              // dò lại danh sách khách
-const PING_MS = 25_000;                 // client chủ động ping, theo khuyến nghị của DNSE
-const MAX_AGE_MS = 7.5 * 3600e3;        // nối mới trước khi DNSE ngắt ở mốc 8 giờ
-const CONTROL = new Set(['welcome', 'auth_success', 'subscribed', 'unsubscribed', 'ping', 'pong', 'connection_expired', 'error']);
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
-/** Chữ ký xác thực WebSocket: HMAC-SHA256(secret, "{api_key}:{timestamp}:{nonce}") dạng hex. */
-let lastNonce = 0;
-export function buildAuth(apiKey, apiSecret, now = Date.now()) {
-  const timestamp = Math.floor(now / 1000);
-  // Micro giây và luôn tăng dần: DNSE từ chối nonce đã dùng trong 10 phút, kể cả khi hai kết nối xác thực cùng lúc.
-  lastNonce = Math.max(lastNonce + 1, now * 1000);
-  const nonce = String(lastNonce);
-  const signature = crypto.createHmac('sha256', apiSecret).update(`${apiKey}:${timestamp}:${nonce}`).digest('hex');
-  return { action: 'auth', api_key: apiKey, signature, timestamp, nonce };
-}
+export { buildAuth };
 
 export const channelsFor = (investorId) => [
   { name: `order.broker.STOCK.${investorId}.json`, symbols: [] },
@@ -43,7 +30,7 @@ export const channelsFor = (investorId) => [
 
 /** Phân loại một message dữ liệu. Payload của kênh broker không có trường T nên nhận dạng theo trường đặc trưng. */
 export function classify(msg) {
-  if (msg && typeof msg === 'object' && !CONTROL.has(msg.action)) {
+  if (msg && typeof msg === 'object' && !isControl(msg)) {
     if ('orderStatus' in msg && 'accountNo' in msg) return 'order';
     if ('openQuantity' in msg && 'accountNo' in msg) return 'position';
   }
@@ -68,59 +55,23 @@ export async function saveOrderEvent(investorId, o, db = rest) {
   });
 }
 
-/** Một kết nối cho một khách. */
+/** Một kết nối cho một khách: dùng DnseSocket, xử lý sự kiện lệnh/vị thế. */
 export class Feed {
   constructor(client, { apiKey, apiSecret, WS = globalThis.WebSocket, db = rest, onEvent = () => {} }) {
-    this.client = client; this.apiKey = apiKey; this.apiSecret = apiSecret; this.WS = WS; this.db = db; this.onEvent = onEvent;
-    this.state = 'idle'; this.stopped = false; this.attempt = 0; this.ws = null; this.timers = new Set();
-    this.lastEventAt = null; this.connectedAt = null; this.events = 0;
+    this.client = client; this.db = db; this.onEvent = onEvent;
+    this.lastEventAt = null; this.events = 0;
     this.queue = Promise.resolve(); // sự kiện dữ liệu xử lý tuần tự: "Filled" không được bị "PartiallyFilled" đến chậm ghi đè
+    this.sock = new DnseSocket({ name: client.investorId, apiKey, apiSecret, WS, channels: channelsFor(client.investorId), onData: (m) => this._onData(m) });
   }
   get investorId() { return this.client.investorId; }
-  _timer(fn, ms) { const t = setTimeout(() => { this.timers.delete(t); fn(); }, ms); this.timers.add(t); return t; }
-  _clear() { this.timers.forEach(clearTimeout); this.timers.clear(); }
+  get state() { return this.sock.state; }
+  start() { this.sock.start(); }
+  stop() { this.sock.stop(); }
 
-  start() { this.stopped = false; this._connect(); }
-  stop() { this.stopped = true; this._clear(); try { this.ws?.close(); } catch { /* đã đóng */ } this.state = 'stopped'; }
-
-  _connect() {
-    if (this.stopped) return;
-    this.state = 'connecting';
-    let ws;
-    try { ws = new this.WS(`${WS_BASE}/v1/stream?encoding=json`); } catch (e) { return this._retry(e.message); }
-    this.ws = ws;
-    ws.onmessage = (ev) => this._onMessage(ev.data);
-    ws.onerror = () => { /* onclose sẽ xử lý */ };
-    ws.onclose = () => { this._clear(); if (!this.stopped) this._retry('closed'); };
-  }
-
-  _send(o) { try { this.ws.send(JSON.stringify(o)); } catch { /* kết nối đang đóng */ } }
-
-  async _onMessage(data) {
-    let m; try { m = JSON.parse(typeof data === 'string' ? data : Buffer.from(data).toString('utf8')); } catch { return; }
-    switch (m.action) {
-      case 'welcome': return this._send(buildAuth(this.apiKey, this.apiSecret));
-      case 'auth_success':
-        this.state = 'subscribing';
-        return this._send({ action: 'subscribe', channels: channelsFor(this.investorId) });
-      case 'subscribed':
-        this.state = 'live'; this.attempt = 0; this.connectedAt = Date.now();
-        this._clear();
-        this._timer(() => this._rotate('hết hạn 8 giờ'), MAX_AGE_MS);
-        this._ping();
-        return;
-      case 'ping': return this._send(m.timestamp ? { action: 'pong', timestamp: m.timestamp } : { action: 'pong' });
-      case 'connection_expired': return this._rotate('server báo hết hạn');
-      case 'error':
-        log(`[${this.investorId}] lỗi từ DNSE:`, m.code, m.message);
-        if (m.code === 'AUTH_FAILED' || m.code === 'MAX_CONNECTIONS_EXCEEDED') this.fatal = m.code;
-        return;
-      default: break;
-    }
+  _onData(m) {
     const kind = classify(m);
     if (kind) this.queue = this.queue.then(() => this._handleData(kind, m)).catch(() => {});
   }
-
   async _handleData(kind, m) {
     if (kind === 'order') {
       this.events++; this.lastEventAt = new Date().toISOString();
@@ -129,15 +80,6 @@ export class Feed {
     } else if (kind === 'position') {
       this.lastEventAt = new Date().toISOString(); this.onEvent(kind, m);
     }
-  }
-
-  _ping() { this._timer(() => { this._send({ action: 'ping' }); this._ping(); }, PING_MS); }
-  _rotate(why) { log(`[${this.investorId}] nối lại: ${why}`); try { this.ws?.close(); } catch { /* */ } }
-  _retry(why) {
-    this.state = 'retry';
-    const delay = Math.min(1000 * 2 ** this.attempt++, 60_000) + Math.floor(Math.random() * 500);
-    if (this.attempt > 1) log(`[${this.investorId}] thử nối lại sau ${Math.round(delay / 1000)}s (${why}${this.fatal ? ', ' + this.fatal : ''})`);
-    this._timer(() => this._connect(), delay);
   }
 }
 

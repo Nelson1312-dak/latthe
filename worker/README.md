@@ -22,3 +22,21 @@ Cần Node 22 trở lên và các biến trong `.env.local`:
 ## Tự khởi động cùng Windows
 Tạo tác vụ trong Task Scheduler: Trigger "At log on", Action `node`, Arguments
 `--env-file=.env.local worker/broker-stream.mjs`, Start in `D:\Claude projects\Project\latthe`, bật "Restart on failure".
+
+---
+
+# Worker giá thị trường (DNSE Market Data WebSocket)
+
+Nhận giá realtime và độ sâu sổ lệnh thật từ DNSE, ghi vào `trade.market_quotes` / `trade.market_indices` mỗi giây.
+`/api/market` ưu tiên đọc từ đây; khi worker chưa chạy hoặc dữ liệu cũ hơn 20 giây thì tự dùng nến 1 phút của Entrade (trễ khoảng 1 phút, không có độ sâu).
+
+```
+npm run worker:market
+```
+
+- Một kết nối cho cả rổ mã (DNSE cho tối đa 10 kết nối/user, 200 stream/kết nối).
+- Kênh: `tick.G1`, `top_price.G1` (3 mức mua/bán với HOSE), `security_definition.G1`, `market_index.{VNINDEX,VN30,HNX,UPCOM}`.
+- Giá khớp ngoài biên độ trần/sàn bị coi là dữ liệu hỏng và bị bỏ qua.
+- Ghi DB lỗi thì giữ lại hàng đợi để ghi lại lần sau, không mất cập nhật.
+- Cần chạy trên cùng máy với DB, giống worker broker. Hai worker dùng chung phần kết nối ở `worker/_socket.mjs`.
+- Trình duyệt vẫn lấy giá bằng cách hỏi `/api/market` mỗi 2,5 giây (giây thứ 5 khi dùng nguồn dự phòng), chưa phải đẩy trực tiếp.

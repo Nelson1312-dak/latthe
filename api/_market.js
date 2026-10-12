@@ -79,33 +79,68 @@ export async function fetchBars(symbol, days, resolution = '1D', kind = 'stock')
   return (await fetchRange(symbol, from, to, resolution, kind)).slice(-days);
 }
 
+/** Bộ nhớ đệm ngắn trong tiến trình: tránh gọi lại nguồn giá cho dữ liệu ít đổi (nến ngày). */
+const memo = new Map();
+export async function cached(key, ttlMs, fn) {
+  const hit = memo.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.value;
+  const value = await fn();
+  memo.set(key, { at: Date.now(), value });
+  return value;
+}
+
+/** Mốc 9h00 (giờ VN) của ngày hôm nay theo giây epoch: cùng quy ước với trường t của nến ngày (02:00 UTC). */
+export function todayBarTime(ts = Date.now()) {
+  return Date.parse(vnNow(ts).ymd + 'T09:00:00+07:00') / 1000;
+}
+
 /**
- * Báo giá từ vài phiên daily gần nhất. Nếu đã có nến của hôm nay thì đó là phiên live
- * (tham chiếu = đóng cửa phiên trước); chưa có thì tham chiếu = đóng cửa phiên gần nhất.
+ * Nến của HÔM NAY dựng từ nến 1 phút. Endpoint nến ngày của nguồn giá chưa có nến hôm nay trong lúc phiên chạy,
+ * nên không dùng nó cho giá trong phiên. Trả null nếu hôm nay chưa có giao dịch (trước giờ mở cửa, cuối tuần, nghỉ lễ).
  */
-export function quoteFromBars(info, bars) {
-  if (bars.length < 2) return null;
-  const last = bars[bars.length - 1];
-  const lastDay = vnNow(last.t * 1000).ymd;
-  const live = lastDay === vnNow().ymd;
-  const ref = (live ? bars[bars.length - 2] : last).c;
-  const { ceil, floor } = limits(ref, info.ex);
+export async function liveBar(symbol, kind = 'stock') {
+  const now = Math.floor(Date.now() / 1000);
+  const from = Date.parse(vnNow().ymd + 'T00:00:00+07:00') / 1000;
+  const m = await fetchRange(symbol, from, now, '1', kind);
+  if (!m.length) return null;
   return {
-    s: info.s, ex: info.ex, name: info.name,
-    ref, ceil, floor,
-    last: live ? last.c : ref,
-    open: live ? last.o : ref,
-    high: live ? last.h : ref,
-    low: live ? last.l : ref,
-    vol: live ? last.v : 0,
-    lastSession: lastDay,
+    t: todayBarTime(), o: m[0].o,
+    h: Math.max(...m.map((b) => b.h)), l: Math.min(...m.map((b) => b.l)),
+    c: m[m.length - 1].c, v: m.reduce((a, b) => a + (b.v || 0), 0),
+    asof: m[m.length - 1].t,
   };
 }
 
-/** Chỉ số: so với đóng cửa phiên liền trước (khi đóng cửa thì là biến động của phiên gần nhất). */
-export function indexFromBars(symbol, bars) {
-  if (bars.length < 2) return null;
-  const last = bars[bars.length - 1];
-  const ref = bars[bars.length - 2].c;
+/**
+ * Báo giá. daily = nến ngày; live = nến hôm nay từ nến 1 phút (nếu có).
+ * Có live: tham chiếu = đóng cửa phiên liền trước, giá hiện tại = giá khớp gần nhất.
+ * Không có live (ngoài giờ): tham chiếu = đóng cửa phiên gần nhất, thay đổi 0%.
+ */
+export function quoteFromBars(info, daily, live = null) {
+  const today = vnNow().ymd;
+  const past = daily.filter((b) => vnNow(b.t * 1000).ymd !== today);
+  const dailyToday = daily.find((b) => vnNow(b.t * 1000).ymd === today) || null;
+  const bar = live || dailyToday;
+  if (bar && past.length) {
+    const ref = past[past.length - 1].c;
+    const { ceil, floor } = limits(ref, info.ex);
+    return { s: info.s, ex: info.ex, name: info.name, ref, ceil, floor, last: bar.c, open: bar.o, high: bar.h, low: bar.l, vol: bar.v, lastSession: today, asof: bar.asof || null };
+  }
+  const last = past[past.length - 1];
+  if (!last) return null;
+  const { ceil, floor } = limits(last.c, info.ex);
+  return { s: info.s, ex: info.ex, name: info.name, ref: last.c, ceil, floor, last: last.c, open: last.c, high: last.c, low: last.c, vol: 0, lastSession: vnNow(last.t * 1000).ymd, asof: null };
+}
+
+/** Chỉ số: so với đóng cửa phiên liền trước. Trong phiên dùng điểm của nến 1 phút mới nhất. */
+export function indexFromBars(symbol, daily, live = null) {
+  const today = vnNow().ymd;
+  const past = daily.filter((b) => vnNow(b.t * 1000).ymd !== today);
+  if (live && past.length) {
+    const ref = past[past.length - 1].c;
+    return { s: symbol, last: live.c, ref, pct: (live.c / ref - 1) * 100 };
+  }
+  if (past.length < 2) return null;
+  const last = past[past.length - 1], ref = past[past.length - 2].c;
   return { s: symbol, last: last.c, ref, pct: (last.c / ref - 1) * 100 };
 }

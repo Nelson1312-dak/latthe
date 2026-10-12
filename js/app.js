@@ -10,7 +10,7 @@ const toBar = b => ({time:b.t,open:b.o,high:b.h,low:b.l,close:b.c,value:b.v});
 
 const UNIVERSE = [];                 // nạp từ API
 const M = {};
-const MKT = {session:"closed", asof:null, indices:[], polledOnce:false};
+const MKT = {session:"closed", asof:null, indices:[], polledOnce:false, source:"poll"};
 
 async function getJSON(url){
   const r = await fetch(url, {headers:{Accept:"application/json"}});
@@ -29,7 +29,7 @@ function buildSymbol(q,hist){
 }
 async function loadMarket(){
   const [mk,hs] = await Promise.all([getJSON("/api/market"), getJSON("/api/history?days=260")]);
-  MKT.session = mk.session; MKT.asof = mk.asof; MKT.indices = mk.indices||[];
+  MKT.session = mk.session; MKT.asof = mk.asof; MKT.indices = mk.indices||[]; MKT.source = mk.source||"poll";
   UNIVERSE.length = 0;
   Object.values(mk.quotes).forEach(q=>{
     if(!hs.bars[q.s]) return;
@@ -41,10 +41,15 @@ async function loadMarket(){
   [["HPG",1.04],["FPT",.93]].forEach(([s,k])=>{ if(M[s]&&ACC.hold[s]) ACC.hold[s].avg = +(P(M[s].refU)*k).toFixed(2); });
 }
 /* Áp báo giá mới. Trả false nếu đã sang phiên mới (cần nạp lại lịch sử). */
+/* Độ sâu thị trường thật (có khi worker WebSocket đang chạy): mua/bán, giá theo nghìn đồng */
+function setDepth(m,q){
+  const d=q.depth, lv=a=>(a||[]).filter(x=>x&&x.p>0).map(x=>({u:U(x.p),q:Math.round(x.q||0)}));
+  m.depth = d ? {bid:lv(d.bid).sort((a,b)=>b.u-a.u), offer:lv(d.offer).sort((a,b)=>a.u-b.u)} : null;
+}
 function applyQuote(m,q){
   if(q.lastSession!==m.session) return false;
   const prevLast=m.lastU, prevVol=m.vol;
-  setQuote(m,q);
+  setQuote(m,q); setDepth(m,q);
   if(q.vol>0){ // phiên đang chạy
     m.hiU=U(q.high); m.loU=U(q.low); m.vol=q.vol;
     Object.assign(m.today,{open:q.open,high:q.high,low:q.low,close:q.last,value:q.vol});
@@ -57,6 +62,10 @@ function applyQuote(m,q){
 }
 /* Độ sâu thị trường (khối lượng chờ mua/bán) không có trong nguồn dữ liệu công khai, nên chỉ hiển thị các bước giá liền kề giá khớp. */
 function book(m){
+  if(m.depth && (m.depth.bid.length||m.depth.offer.length)){
+    const n=m.ex==="HOSE"?3:5;   // HOSE có 3 mức giá; HNX/UPCoM có 10 nhưng bảng này chỉ hiện 5
+    return {asks:m.depth.offer.slice(0,n), bids:m.depth.bid.slice(0,n), real:true};
+  }
   const t=tickU(m.lastU,m.ex), asks=[], bids=[];
   for(let i=1;i<=3;i++){
     const a=m.lastU+i*t, b=m.lastU-i*t;
@@ -155,8 +164,10 @@ function renderHead(){
   $("h-vol").textContent=fN(m.vol);
 }
 function renderBook(){
-  const m=M[S.sym], {asks,bids}=book(m);
-  const row=(o,k)=>`<button class="ob-row ${k}" data-fill="${o.u}" aria-label="Chọn giá ${fP(o.u)}"><span class="${cls(m,o.u)}">${fP(o.u)}</span><span class="q">${(P(o.u)-P(m.lastU)>=0?"+":"")+((o.u-m.lastU)/m.lastU*100).toFixed(2)}%</span></button>`;
+  const m=M[S.sym], {asks,bids,real}=book(m);
+  const mx=Math.max(1,...asks.map(a=>a.q||0),...bids.map(b=>b.q||0));
+  $("ob-head-q").textContent = real ? "KL" : "So với giá khớp";
+  const row=(o,k)=>`<button class="ob-row ${k}" data-fill="${o.u}" aria-label="Chọn giá ${fP(o.u)}"><span class="${cls(m,o.u)}">${fP(o.u)}</span>${o.q!=null?`<span class="bar" style="width:${o.q/mx*100}%"></span>`:""}<span class="q">${o.q!=null?fN(o.q):(P(o.u)-P(m.lastU)>=0?"+":"")+((o.u-m.lastU)/m.lastU*100).toFixed(2)+"%"}</span></button>`;
   const ch=(m.lastU-m.refU)/m.refU*100;
   $("ob").innerHTML=asks.slice().reverse().map(a=>row(a,"ask")).join("")+
     `<div class="ob-mid"><span class="${cls(m,m.lastU)}">${fP(m.lastU)}</span><small>${(ch>=0?"+":"")+ch.toFixed(2)}%</small></div>`+
@@ -696,7 +707,7 @@ function setStatus(err){
   dot.style.background = err?"var(--down)":live?"var(--up)":"var(--faint)";
   const ses = UNIVERSE.length ? M[UNIVERSE[0].s].session : null;
   $("session").textContent = err ? "Mất kết nối nguồn giá, đang thử lại"
-    : `${SESSION_LABEL[MKT.session]}${ses?`, số liệu phiên ${dmyFull(ses)}`:""}, cập nhật ${new Date(MKT.asof).toTimeString().slice(0,8)}`;
+    : `${SESSION_LABEL[MKT.session]}${ses?`, số liệu phiên ${dmyFull(ses)}`:""}, cập nhật ${new Date(MKT.asof).toTimeString().slice(0,8)}${MKT.session!=="closed"?(MKT.source==="ws"?" · DNSE realtime":MKT.source==="mixed"?" · realtime một phần":" · giá trễ khoảng 1 phút"):""}`;
 }
 function renderIndices(){
   $("indices").innerHTML=MKT.indices.map(i=>`<span class="idx"><b>${i.s}</b><span class="${i.pct>=0?"up":"down"}">${i.last.toFixed(2)} ${(i.pct>=0?"+":"")+i.pct.toFixed(2)}%</span></span>`).join("");
@@ -713,14 +724,15 @@ function tick(){
 async function poll(){
   try{
     const mk=await getJSON("/api/market");
-    MKT.session=mk.session; MKT.asof=mk.asof; MKT.indices=mk.indices||MKT.indices;
+    MKT.session=mk.session; MKT.asof=mk.asof; MKT.indices=mk.indices||MKT.indices; MKT.source=mk.source||"poll";
     const stale=Object.values(mk.quotes).some(q=>M[q.s]&&!applyQuote(M[q.s],q));
     MKT.polledOnce=true;
-    if(stale){ await loadMarket(); renderWL(); selectSym(S.sym); }
+    // Sang phiên mới thì nạp lại lịch sử, nhưng không quá 1 lần mỗi 20 giây (lịch sử được cache ở CDN)
+    if(stale && Date.now()-(MKT.reloadedAt||0)>20000){ MKT.reloadedAt=Date.now(); await loadMarket(); renderWL(); selectSym(S.sym); }
     renderIndices(); setStatus(false); tick();
   }catch(e){ setStatus(true); }
 }
-function schedulePoll(){ setTimeout(async()=>{ await poll(); schedulePoll(); }, MKT.session==="closed"?30000:5000); }
+function schedulePoll(){ setTimeout(async()=>{ await poll(); schedulePoll(); }, MKT.session==="closed"?30000:MKT.source==="ws"?2500:5000); }
 
 async function boot(){
   try{ await loadMarket(); }
