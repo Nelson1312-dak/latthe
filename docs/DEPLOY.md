@@ -19,6 +19,7 @@ Nếu máy tắt hoặc ngrok rớt: giá quay về nguồn dự phòng (trễ k
 | `DB_JWT_SECRET` | `.env.local` | mọi tính năng cần DB |
 | `SESSION_SECRET` | `.env.local` | đăng nhập |
 | `BROKER_OWNER_USERNAME` | tên đăng nhập của bạn trên latbai.vn (đăng ký trước) | bàn môi giới, kết nối công ty chứng khoán |
+| `DNSE_LOGIN_CUSTODY` | số lưu ký DNSE của bạn (nhiều số cách nhau bằng dấu phẩy) | nút **Đăng nhập bằng DNSE**; các tài khoản này đồng thời là chủ hệ thống |
 | `DNSE_API_KEY`, `DNSE_API_SECRET` | EntradeX → LightSpeed API | bàn môi giới, cổng khách (xem tài sản) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud Console (bên dưới) | đăng nhập Google |
 | `DNSE_REAL_TRADING=1` | chỉ đặt khi sẵn sàng gửi lệnh thật | gửi/hủy lệnh thật |
@@ -26,15 +27,17 @@ Nếu máy tắt hoặc ngrok rớt: giá quay về nguồn dự phòng (trễ k
 
 ## Các bước
 
-1. **Đăng ký tài khoản trên latbai.vn** (hoặc chạy local) để có tên đăng nhập sẽ dùng làm `BROKER_OWNER_USERNAME`.
+1. **Cách xác định chủ hệ thống** (chọn một hoặc cả hai):
+   - **Đăng nhập bằng DNSE (khuyên dùng):** chỉ cần số lưu ký của bạn. Điền vào `-DnseCustody` ở bước 3, rồi vào latbai.vn bấm *Đăng nhập → Đăng nhập bằng tài khoản DNSE*. Mật khẩu chỉ gửi tới DNSE để xác minh, không lưu.
+   - **Tên đăng nhập Lật Bài:** đăng ký tài khoản rồi dùng tên đó làm `-Owner` (`BROKER_OWNER_USERNAME`).
 2. **Đăng nhập Vercel CLI** (một lần): `vercel login`.
 3. **Đẩy biến lên Vercel**, thay `<tên>` bằng tên đăng nhập của bạn:
    ```
-   powershell -ExecutionPolicy Bypass -File deploy\push-env.ps1 -Owner <tên> -IncludeDnse -DryRun   # xem trước
-   powershell -ExecutionPolicy Bypass -File deploy\push-env.ps1 -Owner <tên> -IncludeDnse
+   powershell -ExecutionPolicy Bypass -File deploy\push-env.ps1 -DnseCustody <số lưu ký> -IncludeDnse -DryRun   # xem trước
+   powershell -ExecutionPolicy Bypass -File deploy\push-env.ps1 -DnseCustody <số lưu ký> -IncludeDnse
    ```
    Biến chỉ áp dụng cho bản deploy mới: chạy `vercel --prod` hoặc đẩy một commit.
-4. **Kiểm tra**: mở `https://latbai.vn/api/health`. `ok: true` nghĩa là database và đăng nhập sẵn sàng; các cờ `google`, `dnse`, `brokerOwner`, `realTrading` cho biết nhóm nào đã bật.
+4. **Kiểm tra**: mở `https://latbai.vn/api/health`. `ok: true` nghĩa là database và đăng nhập sẵn sàng; các cờ `google`, `dnse`, `brokerOwner`, `realTrading` cho biết nhóm nào đã bật (kể cả `dnseLogin`).
 5. **Đăng nhập Google** (tùy chọn): Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID → loại *Web application*. Thêm **Authorized redirect URI** đúng bằng `https://latbai.vn/api/auth/google-callback`. Lấy Client ID và Secret dán vào `.env.local`, rồi chạy lại bước 3 với `-IncludeGoogle`.
 6. **Gửi lệnh thật** (sau khi đã thử kỹ): chạy lại bước 3 với thêm `-EnableRealTrading`. Lệnh đầu tiên nên là 100 cổ phiếu ở giá sàn rồi hủy ngay. Hạn mức mỗi lệnh mặc định 20 triệu (`DNSE_MAX_ORDER_VND`).
 

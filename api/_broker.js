@@ -7,6 +7,7 @@
  */
 import crypto from 'node:crypto';
 import { rest } from './_db.js';
+import { allowedCustody } from './_dnselogin.js';
 
 export class BrokerError extends Error {
   constructor(message, status = 502, code = 'broker') { super(message); this.status = status; this.code = code; this.expose = true; }
@@ -33,14 +34,17 @@ export const ownerUsername = () =>
 /** @returns {Promise<{username: string}>} ném lỗi nếu user không phải chủ sở hữu. */
 export async function assertOwner(uid) {
   const owner = ownerUsername();
-  if (!owner) throw new BrokerError('Kết nối công ty chứng khoán chưa được cấu hình.', 503, 'config');
+  const custody = allowedCustody();
+  if (!owner && !custody.length) throw new BrokerError('Kết nối công ty chứng khoán chưa được cấu hình.', 503, 'config');
   if (!uid) throw new BrokerError('Bạn cần đăng nhập.', 401, 'auth');
-  const rows = await rest(`/users?id=eq.${uid}&select=username&limit=1`, { sub: uid });
-  const username = rows?.[0]?.username;
-  if (username !== owner) {
+  const rows = await rest(`/users?id=eq.${uid}&select=username,dnse_custody&limit=1`, { sub: uid });
+  const u = rows?.[0];
+  const byName = !!owner && u?.username === owner;
+  const byDnse = !!u?.dnse_custody && custody.includes(String(u.dnse_custody).toUpperCase());
+  if (!byName && !byDnse) {
     throw new BrokerError('Kết nối tài khoản chứng khoán thật hiện chỉ mở cho chủ hệ thống.', 403, 'forbidden');
   }
-  return { username };
+  return { username: u.username };
 }
 export const isOwner = (uid) => assertOwner(uid).then(() => true, () => false);
 

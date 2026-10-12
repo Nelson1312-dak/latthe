@@ -89,6 +89,28 @@
     }
   }
 
+  async function submitDnse(e) {
+    e.preventDefault();
+    if (S.busy) return;
+    const username = $('dnse-user').value.trim(), password = $('dnse-pass').value;
+    if (!username || !password) return errBox($('dnse-msg'), 'Nhập số lưu ký (hoặc email, số điện thoại) và mật khẩu DNSE.');
+    S.busy = true; $('dnse-submit').disabled = true; $('dnse-submit').textContent = 'Đang xác minh với DNSE…'; errBox($('dnse-msg'), '');
+    try {
+      const r = await api('/api/auth/dnse', { method: 'POST', body: { username, password } });
+      $('dnse-pass').value = '';   // không giữ mật khẩu trong trang
+      S.user = r.user;
+      $('dlg-auth').close();
+      renderAccount();
+      document.dispatchEvent(new CustomEvent('lb:user', { detail: S.user }));
+      say(`Chào ${S.user.display_name || S.user.username}.`);
+    } catch (err) {
+      $('dnse-pass').value = '';
+      errBox($('dnse-msg'), err.message);
+    } finally {
+      S.busy = false; $('dnse-submit').disabled = false; $('dnse-submit').textContent = 'Đăng nhập bằng DNSE';
+    }
+  }
+
   /* ---------- Công ty chứng khoán ---------- */
   function brokerCard(b) {
     const status = b.connected
@@ -180,6 +202,12 @@
       t.setAttribute('aria-expanded', String(open));
       return;
     }
+    if (t.id === 'btn-dnse-toggle') {
+      const f = $('dnse-form'), open = f.hidden;
+      f.hidden = !open; t.setAttribute('aria-expanded', String(open));
+      if (open) setTimeout(() => $('dnse-user').focus(), 30);
+      return;
+    }
     if (t.dataset.authTab) return setMode(t.dataset.authTab);
     if (t.id === 'auth-cancel') return $('dlg-auth').close();
     if (t.id === 'btn-google') { location.href = '/api/auth/google?next=' + encodeURIComponent(location.pathname + location.hash); return; }
@@ -209,6 +237,7 @@
 
   document.addEventListener('submit', (e) => {
     if (e.target.id === 'auth-form') return submitAuth(e);
+    if (e.target.id === 'dnse-form') return submitDnse(e);
     if (e.target.dataset.loginBroker === 'shs') { e.preventDefault(); return connectShs(e.target); }
   });
 

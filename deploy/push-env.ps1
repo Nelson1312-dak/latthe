@@ -9,12 +9,15 @@
 #   ... -IncludeDnse            also push DNSE_API_KEY / DNSE_API_SECRET (needed for the broker desk and client portal)
 #   ... -EnableRealTrading      also set DNSE_REAL_TRADING=1 (sends REAL orders to DNSE; leave off until you tested)
 #   ... -IncludeGoogle          also push GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET (must exist in .env.local)
+#   ... -DnseCustody 064C123456 enable 'Login with DNSE' for these custody codes (comma separated). Those accounts also
+#                               become system owners, so -Owner is then optional.
 #   ... -DryRun                 show which variables would be set, without touching Vercel
 #
 # NOTE: ASCII-only on purpose (Windows PowerShell 5.1 reads .ps1 files as ANSI without a BOM).
 
 param(
     [string]$Owner = '',
+    [string]$DnseCustody = '',
     [string]$SupabaseUrl = 'https://stiffness-glade-coliseum.ngrok-free.dev/postgrest',
     [string]$Environment = 'production',
     [switch]$IncludeDnse, [switch]$EnableRealTrading, [switch]$IncludeGoogle, [switch]$DryRun
@@ -37,6 +40,7 @@ foreach ($k in 'DB_JWT_SECRET', 'SESSION_SECRET') {
 # On Vercel the database is reached through the ngrok tunnel, NOT the local 127.0.0.1 address from .env.local
 $vars['SUPABASE_URL'] = $SupabaseUrl
 if ($Owner) { $vars['BROKER_OWNER_USERNAME'] = $Owner.ToLower() }
+if ($DnseCustody) { $vars['DNSE_LOGIN_CUSTODY'] = (($DnseCustody -split ',' | ForEach-Object { $_.Trim().ToUpper() } | Where-Object { $_ }) -join ',') }
 if ($IncludeDnse) {
     foreach ($k in 'DNSE_API_KEY', 'DNSE_API_SECRET') { if (-not $env_[$k]) { throw "Missing $k in .env.local" }; $vars[$k] = $env_[$k] }
 }
@@ -45,12 +49,12 @@ if ($IncludeGoogle) {
 }
 if ($EnableRealTrading) {
     if (-not $IncludeDnse) { throw '-EnableRealTrading needs -IncludeDnse' }
-    if (-not $Owner) { throw '-EnableRealTrading needs -Owner' }
+    if (-not $Owner -and -not $DnseCustody) { throw '-EnableRealTrading needs -Owner or -DnseCustody' }
     $vars['DNSE_REAL_TRADING'] = '1'
 }
 
 Write-Host "Variables to set on Vercel ($Environment):"
-$vars.Keys | ForEach-Object { Write-Host ("  {0,-24} {1}" -f $_, $(if ($_ -eq 'SUPABASE_URL' -or $_ -eq 'BROKER_OWNER_USERNAME' -or $_ -eq 'DNSE_REAL_TRADING') { $vars[$_] } else { '(hidden)' })) }
+$vars.Keys | ForEach-Object { Write-Host ("  {0,-24} {1}" -f $_, $(if ($_ -eq 'SUPABASE_URL' -or $_ -eq 'BROKER_OWNER_USERNAME' -or $_ -eq 'DNSE_REAL_TRADING' -or $_ -eq 'DNSE_LOGIN_CUSTODY') { $vars[$_] } else { '(hidden)' })) }
 if ($vars.Contains('DNSE_REAL_TRADING')) { Write-Host 'WARNING: real order placement will be ENABLED on the public site.' -ForegroundColor Yellow }
 if ($DryRun) { Write-Host 'Dry run: nothing was changed.'; exit 0 }
 

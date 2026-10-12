@@ -6,6 +6,7 @@
  * /api/<đường dẫn> thành /api/router?p=<đường dẫn>, query gốc được giữ nguyên.
  * Thêm endpoint mới: tạo file trong server/routes/ rồi thêm một dòng vào bảng ROUTES.
  */
+import r_auth_dnse from '../server/routes/auth/dnse.js';
 import r_auth_google from '../server/routes/auth/google.js';
 import r_auth_google_callback from '../server/routes/auth/google-callback.js';
 import r_auth_login from '../server/routes/auth/login.js';
@@ -36,6 +37,7 @@ import r_shs_account from '../server/routes/shs/account.js';
 import r_shs_connect from '../server/routes/shs/connect.js';
 
 const ROUTES = {
+  'auth/dnse': r_auth_dnse,
   'auth/google': r_auth_google,
   'auth/google-callback': r_auth_google_callback,
   'auth/login': r_auth_login,

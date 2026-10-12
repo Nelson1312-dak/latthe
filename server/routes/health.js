@@ -3,6 +3,7 @@
  * Dùng sau khi thêm biến môi trường trên Vercel để biết còn thiếu nhóm nào.
  */
 import { rest } from '../../api/_db.js';
+import { dnseLoginEnabled } from '../../api/_dnselogin.js';
 
 const has = (...k) => k.every((x) => !!(process.env[x] || '').trim());
 
@@ -13,6 +14,7 @@ export default async function handler(req, res) {
     database: has('SUPABASE_URL', 'DB_JWT_SECRET'),
     login: has('SESSION_SECRET'),
     google: has('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'),
+    dnseLogin: dnseLoginEnabled(),
     brokerOwner: has('BROKER_OWNER_USERNAME'),
     dnse: has('DNSE_API_KEY', 'DNSE_API_SECRET'),
     realTrading: process.env.DNSE_REAL_TRADING === '1',
