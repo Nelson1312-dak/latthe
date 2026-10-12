@@ -18,6 +18,7 @@
       <a href="#giao-dich" data-view="trade" aria-current="page">Giao dịch</a>
       <a href="#cong-dong" data-view="community">Cộng đồng</a>
       <a href="#tin-nhan" data-view="chat">Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
+      <a href="#khach-hang" data-view="desk" id="nav-desk" hidden>Khách hàng</a>
       <a href="#" aria-disabled="true" title="Sắp có">Backtest</a>
     </nav>
     <div class="search">
@@ -170,6 +171,47 @@
     <aside class="ctx" id="ctx" aria-label="Thông tin"></aside>
   </main>
 
+  <main class="desk" id="view-desk" hidden>
+    <section class="desk-list" aria-label="Danh sách khách hàng">
+      <div class="pane-title"><span>Khách hàng <span class="online" id="desk-count"></span></span><button class="link" data-refresh-list>Làm mới</button></div>
+      <div class="desk-sum" id="desk-sum"></div>
+      <div class="desk-search"><input class="inp" id="desk-q" placeholder="Tìm tên, tiểu khoản, số lưu ký" aria-label="Tìm khách hàng" autocomplete="off"></div>
+      <div class="desk-clients" id="desk-clients"></div>
+    </section>
+    <section class="desk-main" aria-label="Tài sản khách hàng" id="desk-detail"></section>
+    <aside class="desk-side" aria-label="Phiếu lệnh">
+      <div class="pane-title">Phiên giao dịch</div>
+      <div class="desk-otp" id="desk-otp"></div>
+      <div class="pane-title">Tạo phiếu lệnh</div>
+      <form class="desk-form" id="desk-form" autocomplete="off" novalidate>
+        <div class="desk-for" id="desk-for">Chọn khách ở cột bên trái.</div>
+        <div class="sides">
+          <button type="button" class="side-btn buy" data-dside="B" aria-pressed="true">Mua</button>
+          <button type="button" class="side-btn sell" data-dside="S" aria-pressed="false">Bán</button>
+        </div>
+        <div class="desk-row">
+          <label>Mã<input class="inp" id="dk-sym" maxlength="10" placeholder="HPG"></label>
+          <label>Loại lệnh<select class="inp" id="dk-type"><option>LO</option><option>MTL</option><option>ATO</option><option>ATC</option></select></label>
+        </div>
+        <div class="desk-row">
+          <label>Giá (nghìn đồng)<input class="inp" id="dk-px" inputmode="decimal" placeholder="20.10"></label>
+          <label>Khối lượng<input class="inp" id="dk-qty" inputmode="numeric" placeholder="100"></label>
+        </div>
+        <label>Chỉ thị của khách<select class="inp" id="dk-src">
+          <option value="phone">Qua điện thoại</option><option value="chat">Qua tin nhắn</option><option value="in_person">Gặp trực tiếp</option><option value="app">Gửi khách xác nhận trong app</option>
+        </select></label>
+        <div class="desk-instr" id="dk-instr">
+          <label>Thời điểm khách ra chỉ thị<input class="inp" id="dk-at" type="datetime-local"></label>
+          <label>Nội dung chỉ thị<textarea class="inp" id="dk-note" rows="2" maxlength="1000" placeholder="Vd: KH gọi 9h40, đặt mua 1.000 HPG giá 20.10"></textarea></label>
+        </div>
+        <div class="msgs" id="dk-msg"></div>
+        <button type="submit" class="cta buy" id="dk-submit">Tạo phiếu</button>
+      </form>
+      <div class="pane-title">Phiếu lệnh gần đây</div>
+      <div class="desk-tickets" id="desk-tickets"></div>
+    </aside>
+  </main>
+
   <main class="community" id="view-community" hidden>
     <section class="cnav" id="cnav" aria-label="Chuyên mục"></section>
     <section class="feed" id="feed" aria-label="Bài viết"></section>
@@ -246,6 +288,7 @@
 
 <script src="/js/vendor/lightweight-charts.js"></script>
 <script src="/js/app.js"></script>
+<script src="/js/desk.js"></script>
 <script src="/js/account.js"></script>
 </body>
 </html>

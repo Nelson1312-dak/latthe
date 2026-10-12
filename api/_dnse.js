@@ -120,11 +120,11 @@ export function setTradingCookie(res, uid, token) {
   c.setAAD(Buffer.from(uid)); // gắn với đúng user: cookie chép sang phiên khác không giải mã được
   const enc = Buffer.concat([c.update(JSON.stringify({ t: token, exp }), 'utf8'), c.final()]);
   const val = [iv, c.getAuthTag(), enc].map((b) => b.toString('base64url')).join('.');
-  res.setHeader('Set-Cookie', `${TT_COOKIE}=${val}; HttpOnly; SameSite=Strict; Path=/api/dnse; Max-Age=${Math.floor((exp - Date.now()) / 1000)}${IS_PROD ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `${TT_COOKIE}=${val}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=${Math.floor((exp - Date.now()) / 1000)}${IS_PROD ? '; Secure' : ''}`);
   return new Date(exp).toISOString();
 }
 export function clearTradingCookie(res) {
-  res.setHeader('Set-Cookie', `${TT_COOKIE}=; HttpOnly; SameSite=Strict; Path=/api/dnse; Max-Age=0${IS_PROD ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `${TT_COOKIE}=; HttpOnly; SameSite=Strict; Path=/api; Max-Age=0${IS_PROD ? '; Secure' : ''}`);
 }
 /** @returns {{ token: string, exp: number } | null} */
 export function readTradingCookie(req, uid) {
