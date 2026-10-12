@@ -37,8 +37,6 @@ async function loadMarket(){
   });
   if(!UNIVERSE.length) throw new Error("Không có mã nào đủ dữ liệu");
   MKT.polledOnce = false;
-  // Tài khoản demo: giá vốn đặt lệch quanh giá thật để màn Danh mục có lãi/lỗ để xem
-  [["HPG",1.04],["FPT",.93]].forEach(([s,k])=>{ if(M[s]&&ACC.hold[s]) ACC.hold[s].avg = +(P(M[s].refU)*k).toFixed(2); });
 }
 /* Áp báo giá mới. Trả false nếu đã sang phiên mới (cần nạp lại lịch sử). */
 /* Độ sâu thị trường thật (có khi worker WebSocket đang chạy): mua/bán, giá theo nghìn đồng */
@@ -76,7 +74,8 @@ function book(m){
 }
 
 /* ---------------- Account (demo) ---------------- */
-const ACC = {cash:500_000_000, hold:{HPG:{qty:3000,avg:21.40}, FPT:{qty:500,avg:98.20}}, orders:[], seq:1};
+/* Tài khoản giao dịch thử (tiền ảo) nằm trên server, gắn với người dùng đã đăng nhập. */
+const ACC = {user:null, cash:0, hold:{}, orders:[]};
 const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
@@ -218,11 +217,12 @@ function renderTicket(){
   const u=ticketPxU(), val=u?P(u)*1000*S.qty:0;
   $("s-val").textContent=fVND(val); $("s-fee").textContent=fVND(val*FEE);
   $("s-tax-l").style.display=$("s-tax").style.display=S.side==="S"?"":"none"; $("s-tax").textContent=fVND(val*TAX);
-  $("a-pp").textContent=fVND(ACC.cash); $("a-sell").textContent=fN(Math.max((ACC.hold[S.sym]?.qty||0)-pendingSellQty(S.sym),0))+" CP";
+  $("a-pp").textContent=ACC.user?fVND(ACC.cash):"Đăng nhập để xem"; $("a-sell").textContent=ACC.user?fN(Math.max((ACC.hold[S.sym]?.qty||0)-pendingSellQty(S.sym),0))+" CP":"–";
   const {errs,warns}=validate();
   $("msgs").innerHTML=errs.map(e=>`<div class="msg err">${e}</div>`).join("")+warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
-  const cta=$("cta"); cta.className="cta "+(S.side==="B"?"buy":"sell"); cta.disabled=!!errs.length;
-  cta.textContent=`${S.side==="B"?"Mua":"Bán"} ${m.s}`;
+  const cta=$("cta"); cta.className="cta "+(S.side==="B"?"buy":"sell");
+  if(!ACC.user){ cta.disabled=false; cta.textContent="Đăng nhập để đặt lệnh"; $("msgs").innerHTML=""; return; }
+  cta.disabled=!!errs.length; cta.textContent=`${S.side==="B"?"Mua":"Bán"} ${m.s}`;
 }
 function flip(open){
   const card=$("card"), was=card.classList.contains("flipped"); card.classList.toggle("flipped",open);
@@ -231,38 +231,57 @@ function flip(open){
     const m=M[S.sym], u=ticketPxU(), val=P(u)*1000*S.qty, {warns}=validate(), sideT=S.side==="B"?"Mua":"Bán";
     $("c-title").innerHTML=`${sideT} <span class="${S.side==="B"?"up":"down"}">${fN(S.qty)}</span> ${m.s}<br>${S.type==="LO"?"giá "+fP(u):"lệnh "+S.type}`;
     $("c-grid").innerHTML=`<span>Loại lệnh</span><b>${S.type}</b><span>Giá trị ${S.type==="LO"?"":"(ước tính)"}</span><b>${fVND(val)}</b><span>Phí</span><b>${fVND(val*FEE)}</b>`+
-      (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tiểu khoản</span><b>0001234567</b>`;
+      (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tài khoản</span><b>Giao dịch thử</b>`;
     $("c-msgs").innerHTML=warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
     const ok=$("c-ok"); ok.className="cta "+(S.side==="B"?"buy":"sell"); ok.textContent=`Gửi lệnh ${sideT.toLowerCase()}`;
     setTimeout(()=>ok.focus({preventScroll:true}),300);
   } else if(was) setTimeout(()=>$("cta").focus({preventScroll:true}),300);
 }
-function placeOrder(){
-  const m=M[S.sym], u=ticketPxU();
-  const o={id:ACC.seq++,time:new Date().toTimeString().slice(0,8),sym:m.s,side:S.side,type:S.type,u,qty:S.qty,filled:0,status:"wait",avgU:null};
-  if(o.side==="B") ACC.cash -= P(u)*1000*o.qty*(1+FEE); // phong tỏa tiền
-  ACC.orders.unshift(o); tryMatch(o, true);
-  toast(`Đã gửi lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym}${o.status==="ok"?" và khớp ngay":""}.${MKT.session==="closed"?" Thị trường đang đóng cửa, lệnh chờ đến phiên sau.":""}`);
-  flip(false); renderTicket(); renderPanel();
+/* ---------------- Tài khoản trên server ---------------- */
+const needLogin = () => { toast("Đăng nhập để đặt lệnh và lưu danh mục."); document.getElementById("btn-login")?.click(); };
+function applyAccount(d){
+  const old=new Map(ACC.orders.map(o=>[o.id,o.status]));
+  ACC.cash=Number(d.cash)||0;
+  ACC.hold=Object.fromEntries((d.holdings||[]).map(h=>[h.symbol,{qty:h.qty,avg:Number(h.avg)}]));
+  ACC.orders=(d.orders||[]).map(o=>({id:o.id,time:new Date(o.created_at).toTimeString().slice(0,8),sym:o.symbol,side:o.side,type:o.type,
+    u:o.price!=null?U(Number(o.price)):null,qty:o.qty,filled:o.filled,status:o.status,avgU:o.avg_price!=null?U(Number(o.avg_price)):null}));
+  ACC.orders.forEach(o=>{ if(old.get(o.id)==="wait"&&o.status==="ok") toast(`Lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym} đã khớp giá ${fP(o.avgU)}.`); });
 }
-function tryMatch(o, initial){
-  if(o.status!=="wait"||o.type==="ATO"||o.type==="ATC"||MKT.session==="closed") return;
-  const m=M[o.sym], {asks,bids}=book(m);
-  let fillU=null;
-  if(o.type==="MTL") fillU = o.side==="B" ? (asks[0]?.u??m.lastU) : (bids[0]?.u??m.lastU);
-  else if(o.side==="B" && ((initial&&asks[0]&&o.u>=asks[0].u) || m.lastU<=o.u)) fillU = initial&&asks[0]?Math.min(o.u,asks[0].u):Math.min(o.u,m.lastU);
-  else if(o.side==="S" && ((initial&&bids[0]&&o.u<=bids[0].u) || m.lastU>=o.u)) fillU = initial&&bids[0]?Math.max(o.u,bids[0].u):Math.max(o.u,m.lastU);
-  if(fillU==null) return;
-  o.status="ok"; o.filled=o.qty; o.avgU=fillU;
-  const val=P(fillU)*1000*o.qty, h=ACC.hold[o.sym]||(ACC.hold[o.sym]={qty:0,avg:0});
-  if(o.side==="B"){ ACC.cash += P(o.u)*1000*o.qty*(1+FEE) - val*(1+FEE); h.avg=(h.avg*h.qty+P(fillU)*o.qty)/(h.qty+o.qty); h.qty+=o.qty; }
-  else { ACC.cash += val*(1-FEE-TAX); h.qty-=o.qty; if(h.qty<=0) delete ACC.hold[o.sym]; }
-  if(!initial) toast(`Lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym} đã khớp giá ${fP(fillU)}.`);
+let accTimer=null, accBusy=false;
+async function refreshAccount(){
+  if(!ACC.user||accBusy) return; accBusy=true;
+  try{
+    const r=await fetch("/api/me"); const d=await r.json();
+    if(!d.user){ ACC.user=null; resetAccount(); } else { applyAccount(d); renderTicket(); renderPanel(); }
+  }catch(e){ /* lỗi mạng tạm thời: giữ số liệu cũ */ } finally{ accBusy=false; }
 }
-function cancelOrder(id){
-  const o=ACC.orders.find(x=>x.id===id); if(!o||o.status!=="wait") return;
-  o.status="cx"; if(o.side==="B") ACC.cash += P(o.u)*1000*o.qty*(1+FEE);
-  toast(`Đã hủy lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym}.`); renderPanel(); renderTicket();
+function resetAccount(){ ACC.cash=0; ACC.hold={}; ACC.orders=[]; renderTicket(); renderPanel(); }
+document.addEventListener("lb:user",e=>{
+  ACC.user=e.detail||null; clearInterval(accTimer);
+  if(ACC.user){ refreshAccount(); accTimer=setInterval(refreshAccount,10000); } else resetAccount();
+});
+
+async function placeOrder(){
+  if(!ACC.user) return needLogin();
+  const m=M[S.sym], u=ticketPxU(), ok=$("c-ok");
+  ok.disabled=true; $("c-msgs").innerHTML="";
+  try{
+    const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({symbol:m.s,side:S.side,type:S.type,qty:S.qty,...(S.type==="LO"?{price:P(u)}:{})})});
+    const d=await r.json();
+    if(!r.ok){ $("c-msgs").innerHTML=`<div class="msg err">${d.error||"Không đặt được lệnh."}</div>`; return; }
+    const filled=d.order.status==="ok";
+    toast(`Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(S.qty)} ${m.s}${filled?" và khớp ngay":""}.${!filled&&MKT.session==="closed"?" Thị trường đang đóng cửa, lệnh chờ đến phiên sau.":""}`);
+    flip(false); await refreshAccount();
+  }catch(e){ $("c-msgs").innerHTML='<div class="msg err">Mất kết nối, thử lại.</div>'; }
+  finally{ ok.disabled=false; }
+}
+async function cancelOrder(id){
+  try{
+    const r=await fetch("/api/orders?id="+id,{method:"DELETE"}), d=await r.json();
+    if(!r.ok) return toast(d.error||"Không hủy được lệnh.");
+    toast("Đã hủy lệnh."); await refreshAccount();
+  }catch(e){ toast("Mất kết nối, thử lại."); }
 }
 
 /* ---------------- Bottom panel ---------------- */
@@ -270,15 +289,15 @@ function renderPanel(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===S.tab));
   const body=$("tab-body");
   if(S.tab==="orders"){
-    if(!ACC.orders.length){ body.innerHTML=`<div class="empty"><b>Chưa có lệnh nào hôm nay</b>Đặt lệnh ở khung bên phải, lệnh sẽ hiện ở đây kèm trạng thái khớp.</div>`; return; }
-    const st={wait:'<span class="pill wait">Chờ khớp</span>',ok:'<span class="pill ok">Đã khớp</span>',cx:'<span class="pill cx">Đã hủy</span>'};
+    if(!ACC.orders.length){ body.innerHTML=`<div class="empty"><b>${ACC.user?"Chưa có lệnh nào":"Đăng nhập để xem sổ lệnh"}</b>${ACC.user?"Đặt lệnh ở khung bên phải, lệnh sẽ hiện ở đây kèm trạng thái khớp.":"Sổ lệnh và danh mục được lưu theo tài khoản của bạn."}</div>`; return; }
+    const st={wait:'<span class="pill wait">Chờ khớp</span>',ok:'<span class="pill ok">Đã khớp</span>',cx:'<span class="pill cx">Đã hủy</span>',rej:'<span class="pill cx">Bị từ chối</span>'};
     body.innerHTML=`<table><thead><tr><th>Giờ</th><th>Mã</th><th>Lệnh</th><th>Loại</th><th class="r">Giá đặt</th><th class="r">KL</th><th class="r">Đã khớp</th><th class="r">Giá khớp</th><th>Trạng thái</th><th></th></tr></thead><tbody>`+
       ACC.orders.map(o=>`<tr><td>${o.time}</td><td><b>${o.sym}</b></td><td class="${o.side==="B"?"up":"down"}">${o.side==="B"?"Mua":"Bán"}</td><td>${o.type}</td>
         <td class="r">${o.type==="LO"?fP(o.u):o.type}</td><td class="r">${fN(o.qty)}</td><td class="r">${fN(o.filled)}</td><td class="r">${o.avgU?fP(o.avgU):"–"}</td>
         <td>${st[o.status]}</td><td>${o.status==="wait"?`<button class="link" data-cancel="${o.id}">Hủy</button>`:""}</td></tr>`).join("")+`</tbody></table>`;
   } else if(S.tab==="pos"){
     const rows=Object.entries(ACC.hold);
-    if(!rows.length){ body.innerHTML=`<div class="empty"><b>Danh mục đang trống</b>Cổ phiếu bạn mua sẽ hiện ở đây cùng lãi lỗ theo giá thị trường.</div>`; return; }
+    if(!rows.length){ body.innerHTML=`<div class="empty"><b>${ACC.user?"Danh mục đang trống":"Đăng nhập để xem danh mục"}</b>Cổ phiếu bạn mua sẽ hiện ở đây cùng lãi lỗ theo giá thị trường.</div>`; return; }
     body.innerHTML=`<table><thead><tr><th>Mã</th><th class="r">KL</th><th class="r">Giá vốn</th><th class="r">Giá TT</th><th class="r">Giá trị</th><th class="r">Lãi/lỗ</th><th class="r">%</th></tr></thead><tbody>`+
       rows.map(([s,h])=>{const m=M[s],px=P(m.lastU),pl=(px-h.avg)*1000*h.qty,pct=(px-h.avg)/h.avg*100,c=pl>=0?"up":"down";
         return `<tr><td><button class="link" data-sym="${s}">${s}</button></td><td class="r">${fN(h.qty)}</td><td class="r">${h.avg.toFixed(2)}</td><td class="r ${cls(m,m.lastU)}">${fP(m.lastU)}</td><td class="r">${fVND(px*1000*h.qty)}</td><td class="r ${c}">${(pl>=0?"+":"")+fN(pl)}</td><td class="r ${c}">${(pct>=0?"+":"")+pct.toFixed(2)}%</td></tr>`}).join("")+`</tbody></table>`;
@@ -308,7 +327,7 @@ document.addEventListener("click",e=>{
     if(t.dataset.step==="qty") S.qty=Math.max(0,(Math.round((S.qty||0)/100)*100)+d*100);
     return renderTicket(); }
   if(t.dataset.pct){ S.qty=Math.floor(Math.max(maxQty(),0)*(+t.dataset.pct)/100/100)*100; return renderTicket(); }
-  if(t.id==="cta") return flip(true);
+  if(t.id==="cta") return ACC.user?flip(true):needLogin();
   if(t.id==="c-back") return flip(false);
   if(t.id==="c-ok"){ const {errs}=validate(); if(errs.length){flip(false);renderTicket();return;} return placeOrder(); }
   if(t.dataset.tab){ S.tab=t.dataset.tab; return renderPanel(); }
@@ -560,7 +579,7 @@ function renderCtx(c){
   if(c.kind==="ai"){
     ctx.innerHTML=`<h3>Trợ lý đang dùng dữ liệu</h3><ul>
       <li class="on"><span><b>Giá và lịch sử giao dịch</b><br>Giá thật từ DNSE (trễ vài giây)</span></li>
-      <li class="on"><span><b>Tài khoản demo của bạn</b><br>Danh mục, sức mua, sổ lệnh</span></li>
+      <li class="on"><span><b>Tài khoản giao dịch thử của bạn</b><br>Danh mục, sức mua, sổ lệnh (tiền ảo)</span></li>
       <li class="on"><span><b>Bộ máy backtest</b><br>Chạy trên nến ngày, đã trừ phí và thuế</span></li>
       <li><span><b>Tin tức, BCTC</b><br>Bản sau, qua MCP của DNSE</span></li></ul>
       <h3>Mô hình</h3><p style="margin:0;color:var(--muted)">${AI_ENDPOINT?`${AI_MODEL} trên máy chủ Lật Bài`:"Bản demo trả lời theo kịch bản, số liệu được tính thật trong trang. Bản chạy thật dùng Qwen trên máy chủ Lật Bài."}</p>
@@ -631,6 +650,7 @@ function aiBacktest(s){
    <div class="ai-actions"><button data-goto="${s}">Mở biểu đồ ${s}</button></div>`;
 }
 function aiPortfolio(){
+  if(!ACC.user) return `<p>Bạn cần đăng nhập để mình xem danh mục giao dịch thử của bạn.</p>`;
   const rows=Object.entries(ACC.hold); if(!rows.length) return `<p>Danh mục demo của bạn đang trống. Sức mua hiện có ${fVND(ACC.cash)}.</p>`;
   let tv=0,tc=0; const tr=rows.map(([s,h])=>{const px=P(M[s].lastU),v=px*1000*h.qty,c=h.avg*1000*h.qty;tv+=v;tc+=c;
     return `<tr><td><b>${s}</b></td><td class="r">${fN(h.qty)}</td><td class="r">${h.avg.toFixed(2)}</td><td class="r">${px.toFixed(2)}</td><td class="r ${v>=c?"up":"down"}">${sg(pct(v,c))}</td></tr>`;}).join("");
@@ -717,7 +737,6 @@ function tick(){
   if(S.tf==="D"){ candle.update({...m.today}); line.update({time:m.today.time,value:m.today.close});
     vol.update({time:m.today.time,value:m.today.value,color:m.today.close>=m.today.open?"rgba(46,189,133,.35)":"rgba(246,70,93,.35)"}); shown[shown.length-1]={...m.today}; legend(shown[shown.length-1]); }
   else if(last){ drawChart(false); }
-  ACC.orders.forEach(o=>tryMatch(o,false));
   renderHead(); renderBook(); updateWLPrices(); renderTicket(); if(S.tab!=="cond") renderPanel();
   communityTick(); chatTick();
 }
