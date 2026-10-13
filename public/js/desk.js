@@ -188,7 +188,7 @@
   }
   function renderAdvice() {
     $('advice-list').innerHTML = D.advice.length ? D.advice.slice(0, 15).map((a) => `<div class="tk"><div class="tk-top"><b class="${a.side === 'S' ? 'down' : a.side === 'B' ? 'up' : ''}">${esc(a.symbol)} ${a.side === 'B' ? 'Mua' : a.side === 'S' ? 'Bán' : 'Theo dõi'}</b><small>${esc(hhmm(a.created_at))}</small></div>
-      <small>Mục tiêu ${a.target ? Number(a.target).toFixed(2) : '–'} · Cắt lỗ ${a.stop ? Number(a.stop).toFixed(2) : '–'} · đã xem ${a.seen}/${a.sent} khách</small></div>`).join('') : '<div class="empty">Chưa gửi khuyến nghị nào.</div>';
+      <small>${a.outcome?.label ? `<b>${esc(a.outcome.label)}${a.outcome.retPct != null ? ` ${a.outcome.retPct > 0 ? '+' : ''}${String(a.outcome.retPct).replace('.', ',')}%` : ''}</b> · ` : ''}Mục tiêu ${a.target ? Number(a.target).toFixed(2) : '–'} · Cắt lỗ ${a.stop ? Number(a.stop).toFixed(2) : '–'} · đã xem ${a.seen}/${a.sent} khách</small></div>`).join('') : '<div class="empty">Chưa gửi khuyến nghị nào.</div>';
   }
   async function loadTickets() {
     try { D.tickets = (await api('/api/broker/tickets')).tickets; } catch (e) { D.tickets = []; }
@@ -257,20 +257,6 @@
       renderDetail();
     } catch (e) { say(e.message); }
   }
-  async function sendAdvice(e) {
-    e.preventDefault();
-    const n = (id) => { const v = $(id).value.trim().replace(',', '.'); return v ? parseFloat(v) : null; };
-    const body = { symbol: $('av-sym').value.trim().toUpperCase(), side: $('av-side').value || null, entryLow: n('av-lo'), entryHigh: n('av-hi'),
-      target: n('av-tp'), stop: n('av-sl'), thesis: $('av-note').value.trim(), validDays: parseInt($('av-days').value, 10) || 7 };
-    $('av-submit').disabled = true; msg($('av-msg'), '');
-    try {
-      const r = await api('/api/broker/advice', { method: 'POST', body });
-      msg($('av-msg'), `Đã gửi cho ${r.sentTo} khách.`, 'warn');
-      $('av-note').value = ''; loadExtras();
-    } catch (err) { msg($('av-msg'), err.message); }
-    finally { $('av-submit').disabled = false; }
-  }
-
   async function otp(action) {
     try {
       if (action === 'send') { await api('/api/dnse/otp', { method: 'POST', body: { action: 'send' } }); say('Đã gửi OTP về email đăng ký với DNSE.'); return; }
@@ -303,7 +289,7 @@
     }
     if (t.dataset.otp) return otp(t.dataset.otp);
   });
-  document.addEventListener('submit', (e) => { if (e.target.id === 'desk-form') createTicket(e); if (e.target.id === 'advice-form') sendAdvice(e); });
+  document.addEventListener('submit', (e) => { if (e.target.id === 'desk-form') createTicket(e); });
   document.addEventListener('input', (e) => {
     if (e.target.id === 'desk-q') { D.q = e.target.value; renderClients(); }
     if (e.target.id === 'dk-sym') { // gợi ý giá theo giá khớp hiện tại nếu mã có trên bảng giá

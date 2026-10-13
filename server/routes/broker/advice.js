@@ -1,12 +1,15 @@
 /**
  * Khuyến nghị của môi giới gửi cho khách đã liên kết.
  *   GET  /api/broker/advice
- *   POST /api/broker/advice { symbol, side?, entryLow?, entryHigh?, target?, stop?, thesis, validDays?, accounts?: [tiểu khoản] }
+ *   POST /api/broker/advice { symbol, side?, entryLow?, entryHigh?, target?, stop?, thesis, validDays?, accounts?: [tiểu khoản], aiJobId? }
+ * GET kèm kết quả thực tế của từng khuyến nghị (đạt mục tiêu, chạm cắt lỗ…) và thành tích tổng hợp.
  * Không gửi accounts = gửi cho mọi khách đã liên kết. DB chỉ cho gửi tới khách đã liên kết với chính môi giới.
  */
 import { route } from '../../../api/_http.js';
 import { rest } from '../../../api/_db.js';
 import * as dnse from '../../../api/_dnse.js';
+import { attachOutcomes } from '../../../api/_adviceperf.js';
+import { checkAdvice } from '../../../api/_technical.js';
 
 const price = (v, label) => {
   if (v == null || v === '') return null;
@@ -19,10 +22,10 @@ export default route('GET, POST, OPTIONS', async ({ req, res, uid, body }) => {
   await dnse.assertOwner(uid);
 
   if (req.method === 'GET') {
-    const rows = await rest('/advice?select=id,symbol,side,entry_low,entry_high,target,stop,thesis,valid_until,created_at,advice_recipients(user_id,seen_at)&order=id.desc&limit=50', { sub: uid });
-    return {
-      advice: rows.map(({ advice_recipients: r = [], ...a }) => ({ ...a, sent: r.length, seen: r.filter((x) => x.seen_at).length })),
-    };
+    const rows = await rest('/advice?select=id,symbol,side,entry_low,entry_high,target,stop,thesis,valid_until,created_at,ai_job_id,advice_recipients(user_id,seen_at)&order=id.desc&limit=50', { sub: uid });
+    const base = rows.map(({ advice_recipients: r = [], ...a }) => ({ ...a, sent: r.length, seen: r.filter((x) => x.seen_at).length }));
+    const { rows: advice, record } = await attachOutcomes(base).catch(() => ({ rows: base, record: null }));
+    return { advice, record };
   }
 
   const symbol = String(body.symbol || '').toUpperCase();
@@ -33,6 +36,10 @@ export default route('GET, POST, OPTIONS', async ({ req, res, uid, body }) => {
   const entryLow = price(body.entryLow, 'Giá vào thấp'), entryHigh = price(body.entryHigh, 'Giá vào cao');
   if (entryLow && entryHigh && entryLow > entryHigh) return res.status(400).json({ error: 'Vùng giá vào bị ngược.' });
   const target = price(body.target, 'Giá mục tiêu'), stop = price(body.stop, 'Giá cắt lỗ');
+  const bad = checkAdvice({ side, entryLow, entryHigh, target, stop }, null).errors;
+  if (bad.length) return res.status(400).json({ error: bad.join(' ') });
+  let aiJobId = null;
+  if (body.aiJobId) aiJobId = (await rest(`/ai_jobs?id=eq.${Number(body.aiJobId)}&kind=eq.advice_draft&select=id`, { sub: uid }))[0]?.id || null;
   const days = Math.min(Math.max(parseInt(body.validDays || '7', 10) || 7, 1), 90);
 
   let links = await rest('/client_links?select=user_id,account_no', { sub: uid });
@@ -44,7 +51,7 @@ export default route('GET, POST, OPTIONS', async ({ req, res, uid, body }) => {
 
   const adv = (await rest('/advice?select=id', {
     sub: uid, method: 'POST', prefer: 'return=representation',
-    body: { broker_id: uid, symbol, side, entry_low: entryLow, entry_high: entryHigh, target, stop, thesis, valid_until: new Date(Date.now() + days * 86400e3).toISOString() },
+    body: { broker_id: uid, symbol, side, entry_low: entryLow, entry_high: entryHigh, target, stop, thesis, ai_job_id: aiJobId, valid_until: new Date(Date.now() + days * 86400e3).toISOString() },
   }))[0];
   const users = [...new Set(links.map((l) => l.user_id))];
   await rest('/advice_recipients', { sub: uid, method: 'POST', body: users.map((u) => ({ advice_id: adv.id, user_id: u, broker_id: uid })) });

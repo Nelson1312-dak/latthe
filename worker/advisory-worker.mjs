@@ -64,12 +64,16 @@ export async function processOne(db = rest, ai = callOllama, cfg = config()) {
   if (!claimed) return null;   // tiến trình khác đã lấy
   try {
     const out = await ai(buildMessages(claimed.kind, claimed.input), cfg);
-    const content = stripThinking(out.content);
+    let content = stripThinking(out.content);
     if (!content) throw new Error('AI trả về nội dung rỗng');
+    // Câu bắt buộc (công bố rủi ro) mà AI bỏ sót: thêm vào cuối, đánh dấu để môi giới biết
+    const squash = (x) => String(x).replace(/\s+/g, ' ').trim().toLowerCase();
+    const appended = (claimed.input?.cau_bat_buoc || []).filter((x) => !squash(content).includes(squash(x)));
+    if (appended.length) content = `${content}\n\n${appended.join(' ')}`;
     const bad = unknownPercents(content, claimed.input);
     await db(`/ai_jobs?id=eq.${claimed.id}`, { ...W, method: 'PATCH', body: {
       status: 'done', output: content, model: cfg.model, finished_at: new Date().toISOString(),
-      flags: { unknownPercents: bad, tokens: out.evalCount ?? null, ms: out.ms ?? null },
+      flags: { unknownPercents: bad, appended, tokens: out.evalCount ?? null, ms: out.ms ?? null },
     } });
     log(`ai job ${claimed.id} (${claimed.kind}) xong${bad.length ? `, số lạ: ${bad.join(' ')}` : ''}`);
   } catch (e) {

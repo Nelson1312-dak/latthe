@@ -107,13 +107,15 @@
   }
 
   /* ================= Môi giới: màn Tư vấn ================= */
-  const A = { broker: false, tab: 'clients', clients: [], q: '', sel: null, data: null, loading: false, perf: 'realized', models: [], edit: null, modelPerf: {}, ai: {}, worker: null, creating: false };
+  const A = { broker: false, tab: 'clients', clients: [], q: '', sel: null, data: null, loading: false, perf: 'realized', models: [], edit: null, modelPerf: {}, ai: {}, worker: null, creating: false,
+    note: {}, notes: {}, adv: null, advList: null, record: null };
 
   function shell() {
     $('adv-body').innerHTML = `
       <div class="av-top"><nav class="subnav" aria-label="Khách hàng">
         <button type="button" data-subnav="desk">Lệnh &amp; tài sản</button>
         <button type="button" data-subnav="clients" ${A.tab === 'clients' ? 'aria-current="page"' : ''}>Tư vấn &amp; danh mục</button>
+        <button type="button" data-subnav="advice" ${A.tab === 'advice' ? 'aria-current="page"' : ''}>Khuyến nghị</button>
         <button type="button" data-subnav="models" ${A.tab === 'models' ? 'aria-current="page"' : ''}>Danh mục mẫu</button></nav>
         <span class="av-ai-status" id="av-ai-status"></span></div>
       <div class="av-grid" id="av-grid"></div>`;
@@ -128,6 +130,7 @@
   }
   function renderTab() {
     const g = $('av-grid'); if (!g) return;
+    if (A.tab === 'advice') { g.className = 'av-grid advice'; g.innerHTML = '<section class="av-compose" id="av-compose"></section><section class="av-advlist" id="av-advlist"></section>'; renderCompose(); renderAdvList(); loadAdvice(); return; }
     if (A.tab === 'models') { g.className = 'av-grid models'; g.innerHTML = '<section class="av-models" id="av-models"></section><section class="av-editor" id="av-editor"></section>'; renderModels(); renderEditor(); return; }
     g.className = 'av-grid';
     g.innerHTML = `<section class="av-list"><div class="desk-search"><input class="inp" id="av-q" placeholder="Tìm khách" aria-label="Tìm khách hàng" autocomplete="off" value="${esc(A.q)}"></div><div class="desk-clients" id="av-clients"></div></section>
@@ -175,7 +178,8 @@
       <div class="dt-sec">Hiệu suất</div><div class="av-pad">${perfBlock(a.performance, A.perf, 'broker')}</div>
       <div class="dt-sec">Cơ cấu danh mục${a.model ? ` so với "${esc(a.model.name)}" (ngưỡng lệch ${f1(a.model.driftPct)} điểm %)` : ''}</div>${compTable(a)}
       <div class="dt-sec">Đề xuất tái phân bổ</div>${rebalanceHtml(a)}
-      <div class="dt-sec">AI nhận xét (Qwen chạy trên máy chủ nhà, chỉ dùng số liệu ở trên)</div>${aiHtml()}`;
+      <div class="dt-sec">AI nhận xét (Qwen chạy trên máy chủ nhà, chỉ dùng số liệu ở trên)</div>${aiHtml()}
+      <div class="dt-sec">Nhận xét gửi khách</div><div id="av-noteblock">${noteHtml()}</div>`;
   }
 
   function rebalanceHtml(a) {
@@ -212,6 +216,218 @@
       <div class="av-ai-foot"><small>${esc(job.model || '')}${job.flags?.ms ? ` · ${f1(job.flags.ms / 1000)} giây` : ''} · Bản nháp cho môi giới, không gửi thẳng cho khách.</small><button class="link" data-aicopy>Sao chép</button></div></div>`;
   }
 
+  /* ---------- Nhận xét gửi khách (AI viết lại cho khách đọc, môi giới sửa rồi gửi) ---------- */
+  function noteHtml() {
+    const acc = A.sel, n = A.note[acc] || {}, sent = A.notes[acc] || [];
+    const job = n.job, busy = job && (job.status === 'queued' || job.status === 'running');
+    const head = `<div class="av-actions"><button class="ghost" data-noteai ${busy || !A.data?.composition?.rows?.length ? 'disabled' : ''}>AI soạn nhận xét cho khách</button><button class="ghost" data-notewrite ${busy ? 'disabled' : ''}>Tự viết</button>
+      <small>AI viết bằng lời dễ hiểu từ số liệu ở trên. Bạn đọc, sửa rồi mới gửi; khách xem trong cổng khách hàng.</small></div>`;
+    let body = '';
+    if (busy) body = '<div class="av-ai"><span class="typing"><i></i><i></i><i></i></span> AI đang soạn nhận xét cho khách (thường 20 đến 60 giây)…</div>';
+    else if (job?.status === 'failed') body = `<div class="msg err av-m">AI không trả lời được: ${esc(job.error)}</div>`;
+    if (n.open) {
+      const bad = n.job?.status === 'done' ? n.job.flags?.unknownPercents || [] : [];
+      body += `<form class="av-note" id="av-note">${bad.length ? `<div class="msg warn">Có số liệu không khớp dữ liệu hệ thống: ${bad.map(esc).join(', ')}. Sửa trước khi gửi.</div>` : ''}
+        <label>Tiêu đề<input class="inp" name="title" maxlength="120" value="${esc(n.title)}"></label>
+        <label>Nội dung<textarea class="inp" name="body" rows="9" maxlength="4000">${esc(n.body)}</textarea></label>
+        ${n.err ? `<div class="msg err">${esc(n.err)}</div>` : ''}
+        <div class="row-end"><small>${n.aiJobId ? 'Soạn từ bản nháp AI' : 'Tự viết'} · khách sẽ thấy đúng nội dung này</small>
+          <span><button type="button" class="link" data-noteclose>Hủy</button> <button type="submit" class="cta buy" ${n.sending ? 'disabled' : ''}>${n.sending ? 'Đang gửi…' : 'Gửi cho khách'}</button></span></div></form>`;
+    }
+    const when = (x) => new Date(x).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    const list = sent.length ? `<div class="av-notes">${sent.slice(0, 5).map((x) => `<div class="tk"><div class="tk-top"><b>${esc(x.title)}</b><small>${new Date(x.created_at).toLocaleDateString('vi-VN')}</small></div>
+      <small>${x.seen_at ? `Khách đã xem ${when(x.seen_at)}` : 'Khách chưa xem'}${x.ai_job_id ? ` · có dùng AI${x.ai_edited ? ', đã sửa' : ', không sửa'}` : ''}</small></div>`).join('')}</div>` : '';
+    return head + body + list;
+  }
+  function syncNote(form) {
+    const n = A.note[A.sel]; if (!n || !form) return;
+    n.title = form.elements.title.value; n.body = form.elements.body.value;
+  }
+  const noteTitle = () => `Nhận xét danh mục ${new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })}`;
+  async function noteAi() {
+    const acc = A.sel;
+    A.note[acc] = { ...(A.note[acc] || {}), open: false, job: { status: 'queued' }, err: null };
+    renderNote();
+    try {
+      const r = await api('/api/ai/jobs', { method: 'POST', body: { kind: 'client_note', account: acc } });
+      A.note[acc].job = r.job; renderNote();
+      waitJob(r.job.id, (j) => {
+        const n = A.note[acc]; n.job = j;
+        if (j.status === 'done') Object.assign(n, { open: true, title: n.title || noteTitle(), body: j.output.replace(/\*\*(.+?)\*\*/g, '$1'), aiJobId: j.id });
+        if (A.sel === acc) renderNote();
+      });
+    } catch (e) { A.note[acc].job = { status: 'failed', error: e.message }; renderNote(); }
+  }
+  async function sendNote(form) {
+    syncNote(form);
+    const acc = A.sel, n = A.note[acc];
+    n.sending = true; n.err = null; renderNote();
+    try {
+      await api('/api/broker/notes', { method: 'POST', body: { account: acc, title: n.title, body: n.body, aiJobId: n.aiJobId } });
+      A.note[acc] = {}; say('Đã gửi nhận xét. Khách sẽ thấy trong cổng khách hàng.');
+      await loadNotes(acc);
+    } catch (e) { n.sending = false; n.err = e.message; }
+    renderNote();
+  }
+  async function loadNotes(acc) {
+    try { A.notes[acc] = (await api('/api/broker/notes?account=' + encodeURIComponent(acc))).notes; } catch { A.notes[acc] = []; }
+    if (A.sel === acc) renderNote();
+  }
+  function renderNote() { const el = $('av-noteblock'); if (el) el.innerHTML = noteHtml(); }
+
+  /** Chờ một việc AI xong; gọi onUpdate mỗi lần có trạng thái mới. */
+  async function waitJob(id, onUpdate, n = 0) {
+    await new Promise((r) => setTimeout(r, n < 10 ? 2000 : 5000));
+    let j; try { j = (await api('/api/ai/jobs?id=' + id)).job; } catch { j = null; }
+    if (j) onUpdate(j);
+    if ((!j || j.status === 'queued' || j.status === 'running') && n < 120) return waitJob(id, onUpdate, n + 1);
+    return j;
+  }
+
+  /* ---------- Khuyến nghị: dữ liệu kỹ thuật, kiểm tra mức giá, AI soạn luận điểm, chọn khách nhận ---------- */
+  const ADV0 = () => ({ symbol: '', side: 'B', entryLow: '', entryHigh: '', target: '', stop: '', days: '7', notes: '', thesis: '', aiJobId: null, job: null, data: null, loading: false, err: null, picked: null, sending: false });
+  const OUT_CLS = { target: 'ok', stop: 'bad', open: 'wait', not_entered: '', expired: 'cx', watch: '' };
+  const PRICE_KEYS = ['entryLow', 'entryHigh', 'target', 'stop'];
+  const pnum = (v) => Number(String(v).replace(',', '.'));
+  function renderCompose() {
+    const box = $('av-compose'); if (!box) return;
+    const a = A.adv || (A.adv = ADV0());
+    const opt = (v, t) => `<option value="${v}" ${a.side === v ? 'selected' : ''}>${t}</option>`;
+    box.innerHTML = `<form class="av-adv" id="av-adv" autocomplete="off" novalidate>
+      <div class="dt-head"><div><h1>Soạn khuyến nghị</h1><p>Dữ liệu kỹ thuật tính từ giá DNSE; AI soạn luận điểm, bạn sửa rồi gửi.</p></div></div>
+      <div class="av-form">
+        <label>Mã<input class="inp" name="symbol" maxlength="10" placeholder="VD: FPT" value="${esc(a.symbol)}"></label>
+        <label>Chiều<select class="inp" name="side">${opt('B', 'Mua')}${opt('S', 'Bán')}${opt('', 'Theo dõi')}</select></label>
+        <label>Vùng vào, từ (nghìn đ)<input class="inp" name="entryLow" inputmode="decimal" value="${esc(a.entryLow)}"></label>
+        <label>đến<input class="inp" name="entryHigh" inputmode="decimal" value="${esc(a.entryHigh)}"></label>
+        <label>Mục tiêu<input class="inp" name="target" inputmode="decimal" value="${esc(a.target)}"></label>
+        <label>Cắt lỗ<input class="inp" name="stop" inputmode="decimal" value="${esc(a.stop)}"></label>
+      </div>
+      <div id="av-tech"></div><div id="av-check"></div>
+      <div class="av-form">
+        <label class="full">Ý chính của bạn (AI dùng để viết luận điểm, không bắt buộc)<textarea class="inp" name="notes" rows="2" maxlength="600" placeholder="VD: tích lũy quanh MA50, ưu tiên giải ngân từng phần">${esc(a.notes)}</textarea></label>
+      </div>
+      <div id="av-advai"></div>
+      <div class="av-form">
+        <label class="full">Luận điểm gửi khách<textarea class="inp" name="thesis" rows="7" maxlength="2000" placeholder="Bấm &quot;AI soạn luận điểm&quot; hoặc tự viết">${esc(a.thesis)}</textarea></label>
+        <label>Hiệu lực (ngày)<input class="inp" name="days" inputmode="numeric" value="${esc(a.days)}"></label>
+      </div>
+      <div class="dt-sec">Gửi cho</div><div id="av-rcpt"></div>
+      <div class="av-actions"><button type="submit" class="cta buy" ${a.sending ? 'disabled' : ''}>${a.sending ? 'Đang gửi…' : 'Gửi khuyến nghị'}</button><span id="av-advmsg"></span></div>
+    </form>`;
+    renderTech(); renderCheck(); renderAdvAi(); renderRcpt();
+  }
+  function renderTech() {
+    const el = $('av-tech'); if (!el) return;
+    const a = A.adv, d = a.data;
+    if (a.loading) { el.innerHTML = '<div class="av-pad"><small>Đang tính chỉ báo…</small></div>'; return; }
+    if (a.err) { el.innerHTML = `<div class="msg err av-m">${esc(a.err)}</div>`; return; }
+    if (!d) { el.innerHTML = ''; return; }
+    const t = d.tech, w = t.hieu_suat || {};
+    el.innerHTML = `<div class="av-kv"><div><span>${esc(d.symbol)}${d.info ? ' · ' + esc(d.info.sector) : ''}</span><b>${t.gia.toFixed(2)}</b> <small>${esc(t.ngay.split('-').reverse().join('/'))}</small></div>
+      <div><span>Xu hướng</span><b>${esc((t.xu_huong || '–').split(' (')[0])}</b> <small>MA20 ${t.ma20 ?? '–'} · MA50 ${t.ma50 ?? '–'}</small></div>
+      <div><span>RSI 14</span><b>${f1(t.rsi14)}</b> <small>${esc(t.rsi_nhan_dinh || '')}</small></div>
+      <div><span>Biến động năm</span><b>${pct(t.bien_dong_nam_pct, false)}</b> <small>${esc(d.riskText || '')}</small></div>
+      <div><span>52 tuần</span><b>${t.day_52_tuan} – ${t.dinh_52_tuan}</b> <small>cách đỉnh ${pct(t.cach_dinh_52_tuan_pct)}</small></div>
+      ${['1M', '3M', '1Y'].map((k) => (w[k] ? `<div><span>${WIN_LABEL[k]}</span><b class="${cls(w[k].ma)}">${pct(w[k].ma)}</b> <small>${esc(w[k].so_voi_vnindex || '')}</small></div>` : '')).join('')}</div>`;
+  }
+  function renderCheck() {
+    const el = $('av-check'); if (!el) return;
+    const c = A.adv.data?.check;
+    if (!c) { el.innerHTML = ''; return; }
+    const rr = c.rr == null ? '–' : c.rr.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' lần';
+    el.innerHTML = `${c.upsidePct != null || c.downsidePct != null ? `<div class="av-kv"><div><span>Tiềm năng (tới mục tiêu)</span><b class="up">${pct(c.upsidePct)}</b></div><div><span>Rủi ro (tới cắt lỗ)</span><b class="down">${pct(c.downsidePct)}</b></div><div><span>Tỷ lệ lời/lỗ</span><b>${rr}</b></div></div>` : ''}
+      ${c.errors.map((x) => `<div class="msg err av-m">${esc(x)}</div>`).join('')}${c.warnings.map((x) => `<div class="msg warn av-m">${esc(x)}</div>`).join('')}`;
+  }
+  function renderRcpt() {
+    const el = $('av-rcpt'); if (!el) return;
+    const list = A.adv.data?.recipients;
+    if (!list) { el.innerHTML = '<div class="av-pad"><small>Nhập mã để xem khách đã liên kết.</small></div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="av-pad"><small>Chưa có khách nào liên kết với Lật Bài. Gửi link mời ở màn Lệnh &amp; tài sản.</small></div>'; return; }
+    if (!A.adv.picked) A.adv.picked = new Set(list.filter((r) => !r.warn).map((r) => r.account));   // khách có cảnh báo: bỏ chọn sẵn
+    el.innerHTML = `<div class="av-rcpt">${list.map((r) => `<label class="${r.warn ? 'warn' : ''}"><input type="checkbox" data-rcpt="${esc(r.account)}" ${A.adv.picked.has(r.account) ? 'checked' : ''}>
+      <span><b>${esc(r.name || r.account)}</b> <small>${esc(r.account)} · ${esc(r.riskLabel || 'chưa đánh giá khẩu vị')}</small>${r.warn ? `<small class="w">${esc(r.warn)}</small>` : ''}</span></label>`).join('')}</div>`;
+  }
+  function renderAdvAi() {
+    const el = $('av-advai'); if (!el) return;
+    const a = A.adv, job = a.job, busy = job && (job.status === 'queued' || job.status === 'running');
+    const bad = job?.status === 'done' ? job.flags?.unknownPercents || [] : [];
+    const note = busy ? '<span class="typing"><i></i><i></i><i></i></span><small>AI đang viết (20 đến 60 giây)…</small>'
+      : job?.status === 'failed' ? `<small class="down">AI lỗi: ${esc(job.error)}</small>`
+      : job?.status === 'done' ? `<small>Đã đưa bản nháp AI vào ô luận điểm${job.flags?.ms ? ` (${f1(job.flags.ms / 1000)} giây)` : ''}. Đọc và sửa trước khi gửi.</small>`
+      : a.data && !a.data.check?.errors?.length ? '<small>AI viết từ dữ liệu kỹ thuật ở trên và ý chính của bạn (khoảng 20 đến 40 giây).</small>'
+      : '<small>Cần nhập mã và các mức giá hợp lệ trước.</small>';
+    el.innerHTML = `<div class="av-actions"><button type="button" class="ghost" data-advai ${busy || !a.data || a.data.check?.errors?.length ? 'disabled' : ''}>AI soạn luận điểm</button>${note}</div>
+      ${bad.length ? `<div class="msg warn av-m">Bản nháp có số liệu không khớp dữ liệu hệ thống: ${bad.map(esc).join(', ')}.</div>` : ''}`;
+  }
+  let advTimer = null;
+  function queueCheck(delay = 450) { clearTimeout(advTimer); advTimer = setTimeout(refreshSymbol, delay); }
+  async function refreshSymbol() {
+    const a = A.adv, sym = a.symbol.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,10}$/.test(sym)) { a.data = null; a.err = null; renderTech(); renderCheck(); renderRcpt(); renderAdvAi(); return; }
+    const p = new URLSearchParams({ symbol: sym, side: a.side || '' });
+    for (const k of PRICE_KEYS) if (String(a[k]).trim()) p.set(k, String(a[k]).replace(',', '.'));
+    const first = a.data?.symbol !== sym;
+    if (first) { a.loading = true; a.picked = null; renderTech(); }
+    try { a.data = await api('/api/broker/symbol?' + p); a.err = null; }
+    catch (e) { a.data = null; a.err = e.message; }
+    a.loading = false;
+    if (A.tab !== 'advice') return;
+    renderTech(); renderCheck(); renderAdvAi(); renderRcpt();
+  }
+  async function advAi() {
+    const a = A.adv;
+    const body = { kind: 'advice_draft', symbol: a.symbol.trim().toUpperCase(), side: a.side || null, notes: a.notes };
+    for (const k of PRICE_KEYS) if (String(a[k]).trim()) body[k] = pnum(a[k]);
+    a.job = { status: 'queued' }; renderAdvAi();
+    try {
+      const r = await api('/api/ai/jobs', { method: 'POST', body });
+      a.job = r.job; renderAdvAi();
+      waitJob(r.job.id, (j) => {
+        a.job = j;
+        if (j.status === 'done') {
+          const text = j.output.replace(/\*\*(.+?)\*\*/g, '$1');
+          if (!a.thesis.trim() || confirm('Thay nội dung luận điểm đang có bằng bản nháp AI?')) {
+            a.thesis = text; a.aiJobId = j.id;
+            const ta = document.querySelector('#av-adv [name=thesis]'); if (ta) ta.value = text;
+          }
+        }
+        if (A.tab === 'advice') renderAdvAi();
+      });
+    } catch (e) { a.job = { status: 'failed', error: e.message }; renderAdvAi(); }
+  }
+  async function sendAdvice() {
+    const a = A.adv, msgEl = $('av-advmsg');
+    const picked = [...(a.picked || [])];
+    if (!picked.length) { msgEl.innerHTML = '<small class="down">Chọn ít nhất một khách.</small>'; return; }
+    const body = { symbol: a.symbol.trim().toUpperCase(), side: a.side || null, thesis: a.thesis, validDays: parseInt(a.days, 10) || 7, accounts: picked, aiJobId: a.aiJobId };
+    for (const k of PRICE_KEYS) if (String(a[k]).trim()) body[k] = pnum(a[k]);
+    a.sending = true; renderCompose();
+    try {
+      const r = await api('/api/broker/advice', { method: 'POST', body });
+      say(`Đã gửi khuyến nghị ${body.symbol} cho ${r.sentTo} khách.`);
+      A.adv = ADV0(); renderCompose(); loadAdvice();
+    } catch (e) { a.sending = false; renderCompose(); $('av-advmsg').innerHTML = `<small class="down">${esc(e.message)}</small>`; }
+  }
+  async function loadAdvice() {
+    try { const r = await api('/api/broker/advice'); A.advList = r.advice; A.record = r.record; } catch { A.advList = A.advList || []; }
+    renderAdvList();
+  }
+  function renderAdvList() {
+    const box = $('av-advlist'); if (!box) return;
+    const r = A.record, list = A.advList;
+    const summary = r && r.total ? `<div class="av-kv flat-pad"><div><span>Đã kết thúc</span><b>${r.closed}/${r.total}</b></div><div><span>Đạt mục tiêu</span><b class="up">${r.wins}</b></div><div><span>Chạm cắt lỗ</span><b class="down">${r.losses}</b></div>
+        <div><span>Tỷ lệ thắng</span><b>${r.winRate == null ? '–' : f1(r.winRate) + '%'}</b></div><div><span>Lãi/lỗ TB</span><b class="${cls(r.avgRetPct)}">${pct(r.avgRetPct)}</b></div></div>` : '';
+    const card = (x) => {
+      const o = x.outcome || {}, d = (s) => s.split('-').reverse().join('/');
+      return `<div class="av-model"><div class="tk-top"><b class="${x.side === 'B' ? 'up' : x.side === 'S' ? 'down' : ''}">${esc(x.symbol)} ${x.side === 'B' ? 'Mua' : x.side === 'S' ? 'Bán' : 'Theo dõi'}</b><span class="pill ${OUT_CLS[o.status] || ''}">${esc(o.label || '')}${o.retPct != null ? ' ' + pct(o.retPct) : ''}</span></div>
+        <small>Vào ${x.entry_low ?? '–'}–${x.entry_high ?? '–'} · Mục tiêu ${x.target ?? '–'} · Cắt lỗ ${x.stop ?? '–'}${o.at ? ` · ${esc(d(o.at))}` : ''}</small>
+        <small>${new Date(x.created_at).toLocaleDateString('vi-VN')} · đã xem ${x.seen}/${x.sent} khách${x.ai_job_id ? ' · soạn với AI' : ''}${o.maxGainPct != null ? ` · cao nhất ${pct(o.maxGainPct)}, thấp nhất ${pct(o.maxLossPct)}` : ''}</small></div>`;
+    };
+    box.innerHTML = `<div class="pane-title"><span>Khuyến nghị đã gửi</span><button class="link" data-advreload>Làm mới</button></div>${summary}
+      ${list == null ? '<div class="empty">Đang tải…</div>' : !list.length ? '<div class="empty"><b>Chưa gửi khuyến nghị nào</b>Kết quả từng khuyến nghị (đạt mục tiêu, chạm cắt lỗ, lãi/lỗ) sẽ tự cập nhật theo giá.</div>' : list.map(card).join('')}`;
+  }
+
   async function loadClients() {
     try {
       const [c, m, j] = await Promise.all([api('/api/broker/clients'), api('/api/broker/models'), api('/api/ai/jobs').catch(() => null)]);
@@ -222,6 +438,7 @@
   }
   async function selectClient(acc) {
     A.sel = acc; A.loading = true; A.data = null; A.made = null; renderClients(); renderMain();
+    loadNotes(acc);
     document.dispatchEvent(new CustomEvent('lb:pick-client', { detail: { account: acc, from: 'adv' } }));
     try {
       const d = await api('/api/broker/analytics?account=' + encodeURIComponent(acc));
@@ -366,6 +583,11 @@
     if (t.hasAttribute('data-mktickets')) return createTickets();
     if (t.dataset.ai) return runAi(t.dataset.ai);
     if (t.hasAttribute('data-aicopy')) { const j = A.ai[A.sel]; return navigator.clipboard?.writeText(j?.output || '').then(() => say('Đã sao chép.'), () => say('Không sao chép được.')); }
+    if (t.hasAttribute('data-noteai')) return noteAi();
+    if (t.hasAttribute('data-notewrite')) { const n = A.note[A.sel] || {}; A.note[A.sel] = { ...n, open: true, title: n.title || noteTitle(), body: n.body || '' }; return renderNote(); }
+    if (t.hasAttribute('data-noteclose')) { A.note[A.sel] = {}; return renderNote(); }
+    if (t.hasAttribute('data-advai')) return advAi();
+    if (t.hasAttribute('data-advreload')) { A.advList = null; renderAdvList(); return loadAdvice(); }
     if (t.hasAttribute('data-mnew')) return editModel(null);
     if (t.dataset.medit) return editModel(Number(t.dataset.medit));
     if (t.dataset.mperf) return modelPerf(Number(t.dataset.mperf));
@@ -381,6 +603,14 @@
   });
   document.addEventListener('input', (e) => {
     if (e.target.id === 'av-q') { A.q = e.target.value; return renderClients(); }
+    const nf = e.target.closest('#av-note'); if (nf) return syncNote(nf);
+    const af = e.target.closest('#av-adv');
+    if (af && e.target.name && A.adv) {
+      A.adv[e.target.name] = e.target.value;
+      if (PRICE_KEYS.includes(e.target.name)) queueCheck();
+      if (e.target.name === 'symbol') queueCheck(700);
+      return;
+    }
     const form = e.target.closest('#av-edit');
     if (form && (e.target.dataset.wval != null || e.target.hasAttribute('data-wcash'))) {
       syncEdit(form);
@@ -390,7 +620,14 @@
       form.querySelector('[type=submit]').disabled = !ok;
     }
   });
+  document.addEventListener('change', (e) => {
+    if (!e.target.closest('#av-adv') || !A.adv) return;
+    if (e.target.dataset.rcpt) { if (e.target.checked) A.adv.picked.add(e.target.dataset.rcpt); else A.adv.picked.delete(e.target.dataset.rcpt); return; }
+    if (e.target.name === 'side') { A.adv.side = e.target.value; queueCheck(0); }
+  });
   document.addEventListener('submit', (e) => {
+    if (e.target.id === 'av-note') { e.preventDefault(); return sendNote(e.target); }
+    if (e.target.id === 'av-adv') { e.preventDefault(); return sendAdvice(); }
     if (e.target.id === 'av-profile') { e.preventDefault(); return saveProfile(e.target); }
     if (e.target.id === 'av-edit') { e.preventDefault(); return saveModel(e.target); }
   });
@@ -432,11 +669,11 @@
   }, 60000);
 
   /* ================= Khách: mục trong "Tài khoản của tôi" ================= */
-  const C = { user: null, links: [], acc: null, data: {}, perf: 'realized', quiz: null, answers: {}, saving: false };
+  const C = { user: null, links: [], acc: null, data: {}, perf: 'realized', quiz: null, answers: {}, saving: false, notes: [] };
 
   function renderClient() {
     const box = $('portal-adv'); if (!box) return;
-    if (!C.user || !C.links.length) { box.innerHTML = ''; return; }
+    if (!C.user || (!C.links.length && !C.notes.length)) { box.innerHTML = ''; return; }
     const pick = C.links.length > 1 ? `<select class="inp av-acc" id="av-acc" aria-label="Chọn tiểu khoản">${C.links.map((l) => `<option value="${esc(l.account_no)}" ${l.account_no === C.acc ? 'selected' : ''}>${esc(l.account_no)}</option>`).join('')}</select>` : '';
     const d = C.data[C.acc];
     let body;
@@ -457,7 +694,10 @@
         <div class="pcard"><div class="pcard-body"><h2>Rủi ro cần lưu ý</h2>${flagsHtml(d.composition.flags)}</div></div>
         <div class="pcard">${compTable(d)}<div class="pcard-body"><p class="av-note">${d.model ? 'Cột "Lệch" so sánh với danh mục mẫu. Khi cần cân bằng lại, môi giới sẽ gửi phiếu lệnh để bạn xác nhận ở mục trên.' : 'Giá theo nghìn đồng.'}</p></div></div>`;
     }
-    box.innerHTML = `<section><div class="av-row"><h2>Danh mục và hiệu suất</h2>${pick}</div>${body}
+    const notes = C.notes.length ? `<section><h2>Nhận xét từ môi giới</h2>${C.notes.slice(0, 5).map((n) => `<div class="pcard"><div class="pcard-body">
+        <div class="av-row"><b style="font-size:15px">${n.seen_at ? '' : '<span class="new-dot" aria-label="Mới"></span>'}${esc(n.title)}</b><span class="pmeta" style="margin:0">${new Date(n.created_at).toLocaleDateString('vi-VN')} · tiểu khoản ${esc(n.account_no)}</span></div>
+        <div class="pnote" style="color:var(--text)">${esc(n.body).replace(/\n/g, '<br>')}</div></div></div>`).join('')}</section>` : '';
+    box.innerHTML = `${notes}<section><div class="av-row"><h2>Danh mục và hiệu suất</h2>${pick}</div>${body}
       <p class="av-note">Số liệu chỉ để tham khảo, không phải cam kết lợi nhuận. Kết quả quá khứ không bảo đảm kết quả tương lai.</p></section>`;
   }
 
@@ -480,7 +720,14 @@
     catch (e) { C.data[acc] = { error: e.message }; }
     if (acc === C.acc) renderClient();
   }
+  async function loadNotes() {
+    try { C.notes = (await api('/api/portal/notes')).notes || []; } catch { C.notes = []; }
+    renderClient();
+    // Đã hiện cho khách => đánh dấu đã xem (môi giới thấy được)
+    C.notes.filter((n) => !n.seen_at).forEach((n) => api('/api/portal/notes', { method: 'POST', body: { id: n.id } }).catch(() => {}));
+  }
   async function loadLinks() {
+    loadNotes();
     try { C.links = (await api('/api/portal/summary')).links || []; } catch { C.links = []; }
     if (!C.links.some((l) => l.account_no === C.acc)) C.acc = C.links[0]?.account_no || null;
     loadClientData();

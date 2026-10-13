@@ -209,6 +209,7 @@
     <nav class="subnav" aria-label="Khách hàng">
       <button type="button" data-subnav="desk" aria-current="page">Lệnh &amp; tài sản</button>
       <button type="button" data-subnav="clients">Tư vấn &amp; danh mục</button>
+      <button type="button" data-subnav="advice">Khuyến nghị</button>
       <button type="button" data-subnav="models">Danh mục mẫu</button>
     </nav>
     <section class="desk-list" aria-label="Danh sách khách hàng">
@@ -250,24 +251,8 @@
       <div class="pane-title">Phiếu lệnh gần đây</div>
       <div class="desk-tickets" id="desk-tickets"></div>
       <div class="pane-title">Khuyến nghị cho khách</div>
-      <form class="desk-form" id="advice-form" autocomplete="off" novalidate>
-        <div class="desk-row">
-          <label>Mã<input class="inp" id="av-sym" maxlength="10" placeholder="HPG"></label>
-          <label>Chiều<select class="inp" id="av-side"><option value="B">Mua</option><option value="S">Bán</option><option value="">Theo dõi</option></select></label>
-        </div>
-        <div class="desk-row">
-          <label>Vùng vào, từ<input class="inp" id="av-lo" inputmode="decimal" placeholder="20.0"></label>
-          <label>đến<input class="inp" id="av-hi" inputmode="decimal" placeholder="20.5"></label>
-        </div>
-        <div class="desk-row">
-          <label>Mục tiêu<input class="inp" id="av-tp" inputmode="decimal" placeholder="23.0"></label>
-          <label>Cắt lỗ<input class="inp" id="av-sl" inputmode="decimal" placeholder="19.0"></label>
-        </div>
-        <label>Luận điểm<textarea class="inp" id="av-note" rows="3" maxlength="2000" placeholder="Lý do, rủi ro, thời hạn nắm giữ dự kiến"></textarea></label>
-        <label>Hiệu lực (ngày)<input class="inp" id="av-days" inputmode="numeric" value="7"></label>
-        <div class="msgs" id="av-msg"></div>
-        <button type="submit" class="cta buy" id="av-submit">Gửi cho khách đã liên kết</button>
-      </form>
+      <div class="desk-advlink"><button type="button" class="ghost" data-subnav="advice">Soạn khuyến nghị (dữ liệu kỹ thuật + AI)</button>
+        <small>Gửi cho khách đã liên kết, kết quả từng khuyến nghị tự cập nhật theo giá.</small></div>
       <div class="desk-tickets" id="advice-list"></div>
     </aside>
   </main>

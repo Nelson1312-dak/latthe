@@ -19,9 +19,11 @@ import r_broker_client from '../server/routes/broker/client.js';
 import r_broker_clients from '../server/routes/broker/clients.js';
 import r_broker_invites from '../server/routes/broker/invites.js';
 import r_broker_models from '../server/routes/broker/models.js';
+import r_broker_notes from '../server/routes/broker/notes.js';
 import r_broker_profile from '../server/routes/broker/profile.js';
 import r_broker_realtime from '../server/routes/broker/realtime.js';
 import r_broker_send from '../server/routes/broker/send.js';
+import r_broker_symbol from '../server/routes/broker/symbol.js';
 import r_broker_tickets from '../server/routes/broker/tickets.js';
 import r_brokers from '../server/routes/brokers.js';
 import r_dnse_account from '../server/routes/dnse/account.js';
@@ -36,6 +38,7 @@ import r_portal_accept from '../server/routes/portal/accept.js';
 import r_portal_advice_seen from '../server/routes/portal/advice-seen.js';
 import r_portal_analytics from '../server/routes/portal/analytics.js';
 import r_portal_decide from '../server/routes/portal/decide.js';
+import r_portal_notes from '../server/routes/portal/notes.js';
 import r_portal_portfolio from '../server/routes/portal/portfolio.js';
 import r_portal_profile from '../server/routes/portal/profile.js';
 import r_portal_summary from '../server/routes/portal/summary.js';
@@ -56,9 +59,11 @@ const ROUTES = {
   'broker/clients': r_broker_clients,
   'broker/invites': r_broker_invites,
   'broker/models': r_broker_models,
+  'broker/notes': r_broker_notes,
   'broker/profile': r_broker_profile,
   'broker/realtime': r_broker_realtime,
   'broker/send': r_broker_send,
+  'broker/symbol': r_broker_symbol,
   'broker/tickets': r_broker_tickets,
   'brokers': r_brokers,
   'dnse/account': r_dnse_account,
@@ -73,6 +78,7 @@ const ROUTES = {
   'portal/advice-seen': r_portal_advice_seen,
   'portal/analytics': r_portal_analytics,
   'portal/decide': r_portal_decide,
+  'portal/notes': r_portal_notes,
   'portal/portfolio': r_portal_portfolio,
   'portal/profile': r_portal_profile,
   'portal/summary': r_portal_summary,

@@ -110,6 +110,20 @@ export async function analyzeAccount({ accountNo, sub, side, plan = true }) {
   };
 }
 
+const KY = { '1M': '1 tháng', '3M': '3 tháng', '6M': '6 tháng', '1Y': '1 năm', YTD: 'từ đầu năm' };
+/** Câu so sánh với VN-Index viết sẵn (kỳ 1 tháng + kỳ dài nhất có), để AI chép nguyên văn thay vì tự diễn đạt. */
+function compareSentence(st) {
+  if (!st?.windows) return null;
+  const vs = (w) => { const d = w.ret - w.bench; return Math.abs(d) < 0.3 ? 'ngang VN-Index' : `${d > 0 ? 'tốt hơn' : 'kém hơn'} VN-Index ${Math.abs(d).toFixed(1).replace('.', ',')} điểm %`; };
+  const parts = [];
+  if (st.windows['1M']) parts.push(`trong 1 tháng, danh mục ${vs(st.windows['1M'])}`);
+  const long = ['1Y', '6M', '3M'].find((k) => st.windows[k]);
+  if (long) parts.push(`trong ${KY[long]}, danh mục ${vs(st.windows[long])}`);
+  if (!parts.length) return null;
+  const t = parts.join('; ');
+  return t[0].toUpperCase() + t.slice(1) + '.';
+}
+
 const r1 = (v) => (v == null || !Number.isFinite(+v) ? null : Math.round(+v * 10) / 10);
 
 /**
@@ -132,6 +146,7 @@ export function factsForAI(a) {
     du_no_ty_trong: r1(a.composition.debtWeight),
     so_ma_hieu_dung: r1(a.composition.effectiveN),
     canh_bao: a.composition.flags.map((f) => f.text),
+    cau_so_sanh_vnindex: compareSentence(st),
     hieu_suat_giu_nguyen: st && { theo_ky: win(st), bien_dong_nam: r1(st.volatility), sut_giam_toi_da: r1(st.maxDrawdown), beta: st.beta == null ? null : Math.round(st.beta * 100) / 100 },
     hieu_suat_thuc_te: rt ? { tu_ngay: rt.from, tong: r1(rt.total), vnindex: r1(rt.benchTotal) } : 'chưa đủ dữ liệu',
     hieu_suat_danh_muc_mau: ms ? { theo_ky: win(ms) } : null,

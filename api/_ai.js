@@ -6,7 +6,9 @@
  * cho khách, không hứa lợi nhuận. Mọi con số % AI viết ra được đối chiếu lại với dữ kiện đầu vào.
  */
 
-export const KINDS = ['portfolio_review', 'rebalance_note'];
+export const KINDS = ['portfolio_review', 'rebalance_note', 'advice_draft', 'client_note'];
+/** Việc soạn nội dung cho khách đọc (sau khi môi giới sửa) dùng giọng khác việc viết cho môi giới. */
+const FOR_CLIENT = new Set(['advice_draft', 'client_note']);
 
 const RULES = `Quy tắc bắt buộc:
 - Chỉ dùng số liệu có trong DỮ KIỆN. Không tự thêm giá, tin tức, sự kiện hay số liệu nào khác. Thiếu dữ liệu thì nói là thiếu.
@@ -24,12 +26,29 @@ const TASK = {
 3. So với khẩu vị và danh mục mẫu: độ phù hợp, độ lệch.
 4. Gợi ý trao đổi với khách: 2-3 câu hỏi hoặc điểm môi giới nên trao đổi.`,
   rebalance_note: `Viết ghi chú giải thích đề xuất tái phân bổ, tối đa 160 chữ: vì sao cần (độ lệch, rủi ro), các lệnh chính, và lưu ý khi thực hiện (lô lẻ, cổ phiếu chưa về, tiền không đủ nếu có trong "luu_y"). Môi giới sẽ sửa lại trước khi gửi khách.`,
+  advice_draft: `Viết luận điểm khuyến nghị cho mã trong DỮ KIỆN, tối đa 130 chữ, đúng 3 đoạn, mỗi đoạn bắt đầu bằng đúng tiêu đề "Luận điểm:", "Kế hoạch:", "Rủi ro:" (không thêm tiêu đề khác):
+Luận điểm: nếu có "y_chinh_cua_moi_gioi" thì câu đầu viết lại ý đó thành một câu hoàn chỉnh, rõ nghĩa (giữ nguyên ý, không thêm số). Tiếp theo chép nguyên văn "cau_dan_chung". Nếu có "cau_nguoc_xu_huong" thì chép nguyên văn ở cuối đoạn.
+Kế hoạch: chép nguyên văn "cau_ke_hoach" (có thể thêm "Khuyến nghị" + "chieu" ở đầu câu).
+Rủi ro: 1-2 câu ngắn: mức biến động của cổ phiếu ("muc_rui_ro_co_phieu") và khả năng giá thủng cắt lỗ; nếu có "luu_y" thì nhắc ngắn.
+Chỉ dùng từ ngữ tài chính thông dụng. Không nói về kết quả kinh doanh, tin tức, định giá vì DỮ KIỆN không có.`,
+  client_note: `Viết thư ngắn gửi khách về danh mục của khách, tối đa 180 chữ, xưng "em", gọi khách là "anh/chị", lời lẽ dễ hiểu (không dùng từ chuyên môn như beta, độ lệch chuẩn):
+- Câu 1: chép nguyên văn "cau_so_sanh_vnindex" (nếu có).
+- Câu 2: mã hoặc ngành chiếm tỷ trọng lớn nhất.
+- Điểm cần lưu ý: tối đa 2 điểm từ "canh_bao".
+- Nếu "tai_phan_bo" có lệnh: nói em đề xuất cân đối lại và sẽ gửi phiếu lệnh để anh/chị xem, xác nhận trong ứng dụng. KHÔNG tự viết lệnh mua/bán cụ thể.
+- Kết thư: mời anh/chị trao đổi thêm.
+Không chào hỏi dài dòng, không hứa lợi nhuận.`,
 };
 
 export function buildMessages(kind, facts) {
   if (!KINDS.includes(kind)) throw new Error('kind không hợp lệ');
+  const forClient = FOR_CLIENT.has(kind);
+  const who = forClient
+    ? 'Bạn soạn nháp nội dung tư vấn cho môi giới chứng khoán tại Việt Nam. Môi giới sẽ đọc, sửa rồi mới gửi khách.'
+    : 'Bạn là trợ lý phân tích danh mục cho môi giới chứng khoán tại Việt Nam.';
+  const rules = forClient ? RULES.replace('dành cho môi giới đọc (không phải gửi thẳng cho khách)', 'dành cho khách đọc') : RULES;
   return [
-    { role: 'system', content: `Bạn là trợ lý phân tích danh mục cho môi giới chứng khoán tại Việt Nam.\n${RULES}` },
+    { role: 'system', content: `${who}\n${rules}` },
     { role: 'user', content: `${TASK[kind]}\n\nDỮ KIỆN (JSON):\n${JSON.stringify(facts)}` },
   ];
 }

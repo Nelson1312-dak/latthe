@@ -1,6 +1,7 @@
 /** GET /api/portal/summary — tài khoản liên kết, phiếu lệnh cần xác nhận, khuyến nghị của khách đang đăng nhập. */
 import { route } from '../../../api/_http.js';
 import { rest } from '../../../api/_db.js';
+import { attachOutcomes } from '../../../api/_adviceperf.js';
 
 const TICKET = 'id,account_no,client_name,symbol,side,type,price,qty,status,source,created_at,approved_at,expires_at,dnse_order_id,dnse_status';
 
@@ -16,6 +17,7 @@ export default route('GET, OPTIONS', async ({ uid }) => {
     links: links.map(({ broker_id, ...l }) => l),
     pending: tickets.filter((t) => t.status === 'pending_client' && Date.now() - Date.parse(t.created_at) < 24 * 3600e3),
     tickets: tickets.filter((t) => t.status !== 'pending_client'),
-    advice: advice.map(({ advice_recipients, ...a }) => ({ ...a, seen: !!mine({ advice_recipients })?.seen_at, expired: a.valid_until ? Date.parse(a.valid_until) < Date.now() : false })),
+    advice: await attachOutcomes(advice.map(({ advice_recipients, ...a }) => ({ ...a, seen: !!mine({ advice_recipients })?.seen_at, expired: a.valid_until ? Date.parse(a.valid_until) < Date.now() : false })))
+      .then((x) => x.rows, () => advice),
   };
 }, { auth: true });
