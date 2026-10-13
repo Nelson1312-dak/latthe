@@ -171,9 +171,14 @@ export class MarketState {
     if (vol != null) this.volTruoc.set(s, vol);
 
     const bid1 = dong(q.bid?.[0]?.p), ask1 = dong(q.offer?.[0]?.p);
-    // Khớp ở giá chào bán = bên mua chủ động trả giá; khớp ở giá chào mua = bên bán chủ động
+    // Khớp ở giá chào bán = bên mua chủ động trả giá; khớp ở giá chào mua = bên bán chủ động.
+    // Nhưng biên độ ngày cao nhất ở Việt Nam là ±15% (UPCOM), nên giá lệch quá 40% so với sổ lệnh
+    // chắc chắn là tin lỗi: vẫn ghi lại nguyên văn, nhưng không kết luận bên nào chủ động.
+    const neo = bid1 ?? ask1;
+    const tinDuoc = neo == null || Math.abs(price - neo) <= neo * 0.4;
     let side = '?';
-    if (ask1 != null && price >= ask1) side = 'M';
+    if (!tinDuoc) side = '?';
+    else if (ask1 != null && price >= ask1) side = 'M';
     else if (bid1 != null && price <= bid1) side = 'B';
 
     const matchQty = num(m.matchQtty);
