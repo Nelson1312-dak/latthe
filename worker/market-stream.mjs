@@ -100,7 +100,7 @@ export class MarketStream {
   report() {
     return this.db('/worker_status?on_conflict=name', {
       role: 'app_worker', method: 'POST', prefer: 'resolution=merge-duplicates',
-      body: { name: 'market-stream', at: new Date().toISOString(), info: { state: this.sock.state, ...this.state.counts, symbols: this.state.quotes.size, indices: this.state.indices.size, lastFlush: this.lastFlush ? new Date(this.lastFlush).toISOString() : null } },
+      body: { name: 'market-stream', at: new Date().toISOString(), info: { state: this.sock.state, reconnects: this.sock.reconnects, lastMsgAt: this.sock.lastMsgAt ? new Date(this.sock.lastMsgAt).toISOString() : null, ...this.state.counts, symbols: this.state.quotes.size, indices: this.state.indices.size, lastFlush: this.lastFlush ? new Date(this.lastFlush).toISOString() : null } },
     }).catch((e) => log('không ghi được trạng thái worker:', e.message));
   }
 }

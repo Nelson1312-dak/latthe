@@ -57,11 +57,12 @@ export async function saveOrderEvent(investorId, o, db = rest) {
 
 /** Một kết nối cho một khách: dùng DnseSocket, xử lý sự kiện lệnh/vị thế. */
 export class Feed {
-  constructor(client, { apiKey, apiSecret, WS = globalThis.WebSocket, db = rest, onEvent = () => {} }) {
+  constructor(client, { apiKey, apiSecret, WS = globalThis.WebSocket, db = rest, onEvent = () => {}, timeouts } = {}) {
     this.client = client; this.db = db; this.onEvent = onEvent;
     this.lastEventAt = null; this.events = 0;
     this.queue = Promise.resolve(); // sự kiện dữ liệu xử lý tuần tự: "Filled" không được bị "PartiallyFilled" đến chậm ghi đè
-    this.sock = new DnseSocket({ name: client.investorId, apiKey, apiSecret, WS, channels: channelsFor(client.investorId), onData: (m) => this._onData(m) });
+    // Kênh môi giới: DNSE ping mỗi 3 phút, nên chỉ coi là mất tín hiệu sau 4 phút im lặng
+    this.sock = new DnseSocket({ name: client.investorId, apiKey, apiSecret, WS, channels: channelsFor(client.investorId), onData: (m) => this._onData(m), timeouts: { idle: 240_000, ...(timeouts || {}) } });
   }
   get investorId() { return this.client.investorId; }
   get state() { return this.sock.state; }

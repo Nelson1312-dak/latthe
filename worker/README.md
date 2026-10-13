@@ -45,6 +45,9 @@ powershell -ExecutionPolicy Bypass -File worker\register-worker.ps1 -Name market
 - Log ở `worker/logs/<tên>.log` (tự cắt khi quá 1 MB, nằm trong .gitignore), không chứa key hay secret.
 - Key và secret chỉ nằm trong `.env.local`. Đổi key thì sửa file đó rồi `Stop-ScheduledTask` và `Start-ScheduledTask` tác vụ tương ứng.
 
+- Bộ canh kết nối (`worker/_socket.mjs`, dùng chung cho giá và lệnh): quá 20 giây chưa bắt tay xong, hoặc đang chạy mà quá 90 giây
+  không nhận được gì (kênh lệnh: 4 phút, vì DNSE ping 3 phút một lần) thì tự hủy và nối lại. Trước đây một lần nối lại lúc 2:45 sáng
+  bị treo ở "connecting" cả đêm vì DNSE không trả lời bắt tay mà code không có hạn chờ. Trạng thái `worker_status` có thêm `reconnects`, `lastMsgAt`.
 - Một kết nối cho cả rổ mã (DNSE cho tối đa 10 kết nối/user, 200 stream/kết nối).
 - Kênh: `tick.G1`, `top_price.G1` (3 mức mua/bán với HOSE), `security_definition.G1`, `market_index.{VNINDEX,VN30,HNX,UPCOM}`.
 - Giá khớp ngoài biên độ trần/sàn bị coi là dữ liệu hỏng và bị bỏ qua.
