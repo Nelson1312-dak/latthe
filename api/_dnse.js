@@ -87,7 +87,31 @@ export const careBy = () => call('GET', '/brokers/accounts/care-by');
 export const balances = (acc) => call('GET', `/accounts/${encodeURIComponent(acc)}/balances`);
 export const positions = (acc) => call('GET', `/accounts/${encodeURIComponent(acc)}/positions`, { query: { marketType: 'STOCK' } });
 export const orderBook = (acc) => call('GET', `/accounts/${encodeURIComponent(acc)}/orders`, { query: { marketType: 'STOCK', orderCategory: 'NORMAL' } });
-export const loanPackages = (acc, symbol) => call('GET', `/accounts/${encodeURIComponent(acc)}/loan-packages`, { query: { marketType: 'STOCK', symbol } });
+/**
+ * Gói vay ký quỹ áp dụng cho một mã. Trả { loanPackages: [{ id, name, type, initialRate, interestRate,
+ * maintenanceRate, liquidRate, brokerFirmBuyingFeeRate, brokerFirmSellingFeeRate }] }.
+ * `initialRate` là tỷ lệ tiền của khách: 1 = trả đủ tiền, 0.5 = vay một nửa.
+ */
+export async function loanPackages(acc, symbol) {
+  const r = await call('GET', `/accounts/${encodeURIComponent(acc)}/loan-packages`, { query: { marketType: 'STOCK', symbol } });
+  return Array.isArray(r) ? r : r?.loanPackages || r?.data || [];
+}
+
+/**
+ * Sức mua / sức bán cho một lệnh cụ thể.
+ * ĐƠN VỊ: `price` phải tính bằng ĐỒNG (không phải nghìn đồng như securityDef trả về) — kiểm chứng
+ * ngày 13/10/2026 trên tài khoản thật: sức mua 857.834 đ, giá 11.700 đ cho đúng qmaxBuy 73.
+ * `qmaxSell` phụ thuộc GÓI VAY: cổ phiếu đang nằm ở gói nào thì phải hỏi bằng đúng gói đó,
+ * hỏi bằng gói khác sẽ trả 0 và trông như khách không có gì để bán.
+ * @returns {Promise<{qmaxBuy:number|null, qmaxSell:number|null, pp0Buy:number|null, price:number|null}>}
+ */
+export async function buyingPower(acc, { symbol, priceVnd, loanPackageId } = {}) {
+  const r = await call('GET', `/accounts/${encodeURIComponent(acc)}/ppse`, {
+    query: { marketType: 'STOCK', symbol, price: priceVnd, loanPackageId },
+  });
+  const n = (v) => (Number.isFinite(+v) ? +v : null);
+  return { qmaxBuy: n(r?.qmaxBuy), qmaxSell: n(r?.qmaxSell), pp0Buy: n(r?.pp0Buy), price: n(r?.price) };
+}
 export async function securityDef(symbol) {
   const r = await call('GET', `/price/${encodeURIComponent(symbol)}/secdef`);
   const list = Array.isArray(r) ? r : r ? [r] : [];

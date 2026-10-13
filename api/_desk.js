@@ -40,6 +40,28 @@ export async function listClients({ fresh = false } = {}) {
   return data;
 }
 
+/**
+ * Gói vay mặc định cho một mã: gói đòi tỷ lệ tiền của khách CAO NHẤT, tức ít vay nhất ("GD Tiền mặt").
+ *
+ * Bắt buộc phải chọn tường minh, không được để trống. Đo trên tài khoản thật ngày 13/10/2026:
+ * cùng một mã, cùng một giá, hỏi sức mua mà không kèm gói vay thì DNSE trả về SỐ ÂM (−577.342 đ)
+ * và sức mua 0 cổ; hỏi kèm gói tiền mặt thì ra +857.834 đ và mua được 73 cổ. Để trống sẽ chặn
+ * nhầm mọi lệnh mua hợp lệ.
+ */
+const goiCache = new Map();
+export async function defaultLoanPackage(accountNo, symbol) {
+  const key = `${accountNo}:${symbol}`;
+  const c = goiCache.get(key);
+  if (c && Date.now() - c.at < 300_000) return c.v;
+  let v = null;
+  try {
+    const ds = await dnse.loanPackages(accountNo, symbol);
+    v = ds.filter((g) => Number.isFinite(+g?.id)).sort((a, b) => (b.initialRate ?? 0) - (a.initialRate ?? 0))[0] || null;
+  } catch { v = null; }
+  goiCache.set(key, { at: Date.now(), v });
+  return v;
+}
+
 /** Lấy khách theo tiểu khoản và kiểm tra quyền. fresh=true khi sắp gửi lệnh: không tin bản cache. */
 export async function requireClient(accountNo, { need = 'view', fresh = false } = {}) {
   const c = (await listClients({ fresh })).find((x) => x.accountNo === String(accountNo || ''));
@@ -55,7 +77,7 @@ export async function requireClient(accountNo, { need = 'view', fresh = false } 
  * Kiểm tra lệnh theo trần/sàn thật của DNSE và hạn mức, trả về body gửi lên DNSE.
  * Giá người dùng nhập theo nghìn đồng; đơn vị gửi lên giống secdef (tự nhận biết).
  */
-export async function buildOrder({ accountNo, symbol, side, type, price, qty }) {
+export async function buildOrder({ accountNo, symbol, side, type, price, qty, loanPackageId }) {
   symbol = String(symbol || '').toUpperCase();
   if (!/^[A-Z0-9]{3,10}$/.test(symbol)) throw new dnse.DnseError('Mã chứng khoán không hợp lệ.', 400);
   if (side !== 'B' && side !== 'S') throw new dnse.DnseError('Lệnh phải là mua hoặc bán.', 400);
@@ -81,10 +103,50 @@ export async function buildOrder({ accountNo, symbol, side, type, price, qty }) 
   if (estValue > dnse.maxOrderVnd()) {
     throw new dnse.DnseError(`Giá trị lệnh khoảng ${fmt(estValue)} đ vượt hạn mức ${fmt(dnse.maxOrderVnd())} đ mỗi lệnh.`, 400);
   }
+  // Sức mua / sức bán thật của DNSE. Giá hỏi phải bằng ĐỒNG; lệnh thị trường lấy giá trần cho
+  // trường hợp xấu nhất khi mua, giá sàn khi bán.
+  const giaHoi = Math.round(type === 'LO' ? toVnd(apiPrice) : toVnd(side === 'B' ? sec.ceilingPrice : sec.floorPrice));
+  let suc = null, canhBao = null;
+  // Không có gói vay thì lấy gói ít vay nhất, KHÔNG để DNSE tự chọn (xem defaultLoanPackage).
+  // Phải nhớ người gọi CÓ tự chọn hay không: bên dưới cần phân biệt "hết hàng thật" với
+  // "hỏi nhầm gói nên ra 0", mà sau khi điền mặc định thì không còn phân biệt được nữa.
+  const tuChonGoi = loanPackageId != null;
+  const goi = tuChonGoi ? { id: Number(loanPackageId) } : await defaultLoanPackage(accountNo, symbol);
+  loanPackageId = goi?.id ?? null;
+  try {
+    suc = await dnse.buyingPower(accountNo, { symbol, priceVnd: giaHoi, loanPackageId: loanPackageId ?? undefined });
+  } catch {
+    // DNSE trục trặc thì không chặn: lệnh sai sẽ bị chính DNSE từ chối, còn chặn nhầm
+    // lại làm môi giới không đặt được lệnh đúng.
+    canhBao = 'Không hỏi được sức mua từ DNSE, lệnh vẫn gửi nhưng DNSE có thể từ chối.';
+  }
+  if (suc) {
+    if (side === 'B' && suc.qmaxBuy != null && qty > suc.qmaxBuy) {
+      throw new dnse.DnseError(
+        `Sức mua không đủ: tối đa ${fmt(suc.qmaxBuy)} cổ phiếu ${symbol} ở giá này`
+        + `${suc.pp0Buy != null ? ` (sức mua ${fmt(suc.pp0Buy)} đ)` : ''}, lệnh đang đặt ${fmt(qty)}.`, 400, 'not_enough_buying_power');
+    }
+    if (side === 'S' && suc.qmaxSell != null && suc.qmaxSell > 0 && qty > suc.qmaxSell) {
+      throw new dnse.DnseError(
+        `Chỉ bán được tối đa ${fmt(suc.qmaxSell)} ${symbol} (cổ phiếu chưa về tài khoản thì chưa bán được), lệnh đang đặt ${fmt(qty)}.`,
+        400, 'not_enough_sellable');
+    }
+    // qmaxSell = 0 mà không chỉ định gói vay thì chưa chắc đã hết hàng: sức bán tính theo
+    // từng gói vay, hỏi nhầm gói sẽ ra 0. Cảnh báo chứ không chặn.
+    if (side === 'S' && suc.qmaxSell === 0 && !tuChonGoi) {
+      canhBao = `DNSE báo sức bán ${symbol} bằng 0. Nếu cổ phiếu đang nằm ở một gói vay, cần chọn đúng gói đó.`;
+    }
+  }
+
   return {
-    order: { accountNo, symbol, side: side === 'B' ? 'NB' : 'NS', orderType: type, quantity: qty, ...(type === 'LO' ? { price: apiPrice } : {}) },
+    order: {
+      accountNo, symbol, side: side === 'B' ? 'NB' : 'NS', orderType: type, quantity: qty,
+      ...(type === 'LO' ? { price: apiPrice } : {}),
+      ...(loanPackageId != null ? { loanPackageId: Number(loanPackageId) } : {}),
+    },
     estValueVnd: Math.round(estValue),
     ceilingVnd: toVnd(sec.ceilingPrice), floorVnd: toVnd(sec.floorPrice),
+    sucMua: suc, canhBao, loanPackageId: loanPackageId != null ? Number(loanPackageId) : null,
     text: `${side === 'B' ? 'MUA' : 'BÁN'} ${qty.toLocaleString('vi-VN')} ${symbol} ${type === 'LO' ? `giá ${fmt(toVnd(apiPrice))} đ` : `lệnh ${type}`}`,
   };
 }
