@@ -15,11 +15,14 @@ import { rest } from '../api/_db.js';
 import * as dnse from '../api/_dnse.js';
 import { listClients } from '../api/_desk.js';
 import { normalizeAccount } from '../api/_portfolio.js';
-import { vnNow } from '../api/_market.js';
-import { buildMessages, stripThinking, unknownPercents } from '../api/_ai.js';
+import { UNIVERSE, BY_SYMBOL, fetchBars, vnNow } from '../api/_market.js';
+import { technicals } from '../api/_technical.js';
+import { symbolFacts, factsHash, briefFacts } from '../api/_facts.js';
+import { buildMessages, stripThinking, unknownPercents, novelWords } from '../api/_ai.js';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const W = { role: 'app_worker' };
 
 export const config = () => ({
@@ -119,26 +122,96 @@ export const snapshotDue = (lastDay, ts = Date.now()) => {
   return dow >= 1 && dow <= 5 && min >= 15 * 60 + 5 && lastDay !== ymd;
 };
 
+// ---------------- Kho dữ liệu theo mã (để tư vấn trả lời ngay) ----------------
+// Mỗi phiên: tính lại chỉ báo kỹ thuật cho cả rổ, rồi nhờ AI viết sẵn bản tóm tắt cho mã nào có dữ liệu mới.
+// Khi môi giới hoặc khách hỏi một mã, API chỉ đọc bản đã viết sẵn (vài chục mili giây).
+
+/** Cập nhật chỉ báo kỹ thuật của một mã từ nến ngày. */
+export async function refreshTech(symbol, db = rest) {
+  const info = BY_SYMBOL[symbol];
+  const [bars, bench] = await Promise.all([
+    fetchBars(symbol, 260).catch(() => []),
+    fetchBars('VNINDEX', 260, '1D', 'index').catch(() => []),
+  ]);
+  const tech = technicals(bars, bench, info?.ex);
+  if (!tech) return null;
+  await db('/symbol_facts?on_conflict=symbol', {
+    role: 'app_worker', method: 'POST', prefer: 'resolution=merge-duplicates',
+    body: { symbol, tech, tech_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  });
+  return tech;
+}
+
+/**
+ * Làm mới cả kho: chỉ báo kỹ thuật + bản tóm tắt AI.
+ * Chỉ viết lại bản tóm tắt khi dữ liệu đổi (so dấu vân tay) hoặc quá maxAgeDays ngày.
+ */
+export async function refreshKnowledge({ db = rest, ai = callOllama, cfg = config(), symbols = UNIVERSE.map((x) => x.s), maxAgeDays = 7, pause = 300, writeBriefs = true } = {}) {
+  const rows = await db(`/symbol_facts?select=symbol,fundamentals,fund_at&symbol=in.(${symbols.join(',')})`, { role: 'app_worker' });
+  const fund = Object.fromEntries((rows || []).map((r) => [r.symbol, r]));
+  const briefs = Object.fromEntries(((await db(`/symbol_briefs?select=symbol,facts_hash,generated_at&symbol=in.(${symbols.join(',')})`, { role: 'app_worker' })) || []).map((b) => [b.symbol, b]));
+  let tech = 0, wrote = 0, skipped = 0, failed = 0;
+  for (const symbol of symbols) {
+    let t;
+    try { t = await refreshTech(symbol, db); if (t) tech++; }
+    catch (e) { failed++; log(`kho dữ liệu ${symbol}: không tính được kỹ thuật (${e.message})`); }
+    if (!writeBriefs) { if (pause) await sleep(pause); continue; }
+    const f = fund[symbol]?.fundamentals || null;
+    if (!t && !f) { skipped++; continue; }
+    const hash = factsHash(t, f);
+    const old = briefs[symbol];
+    const stale = !old || old.facts_hash !== hash || Date.now() - Date.parse(old.generated_at) > maxAgeDays * 86400e3;
+    if (!stale) { skipped++; continue; }
+    try {
+      const facts = briefFacts(symbolFacts({ symbol, tech: t, fundamentals: f, priceK: t?.gia, fundAt: fund[symbol]?.fund_at }));
+      const out = await ai(buildMessages('symbol_brief', facts), cfg);
+      const brief = stripThinking(out.content);
+      if (!brief) throw new Error('AI trả về nội dung rỗng');
+      await db('/symbol_briefs?on_conflict=symbol', {
+        role: 'app_worker', method: 'POST', prefer: 'resolution=merge-duplicates',
+        body: { symbol, brief, facts_hash: hash, model: cfg.model, generated_at: new Date().toISOString(),
+          flags: { unknownPercents: unknownPercents(brief, facts), novelWords: novelWords(brief, facts).slice(0, 12), ms: out.ms ?? null } },
+      });
+      wrote++;
+    } catch (e) { failed++; log(`kho dữ liệu ${symbol}: không viết được tóm tắt (${e.message})`); }
+    if (pause) await sleep(pause);
+  }
+  log(`kho dữ liệu: ${tech} mã cập nhật kỹ thuật, ${wrote} bản tóm tắt viết mới, ${skipped} bỏ qua, ${failed} lỗi`);
+  return { tech, wrote, skipped, failed };
+}
+
+/** Đến giờ làm mới kho chưa: thứ 2-6 từ 15:20 giờ VN, mỗi ngày một lần. */
+export const knowledgeDue = (lastDay, ts = Date.now()) => {
+  const { ymd, dow, min } = vnNow(ts);
+  return dow >= 1 && dow <= 5 && min >= 15 * 60 + 20 && lastDay !== ymd;
+};
+
 // ---------------- Vòng chạy chính ----------------
 async function main() {
   const cfg = config();
   if (process.argv.includes('--snapshot-now')) { console.log(await snapshotAll()); return; }
+  if (process.argv.includes('--knowledge-now')) { console.log(await refreshKnowledge({ writeBriefs: !process.argv.includes('--tech-only') })); return; }
   log(`advisory worker: model ${cfg.model} tại ${cfg.ollama}`);
   await failStale().catch((e) => log('failStale:', e.message));
-  let lastSnap = null, lastBeat = 0, done = 0, ready = false;
+  let lastSnap = null, lastKb = null, lastBeat = 0, done = 0, ready = false;
   for (;;) {
     try {
       if (Date.now() - lastBeat > 30e3) {
         ready = await modelReady(cfg);
         if (!ready) log(`chưa thấy model ${cfg.model} trong Ollama (ollama pull ${cfg.model})`);
         await rest('/worker_status?on_conflict=name', { ...W, method: 'POST', prefer: 'resolution=merge-duplicates',
-          body: { name: 'advisory', at: new Date().toISOString(), info: { model: cfg.model, modelReady: ready, jobsDone: done, lastSnapshot: lastSnap } } });
+          body: { name: 'advisory', at: new Date().toISOString(), info: { model: cfg.model, modelReady: ready, jobsDone: done, lastSnapshot: lastSnap, lastKnowledge: lastKb } } });
         lastBeat = Date.now();
       }
       if (ready && await processOne(rest, callOllama, cfg)) { done++; continue; }
       if (process.env.DNSE_API_KEY && snapshotDue(lastSnap)) {
         const r = await snapshotAll();
         lastSnap = r.day;
+      }
+      // Việc của môi giới được ưu tiên; kho dữ liệu chỉ chạy khi hàng đợi rỗng
+      if (knowledgeDue(lastKb)) {
+        await refreshKnowledge({ writeBriefs: ready });
+        lastKb = vnNow().ymd;
       }
     } catch (e) {
       log('lỗi vòng chạy:', e.message);

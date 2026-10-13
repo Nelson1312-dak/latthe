@@ -51,7 +51,8 @@ function applyQuote(m,q){
   if(q.vol>0){ // phiên đang chạy
     m.hiU=U(q.high); m.loU=U(q.low); m.vol=q.vol;
     Object.assign(m.today,{open:q.open,high:q.high,low:q.low,close:q.last,value:q.vol});
-    if(MKT.polledOnce && q.vol>prevVol){
+    // prevVol>0: lần quan sát đầu tiên của mã chưa biết khối lượng trước đó, nếu ghi thì sẽ thành một lệnh khổng lồ bằng cả phiên
+    if(MKT.polledOnce && prevVol>0 && q.vol>prevVol){
       m.tape.unshift({t:new Date().toTimeString().slice(0,8),u:m.lastU,q:q.vol-prevVol,side:m.lastU>=prevLast?"M":"B"});
       m.tape.length=Math.min(m.tape.length,40);
     }
@@ -302,6 +303,9 @@ function renderPanel(){
     body.innerHTML=`<table><thead><tr><th>Mã</th><th class="r">KL</th><th class="r">Giá vốn</th><th class="r">Giá TT</th><th class="r">Giá trị</th><th class="r">Lãi/lỗ</th><th class="r">%</th></tr></thead><tbody>`+
       rows.map(([s,h])=>{const m=M[s],px=P(m.lastU),pl=(px-h.avg)*1000*h.qty,pct=(px-h.avg)/h.avg*100,c=pl>=0?"up":"down";
         return `<tr><td><button class="link" data-sym="${s}">${s}</button></td><td class="r">${fN(h.qty)}</td><td class="r">${h.avg.toFixed(2)}</td><td class="r ${cls(m,m.lastU)}">${fP(m.lastU)}</td><td class="r">${fVND(px*1000*h.qty)}</td><td class="r ${c}">${(pl>=0?"+":"")+fN(pl)}</td><td class="r ${c}">${(pct>=0?"+":"")+pct.toFixed(2)}%</td></tr>`}).join("")+`</tbody></table>`;
+  } else if(S.tab==="brief"){
+    body.innerHTML=`<div id="sym-brief"></div>`;
+    document.dispatchEvent(new CustomEvent("lb:brief",{detail:S.sym}));
   } else {
     body.innerHTML=`<div class="empty"><b>Chưa có lệnh điều kiện</b>Lệnh dừng lỗ, chốt lời và lệnh xu hướng sẽ có ở bản tiếp theo, chạy trên engine lệnh điều kiện của DNSE.</div>`;
   }
@@ -312,6 +316,7 @@ function selectSym(s){
   if(!M[s]) return; S.sym=s; S.pxU=M[s].lastU;
   document.querySelectorAll(".wl-row").forEach(r=>r.setAttribute("aria-pressed",r.dataset.sym===s));
   flip(false); renderHead(); renderBook(); renderTicket(); drawChart(true);
+  if(S.tab==="brief") document.dispatchEvent(new CustomEvent("lb:brief",{detail:S.sym}));
 }
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,a"); if(!t) return;
@@ -744,7 +749,7 @@ function tick(){
   if(S.tf==="D"){ candle.update({...m.today}); line.update({time:m.today.time,value:m.today.close});
     vol.update({time:m.today.time,value:m.today.value,color:m.today.close>=m.today.open?"rgba(46,189,133,.35)":"rgba(246,70,93,.35)"}); shown[shown.length-1]={...m.today}; legend(shown[shown.length-1]); }
   else if(last){ drawChart(false); }
-  renderHead(); renderBook(); updateWLPrices(); renderTicket(); if(S.tab!=="cond") renderPanel();
+  renderHead(); renderBook(); updateWLPrices(); renderTicket(); if(S.tab==="orders"||S.tab==="pos") renderPanel();
   if(SOCIAL_DEMO){ communityTick(); chatTick(); }
   document.dispatchEvent(new CustomEvent("lb:tick"));
 }

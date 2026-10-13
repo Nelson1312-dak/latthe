@@ -329,7 +329,8 @@
       <div><span>RSI 14</span><b>${f1(t.rsi14)}</b> <small>${esc(t.rsi_nhan_dinh || '')}</small></div>
       <div><span>Biến động năm</span><b>${pct(t.bien_dong_nam_pct, false)}</b> <small>${esc(d.riskText || '')}</small></div>
       <div><span>52 tuần</span><b>${t.day_52_tuan} – ${t.dinh_52_tuan}</b> <small>cách đỉnh ${pct(t.cach_dinh_52_tuan_pct)}</small></div>
-      ${['1M', '3M', '1Y'].map((k) => (w[k] ? `<div><span>${WIN_LABEL[k]}</span><b class="${cls(w[k].ma)}">${pct(w[k].ma)}</b> <small>${esc(w[k].so_voi_vnindex || '')}</small></div>` : '')).join('')}</div>`;
+      ${['1M', '3M', '1Y'].map((k) => (w[k] ? `<div><span>${WIN_LABEL[k]}</span><b class="${cls(w[k].ma)}">${pct(w[k].ma)}</b> <small>${esc(w[k].so_voi_vnindex || '')}</small></div>` : '')).join('')}</div>
+      ${d.brief ? `<details class="kb-fold" open><summary>Tóm tắt mã (AI viết sẵn ${dmy(d.brief.at)})</summary><div class="kb-text">${esc(d.brief.text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')}</div></details>` : ''}`;
   }
   function renderCheck() {
     const el = $('av-check'); if (!el) return;
@@ -768,6 +769,50 @@
   document.addEventListener('submit', (e) => { if (e.target.id === 'av-quiz') { e.preventDefault(); submitQuiz(); } });
   document.addEventListener('lb:view', (e) => { if (e.detail === 'portal' && C.user) loadLinks(); });
   document.addEventListener('lb:user', (e) => { C.user = e.detail || null; C.links = []; C.data = {}; C.quiz = null; renderClient(); });
+
+/* ================= Tóm tắt mã (kho dữ liệu viết sẵn, trả lời ngay) ================= */
+  const KB = { cache: {}, cur: null };
+  const dmy = (s) => (s ? String(s).slice(0, 10).split('-').reverse().join('/') : '');
+
+  function briefHtml(d) {
+    if (!d) return '';
+    if (d.error) return `<div class="empty"><b>Chưa có tóm tắt cho mã này</b>${esc(d.error)}</div>`;
+    const f = d.facts, c = f.cau_viet_san || {}, t = f.ky_thuat;
+    const b = d.brief;
+    const warn = [];
+    if (b?.flags?.unknownPercents?.length) warn.push(`Bản tóm tắt có số liệu không khớp dữ liệu hệ thống: ${b.flags.unknownPercents.map(esc).join(', ')}.`);
+    if (b?.flags?.novelWords?.length) warn.push(`Bản tóm tắt có nội dung không nằm trong dữ liệu (${b.flags.novelWords.slice(0, 6).map(esc).join(', ')}), cần kiểm tra.`);
+    if (f.canh_bao_du_lieu) warn.push(f.canh_bao_du_lieu);
+    const dg = f.dinh_gia || {}, sk = f.suc_khoe || {}, sh = f.so_huu || {};
+    const kv = (label, val) => (val == null || val === '' ? '' : `<div><span>${label}</span><b>${esc(val)}</b></div>`);
+    return `<div class="kb">
+      <div class="kb-head"><b>${esc(f.ma)}${f.ten ? ' · ' + esc(f.ten) : ''}</b>
+        <small>${f.nganh ? esc(f.nganh) + ' · ' : ''}${d.priceK ? 'giá ' + d.priceK.toFixed(2) : ''}${f.quy_mo?.von_hoa ? ' · vốn hóa ' + esc(f.quy_mo.von_hoa) : ''}</small></div>
+      ${warn.map((w) => `<div class="msg warn">${esc(w)}</div>`).join('')}
+      ${b ? `<div class="kb-text">${esc(b.text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')}</div>
+        <small class="kb-src">AI local viết ${dmy(b.at)}${b.stale ? ' (đã cũ, chờ cập nhật)' : ''} từ dữ liệu DNSE${d.nguon?.co_ban_at ? ', số liệu cơ bản cập nhật ' + dmy(d.nguon.co_ban_at) : ''}. Số liệu tham khảo, không phải khuyến nghị đầu tư.</small>`
+        : `<div class="kb-text">${[c.cau_doanh_nghiep, c.cau_gioi_thieu, c.cau_co_ban, c.cau_loi_nhuan, c.cau_co_tuc, c.cau_so_huu, c.cau_ky_thuat].filter(Boolean).map(esc).join('<br>')}</div>
+          <small class="kb-src">Chưa có bản AI viết sẵn, đang hiển thị dữ liệu thô.</small>`}
+      <div class="av-kv kb-kv">
+        ${kv('P/E', dg.pe)}${kv('P/B', dg.pb)}${kv('ROE', sk.roe_pct == null ? null : f1(sk.roe_pct) + '%')}
+        ${kv('NIM', sk.nim_pct == null ? null : f1(sk.nim_pct) + '%')}${kv('Nợ xấu', sk.no_xau_pct == null ? null : f1(sk.no_xau_pct) + '%')}
+        ${kv('Biên LN gộp', sk.bien_loi_nhuan_gop_pct == null ? null : f1(sk.bien_loi_nhuan_gop_pct) + '%')}
+        ${kv('Room ngoại còn', sh.room_con_lai_pct == null ? null : f1(sh.room_con_lai_pct) + '%')}
+        ${t ? kv('RSI 14', f1(t.rsi14)) : ''}${t ? kv('Biến động năm', pct(t.bien_dong_nam_pct, false)) : ''}
+        ${t ? kv('52 tuần', `${t.day_52_tuan} – ${t.dinh_52_tuan}`) : ''}
+      </div></div>`;
+  }
+  async function loadBrief(symbol) {
+    KB.cur = symbol;
+    const box = $('sym-brief'); if (!box) return;
+    if (KB.cache[symbol]) { box.innerHTML = briefHtml(KB.cache[symbol]); return; }
+    box.innerHTML = '<div class="empty">Đang lấy tóm tắt…</div>';
+    try { KB.cache[symbol] = await api('/api/symbol?symbol=' + encodeURIComponent(symbol)); }
+    catch (e) { KB.cache[symbol] = { error: e.status === 401 ? 'Đăng nhập để xem tóm tắt mã.' : e.message }; }
+    if (KB.cur === symbol && $('sym-brief')) $('sym-brief').innerHTML = briefHtml(KB.cache[symbol]);
+  }
+  document.addEventListener('lb:brief', (e) => loadBrief(e.detail));
+  document.addEventListener('lb:user', () => { KB.cache = {}; });
 
   /* ================= Giới thiệu cho người mới (chưa đăng nhập) ================= */
   const INTRO_KEY = 'lb_intro_closed';

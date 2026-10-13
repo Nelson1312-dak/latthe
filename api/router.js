@@ -42,6 +42,7 @@ import r_portal_notes from '../server/routes/portal/notes.js';
 import r_portal_portfolio from '../server/routes/portal/portfolio.js';
 import r_portal_profile from '../server/routes/portal/profile.js';
 import r_portal_summary from '../server/routes/portal/summary.js';
+import r_symbol from '../server/routes/symbol.js';
 import r_shs_account from '../server/routes/shs/account.js';
 import r_shs_connect from '../server/routes/shs/connect.js';
 
@@ -82,6 +83,7 @@ const ROUTES = {
   'portal/portfolio': r_portal_portfolio,
   'portal/profile': r_portal_profile,
   'portal/summary': r_portal_summary,
+  'symbol': r_symbol,
   'shs/account': r_shs_account,
   'shs/connect': r_shs_connect,
 };

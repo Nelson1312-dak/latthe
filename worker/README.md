@@ -85,9 +85,17 @@ Chạy trên máy nhà, cạnh Postgres và Ollama. Hai việc:
 2. **Ảnh chụp danh mục**: thứ 2 đến thứ 6, sau 15:05 giờ VN, chụp tiền + danh mục của mọi khách care-by vào `trade.portfolio_snapshots`
    để tính hiệu suất thực tế. Chụp tay: `node --env-file=.env.local worker/advisory-worker.mjs --snapshot-now`.
 
+3. **Kho dữ liệu theo mã** (để tư vấn trả lời ngay): mỗi phiên sau 15:20, tính lại chỉ báo kỹ thuật cho cả rổ rồi nhờ Qwen
+   viết sẵn bản tóm tắt từng mã vào `trade.symbol_briefs`. Khi môi giới hoặc khách hỏi một mã, API chỉ đọc bản đã viết sẵn
+   (khoảng 40 mili giây) thay vì chờ AI 20-40 giây. Chỉ viết lại khi dữ liệu đổi (so dấu vân tay) hoặc bản cũ quá 7 ngày.
+   Chạy tay: `node --env-file=.env.local worker/advisory-worker.mjs --knowledge-now` (thêm `--tech-only` để bỏ phần AI).
+
 Biến môi trường (trong `.env.local`, đều có mặc định): `ADVISORY_MODEL` (mặc định `qwen3:8b`), `ADVISORY_OLLAMA_URL` (mặc định `http://127.0.0.1:11434`), `ADVISORY_NUM_CTX` (mặc định 3072), `ADVISORY_TIMEOUT_MS`.
 
-Ollama cài bản Windows, model lưu ở `D:\ollama-models` (biến người dùng `OLLAMA_MODELS`), tự chạy khi đăng nhập. Đổi model: `ollama pull <tên>` rồi đặt `ADVISORY_MODEL` và khởi động lại tác vụ "Latbai worker advisory".
+Ollama cài bản Windows, model lưu ở `C:\ollama-models` (biến người dùng `OLLAMA_MODELS`), tự chạy khi đăng nhập. Đổi model: `ollama pull <tên>` rồi đặt `ADVISORY_MODEL` và khởi động lại tác vụ "Latbai worker advisory".
+**Model phải nằm trên ổ SSD.** Để ở ổ D (đĩa cơ) thì mỗi lần nạp lại mất hơn 3 phút và việc AI bị quá hạn; chuyển sang ổ C
+(SSD) còn 7 giây. Biến `OLLAMA_KEEP_ALIVE=1h` giữ model trong bộ nhớ để lần hỏi sau không phải nạp lại.
+
 GTX 1660 SUPER 6 GB: `qwen3:8b` không vừa trọn VRAM (khoảng 25% chạy trên CPU), mỗi nhận xét mất 25 đến 50 giây. Đã bật hai biến người dùng
 `OLLAMA_FLASH_ATTENTION=1` và `OLLAMA_KV_CACHE_TYPE=q8_0`, và worker dùng ngữ cảnh 3.072 token (`ADVISORY_NUM_CTX`), giảm từ khoảng 127 xuống 40 giây.
 Muốn nhanh hơn nữa (nằm gọn trong GPU, chất lượng thấp hơn): `ollama pull qwen3:4b` rồi đặt `ADVISORY_MODEL=qwen3:4b`.

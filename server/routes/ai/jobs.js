@@ -13,6 +13,8 @@ import { analyzeAccount, factsForAI } from '../../../api/_advisory.js';
 import { KINDS } from '../../../api/_ai.js';
 import { checkAdvice } from '../../../api/_technical.js';
 import { symbolData } from '../broker/symbol.js';
+import { symbolSummary } from '../symbol.js';
+import { fundamentalsForAdvice } from '../../../api/_facts.js';
 
 const COLS = 'id,kind,status,output,model,flags,error,created_at,started_at,finished_at';
 
@@ -66,6 +68,7 @@ async function adviceFacts(body, res) {
     ky_thuat: d.tech,
     muc_rui_ro_co_phieu: d.risk === 'high' ? 'biến động cao' : d.risk === 'medium' ? 'biến động trung bình' : d.risk === 'low' ? 'biến động thấp' : null,
     y_chinh_cua_moi_gioi: String(body.notes || '').trim().slice(0, 600) || null,
+    co_ban: fundamentalsForAdvice((await symbolSummary(symbol).catch(() => null))?.facts),
     luu_y: c.warnings,
     cau_dan_chung: evidenceSentence(symbol, d.tech),
     cau_ke_hoach: planSentence(plan, c),

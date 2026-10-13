@@ -31,8 +31,9 @@ export async function listModels(sub) {
 }
 
 /**
- * Giá gần nhất theo đồng, ưu tiên: bảng giá realtime trong ngày > giá DNSE của mã đang nắm giữ (cùng giá đã dùng tính
- * tài sản ròng, để tỷ trọng và đề xuất khớp nhau) > giá đóng cửa gần nhất.
+ * Giá gần nhất theo đồng cho mỗi mã, ưu tiên: bảng giá realtime trong ngày > giá DNSE trả kèm vị thế > giá đóng cửa gần nhất.
+ * Dùng CHUNG cho cả tỷ trọng danh mục và đề xuất tái phân bổ: hai phần tính trên hai mức giá khác nhau thì
+ * khối lượng mua bán sẽ không khớp với tỷ trọng hiển thị.
  */
 async function latestPrices(symbols, hist, holdings) {
   const out = {};
@@ -68,14 +69,13 @@ export async function analyzeAccount({ accountNo, sub, side, plan = true }) {
 
   const symbols = [...new Set([...account.holdings.map((h) => h.symbol), ...Object.keys(model?.weights || {})])];
   const hist = await loadHistory(symbols, 260);
-  // DNSE không trả giá cho mã nào thì dùng giá đóng cửa gần nhất, tránh tính mã đó bằng 0
-  const noPrice = account.holdings.filter((h) => !h.price);
-  for (const h of noPrice) { const s = hist.prices[h.symbol]; if (s?.length) h.price = s[s.length - 1].c; }
-  if (noPrice.length) {
-    account.stockValue = account.holdings.reduce((a, h) => a + (h.price || 0) * h.qty, 0);
-    account.nav = account.stockValue + account.cash - account.debt;
-    account.warnings.push(`DNSE chưa trả giá thị trường của ${noPrice.map((h) => h.symbol).join(', ')}: tạm dùng giá đóng cửa gần nhất.`);
-  }
+  // Chốt một bảng giá duy nhất rồi mới tính tỷ trọng, để tỷ trọng và đề xuất mua bán luôn khớp nhau
+  const prices = await latestPrices(symbols, hist, account.holdings);
+  const noPrice = account.holdings.filter((h) => !h.price && !prices[h.symbol]);
+  for (const h of account.holdings) if (prices[h.symbol]) h.price = prices[h.symbol];
+  account.stockValue = account.holdings.reduce((a, h) => a + (h.price || 0) * h.qty, 0);
+  account.nav = account.stockValue + account.cash - account.debt;
+  if (noPrice.length) account.warnings.push(`Chưa có giá của ${noPrice.map((h) => h.symbol).join(', ')}: mã này được tính bằng 0 trong tỷ trọng.`);
   const comp = composition(account);
   const snaps = await rest(`/portfolio_snapshots?account_no=eq.${acc}&select=day,nav,cash,debt,positions&order=day.asc&limit=400`,
     side === 'broker' ? { role: 'app_worker' } : { sub });
@@ -86,7 +86,6 @@ export async function analyzeAccount({ accountNo, sub, side, plan = true }) {
 
   let rebalance = null;
   if (model) {
-    const prices = await latestPrices(symbols, hist, account.holdings);
     rebalance = planRebalance(account, model, prices, { maxOrderVnd: dnse.maxOrderVnd() });
     if (!plan && rebalance.ok) rebalance = { ...rebalance, trades: [], cash: undefined, fees: undefined, turnoverPct: undefined };   // khách chỉ xem độ lệch
   }

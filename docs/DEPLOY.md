@@ -26,6 +26,16 @@ Dữ liệu Postgres nằm ở `D:\Claude projects\Project\latthe-pgdata`, **ngo
 Muốn nạp lại từ một bản sao lưu vào DB trống: xóa thư mục `latthe-pgdata` (khi container đã dừng), rồi chạy
 `infra\setup-stack.ps1 -Restore "D:\Claude projects\Project\latthe-db-backup\<tệp>.dump"` (chỉ nạp dữ liệu schema `trade`).
 
+## Cập nhật thông tin cơ bản các mã (mỗi quý)
+
+Chỉ số tài chính đổi theo quý. Khi cần làm mới:
+1. Nhờ Claude chạy lại bộ công cụ DNSE (`company_get_profile`, `financial_get_index`) cho danh mục đang theo dõi và cập nhật
+   `data/symbol-facts.json`.
+2. `node --env-file=.env.local db/import-facts.mjs --check` để kiểm tra, rồi bỏ `--check` để nạp vào DB.
+3. `node --env-file=.env.local worker/advisory-worker.mjs --knowledge-now` để AI viết lại bản tóm tắt (khoảng 30 giây mỗi mã).
+
+Giá và chỉ báo kỹ thuật thì worker tự cập nhật mỗi phiên, không cần làm gì.
+
 ## Danh sách biến môi trường trên Vercel
 
 | Biến | Lấy ở đâu | Bắt buộc cho |

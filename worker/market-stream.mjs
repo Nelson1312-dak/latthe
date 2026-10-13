@@ -23,7 +23,8 @@ export const channels = (symbols = UNIVERSE.map((x) => x.s), indices = INDICES) 
 ];
 
 const num = (v) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : null);
-const lvl = (a) => (Array.isArray(a) ? a.slice(0, 10).map((x) => ({ p: num(x.price), q: num(x.quantity) })).filter((x) => x.p != null) : []);
+// DNSE gửi khối lượng mỗi bước giá ở trường `qtty` (không phải `quantity`); giữ cả hai tên cho chắc.
+const lvl = (a) => (Array.isArray(a) ? a.slice(0, 10).map((x) => ({ p: num(x.price), q: num(x.qtty ?? x.quantity) })).filter((x) => x.p != null) : []);
 const tsOf = (t) => (t && Number.isFinite(+t.Seconds) ? new Date(t.Seconds * 1000 + Math.floor((t.Nanos || 0) / 1e6)).toISOString() : new Date().toISOString());
 
 /** Phân loại message dữ liệu của kênh giá theo trường đặc trưng của từng loại. */
@@ -59,7 +60,9 @@ export class MarketState {
     if (kind === 'tick') {
       Object.assign(q, { last: num(m.matchPrice), lastQty: num(m.matchQtty), vol: num(m.totalVolumeTraded), open: num(m.openPrice), high: num(m.highestPrice), low: num(m.lowestPrice), tickAt: tsOf(m.time) });
     } else if (kind === 'depth') {
-      Object.assign(q, { bid: lvl(m.bid), offer: lvl(m.offer), totalBid: num(m.totalBidQtty), totalOffer: num(m.totalOfferQtty), depthAt: tsOf(m.time) });
+      const bid = lvl(m.bid), offer = lvl(m.offer);
+      const tong = (a) => (a.length && a.every((x) => x.q != null) ? a.reduce((x, y) => x + y.q, 0) : null);
+      Object.assign(q, { bid, offer, totalBid: num(m.totalBidQtty) ?? tong(bid), totalOffer: num(m.totalOfferQtty) ?? tong(offer), depthAt: tsOf(m.time) });
     } else if (kind === 'secdef') {
       Object.assign(q, { ref: num(m.basicPrice), ceil: num(m.ceilingPrice), floor: num(m.floorPrice) });
     }

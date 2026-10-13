@@ -112,6 +112,23 @@ Worker đọc danh sách khách có liên kết, mở một kết nối WebSocke
 - **Kết quả khuyến nghị**: `api/_adviceperf.js` chấm theo giá thật từ ngày gửi (đạt mục tiêu, chạm cắt lỗ, chưa vào vùng, hết hiệu lực; một phiên chạm cả hai tính là cắt lỗ), kèm thành tích tổng (tỷ lệ thắng, lãi/lỗ trung bình). Khách cũng thấy kết quả trên từng khuyến nghị.
 - **Nhận xét gửi khách** (`client_notes`): AI (`client_note`) viết lại phân tích danh mục bằng lời dễ hiểu, môi giới sửa rồi gửi; lưu `ai_edited` (có sửa bản nháp không) và `seen_at` (khách đã xem). RLS: chỉ gửi cho khách đã liên kết đúng tiểu khoản; khách chỉ được đánh dấu đã xem.
 - **Cách giữ AI đúng**: các câu chứa số liệu (so sánh VN-Index, dẫn chứng kỹ thuật, kế hoạch giá) do code viết sẵn, AI chỉ ghép và diễn đạt; câu công bố rủi ro bắt buộc (ví dụ mua ngược xu hướng) AI bỏ sót thì worker tự thêm và đánh dấu.
+### 5.5 Kho dữ liệu theo mã (tư vấn trả lời ngay)
+Mục tiêu: khi khách hỏi "FPT thế nào?", môi giới có câu trả lời trong vài chục mili giây thay vì chờ AI viết 20-40 giây.
+
+- **`trade.symbol_facts`**: mỗi mã một dòng.
+  - `tech`: chỉ báo kỹ thuật, worker tính lại mỗi phiên từ giá DNSE (32 mã mất khoảng 13 giây).
+  - `fundamentals`: hồ sơ doanh nghiệp + chỉ số tài chính 12 tháng. Lấy qua **bộ công cụ DNSE của Claude**, xuất ra
+    `data/symbol-facts.json` rồi nạp bằng `db/import-facts.mjs`. Worker trên máy KHÔNG gọi được bộ công cụ đó (nó chạy trên
+    máy chủ Claude, gắn với tài khoản người dùng), nên phần này cập nhật theo quý, không tự động hằng ngày.
+- **`trade.symbol_briefs`**: bản tóm tắt do AI local viết sẵn, chỉ viết lại khi dấu vân tay dữ liệu đổi hoặc quá 7 ngày.
+- **Đọc**: `GET /api/symbol?symbol=` cho mọi tài khoản đã đăng nhập (dữ liệu thị trường, không gắn với khách nào);
+  `/api/broker/symbol` trả kèm tóm tắt khi môi giới soạn khuyến nghị; luận điểm khuyến nghị của AI cũng được nạp thêm phần cơ bản.
+- **P/E, P/B, tỷ suất cổ tức tính theo giá hiện tại**, không lưu sẵn. Nếu số cổ tức và tỷ suất cổ tức DNSE cung cấp không khớp
+  nhau theo giá hiện tại thì hệ thống không công bố tỷ suất và gắn cảnh báo.
+- **Chống AI bịa**: AI chỉ nhận các câu đã viết sẵn (không nhận số thô, không nhận đoạn giới thiệu tự do) và chỉ được ghép lại.
+  Sau khi viết, hệ thống soát hai lớp: số phần trăm không khớp dữ liệu, và từ có nghĩa không xuất hiện trong dữ kiện
+  (`novelWords`). Ví dụ thật: SSI không có phần giới thiệu, AI tự thêm câu mô tả hoạt động kinh doanh; sau khi siết lại thì hết.
+
 - Phân quyền: môi giới đọc ảnh chụp bằng `app_worker` sau khi đã `assertOwner` + kiểm tra care-by trong code (khách care-by chưa chắc có tài khoản Lật Bài); khách chỉ đọc dữ liệu tiểu khoản đã liên kết qua RLS.
 
 ## 6. Dữ liệu (schema `trade`)

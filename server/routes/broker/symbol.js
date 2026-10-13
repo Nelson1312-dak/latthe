@@ -9,6 +9,7 @@ import * as dnse from '../../../api/_dnse.js';
 import { BY_SYMBOL, fetchBars, cached } from '../../../api/_market.js';
 import { technicals, stockRisk, checkAdvice } from '../../../api/_technical.js';
 import { RISK_LEVELS, RISK_LABEL } from '../../../api/_portfolio.js';
+import { symbolSummary } from '../symbol.js';
 
 const RISK_TEXT = { low: 'biến động thấp', medium: 'biến động trung bình', high: 'biến động cao' };
 const num = (v) => (v == null || v === '' || !Number.isFinite(+String(v).replace(',', '.')) ? null : +String(v).replace(',', '.'));
@@ -47,5 +48,8 @@ export default route('GET, OPTIONS', async ({ req, res, uid }) => {
     else if (side === 'B' && d.risk === 'medium' && lv === 'conservative') warn = `Cổ phiếu ${RISK_TEXT.medium}, khách có khẩu vị Thận trọng.`;
     return { account: l.account_no, name: l.client_name, riskLevel: lv, riskLabel: lv ? RISK_LABEL[lv] : null, warn };
   });
-  return { symbol, ...d, riskText: RISK_TEXT[d.risk] || null, check, recipients };
+  // Tóm tắt và thông tin cơ bản lấy từ kho dữ liệu nên có ngay, không phải chờ AI
+  const kb = await symbolSummary(symbol).catch(() => null);
+  return { symbol, ...d, riskText: RISK_TEXT[d.risk] || null, check, recipients,
+    facts: kb?.facts || null, brief: kb?.brief || null, nguon: kb?.nguon || null };
 }, { auth: true });

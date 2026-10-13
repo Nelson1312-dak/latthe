@@ -802,3 +802,15 @@ td.warn{color:var(--ref);font-weight:600}
 .desk-advlink small{color:var(--faint);line-height:1.45}
 @media (max-width:1180px){.av-grid.advice{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:720px){.av-adv .av-form{grid-template-columns:1fr}}
+
+/* ---------- Tóm tắt mã ---------- */
+.kb{padding:12px 14px;display:flex;flex-direction:column;gap:9px;max-width:960px}
+.kb-head b{font-size:14px}
+.kb-head small{display:block;color:var(--faint);margin-top:2px}
+.kb-text{line-height:1.65}
+.kb-src{color:var(--faint);line-height:1.5}
+.kb-kv{margin:0;border:1px solid var(--line-soft);border-radius:var(--radius-s);grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.kb-kv div{padding:7px 12px}
+.kb-fold{margin:8px 18px 0;border:1px solid var(--line-soft);border-radius:var(--radius-s);padding:8px 12px}
+.kb-fold summary{cursor:pointer;color:var(--faint);font-size:12px;font-weight:600}
+.kb-fold .kb-text{margin-top:8px;font-size:12px}
