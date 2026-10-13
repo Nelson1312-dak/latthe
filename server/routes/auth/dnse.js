@@ -9,10 +9,9 @@ import { route } from '../../../api/_http.js';
 import { rest } from '../../../api/_db.js';
 import { startSession } from '../../../api/_auth.js';
 import { checkRateLimit, getClientIp } from '../../../api/_rateLimit.js';
-import { verifyDnseAccount, allowedCustody, dnseLoginEnabled, usernameFromCustody } from '../../../api/_dnselogin.js';
+import { verifyDnseAccount, allowedCustody, dnseLoginEnabled, usernameFromCustody, CUSTODY_LIKE } from '../../../api/_dnselogin.js';
 
 const COLS = 'id,username,display_name,role,avatar_url,email';
-const CUSTODY_LIKE = /^\d{3}[A-Za-z]\d{6}$/;   // dạng số lưu ký, ví dụ 064C123456
 
 async function findOrCreate(p) {
   const found = await rest(`/users?dnse_custody=eq.${encodeURIComponent(p.custodyCode)}&select=${COLS}&limit=1`, { role: 'app_auth' });
@@ -55,7 +54,19 @@ export default route('POST, OPTIONS', async ({ req, res, body }) => {
   // Nhập thẳng số lưu ký mà không nằm trong danh sách: dừng ngay, mật khẩu không được gửi đi đâu cả
   if (CUSTODY_LIKE.test(username) && !allowed.includes(username.toUpperCase())) return res.status(403).json(notGranted);
 
-  const profile = await verifyDnseAccount(username, password);
+  let profile;
+  try {
+    profile = await verifyDnseAccount(username, password);
+  } catch (e) {
+    // detail chỉ nói BƯỚC nào hỏng và vì sao (không chứa thông tin đăng nhập), giúp dò lỗi trên máy chủ thật
+    if (e?.detail) {
+      console.error('[auth/dnse]', e.detail);
+      return res.status(e.status || 502).json({ error: e.message, code: e.code, detail: e.detail });
+    }
+    throw e;
+  }
+  // Vào được nhưng thiếu hồ sơ: vẫn ghi lại để biết endpoint nào của DNSE đang trục trặc
+  if (profile.thieuHoSo) console.error('[auth/dnse] vao duoc bang so luu ky, khong doc duoc ho so:', profile.thieuHoSo);
   if (!allowed.includes(profile.custodyCode)) return res.status(403).json(notGranted);
 
   const user = await findOrCreate(profile);

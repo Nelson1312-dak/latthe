@@ -18,7 +18,7 @@
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
     let j = null; try { j = await r.json(); } catch { /* không phải JSON */ }
-    if (!r.ok) throw Object.assign(new Error(j?.error || `Lỗi ${r.status}`), { status: r.status, code: j?.code });
+    if (!r.ok) throw Object.assign(new Error(j?.error || `Lỗi ${r.status}`), { status: r.status, code: j?.code, detail: j?.detail });
     return j;
   }
   const errBox = (el, msg, kind = 'err') => { el.innerHTML = msg ? `<div class="msg ${kind}">${esc(msg)}</div>` : ''; };
@@ -105,7 +105,8 @@
       say(`Chào ${S.user.display_name || S.user.username}.`);
     } catch (err) {
       $('dnse-pass').value = '';
-      errBox($('dnse-msg'), err.message);
+      // kèm bước hỏng (vd "me:HTTP 502") để báo lại được khi cần dò lỗi; trong đó không có thông tin đăng nhập
+      errBox($('dnse-msg'), err.detail ? `${err.message} (${err.detail})` : err.message);
     } finally {
       S.busy = false; $('dnse-submit').disabled = false; $('dnse-submit').textContent = 'Đăng nhập bằng DNSE';
     }

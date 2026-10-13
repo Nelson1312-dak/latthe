@@ -64,8 +64,11 @@ async function call(method, path, { query, body, tradingToken } = {}) {
   let res;
   try {
     res = await fetch(base() + path + qs, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: ctl.signal });
-  } catch {
-    throw new DnseError('Không kết nối được DNSE, thử lại sau.', 503, 'unreachable');
+  } catch (e) {
+    // Câu chữ phải khác bên đăng nhập (_dnselogin.js) để nhìn màn hình là biết hỏng ở đâu
+    const err = new DnseError('Không gọi được API giao dịch DNSE, thử lại sau.', 503, 'unreachable');
+    err.detail = `openapi:${e?.name === 'AbortError' ? 'quá 12s' : e?.cause?.code || e?.name || 'lỗi mạng'}`;
+    throw err;
   } finally { clearTimeout(timer); }
   if (res.status === 204) return null;
   const text = await res.text();
