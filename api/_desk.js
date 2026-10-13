@@ -31,7 +31,10 @@ let cache = { at: 0, data: null };
 export async function listClients({ fresh = false } = {}) {
   if (!fresh && cache.data && Date.now() - cache.at < 60_000) return cache.data;
   const r = await dnse.careBy();
-  const raw = Array.isArray(r) ? r : r?.accounts || r?.data || [];
+  // DNSE bọc danh sách trong khóa `careBy` (kèm `total`), không phải `accounts`/`data`.
+  // Đọc sai khóa thì mảng rỗng và bàn môi giới hiện "chưa có khách" trong khi thực tế có —
+  // lỗi im lặng, không báo gì, nên giữ cả các tên cũ để phòng DNSE đổi.
+  const raw = Array.isArray(r) ? r : r?.careBy || r?.accounts || r?.data || [];
   const data = raw.map(normalizeClient).filter((c) => c.accountNo);
   cache = { at: Date.now(), data };
   return data;
