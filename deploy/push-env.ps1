@@ -58,16 +58,24 @@ $vars.Keys | ForEach-Object { Write-Host ("  {0,-24} {1}" -f $_, $(if ($_ -eq 'S
 if ($vars.Contains('DNSE_REAL_TRADING')) { Write-Host 'WARNING: real order placement will be ENABLED on the public site.' -ForegroundColor Yellow }
 if ($DryRun) { Write-Host 'Dry run: nothing was changed.'; exit 0 }
 
-$who = (& vercel whoami 2>&1 | Select-Object -Last 1)
-if ($LASTEXITCODE -ne 0 -or "$who" -match 'device|login|Waiting') { throw 'Not logged in to Vercel. Run: vercel login   then run this script again.' }
+# Vercel CLI writes hints to stderr; under PowerShell 5.1 that would abort the script, so run it through cmd.exe.
+$who = (cmd.exe /c "vercel whoami 2>nul" | Select-Object -Last 1)
+if ($LASTEXITCODE -ne 0 -or -not "$who" -or "$who" -match 'device|login|Waiting') { throw 'Not logged in to Vercel. Run: vercel login   then run this script again.' }
 Write-Host "Vercel account: $who"
 
-foreach ($k in $vars.Keys) {
-    # Replace an existing value (ignore "not found")
-    & vercel env rm $k $Environment --yes 2>&1 | Out-Null
-    $vars[$k] | & vercel env add $k $Environment 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Could not set $k" }
-    Write-Host "  set $k"
+# The value goes in through a temp file with NO trailing newline (a piped string would get one, which would
+# silently change secrets such as DB_JWT_SECRET). The file is readable only by you and deleted right after.
+$tmp = Join-Path $env:TEMP ("lb-env-" + [guid]::NewGuid().ToString('N'))
+try {
+    foreach ($k in $vars.Keys) {
+        cmd.exe /c "vercel env rm $k $Environment --yes >nul 2>&1"     # replace an existing value (ignore "not found")
+        [IO.File]::WriteAllText($tmp, [string]$vars[$k], (New-Object Text.UTF8Encoding($false)))
+        cmd.exe /c "vercel env add $k $Environment < `"$tmp`" >nul 2>&1"
+        if ($LASTEXITCODE -ne 0) { throw "Could not set $k" }
+        Write-Host "  set $k"
+    }
+} finally {
+    if (Test-Path $tmp) { Remove-Item $tmp -Force }
 }
 Write-Host ''
 Write-Host 'Done. Environment variables only apply to NEW deployments. Redeploy:  vercel --prod   (or push a commit)'
