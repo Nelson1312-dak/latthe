@@ -31,6 +31,31 @@ Nhận giá realtime và độ sâu sổ lệnh thật từ DNSE, ghi vào `trad
 npm run worker:market
 ```
 
+Worker còn **ghi lại lịch sử** vào `trade.tape` (băng lệnh khớp) và `trade.depth_log` (các bước giá) cho rổ
+150 mã trong `data/tape-universe.json`. Dữ liệu này không mua lại được — API lịch sử của DNSE chỉ có nến OHLCV —
+nên phiên nào không ghi là mất hẳn. Đặt `TAPE_OFF=1` nếu chỉ muốn chạy phần giá.
+
+**Giới hạn DNSE (đo thật 13/10/2026, hạng `normalUser`): 200 cặp (kênh × mã) mỗi kết nối**, không phải 200 mã.
+Rổ 150 mã × 2 kênh + 4 chỉ số = 304 cặp nên worker tự chia thành **2 kết nối** (`shardChannels`). Giữ được ít
+nhất 8 kết nối đồng thời, nên còn chỗ mở rộng rổ. Kênh `security_definition` đã bỏ: cả phiên nó gửi 0 bản tin
+mà chiếm một phần ba hạn mức.
+
+Kiểm tra trong `trade.worker_status`: `ketNoi` phải là `["live","live"]` và **`loiDangKy` phải rỗng**. Có giá trị
+trong `loiDangKy` nghĩa là đang thiếu mã dù kết nối vẫn sống — phải xem ngay.
+
+### Đo mức gộp tin
+
+DNSE không gửi từng lệnh khớp mà gửi ảnh chụp gộp (khoảng 1 bản tin / 8,5 giây / mã). Mỗi dòng băng lệnh giữ cả
+`match_qty` (DNSE báo) lẫn `vol_delta` (khối lượng thật). Xem mức gộp:
+
+```
+node --env-file=.env.local worker/do-gop-tin.mjs              # phiên hôm nay
+node --env-file=.env.local worker/do-gop-tin.mjs 2026-10-14 --ma FPT,HPG
+```
+
+Mức gộp quyết định làm được gì: gần 1 thì tách được dòng tiền theo quy mô lệnh; lớn hơn 3 thì không, và mọi
+thống kê phải dùng `vol_delta`.
+
 ## Chạy tự động trên Windows (khuyên dùng)
 
 ```

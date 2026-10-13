@@ -19,7 +19,7 @@ powershell -ExecutionPolicy Bypass -File infra\setup-stack.ps1
 Chạy lại nhiều lần đều an toàn. Script:
 1. tạo `..\latthe-secrets\stack.env` một lần (mật khẩu DB ngẫu nhiên, chỉ tài khoản Windows của bạn đọc được; JWT lấy từ `DB_JWT_SECRET` trong `.env.local`);
 2. dựng Postgres (`postgres_latthe`) và PostgREST (`postgrest_trade`), chỉ lắng nghe `127.0.0.1`, log bị giới hạn;
-3. nếu DB trống thì áp dụng `db/001`, `004`–`011` (`002`/`003` chỉ dọn bảng RAG cũ nên bỏ qua);
+3. nếu DB trống thì áp dụng `db/001`, `004`–`015` (`002`/`003` chỉ dọn bảng RAG cũ nên bỏ qua);
 4. kiểm tra API bằng `deploy/check-local-db.mjs` (không token 401, token giả 401, token hợp lệ 200, bảng cũ không lộ).
 
 Dữ liệu Postgres nằm ở `D:\Claude projects\Project\latthe-pgdata`, **ngoài Docker**, nên xóa hoặc dựng lại Docker không mất dữ liệu.
@@ -69,6 +69,20 @@ Giá và chỉ báo kỹ thuật thì worker tự cập nhật mỗi phiên, kh�
 ## Vận hành hằng ngày
 
 - **Worker giá**: `worker/README.md`. Kiểm tra: thanh trạng thái dưới cùng của trang giao dịch ghi "DNSE realtime" trong phiên.
-- **Sao lưu**: tự chạy 03:00. Chạy tay: `powershell -ExecutionPolicy Bypass -File db\backup.ps1`. Mỗi bản được kiểm tra đọc lại được trước khi giữ; bản lỗi bị xóa. Hệ thống **không** tự xóa bản cũ (khoảng 1,5 MB mỗi ngày), bạn dọn tay khi cần.
+- **Sao lưu**: tự chạy 03:00. Chạy tay: `powershell -ExecutionPolicy Bypass -File db\backup.ps1`. Mỗi bản được kiểm tra đọc lại được trước khi giữ; bản lỗi bị xóa. Hệ thống **không** tự xóa bản cũ, bạn dọn tay khi cần.
+
+  Có **hai loại bản lưu**, cố ý tách rời:
+  | Tệp | Nội dung | Nhịp |
+  |---|---|---|
+  | `latthe-<lúc>.dump` | Toàn bộ DB **trừ dữ liệu băng lệnh** | mỗi đêm, nhỏ |
+  | `tape/tape-<YYYYMMDD>.dump` | Một phiên của `trade.tape` + `trade.depth_log` | **ghi một lần rồi thôi** |
+
+  Lý do: hai bảng băng lệnh lớn dần không giới hạn. Nếu để chúng nằm trong bản dump toàn bộ mỗi đêm thì bản thứ N
+  chứa lại cả N ngày lịch sử. Đo ở rổ 150 mã: khoảng 16 MB mỗi phiên sau khi nén → **bản dump đêm sẽ đạt ~500 GB
+  trong năm đầu**, trong khi lưu từng ngày một lần chỉ tốn **~4 GB**. Ngày nào chưa có tệp sẽ được bù ở lần chạy sau,
+  nên một ngày máy tắt không bị mất.
+
+- **Dọn dữ liệu băng lệnh cũ**: dữ liệu thô chỉ cần giữ một thời gian (bản tổng hợp theo ngày mới giữ lâu dài).
+  `select trade.drop_old_tape_partitions(90);` — xoá nguyên phân vùng nên tức thì. Hàm từ chối nếu đòi giữ dưới 30 ngày.
 - **Khôi phục thử**: `docker exec -i postgres_latthe pg_restore -U postgres -d <db-tạm> --no-owner < <tập .dump>`. Luôn khôi phục vào DB tạm để kiểm tra trước, không ghi đè DB thật.
 - **Đổi key DNSE**: sửa `.env.local`, khởi động lại tác vụ `Latbai worker market`, rồi chạy lại `push-env.ps1 -IncludeDnse`.

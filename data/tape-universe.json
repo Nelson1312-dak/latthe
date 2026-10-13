@@ -1,0 +1,906 @@
+{
+  "ghi_chu": "Ro ma ghi bang lenh (trade.tape / trade.depth_log). Chon theo gia tri giao dich binh quan 10 phien, lay tu chart-api DNSE ngay 13/10/2026. Bao tron ro UNIVERSE cua giao dien. 150 ma = 97,9% GTGD toan HOSE+HNX, vua trong gioi han 200 ma moi ket noi WebSocket.",
+  "cap_nhat": "2026-10-13",
+  "ma": [
+    {
+      "s": "VIC",
+      "ex": "HOSE",
+      "ten": "Tập đoàn Vingroup - Công ty Cổ phần",
+      "gt_ty": 702.8
+    },
+    {
+      "s": "TCB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Kỹ thương Việt Nam",
+      "gt_ty": 552.1
+    },
+    {
+      "s": "SHB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng TMCP Sài Gòn - Hà Nội",
+      "gt_ty": 524.1
+    },
+    {
+      "s": "MSN",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Tập đoàn Ma San",
+      "gt_ty": 486
+    },
+    {
+      "s": "PNJ",
+      "ex": "HOSE",
+      "ten": "CTCP Vàng bạc Đá quý Phú Nhuận",
+      "gt_ty": 454.9
+    },
+    {
+      "s": "VHM",
+      "ex": "HOSE",
+      "ten": "CTCP Vinhomes",
+      "gt_ty": 426.5
+    },
+    {
+      "s": "HPG",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Tập đoàn Hòa phát",
+      "gt_ty": 393.8
+    },
+    {
+      "s": "NVL",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Tập đoàn Đầu tư Địa ốc No Va",
+      "gt_ty": 393.8
+    },
+    {
+      "s": "HDB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Phát triển thành phố Hồ Chí Minh",
+      "gt_ty": 392
+    },
+    {
+      "s": "VPB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng TMCP Việt Nam Thịnh Vượng",
+      "gt_ty": 381.6
+    },
+    {
+      "s": "SSI",
+      "ex": "HOSE",
+      "ten": "CTCP Chứng khoán SSI",
+      "gt_ty": 372
+    },
+    {
+      "s": "FPT",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần FPT",
+      "gt_ty": 332.2
+    },
+    {
+      "s": "VIX",
+      "ex": "HOSE",
+      "ten": "CTCP Chứng khoán VIX",
+      "gt_ty": 307.1
+    },
+    {
+      "s": "BSR",
+      "ex": "HOSE",
+      "ten": "Công ty TNHH MTV Lọc- Hóa dầu Bình Sơn",
+      "gt_ty": 306.5
+    },
+    {
+      "s": "MWG",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Đầu tư Thế giới Di động",
+      "gt_ty": 259.4
+    },
+    {
+      "s": "STB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại Cổ phần Sài Gòn Thương Tín",
+      "gt_ty": 240
+    },
+    {
+      "s": "MBB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại Cổ phần Quân đội",
+      "gt_ty": 200.7
+    },
+    {
+      "s": "PVT",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Cổ phần Vận tải Dầu khí",
+      "gt_ty": 200.5
+    },
+    {
+      "s": "CTG",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại Cổ phần Công Thương Việt Nam",
+      "gt_ty": 166.1
+    },
+    {
+      "s": "PLX",
+      "ex": "HOSE",
+      "ten": "Tập đoàn Xăng dầu Việt Nam",
+      "gt_ty": 165.8
+    },
+    {
+      "s": "ACB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại CP Á Châu",
+      "gt_ty": 153.5
+    },
+    {
+      "s": "VCB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại Cổ phần Ngoại Thương Việt Nam",
+      "gt_ty": 152.6
+    },
+    {
+      "s": "MSB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Hàng Hải Việt Nam",
+      "gt_ty": 146.3
+    },
+    {
+      "s": "GEX",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty cổ phần Thiết bị điện Việt Nam",
+      "gt_ty": 145.1
+    },
+    {
+      "s": "VCI",
+      "ex": "HOSE",
+      "ten": "CTCP Chứng khoán Vietcap",
+      "gt_ty": 138
+    },
+    {
+      "s": "VNM",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Sữa Việt Nam",
+      "gt_ty": 134
+    },
+    {
+      "s": "VND",
+      "ex": "HOSE",
+      "ten": "CTCP Chứng khoán VNDIRECT",
+      "gt_ty": 125.3
+    },
+    {
+      "s": "PVS",
+      "ex": "HNX",
+      "ten": "Tổng CTCP Dịch vụ Kỹ thuật Dầu khí Việt Nam",
+      "gt_ty": 122.4
+    },
+    {
+      "s": "FRT",
+      "ex": "HOSE",
+      "ten": "CTCP Bán lẻ Kỹ thuật số FPT",
+      "gt_ty": 114.7
+    },
+    {
+      "s": "SHS",
+      "ex": "HNX",
+      "ten": "CTCP Chứng khoán Sài Gòn Hà Nội",
+      "gt_ty": 112.8
+    },
+    {
+      "s": "VJC",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Hàng không VIETJET",
+      "gt_ty": 110.6
+    },
+    {
+      "s": "BID",
+      "ex": "HOSE",
+      "ten": "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam",
+      "gt_ty": 100.8
+    },
+    {
+      "s": "VSC",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Container Việt Nam",
+      "gt_ty": 96.7
+    },
+    {
+      "s": "GVR",
+      "ex": "HOSE",
+      "ten": "Công ty mẹ - Tập đoàn Công nghiệp Cao suViệt Nam",
+      "gt_ty": 96
+    },
+    {
+      "s": "GEE",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Điện lực Gelex",
+      "gt_ty": 95.9
+    },
+    {
+      "s": "TPB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Tiên Phong",
+      "gt_ty": 93.8
+    },
+    {
+      "s": "VPI",
+      "ex": "HOSE",
+      "ten": "CTCP Phát triển Bất động sản Văn Phú",
+      "gt_ty": 86.7
+    },
+    {
+      "s": "DGW",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Thế Giới Số",
+      "gt_ty": 85.3
+    },
+    {
+      "s": "LPB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng TMCP Bưu điện Liên Việt",
+      "gt_ty": 84.4
+    },
+    {
+      "s": "DCM",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần - Tổng Công ty Phân bón Dầu khí Cà Mau",
+      "gt_ty": 84.1
+    },
+    {
+      "s": "CII",
+      "ex": "HOSE",
+      "ten": "CTCP Đầu tư Hạ tầng Kỹ thuật TP.HCM",
+      "gt_ty": 82.1
+    },
+    {
+      "s": "DXG",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Tập đoàn Đất Xanh",
+      "gt_ty": 81.8
+    },
+    {
+      "s": "MCH",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Hàng tiêu dùng MASAN",
+      "gt_ty": 81.4
+    },
+    {
+      "s": "GAS",
+      "ex": "HOSE",
+      "ten": "Tổng công ty Khí Việt Nam - Công ty Cổ phần",
+      "gt_ty": 80.6
+    },
+    {
+      "s": "VIB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Quốc tế Việt Nam",
+      "gt_ty": 80.5
+    },
+    {
+      "s": "GMD",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Gemadept",
+      "gt_ty": 80.3
+    },
+    {
+      "s": "POW",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Điện lực Dầu khí Việt Nam – Công ty cổ phần",
+      "gt_ty": 79
+    },
+    {
+      "s": "VRE",
+      "ex": "HOSE",
+      "ten": "CTCP Vincom Retail",
+      "gt_ty": 72.6
+    },
+    {
+      "s": "BVH",
+      "ex": "HOSE",
+      "ten": "Tập đoàn Bảo Việt",
+      "gt_ty": 71.1
+    },
+    {
+      "s": "HAH",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Vận tải và Xếp dỡ Hải An",
+      "gt_ty": 64.2
+    },
+    {
+      "s": "TCX",
+      "ex": "HOSE",
+      "ten": "TCBS",
+      "gt_ty": 63.6
+    },
+    {
+      "s": "PVD",
+      "ex": "HOSE",
+      "ten": "Tổng CTCP Khoan và Dịch vụ Khoan dầu khí",
+      "gt_ty": 63.5
+    },
+    {
+      "s": "CEO",
+      "ex": "HNX",
+      "ten": "CTCP Tập đoàn C.E.O",
+      "gt_ty": 62.8
+    },
+    {
+      "s": "HCM",
+      "ex": "HOSE",
+      "ten": "CTCP Chứng khoán Thành phố Hồ Chí Minh",
+      "gt_ty": 56.1
+    },
+    {
+      "s": "DPM",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Phân bón và Hóa chất Dầu khí - CTCP",
+      "gt_ty": 55.3
+    },
+    {
+      "s": "BAF",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Nông nghiệp BAF Việt Nam",
+      "gt_ty": 54.8
+    },
+    {
+      "s": "VPL",
+      "ex": "HOSE",
+      "ten": "VPL",
+      "gt_ty": 51
+    },
+    {
+      "s": "IDC",
+      "ex": "HNX",
+      "ten": "Tổng công ty Đầu tư phát triển đô thị và Khu Công nghiệp Việt Nam – TNHH Một thành viên",
+      "gt_ty": 50.7
+    },
+    {
+      "s": "PDR",
+      "ex": "HOSE",
+      "ten": "CTCP phát triển bất động sản Phát Đạt",
+      "gt_ty": 49.2
+    },
+    {
+      "s": "KDH",
+      "ex": "HOSE",
+      "ten": "CTCP Đầu tư và Kinh doanh nhà Khang Điền",
+      "gt_ty": 47.2
+    },
+    {
+      "s": "HAG",
+      "ex": "HOSE",
+      "ten": "Công Ty Cổ Phần Hoàng Anh Gia Lai",
+      "gt_ty": 44.9
+    },
+    {
+      "s": "TCH",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Đầu tư Dịch vụ Tài chính Hoàng Huy",
+      "gt_ty": 44.2
+    },
+    {
+      "s": "EIB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại Cổ phần Xuất nhập khẩu Việt Nam",
+      "gt_ty": 43.9
+    },
+    {
+      "s": "NVB",
+      "ex": "HNX",
+      "ten": "Ngân hàng TMCP Nam Việt",
+      "gt_ty": 43.8
+    },
+    {
+      "s": "VCK",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Thuốc sát trùng Việt Nam",
+      "gt_ty": 43.8
+    },
+    {
+      "s": "VTP",
+      "ex": "HOSE",
+      "ten": "Tổng công ty Cổ phần Bưu Chính Viettel",
+      "gt_ty": 40.2
+    },
+    {
+      "s": "MBS",
+      "ex": "HNX",
+      "ten": "Công ty cổ phần Chứng khoán MB",
+      "gt_ty": 39.3
+    },
+    {
+      "s": "SSB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Đông Nam Á",
+      "gt_ty": 39.2
+    },
+    {
+      "s": "DIG",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Cổ phần Đầu tư Phát triển Xây dựng",
+      "gt_ty": 39.1
+    },
+    {
+      "s": "GEL",
+      "ex": "HOSE",
+      "ten": "GEL",
+      "gt_ty": 36.7
+    },
+    {
+      "s": "PET",
+      "ex": "HOSE",
+      "ten": "Tổng CTCP Dịch vụ Tổng hợp Dầu khí",
+      "gt_ty": 36
+    },
+    {
+      "s": "VGC",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Viglacera – CTCP",
+      "gt_ty": 35.7
+    },
+    {
+      "s": "PVP",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Vận tải Dầu khí Thái Bình Dương",
+      "gt_ty": 35.4
+    },
+    {
+      "s": "KBC",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Phát triển Đô Thị Kinh Bắc – Công ty Cổ phần",
+      "gt_ty": 34.3
+    },
+    {
+      "s": "DCL",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Dược phẩm Cửu Long",
+      "gt_ty": 33
+    },
+    {
+      "s": "NLG",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Đầu tư Nam Long",
+      "gt_ty": 31.6
+    },
+    {
+      "s": "NAB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Nam Á",
+      "gt_ty": 29.3
+    },
+    {
+      "s": "SBT",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Thành Thành Công- Biên Hòa",
+      "gt_ty": 26.5
+    },
+    {
+      "s": "HUT",
+      "ex": "HNX",
+      "ten": "CTCP Tasco",
+      "gt_ty": 26.3
+    },
+    {
+      "s": "ANV",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Nam Việt",
+      "gt_ty": 26.1
+    },
+    {
+      "s": "DBC",
+      "ex": "HOSE",
+      "ten": "CTCP Tập đoàn Dabaco Việt Nam",
+      "gt_ty": 25.2
+    },
+    {
+      "s": "REE",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Cơ điện lạnh",
+      "gt_ty": 25
+    },
+    {
+      "s": "ORS",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Chứng khoán Tiên Phong",
+      "gt_ty": 24.8
+    },
+    {
+      "s": "VCG",
+      "ex": "HOSE",
+      "ten": "Tổng CTCP Xuất nhập Khẩu và Xây dựng Việt Nam",
+      "gt_ty": 24
+    },
+    {
+      "s": "HSG",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Tập đoàn Hoa Sen",
+      "gt_ty": 23.5
+    },
+    {
+      "s": "DMX",
+      "ex": "HOSE",
+      "ten": "DMX",
+      "gt_ty": 23.3
+    },
+    {
+      "s": "DHC",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Đông Hải Bến tre",
+      "gt_ty": 23.2
+    },
+    {
+      "s": "HHV",
+      "ex": "HOSE",
+      "ten": "CTCP Đầu tư Hạ tầng Giao thông Đèo Cả",
+      "gt_ty": 22.7
+    },
+    {
+      "s": "DPR",
+      "ex": "HOSE",
+      "ten": "CTCP Cao su Đồng Phú",
+      "gt_ty": 22.2
+    },
+    {
+      "s": "VPX",
+      "ex": "HOSE",
+      "ten": "VPBS",
+      "gt_ty": 21.7
+    },
+    {
+      "s": "CTD",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Xây dựng Cotec",
+      "gt_ty": 21.6
+    },
+    {
+      "s": "VTZ",
+      "ex": "HNX",
+      "ten": "Công ty cổ phần Sản xuất và Thương mại Nhựa Việt Thành",
+      "gt_ty": 21.4
+    },
+    {
+      "s": "PHR",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Cao su Phước Hòa",
+      "gt_ty": 20.5
+    },
+    {
+      "s": "VHC",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ Phần Vĩnh Hoàn",
+      "gt_ty": 20.4
+    },
+    {
+      "s": "TNG",
+      "ex": "HNX",
+      "ten": "CTCP Đầu tư và Thương mại TNG",
+      "gt_ty": 19.5
+    },
+    {
+      "s": "VOS",
+      "ex": "HOSE",
+      "ten": "CTCP vận tải biển Việt Nam",
+      "gt_ty": 19.4
+    },
+    {
+      "s": "NKG",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần thép Nam Kim",
+      "gt_ty": 19.4
+    },
+    {
+      "s": "DGC",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Tập đoàn Hóa chất Đức Giang",
+      "gt_ty": 17.9
+    },
+    {
+      "s": "BCM",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Đầu tư và Phát triển Công Nghiệp- CTCP",
+      "gt_ty": 17.2
+    },
+    {
+      "s": "LPS",
+      "ex": "HOSE",
+      "ten": "LPBS",
+      "gt_ty": 17.2
+    },
+    {
+      "s": "CTS",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Chứng khoán Vietinbank",
+      "gt_ty": 17.1
+    },
+    {
+      "s": "BFC",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Phân bón Bình Điền",
+      "gt_ty": 17
+    },
+    {
+      "s": "CTR",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần công trình VIETTEL",
+      "gt_ty": 15.4
+    },
+    {
+      "s": "HHP",
+      "ex": "HOSE",
+      "ten": "CTCP Giấy Hoàng Hà Hải Phòng",
+      "gt_ty": 15.4
+    },
+    {
+      "s": "HSL",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Đầu tư Phát triển Thực phẩm Hồng Hà",
+      "gt_ty": 15.3
+    },
+    {
+      "s": "TLG",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần tập đoàn Thiên Long",
+      "gt_ty": 14.7
+    },
+    {
+      "s": "SAB",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty cổ phần Bia - Rượu - Nước giải khát Sài Gòn",
+      "gt_ty": 14.6
+    },
+    {
+      "s": "HDC",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Phát triển nhà Bà Rịa – Vũng Tàu",
+      "gt_ty": 13.6
+    },
+    {
+      "s": "PAN",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Tập đoàn PAN",
+      "gt_ty": 13.4
+    },
+    {
+      "s": "NAF",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Nafoods Group",
+      "gt_ty": 13.3
+    },
+    {
+      "s": "KSV",
+      "ex": "HNX",
+      "ten": "Tổng Công ty Khoáng Sản TKV - CTCP",
+      "gt_ty": 12.8
+    },
+    {
+      "s": "BVS",
+      "ex": "HNX",
+      "ten": "CTCP Chứng khoán Bảo Việt",
+      "gt_ty": 12.6
+    },
+    {
+      "s": "BVB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Bản Việt",
+      "gt_ty": 12.5
+    },
+    {
+      "s": "VVS",
+      "ex": "HOSE",
+      "ten": "VVS-AUTO",
+      "gt_ty": 11.9
+    },
+    {
+      "s": "EVF",
+      "ex": "HOSE",
+      "ten": "Công ty Tài chính Tổng hợp Cổ phần Điện lực",
+      "gt_ty": 11.7
+    },
+    {
+      "s": "VTO",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Vận tải Xăng dầu Vitaco",
+      "gt_ty": 11.6
+    },
+    {
+      "s": "MZG",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Miza",
+      "gt_ty": 11.5
+    },
+    {
+      "s": "OCB",
+      "ex": "HOSE",
+      "ten": "Ngân hàng Thương mại cổ phần Phương Đông",
+      "gt_ty": 11.2
+    },
+    {
+      "s": "FTS",
+      "ex": "HOSE",
+      "ten": "Công ty CP Chứng khoán FPT",
+      "gt_ty": 11
+    },
+    {
+      "s": "HDG",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Tập đoàn Hà Đô",
+      "gt_ty": 10.3
+    },
+    {
+      "s": "MST",
+      "ex": "HNX",
+      "ten": "Công ty cổ phần đầu tư MST",
+      "gt_ty": 10.3
+    },
+    {
+      "s": "DXP",
+      "ex": "HNX",
+      "ten": "CTCP Cảng Đoạn Xá",
+      "gt_ty": 10.2
+    },
+    {
+      "s": "HVN",
+      "ex": "HOSE",
+      "ten": "Tổng Công ty Hàng không Việt Nam - CTCP",
+      "gt_ty": 10
+    },
+    {
+      "s": "KHG",
+      "ex": "HOSE",
+      "ten": "Cổ phiếu Công ty Cổ phần Tập đoàn Khải Hoàn Land",
+      "gt_ty": 9.9
+    },
+    {
+      "s": "DSE",
+      "ex": "HOSE",
+      "ten": "Công ty CP Chứng khoán DNSE",
+      "gt_ty": 9.8
+    },
+    {
+      "s": "TCM",
+      "ex": "HOSE",
+      "ten": "CTCP Dệt may - Đầu tư - Thương mại Thành Công",
+      "gt_ty": 9.7
+    },
+    {
+      "s": "HHS",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Đầu tư Dịch vụ Hoàng Huy",
+      "gt_ty": 9.6
+    },
+    {
+      "s": "CSV",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Hóa chất cơ bản miền Nam",
+      "gt_ty": 9.4
+    },
+    {
+      "s": "PVC",
+      "ex": "HNX",
+      "ten": "Tổng CT Hóa chất và Dịch vụ Dầu khí - CTCP",
+      "gt_ty": 9
+    },
+    {
+      "s": "AAA",
+      "ex": "HOSE",
+      "ten": "CTCP Nhựa An Phát Xanh",
+      "gt_ty": 8.7
+    },
+    {
+      "s": "TDP",
+      "ex": "HOSE",
+      "ten": "CTCP Thuận Đức",
+      "gt_ty": 8.4
+    },
+    {
+      "s": "NTP",
+      "ex": "HNX",
+      "ten": "CTCP Nhựa Thiếu niên Tiền Phong",
+      "gt_ty": 8.2
+    },
+    {
+      "s": "DXS",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Dịch vụ Bất động sản Đất Xanh",
+      "gt_ty": 8.2
+    },
+    {
+      "s": "DPG",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Tập đoàn Đạt Phương",
+      "gt_ty": 8
+    },
+    {
+      "s": "TAL",
+      "ex": "HOSE",
+      "ten": "TAL-AUTO",
+      "gt_ty": 7.9
+    },
+    {
+      "s": "TRC",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Cao su Tây Ninh",
+      "gt_ty": 7.4
+    },
+    {
+      "s": "KSF",
+      "ex": "HNX",
+      "ten": "KSF-AUTO",
+      "gt_ty": 7.2
+    },
+    {
+      "s": "ELC",
+      "ex": "HOSE",
+      "ten": "CTCP Công Nghệ - Viễn Thông Elcom",
+      "gt_ty": 7
+    },
+    {
+      "s": "YEG",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Tập đoàn Yeah1",
+      "gt_ty": 6.9
+    },
+    {
+      "s": "KSB",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần khoáng sản và xây dựng Bình Dương",
+      "gt_ty": 6.9
+    },
+    {
+      "s": "FCN",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần FECON",
+      "gt_ty": 6.8
+    },
+    {
+      "s": "BMP",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Nhựa Bình Minh",
+      "gt_ty": 6.5
+    },
+    {
+      "s": "IJC",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần Phát triển hạ tầng kỹ thuật",
+      "gt_ty": 6.1
+    },
+    {
+      "s": "CDC",
+      "ex": "HOSE",
+      "ten": "CTCP Chương Dương",
+      "gt_ty": 5.7
+    },
+    {
+      "s": "HQC",
+      "ex": "HOSE",
+      "ten": "CTCP Tư vấn – Thương mại – Dịch vụ Địa ốc Hoàng Quân",
+      "gt_ty": 5.7
+    },
+    {
+      "s": "SCR",
+      "ex": "HOSE",
+      "ten": "CTCP Địa Ốc Sài Gòn Thương Tín",
+      "gt_ty": 5.7
+    },
+    {
+      "s": "BSI",
+      "ex": "HOSE",
+      "ten": "Công ty Cổ phần Chứng khoán Ngân hàng Đầu tư và Phát triển Việt Nam",
+      "gt_ty": 5.5
+    },
+    {
+      "s": "HII",
+      "ex": "HOSE",
+      "ten": "Công ty cổ phần An Tiến Industries",
+      "gt_ty": 5.4
+    },
+    {
+      "s": "HPX",
+      "ex": "HOSE",
+      "ten": "CTCP Đầu tư Hải Phát",
+      "gt_ty": 5.1
+    },
+    {
+      "s": "VFS",
+      "ex": "HNX",
+      "ten": "Công ty cổ phần Chứng khoán Nhất Việt",
+      "gt_ty": 4.9
+    }
+  ]
+}

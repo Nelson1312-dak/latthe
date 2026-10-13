@@ -1,28 +1,92 @@
 /**
  * worker/market-stream.mjs — giá thị trường realtime từ DNSE Market Data WebSocket.
- * Nhận khớp lệnh (tick), độ sâu thị trường (top_price: 3 mức mua/bán với HOSE) và chỉ số (market_index),
- * gộp vào trạng thái mới nhất của từng mã rồi ghi vào DB mỗi giây. API /api/market đọc từ đó.
+ * Nhận khớp lệnh (tick), độ sâu thị trường (top_price: 3 mức mua/bán với HOSE, 10 mức với HNX)
+ * và chỉ số (market_index). Làm hai việc cùng lúc:
+ *   1. gộp vào trạng thái mới nhất của từng mã rồi ghi đè vào trade.market_quotes mỗi giây (API /api/market đọc từ đó);
+ *   2. GHI LẠI LỊCH SỬ vào trade.tape và trade.depth_log — dữ liệu này không mua lại được về sau.
  *
  *   npm run worker:market
  *
- * Chỉ MỘT kết nối cho cả rổ mã (DNSE cho tối đa 10 kết nối/user và 200 stream/kết nối).
+ * GIỚI HẠN CỦA DNSE (đo thật ngày 13/10/2026, hạng tài khoản normalUser):
+ *   - Mỗi kết nối tối đa 200 CẶP (kênh × mã), không phải 200 mã: 65 mã × 3 kênh + 4 chỉ số = 199 thì
+ *     được, 66 mã × 3 kênh + 4 chỉ số = 202 thì bị từ chối, còn 98 mã × 2 kênh + 4 chỉ số = 200 vừa khít.
+ *   - Giữ mở đồng thời ít nhất 8 kết nối, mỗi kết nối đủ 200 cặp.
+ *   Nên rổ lớn phải CHIA cho nhiều kết nối — xem shardChannels().
+ *
+ *   Lưu ý khi tự đo lại: DNSE trả `subscribed` RIÊNG cho từng kênh, và vẫn gửi `subscribed` cho các
+ *   kênh hợp lệ kèm theo một `error` cho phần vượt hạn. Đóng kết nối ngay khi thấy `subscribed` đầu
+ *   tiên sẽ bỏ sót lỗi và cho kết quả sai. Phải đợi hết mọi phản hồi rồi mới kết luận.
+ *
+ * Không đăng ký kênh security_definition nữa: suốt cả phiên 13/10 nó gửi đúng 0 bản tin
+ * (trường `secdef` trong trade.worker_status) nhưng chiếm một phần ba hạn mức. Giá tham chiếu,
+ * trần và sàn vẫn tính được bằng api/_market.js limits().
+ *
  * Biến môi trường: DNSE_API_KEY, DNSE_API_SECRET, SUPABASE_URL, DB_JWT_SECRET
+ *                  TAPE_OFF=1 để chỉ chạy phần giá, không ghi lịch sử.
  */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { rest } from '../api/_db.js';
 import { UNIVERSE, INDICES } from '../api/_market.js';
 import { DnseSocket, isControl } from './_socket.mjs';
 
 const FLUSH_MS = 1000;
+const MAX_BUFFER = 300_000;        // DB chết lâu thì giữ lại tối đa ngần này dòng, cũ nhất bị bỏ
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
-export const channels = (symbols = UNIVERSE.map((x) => x.s), indices = INDICES) => [
-  { name: 'tick.G1.json', symbols },
-  { name: 'top_price.G1.json', symbols },
-  { name: 'security_definition.G1.json', symbols },
+const GOC = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+/** Rổ mã ghi băng lệnh: 150 mã lớn nhất HOSE+HNX, đã bao trọn UNIVERSE của giao diện. */
+export function tapeSymbols() {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(GOC, 'data/tape-universe.json'), 'utf8'));
+    const ds = new Set(j.ma.map((x) => x.s));
+    for (const x of UNIVERSE) ds.add(x.s);      // giao diện phải luôn có giá, dù rổ ghi có đổi
+    return [...ds];
+  } catch (e) {
+    log('không đọc được data/tape-universe.json, quay về rổ giao diện:', e.message);
+    return UNIVERSE.map((x) => x.s);
+  }
+}
+
+const MAX_CAP = 200;                                        // cặp (kênh × mã) tối đa mỗi kết nối
+const KENH_MA = ['tick.G1.json', 'top_price.G1.json'];      // kênh tính theo từng mã
+
+export const channels = (symbols = tapeSymbols(), indices = INDICES) => [
+  ...KENH_MA.map((name) => ({ name, symbols })),
   ...indices.map((i) => ({ name: `market_index.${i}.json`, symbols: [] })),
 ];
 
+/**
+ * Chia rổ mã thành nhiều kết nối sao cho mỗi kết nối không quá `max` cặp (kênh × mã).
+ * Kênh chỉ số tính 1 cặp mỗi kênh và dồn vào kết nối đầu.
+ * @returns {Array<Array<{name:string,symbols:string[]}>>} mỗi phần tử là danh sách kênh của một kết nối
+ */
+export function shardChannels(symbols = tapeSymbols(), indices = INDICES, max = MAX_CAP) {
+  const phan = [];
+  const idx = [...indices];
+  let i = 0;
+  while (i < symbols.length || idx.length) {
+    const chiSo = idx.splice(0, Math.max(0, max - KENH_MA.length));   // chừa chỗ cho ít nhất một mã
+    const choMa = Math.floor((max - chiSo.length) / KENH_MA.length);
+    const cua = symbols.slice(i, i + choMa);
+    i += cua.length;
+    phan.push([
+      ...(cua.length ? KENH_MA.map((name) => ({ name, symbols: cua })) : []),
+      ...chiSo.map((x) => ({ name: `market_index.${x}.json`, symbols: [] })),
+    ]);
+    if (!cua.length && !chiSo.length) break;   // không còn gì để chia, tránh lặp vô hạn
+  }
+  return phan;
+}
+
+/** Số cặp (kênh × mã) của một danh sách kênh — dùng để kiểm tra không vượt trần. */
+export const demCap = (ch) => ch.reduce((n, c) => n + Math.max(1, c.symbols.length), 0);
+
 const num = (v) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : null);
+// DNSE gửi giá theo đơn vị nghìn đồng (FPT = 56.3). Lịch sử lưu thẳng ra ĐỒNG dạng số nguyên
+// để không bao giờ lệch do số thực; giá sàn Việt Nam luôn là bội của 10 đồng nên không mất mát.
+const dong = (v) => { const p = num(v); return p == null ? null : Math.round(p * 1000); };
 // DNSE gửi khối lượng mỗi bước giá ở trường `qtty` (không phải `quantity`); giữ cả hai tên cho chắc.
 const lvl = (a) => (Array.isArray(a) ? a.slice(0, 10).map((x) => ({ p: num(x.price), q: num(x.qtty ?? x.quantity) })).filter((x) => x.p != null) : []);
 const tsOf = (t) => (t && Number.isFinite(+t.Seconds) ? new Date(t.Seconds * 1000 + Math.floor((t.Nanos || 0) / 1e6)).toISOString() : new Date().toISOString());
@@ -39,7 +103,19 @@ export function classify(m) {
 
 /** Trạng thái giá mới nhất, gộp từ nhiều loại message. */
 export class MarketState {
-  constructor() { this.quotes = new Map(); this.indices = new Map(); this.dirty = new Set(); this.dirtyIdx = new Set(); this.counts = { tick: 0, depth: 0, index: 0, secdef: 0 }; }
+  constructor({ tape = true } = {}) {
+    this.quotes = new Map(); this.indices = new Map(); this.dirty = new Set(); this.dirtyIdx = new Set();
+    this.counts = { tick: 0, depth: 0, index: 0, secdef: 0 };
+    // Ghi lịch sử: hàng đợi chờ đẩy xuống DB, và khối lượng luỹ kế lần trước của từng mã để tính chênh
+    this.ghiTape = tape; this.tapeRows = []; this.depthRows = []; this.volTruoc = new Map();
+    this.bo = { tape: 0, depth: 0 };        // số dòng buộc phải bỏ vì hàng đợi đầy
+    this.gop = { tongMatch: 0, tongDelta: 0 };   // để đo mức gộp tin của DNSE ngay khi đang chạy
+  }
+  /** Đưa vào hàng đợi, chặn trên để DB chết lâu cũng không ăn hết bộ nhớ. */
+  _them(arr, row, ten) {
+    arr.push(row);
+    if (arr.length > MAX_BUFFER) { arr.splice(0, arr.length - MAX_BUFFER); this.bo[ten]++; }
+  }
   apply(m) {
     const kind = classify(m);
     if (!kind) return null;
@@ -59,35 +135,98 @@ export class MarketState {
     const q = this.quotes.get(s) || { symbol: s };
     if (kind === 'tick') {
       Object.assign(q, { last: num(m.matchPrice), lastQty: num(m.matchQtty), vol: num(m.totalVolumeTraded), open: num(m.openPrice), high: num(m.highestPrice), low: num(m.lowestPrice), tickAt: tsOf(m.time) });
+      if (this.ghiTape) this._ghiTick(s, m, q);
     } else if (kind === 'depth') {
       const bid = lvl(m.bid), offer = lvl(m.offer);
       const tong = (a) => (a.length && a.every((x) => x.q != null) ? a.reduce((x, y) => x + y.q, 0) : null);
       Object.assign(q, { bid, offer, totalBid: num(m.totalBidQtty) ?? tong(bid), totalOffer: num(m.totalOfferQtty) ?? tong(offer), depthAt: tsOf(m.time) });
+      if (this.ghiTape && (bid.length || offer.length)) {
+        this._them(this.depthRows, {
+          symbol: s, at: tsOf(m.time),
+          bid_p: bid.map((x) => dong(x.p)), bid_q: bid.map((x) => x.q ?? 0),
+          ask_p: offer.map((x) => dong(x.p)), ask_q: offer.map((x) => x.q ?? 0),
+        }, 'depth');
+      }
     } else if (kind === 'secdef') {
       Object.assign(q, { ref: num(m.basicPrice), ceil: num(m.ceilingPrice), floor: num(m.floorPrice) });
     }
     this.quotes.set(s, q); this.dirty.add(s);
     return kind;
   }
+
+  /**
+   * Một dòng băng lệnh. DNSE không gửi từng lệnh khớp mà gửi ảnh chụp gộp theo nhịp, nên:
+   *  - match_qty là khối lượng DNSE báo cho lệnh khớp cuối (có thể đã bỏ sót các lệnh ở giữa),
+   *  - vol_delta là chênh lệch khối lượng luỹ kế = khối lượng THẬT đã khớp từ bản tin trước tới giờ.
+   * Thống kê dòng tiền phải dùng vol_delta. Bản tin đầu tiên của một mã trong phiên để vol_delta
+   * rỗng, vì lúc đó luỹ kế đã là cả phiên — ghi vào sẽ thành một lệnh khổng lồ không có thật.
+   */
+  _ghiTick(s, m, q) {
+    const price = dong(m.matchPrice);
+    if (price == null) return;
+    const vol = num(m.totalVolumeTraded);
+    const truoc = this.volTruoc.get(s);
+    // Luỹ kế tụt xuống nghĩa là sang phiên mới, DNSE đếm lại từ đầu
+    const delta = truoc != null && vol != null && vol >= truoc ? vol - truoc : null;
+    if (vol != null) this.volTruoc.set(s, vol);
+
+    const bid1 = dong(q.bid?.[0]?.p), ask1 = dong(q.offer?.[0]?.p);
+    // Khớp ở giá chào bán = bên mua chủ động trả giá; khớp ở giá chào mua = bên bán chủ động
+    let side = '?';
+    if (ask1 != null && price >= ask1) side = 'M';
+    else if (bid1 != null && price <= bid1) side = 'B';
+
+    const matchQty = num(m.matchQtty);
+    if (matchQty != null) this.gop.tongMatch += matchQty;
+    if (delta != null) this.gop.tongDelta += delta;
+
+    this._them(this.tapeRows, {
+      symbol: s, at: tsOf(m.time), price, match_qty: matchQty, vol_delta: delta,
+      total_vol: vol, bid1, ask1, side,
+    }, 'tape');
+  }
   /** Lấy các dòng đã đổi kể từ lần ghi trước. */
   drain() {
     const quotes = [...this.dirty].map((s) => ({ symbol: s, data: this.quotes.get(s), at: new Date().toISOString() }));
     const indices = [...this.dirtyIdx].map((n) => ({ name: n, data: this.indices.get(n), at: new Date().toISOString() }));
     this.dirty.clear(); this.dirtyIdx.clear();
-    return { quotes, indices };
+    const tape = this.tapeRows; this.tapeRows = [];
+    const depth = this.depthRows; this.depthRows = [];
+    return { quotes, indices, tape, depth };
   }
 }
 
 export class MarketStream {
-  constructor({ apiKey = process.env.DNSE_API_KEY, apiSecret = process.env.DNSE_API_SECRET, WS, db = rest, symbols, indices } = {}) {
-    this.db = db; this.state = new MarketState(); this.timer = null; this.lastFlush = null; this.flushErrors = 0;
-    this.sock = new DnseSocket({ name: 'market', apiKey, apiSecret, WS, channels: channels(symbols, indices), onData: (m) => this.state.apply(m) });
+  constructor({ apiKey = process.env.DNSE_API_KEY, apiSecret = process.env.DNSE_API_SECRET, WS, db = rest, symbols, indices, tape = process.env.TAPE_OFF !== '1' } = {}) {
+    this.db = db; this.state = new MarketState({ tape }); this.timer = null; this.partTimer = null;
+    this.lastFlush = null; this.flushErrors = 0; this.tapeErrors = 0;
+    this.ghi = { tape: 0, depth: 0 };        // tổng số dòng lịch sử đã ghi được
+    // Rổ lớn hơn 200 cặp phải chia cho nhiều kết nối, nếu không DNSE từ chối phần vượt
+    const phan = shardChannels(symbols ?? tapeSymbols(), indices ?? INDICES);
+    this.socks = phan.map((ch, i) => new DnseSocket({
+      name: phan.length > 1 ? `market${i + 1}` : 'market',
+      apiKey, apiSecret, WS, channels: ch, onData: (m) => this.state.apply(m),
+    }));
   }
-  start() { this.sock.start(); this.timer = setInterval(() => this.flush(), FLUSH_MS); }
-  stop() { clearInterval(this.timer); this.sock.stop(); }
+  /** Kết nối đầu tiên, để mã cũ và test vẫn đọc được trạng thái. */
+  get sock() { return this.socks[0]; }
+  start() {
+    for (const s of this.socks) s.start();
+    this.timer = setInterval(() => this.flush(), FLUSH_MS);
+    // Phân vùng phải có sẵn TRƯỚC khi dữ liệu tới, nếu không mọi dòng rơi vào phân vùng hứng
+    this.ensurePartitions();
+    this.partTimer = setInterval(() => this.ensurePartitions(), 6 * 3600e3);
+  }
+  stop() { clearInterval(this.timer); clearInterval(this.partTimer); for (const s of this.socks) s.stop(); }
+
+  ensurePartitions() {
+    return this.db('/rpc/ensure_tape_partitions', { role: 'app_worker', method: 'POST', body: { p_days: 7 } })
+      .then((n) => { if (n) log(`đã tạo ${n} phân vùng mới cho bảng lịch sử`); })
+      .catch((e) => log('không tạo được phân vùng:', e.message));
+  }
 
   async flush() {
-    const { quotes, indices } = this.state.drain();
+    const { quotes, indices, tape, depth } = this.state.drain();
     try {
       if (quotes.length) await this.db('/market_quotes?on_conflict=symbol', { role: 'app_worker', method: 'POST', prefer: 'resolution=merge-duplicates', body: quotes });
       if (indices.length) await this.db('/market_indices?on_conflict=name', { role: 'app_worker', method: 'POST', prefer: 'resolution=merge-duplicates', body: indices });
@@ -98,12 +237,39 @@ export class MarketStream {
       quotes.forEach((r) => this.state.dirty.add(r.symbol)); indices.forEach((r) => this.state.dirtyIdx.add(r.name));
       if (this.flushErrors++ % 30 === 0) log('không ghi được giá vào DB:', e.message);
     }
-    return { quotes: quotes.length, indices: indices.length };
+    // Lịch sử ghi riêng: hỏng phần này thì giá vẫn phải chạy, và ngược lại
+    try {
+      if (tape.length) { await this.db('/tape', { role: 'app_worker', method: 'POST', prefer: 'return=minimal', body: tape }); this.ghi.tape += tape.length; }
+      if (depth.length) { await this.db('/depth_log', { role: 'app_worker', method: 'POST', prefer: 'return=minimal', body: depth }); this.ghi.depth += depth.length; }
+      this.tapeErrors = 0;
+    } catch (e) {
+      this.state.tapeRows.unshift(...tape); this.state.depthRows.unshift(...depth);
+      for (const [arr, ten] of [[this.state.tapeRows, 'tape'], [this.state.depthRows, 'depth']]) {
+        if (arr.length > MAX_BUFFER) { arr.splice(0, arr.length - MAX_BUFFER); this.state.bo[ten]++; }
+      }
+      if (this.tapeErrors++ % 30 === 0) log('không ghi được lịch sử băng lệnh:', e.message);
+    }
+    return { quotes: quotes.length, indices: indices.length, tape: tape.length, depth: depth.length };
   }
   report() {
     return this.db('/worker_status?on_conflict=name', {
       role: 'app_worker', method: 'POST', prefer: 'resolution=merge-duplicates',
-      body: { name: 'market-stream', at: new Date().toISOString(), info: { state: this.sock.state, reconnects: this.sock.reconnects, lastMsgAt: this.sock.lastMsgAt ? new Date(this.sock.lastMsgAt).toISOString() : null, ...this.state.counts, symbols: this.state.quotes.size, indices: this.state.indices.size, lastFlush: this.lastFlush ? new Date(this.lastFlush).toISOString() : null } },
+      body: { name: 'market-stream', at: new Date().toISOString(), info: {
+        // Nhiều kết nối: báo trạng thái xấu nhất, để một kết nối chết không bị che bởi các kết nối còn sống
+        state: this.socks.map((s) => s.state).find((x) => x !== 'live') || 'live',
+        ketNoi: this.socks.map((s) => s.state),
+        // Có giá trị = đang thiếu mã dù kết nối vẫn sống. Phải xem ngay, vì dữ liệu mất là mất hẳn.
+        loiDangKy: this.socks.map((s) => s.subError).filter(Boolean),
+        reconnects: this.socks.reduce((n, s) => n + s.reconnects, 0),
+        lastMsgAt: Math.max(...this.socks.map((s) => s.lastMsgAt || 0)) ? new Date(Math.max(...this.socks.map((s) => s.lastMsgAt || 0))).toISOString() : null,
+        ...this.state.counts, symbols: this.state.quotes.size, indices: this.state.indices.size,
+        lastFlush: this.lastFlush ? new Date(this.lastFlush).toISOString() : null,
+        tape: this.ghi.tape, depthRows: this.ghi.depth,
+        choGhi: this.state.tapeRows.length + this.state.depthRows.length, boDong: this.state.bo,
+        // Mức gộp tin của DNSE: khối lượng thật / khối lượng được báo ở lệnh khớp cuối.
+        // Bằng 1 nghĩa là nhận đủ từng lệnh; càng lớn càng nhiều lệnh bị gộp vào một bản tin.
+        mucGop: this.state.gop.tongMatch ? +(this.state.gop.tongDelta / this.state.gop.tongMatch).toFixed(2) : null,
+      } },
     }).catch((e) => log('không ghi được trạng thái worker:', e.message));
   }
 }

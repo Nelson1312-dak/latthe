@@ -34,7 +34,7 @@ export class DnseSocket {
   constructor(o) {
     Object.assign(this, { name: o.name, apiKey: o.apiKey, apiSecret: o.apiSecret, channels: o.channels, onData: o.onData || (() => {}), WS: o.WS || globalThis.WebSocket });
     this.state = 'idle'; this.stopped = false; this.attempt = 0; this.ws = null; this.timers = new Set();
-    this.connectedAt = null; this.fatal = null; this.lastMsgAt = 0; this.reconnects = 0;
+    this.connectedAt = null; this.fatal = null; this.subError = null; this.lastMsgAt = 0; this.reconnects = 0;
     // Thời hạn có thể thu nhỏ khi test
     this.t = { ping: PING_MS, maxAge: MAX_AGE_MS, connect: CONNECT_TIMEOUT_MS, idle: IDLE_TIMEOUT_MS, ...(o.timeouts || {}) };
   }
@@ -45,7 +45,7 @@ export class DnseSocket {
 
   _connect() {
     if (this.stopped) return;
-    this.state = 'connecting';
+    this.state = 'connecting'; this.subError = null;   // lỗi của lần kết nối trước không được dính sang lần này
     let ws;
     try { ws = new this.WS(`${WS_BASE()}/v1/stream?encoding=json`); } catch (e) { return this._retry(e.message); }
     this.ws = ws;
@@ -91,6 +91,9 @@ export class DnseSocket {
       case 'error':
         log(`[${this.name}] lỗi từ DNSE:`, m.code, m.message);
         if (m.code === 'AUTH_FAILED' || m.code === 'MAX_CONNECTIONS_EXCEEDED') this.fatal = m.code;
+        // DNSE vẫn trả `subscribed` cho các kênh hợp lệ rồi mới báo lỗi phần vượt hạn, nên nếu không
+        // giữ lại lỗi này thì kết nối hiện ra "live" trong khi đang thiếu mã — mất dữ liệu mà không ai biết.
+        if (m.code === 'SUBSCRIBE_FAILED') this.subError = m.message || m.code;
         return;
       default: break;
     }

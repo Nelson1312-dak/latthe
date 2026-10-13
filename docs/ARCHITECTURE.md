@@ -102,6 +102,31 @@ Môi giới tạo khuyến nghị (mã, chiều, vùng giá, mục tiêu, cắt 
 
 Worker đọc danh sách khách có liên kết, mở một kết nối WebSocket mỗi khách (kênh order + position), lưu sự kiện vào `trade.order_events`, đồng bộ trạng thái phiếu lệnh theo `id` lệnh DNSE. Giao diện đọc qua API (poll ngắn hoặc SSE).
 
+### 5.3b Băng lệnh và sổ lệnh theo thời gian (nền cho phần bóc tách dòng tiền)
+
+Khác với `market_quotes` (một dòng mỗi mã, ghi đè liên tục), `trade.tape` và `trade.depth_log` **giữ lịch sử**.
+Dữ liệu này không mua lại được: API lịch sử của DNSE chỉ có nến OHLCV, nên phiên nào không ghi là mất hẳn.
+
+- **Rổ ghi**: 150 mã lớn nhất HOSE+HNX (`data/tape-universe.json`) = 97,9% giá trị giao dịch toàn thị trường.
+  Danh sách này tách khỏi `UNIVERSE` của giao diện và luôn bao trọn `UNIVERSE`.
+- **Chia bảng theo ngày (UTC)**: phiên Việt Nam nằm gọn trong 02:00–08:00 UTC nên một ngày UTC = một phiên.
+  Dọn dữ liệu cũ bằng `DROP` phân vùng, và **sao lưu được từng ngày một lần rồi thôi** (xem `docs/DEPLOY.md`).
+- **Giới hạn DNSE (đo thật 13/10/2026, hạng `normalUser`)**: mỗi kết nối tối đa **200 cặp (kênh × mã)** —
+  không phải 200 mã. 65 mã × 3 kênh + 4 chỉ số = 199 thì được, 66 mã × 3 kênh = 202 thì bị từ chối.
+  Giữ được ít nhất 8 kết nối đồng thời. `shardChannels()` chia rổ cho nhiều kết nối; 150 mã × 2 kênh + 4 chỉ số
+  = 304 cặp → 2 kết nối.
+  Khi tự đo lại: DNSE trả `subscribed` **riêng cho từng kênh** và vẫn trả `subscribed` cho phần hợp lệ rồi mới
+  báo `error` cho phần vượt hạn — đóng kết nối ngay khi thấy `subscribed` đầu tiên sẽ cho kết quả sai.
+- **Không dùng kênh `security_definition`**: cả phiên 13/10 nó gửi đúng 0 bản tin nhưng chiếm một phần ba hạn mức.
+  Giá tham chiếu/trần/sàn vẫn lấy từ nến ngày qua `api/_market.js limits()`.
+- **DNSE gửi ảnh chụp gộp, không phải từng lệnh khớp** (khoảng 1 bản tin / 8,5 giây / mã). Vì vậy mỗi dòng giữ
+  cả `match_qty` (khối lượng DNSE báo) lẫn `vol_delta` (chênh khối lượng luỹ kế = khối lượng **thật**).
+  **Mọi thống kê dòng tiền phải dùng `vol_delta`.** Tỷ lệ `vol_delta / match_qty` chính là mức gộp; worker tự tính
+  liên tục (`mucGop` trong `worker_status`), và `worker/do-gop-tin.mjs` phân tích chi tiết theo mã.
+  Hệ quả: **không tách được dòng tiền theo quy mô lệnh** (tiền lớn / tiền nhỏ), và lệnh kê–rút dưới ~5 giây là vô hình.
+- `side` ('M' mua chủ động / 'B' bán chủ động / '?') suy từ giá khớp so với `bid1`/`ask1`. Hai giá này được **lưu thô**
+  chứ không chỉ lưu kết luận, để sau này đổi cách suy luận còn tính lại được trên dữ liệu cũ.
+
 ### 5.4 Tư vấn danh mục, tái phân bổ, AI local
 - **Danh mục mẫu** (`model_portfolios`, `model_weights`): môi giới tạo theo mức rủi ro (Thận trọng, Cân bằng, Tăng trưởng, Mạo hiểm), tỷ trọng cổ phiếu + tiền mặt = 100%, kèm ngưỡng lệch.
 - **Khẩu vị rủi ro** (`client_profiles`): khách tự trả lời 7 câu trong cổng khách hàng (chấm điểm ở máy chủ, `api/_risk.js`), hoặc môi giới đặt. Hệ thống cảnh báo khi danh mục mẫu rủi ro cao hơn khẩu vị.
@@ -143,6 +168,8 @@ Mục tiêu: khi khách hỏi "FPT thế nào?", môi giới có câu trả lờ
 | `order_tickets` | Phiếu lệnh: khách, lệnh, trạng thái, nguồn chỉ thị, người duyệt, thời điểm, id lệnh DNSE |
 | `order_events` | Sự kiện lệnh/vị thế từ WebSocket |
 | `dnse_audit` | Nhật ký mọi lần gửi/hủy lên DNSE (đã có) |
+| `tape` | Băng lệnh khớp, chia theo ngày. Giá theo **đồng** (số nguyên), kèm `vol_delta`, `bid1`/`ask1`, bên chủ động |
+| `depth_log` | Các bước giá theo thời gian, chia theo ngày. Mảng số nguyên — jsonb tốn gấp 5,5 lần cho cùng nội dung |
 
 RLS: môi giới chỉ thấy dữ liệu khách của mình; khách chỉ thấy dữ liệu gắn với investor_id của mình.
 
