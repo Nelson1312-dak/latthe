@@ -755,7 +755,7 @@ td.warn{color:var(--ref);font-weight:600}
 .pmore summary:hover{color:var(--text)}
 
 /* ---------- Giới thiệu cho người mới ---------- */
-.intro{position:fixed;left:16px;bottom:40px;z-index:40;width:min(360px,calc(100vw - 32px));padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);box-shadow:0 12px 40px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:8px;line-height:1.5}
+.intro{position:relative;margin:0 0 14px;max-width:760px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);display:flex;flex-direction:column;gap:8px;line-height:1.5}
 .intro b{font-size:14px}
 .intro ul{margin:0;padding-left:18px;color:var(--muted)}
 .intro-act{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:2px}
@@ -765,7 +765,7 @@ td.warn{color:var(--ref);font-weight:600}
 @media (max-width:720px){
   .mkt-cards{grid-template-columns:1fr 1fr;gap:8px}
   .mc{padding:9px 11px}.mc-v{font-size:18px}.mc-sub{display:none}
-  .intro{left:8px;right:8px;bottom:34px;width:auto;padding:12px 14px}
+  .intro{padding:12px 14px}
   .intro ul{display:none}
 }
 /* Bảng giá trên điện thoại: chỉ giữ Mã, Giá, %, KL (bấm mã để xem đủ trần/sàn, độ sâu) */

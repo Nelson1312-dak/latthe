@@ -140,28 +140,17 @@
     }
   });
 
-  /**
-   * Mở màn cổng khách. Trước đây chỗ này chờ `UNIVERSE.length` của bảng giá rồi mới chuyển màn,
-   * nên bảng giá hỏng (đúng sự cố /api/market 502 ngày 19/10) là vòng chờ quay vô hạn và khách
-   * KHÔNG BAO GIỜ thấy cổng, dù đã liên kết xong. Cổng khách không đọc gì từ bảng giá, nên không
-   * có lý do phải chờ: chuyển màn ngay, chỉ cần `setView` đã sẵn sàng.
-   */
-  function moPortal(conLai = 20) {
-    if (typeof setView === 'function') return setView('portal');
-    if (conLai > 0) setTimeout(() => moPortal(conLai - 1), 250);   // app.js chưa nạp xong, thử lại tối đa 5 giây
-  }
-
   document.addEventListener('lb:view', (e) => { if (e.detail === 'portal') load(); });
   document.addEventListener('lb:user', async (e) => {
     P.user = e.detail || null; P.data = null;
     if (!P.user) { updateBadge(); render(); if (!$('view-portal').hidden && typeof setView === 'function') setView('trade'); return; }
     const t = savedToken();
     if (t) { // vừa đăng nhập xong, nhận lời mời đang chờ
-      if (await acceptToken(t)) moPortal();
+      if (await acceptToken(t)) openView('portal');
     }
     try { P.data = await api('/api/portal/summary'); } catch { P.data = null; }
     updateBadge();
-    if (P.data?.linked && location.hash === '#tai-khoan' && $('view-portal').hidden) moPortal();
+    if (P.data?.linked && location.hash === '#tai-khoan' && $('view-portal').hidden) openView('portal');
   });
 
   // Mở link mời khi chưa đăng nhập: nhắc đăng nhập, mã được giữ lại trong sessionStorage

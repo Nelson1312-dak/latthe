@@ -659,8 +659,7 @@
     if (e.detail) { try { A.broker = !!(await api('/api/brokers')).owner; } catch { A.broker = false; } }
     if (!A.broker && !$('view-advisory').hidden && typeof setView === 'function') setView('trade');
     if (A.broker && location.hash === '#tu-van') {
-      let n = 0; const tryOpen = () => { if (typeof UNIVERSE !== 'undefined' && UNIVERSE.length) setView('advisory'); else if (++n < 40) setTimeout(tryOpen, 250); };
-      tryOpen();
+      openView('advisory');
     }
   });
   // Trạng thái AI local cập nhật mỗi phút khi đang mở màn Tư vấn
@@ -817,10 +816,18 @@
   /* ================= Giới thiệu cho người mới (chưa đăng nhập) ================= */
   const INTRO_KEY = 'lb_intro_closed';
   const introClosed = () => { try { return localStorage.getItem(INTRO_KEY) === '1'; } catch { return false; } };
+  /**
+   * Khối giới thiệu cho khách chưa đăng nhập.
+   *
+   * Trước đây nó là một thẻ NỔI (position:fixed, góc dưới trái) nên đè lên nội dung ở mọi màn: che
+   * khoảng 5 dòng bảng giá, và che mấy dòng watchlist ở màn Giao dịch. Giờ nó nằm TRONG luồng, ngay
+   * đầu màn Giao dịch — đẩy nội dung xuống thay vì che, và chỉ xuất hiện ở màn đích của người mới.
+   */
   function renderIntro(user) {
     let box = $('lb-intro');
     if (user || introClosed()) { if (box) box.remove(); return; }
     if (box) return;
+    const noi = $('view-trade'); if (!noi) return;
     box = document.createElement('aside');
     box.id = 'lb-intro'; box.className = 'intro'; box.setAttribute('aria-label', 'Giới thiệu Lật Bài');
     box.innerHTML = `<button class="intro-x" data-intro-close aria-label="Đóng giới thiệu">×</button>
@@ -828,7 +835,7 @@
       <ul><li>Bảng giá và biểu đồ realtime từ DNSE</li><li>Giao dịch thử bằng tiền ảo, không mất tiền thật</li>
         <li>Khách của môi giới: nhận khuyến nghị, xác nhận lệnh trong app, theo dõi hiệu suất danh mục</li></ul>
       <div class="intro-act"><button class="btn-primary" data-intro-login>Đăng nhập hoặc tạo tài khoản</button><button class="link" data-intro-board>Xem bảng giá</button></div>`;
-    document.body.appendChild(box);
+    noi.prepend(box);
   }
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-intro-close],[data-intro-login],[data-intro-board]'); if (!t) return;

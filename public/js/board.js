@@ -182,10 +182,6 @@
   document.addEventListener('lb:view', (e) => { if (e.detail === 'board') { B.prev.clear(); render(); } });
   document.addEventListener('lb:tick', render);
 
-  // Mở thẳng từ địa chỉ #bang-gia khi dữ liệu giá đã sẵn sàng
-  if (location.hash === '#bang-gia') {
-    let n = 0;
-    const open = () => { if (typeof UNIVERSE !== 'undefined' && UNIVERSE.length && typeof setView === 'function') setView('board'); else if (++n < 60) setTimeout(open, 250); };
-    open();
-  }
+  // Mở thẳng từ địa chỉ #bang-gia
+  if (location.hash === '#bang-gia') openView('board');
 })();

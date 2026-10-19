@@ -361,8 +361,7 @@
     const onDesk = !$('view-desk').hidden;
     if (!D.broker && onDesk && typeof setView === 'function') setView('trade');
     if (D.broker && location.hash === '#khach-hang') { // mở thẳng màn khách hàng khi bảng giá đã sẵn sàng
-      let n = 0; const tryOpen = () => { if (typeof UNIVERSE !== 'undefined' && UNIVERSE.length) setView('desk'); else if (++n < 40) setTimeout(tryOpen, 250); };
-      tryOpen();
+      openView('desk');
     }
   });
 

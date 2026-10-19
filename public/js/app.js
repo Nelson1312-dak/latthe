@@ -474,8 +474,12 @@ function livePrices(){ document.querySelectorAll("[data-live]").forEach(el=>{con
 const SOCIAL_DEMO=false;
 const NAV_OF={advisory:"desk"};
 const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#cong-dong"],chat:["view-chat","#tin-nhan"],desk:["view-desk","#khach-hang"],portal:["view-portal","#tai-khoan"],board:["view-board","#bang-gia"],advisory:["view-advisory","#tu-van"]};
+/* Trước đây hàm này mở đầu bằng `if(!UNIVERSE.length) return;` nên nguồn giá hỏng là CẢ THANH TAB
+   chết: bấm tab nào cũng không có gì xảy ra, không một thông báo. Đúng chuyện đã xảy ra suốt 4 tiếng
+   ngày 19/10/2026 khi /api/market trả 502. Vô lý ở chỗ Khách hàng, Tư vấn và Tài khoản của tôi không
+   đọc giá, còn màn Giao dịch không có giá thì hiện khung rỗng kèm dòng trạng thái báo lỗi — vẫn tốt
+   hơn là bấm không ăn. */
 function setView(v){
-  if(!UNIVERSE.length) return;
   if(!SOCIAL_DEMO&&(v==="community"||v==="chat")) v="trade";
   CS.view=v; Object.entries(VIEWS).forEach(([k,[id]])=>$(id).hidden=k!==v);
   const navV=NAV_OF[v]||v; // màn Tư vấn nằm trong mục "Khách hàng"
@@ -486,6 +490,16 @@ function setView(v){
   document.dispatchEvent(new CustomEvent("lb:view",{detail:v}));
   window.scrollTo(0,0);
 }
+/**
+ * Mở một màn theo deep link, chờ app.js nạp xong nếu cần.
+ * Dùng chung cho board/desk/portal/advisory: trước đây mỗi file tự viết một vòng chờ
+ * `UNIVERSE.length` giống hệt nhau, và cả bốn đều kẹt vĩnh viễn khi nguồn giá hỏng.
+ */
+function openView(v, conLai=20){
+  if(typeof setView==="function") return setView(v);
+  if(conLai>0) setTimeout(()=>openView(v,conLai-1),250);
+}
+
 function openComposer(){
   const sel=$("d-where"); const def=CS.cat.startsWith("sym:")?CS.cat:(CS.cat==="all"?"chung":CS.cat);
   sel.innerHTML=CATS.filter(c=>c.id!=="all").map(c=>`<option value="${c.id}">${c.name}</option>`).join("")+CSYMS.map(s=>`<option value="sym:${s}">Mã ${s}</option>`).join("");
