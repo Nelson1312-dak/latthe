@@ -45,6 +45,9 @@ export default async function handler(req, res) {
       const q = quoteFromBars(x, daily, live);
       if (!q) return null;
       q.source = wsOk ? 'ws' : 'poll';
+      // Ngành lấy từ DB (worker ghi theo data/nganh.json) chứ không giữ nhãn cũ trong UNIVERSE:
+      // để mỗi bên một kiểu thì bộ lọc ngành trên bảng giá tách đôi, cùng một ngành thành hai mục.
+      if (w?.sector) q.sector = w.sector;
       // Giá khớp ngoài biên độ là dữ liệu hỏng: bỏ WebSocket, dùng nguồn dự phòng
       if (wsOk && (q.last > q.ceil + 1e-9 || q.last < q.floor - 1e-9)) {
         const alt = quoteFromBars(x, daily, await orNull(cached('l:' + x.s, 12_000, () => liveBar(x.s))));
