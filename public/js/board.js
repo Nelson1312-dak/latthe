@@ -32,7 +32,39 @@
       lastU: m.lastU, hasDepth: !!bid || !!ask,
     };
   }
-  const allRows = () => UNIVERSE.map(rowOf).filter(Boolean);
+  /**
+   * Một dòng dựng thẳng từ báo giá của API, cho các mã ngoài rổ biểu đồ.
+   *
+   * Worker ghi giá ~150 mã, nhưng M/UNIVERSE của app.js chỉ chứa các mã có đủ 260 nến để vẽ biểu đồ.
+   * Bảng giá không cần nến, nên những mã còn lại đi đường này: giá đã theo nghìn đồng sẵn, không có
+   * cao/thấp trong phiên thì lấy chính giá khớp, không có độ sâu thì để trống.
+   */
+  function rowFromQuote(q) {
+    const ref = q.ref, last = q.last;
+    if (!Number.isFinite(ref) || !Number.isFinite(last)) return null;
+    const best = (a) => (a && a.length ? a[0] : null);
+    const bid = best(q.depth?.bid), ask = best(q.depth?.offer);
+    const lop = last >= q.ceil ? 'ceil' : last <= q.floor ? 'floor' : last === ref ? 'ref' : last > ref ? 'up' : 'down';
+    return {
+      sym: q.s, name: q.name || q.s, sector: q.sector || '', vn30: !!q.vn30, watch: !!q.watch, cls: lop,
+      ref, ceil: q.ceil, floor: q.floor, last, chg: last - ref, pct: ref ? (last / ref - 1) * 100 : 0,
+      vol: q.vol || 0, high: q.high ?? last, low: q.low ?? last,
+      bid: bid ? bid.p : null, bidq: bid ? bid.q : null, ask: ask ? ask.p : null, askq: ask ? ask.q : null,
+      lastU: Math.round(last * 100), hasDepth: !!bid || !!ask,
+    };
+  }
+
+  /** Cả rổ: mã nào có mô hình đầy đủ thì lấy từ đó (có độ sâu, cao/thấp trong phiên), còn lại dựng từ báo giá. */
+  function allRows() {
+    const ra = [];
+    const da = new Set();
+    for (const x of UNIVERSE) { const r = rowOf(x); if (r) { ra.push(r); da.add(x.s); } }
+    for (const q of Object.values((typeof MKT !== 'undefined' && MKT.all) || {})) {
+      if (da.has(q.s)) continue;
+      const r = rowFromQuote(q); if (r) ra.push(r);
+    }
+    return ra;
+  }
   const inGroup = (r) => (B.group === 'vn30' ? r.vn30 : B.group === 'watch' ? r.watch : true);
 
   /* ---------- Thẻ chỉ số ---------- */

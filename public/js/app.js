@@ -36,6 +36,10 @@ async function loadMarket(){
     UNIVERSE.push({s:q.s,ex:q.ex,name:q.name,sector:q.sector,vn30:q.vn30,watch:q.watch}); M[q.s] = buildSymbol(q,hs.bars[q.s]);
   });
   if(!UNIVERSE.length) throw new Error("Không có mã nào đủ dữ liệu");
+  // Bảng giá dùng CẢ rổ worker đang ghi (~150 mã), còn UNIVERSE/M giữ nguyên là các mã có đủ 260
+  // nến để vẽ biểu đồ ở màn Giao dịch. Tách hai thứ ra để mở rộng bảng giá không kéo theo 150 lượt
+  // gọi /api/history.
+  MKT.all = mk.quotes;
   MKT.polledOnce = false;
 }
 /* Áp báo giá mới. Trả false nếu đã sang phiên mới (cần nạp lại lịch sử). */
@@ -757,6 +761,7 @@ async function poll(){
   try{
     const mk=await getJSON("/api/market");
     MKT.session=mk.session; MKT.asof=mk.asof; MKT.indices=mk.indices||MKT.indices; MKT.source=mk.source||"poll";
+    MKT.all=mk.quotes;
     const stale=Object.values(mk.quotes).some(q=>M[q.s]&&!applyQuote(M[q.s],q));
     MKT.polledOnce=true;
     // Sang phiên mới thì nạp lại lịch sử, nhưng không quá 1 lần mỗi 20 giây (lịch sử được cache ở CDN)

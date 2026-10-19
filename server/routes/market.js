@@ -73,6 +73,26 @@ export default async function handler(req, res) {
     if (r.status === 'fulfilled' && r.value) quotes[UNIVERSE[i].s] = r.value;
     else failed.push(UNIVERSE[i].s);
   });
+  // Phần rổ còn lại (worker ghi ~150 mã, giao diện chỉ mô tả kỹ 32): dựng thẳng từ WebSocket trong DB.
+  // Trần/sàn do worker tính sẵn mỗi phiên một lần, nên ở đây KHÔNG gọi nguồn nến lượt nào — chính vì
+  // vậy mở rộng rổ không làm tăng tải lên nguồn giá.
+  for (const [s, w] of Object.entries(ws.quotes)) {
+    if (quotes[s] || !usable(w, session)) continue;
+    if (!Number.isFinite(w.last) || !Number.isFinite(w.ref) || !Number.isFinite(w.ceil)) continue;
+    const q = {
+      s, ex: w.ex || null, name: w.name || null, sector: w.sector || null, vn30: !!w.vn30, watch: !!w.watch,
+      ref: w.ref, ceil: w.ceil, floor: w.floor,
+      last: w.last, open: w.open ?? w.last, high: w.high ?? w.last, low: w.low ?? w.last, vol: w.vol ?? 0,
+      // Phiên của giá, lấy theo lúc KHỚP chứ không theo lúc ghi: dòng trần/sàn làm `at` nhảy sang
+      // hôm nay trong khi giá vẫn là của phiên trước.
+      lastSession: vnNow(Date.parse(w.tickAt || w.at)).ymd, asof: w.tickAt ? Math.floor(Date.parse(w.tickAt) / 1000) : null,
+      source: 'ws',
+    };
+    if (usable({ at: w.depthAt }, session) && (w.bid?.length || w.offer?.length)) {
+      q.depth = { bid: w.bid || [], offer: w.offer || [], totalBid: w.totalBid ?? null, totalOffer: w.totalOffer ?? null };
+    }
+    quotes[s] = q;
+  }
   if (!Object.keys(quotes).length) {
     return res.status(502).json({ error: 'Không lấy được giá từ nguồn dữ liệu.' });
   }

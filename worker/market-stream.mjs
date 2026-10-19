@@ -28,7 +28,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rest } from '../api/_db.js';
-import { UNIVERSE, INDICES } from '../api/_market.js';
+import { UNIVERSE, INDICES, fetchBars, limits, refFromBars, vnNow } from '../api/_market.js';
 import { DnseSocket, isControl } from './_socket.mjs';
 
 const FLUSH_MS = 1000;
@@ -47,6 +47,17 @@ export function tapeSymbols() {
     log('không đọc được data/tape-universe.json, quay về rổ giao diện:', e.message);
     return UNIVERSE.map((x) => x.s);
   }
+}
+
+/** Bản đồ mã -> { ex, ten } cho cả rổ ghi. UNIVERSE mô tả kỹ hơn (ngành, VN30) nên được ưu tiên. */
+export function tapeInfo() {
+  const m = new Map();
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(GOC, 'data/tape-universe.json'), 'utf8'));
+    for (const x of j.ma) m.set(x.s, { ex: x.ex, name: x.ten });
+  } catch { /* rổ giao diện bên dưới vẫn đủ để chạy */ }
+  for (const x of UNIVERSE) m.set(x.s, { ex: x.ex, name: x.name, sector: x.sector, vn30: !!x.vn30, watch: !!x.watch });
+  return m;
 }
 
 const MAX_CAP = 200;                                        // cặp (kênh × mã) tối đa mỗi kết nối
@@ -103,7 +114,8 @@ export function classify(m) {
 
 /** Trạng thái giá mới nhất, gộp từ nhiều loại message. */
 export class MarketState {
-  constructor({ tape = true } = {}) {
+  constructor({ tape = true, thongTin = new Map() } = {}) {
+    this.thongTin = thongTin;
     this.quotes = new Map(); this.indices = new Map(); this.dirty = new Set(); this.dirtyIdx = new Set();
     this.counts = { tick: 0, depth: 0, index: 0, secdef: 0 };
     // Ghi lịch sử: hàng đợi chờ đẩy xuống DB, và khối lượng luỹ kế lần trước của từng mã để tính chênh
@@ -132,7 +144,7 @@ export class MarketState {
       this.dirtyIdx.add(name); return kind;
     }
     const s = String(m.symbol).toUpperCase();
-    const q = this.quotes.get(s) || { symbol: s };
+    const q = this._lay(s);
     if (kind === 'tick') {
       Object.assign(q, { last: num(m.matchPrice), lastQty: num(m.matchQtty), vol: num(m.totalVolumeTraded), open: num(m.openPrice), high: num(m.highestPrice), low: num(m.lowestPrice), tickAt: tsOf(m.time) });
       if (this.ghiTape) this._ghiTick(s, m, q);
@@ -190,6 +202,27 @@ export class MarketState {
       total_vol: vol, bid1, ask1, side,
     }, 'tape');
   }
+  /**
+   * Lấy bản ghi của một mã, tạo nếu chưa có, và bù mô tả mã (sàn, tên, ngành) khi còn thiếu.
+   * Phải bù chứ không chỉ gán lúc tạo: sau khi nạp lại từ DB thì bản ghi đã tồn tại nhưng là dữ
+   * liệu cũ chưa có các trường này, nên nhánh "tạo mới" không bao giờ chạy tới.
+   */
+  _lay(s) {
+    let q = this.quotes.get(s);
+    if (!q) { q = { symbol: s }; this.quotes.set(s, q); }
+    if (!q.name) Object.assign(q, this.thongTin.get(s) || {});
+    return q;
+  }
+
+  /**
+   * Trần/sàn/tham chiếu của một mã, tính sẵn mỗi phiên một lần. Không đến từ WebSocket: kênh
+   * security_definition đã bỏ vì cả phiên gửi 0 bản tin mà chiếm một phần ba hạn mức.
+   */
+  datTranSan(s, v) {
+    Object.assign(this._lay(s), v);
+    this.dirty.add(s);
+  }
+
   /** Lấy các dòng đã đổi kể từ lần ghi trước. */
   drain() {
     const quotes = [...this.dirty].map((s) => ({ symbol: s, data: this.quotes.get(s), at: new Date().toISOString() }));
@@ -203,11 +236,13 @@ export class MarketState {
 
 export class MarketStream {
   constructor({ apiKey = process.env.DNSE_API_KEY, apiSecret = process.env.DNSE_API_SECRET, WS, db = rest, symbols, indices, tape = process.env.TAPE_OFF !== '1' } = {}) {
-    this.db = db; this.state = new MarketState({ tape }); this.timer = null; this.partTimer = null;
+    this.roMa = symbols ?? tapeSymbols();
+    this.db = db; this.state = new MarketState({ tape, thongTin: tapeInfo() }); this.timer = null; this.partTimer = null;
+    this.tranSanTimer = null;
     this.lastFlush = null; this.flushErrors = 0; this.tapeErrors = 0;
     this.ghi = { tape: 0, depth: 0 };        // tổng số dòng lịch sử đã ghi được
     // Rổ lớn hơn 200 cặp phải chia cho nhiều kết nối, nếu không DNSE từ chối phần vượt
-    const phan = shardChannels(symbols ?? tapeSymbols(), indices ?? INDICES);
+    const phan = shardChannels(this.roMa, indices ?? INDICES);
     this.socks = phan.map((ch, i) => new DnseSocket({
       name: phan.length > 1 ? `market${i + 1}` : 'market',
       apiKey, apiSecret, WS, channels: ch, onData: (m) => this.state.apply(m),
@@ -221,8 +256,55 @@ export class MarketStream {
     // Phân vùng phải có sẵn TRƯỚC khi dữ liệu tới, nếu không mọi dòng rơi vào phân vùng hứng
     this.ensurePartitions();
     this.partTimer = setInterval(() => this.ensurePartitions(), 6 * 3600e3);
+    // Nạp lại TRƯỚC khi tính trần/sàn: sau một lần khởi động lại, trạng thái trong bộ nhớ trống,
+    // mà flush ghi đè nguyên cả object `data` của mã. Không nạp lại thì dòng trần/sàn đầu tiên sẽ
+    // xoá mất giá đóng cửa đang lưu trong DB, và bảng giá ngoài phiên trống trơn.
+    // Trần/sàn phải có TRƯỚC giờ mở cửa, nếu không bảng giá hiện mã mà không biết biên độ.
+    this.napLai().then(() => this.napTranSan());
+    this.tranSanTimer = setInterval(() => this.napTranSan(), 30 * 60e3);
   }
-  stop() { clearInterval(this.timer); clearInterval(this.partTimer); for (const s of this.socks) s.stop(); }
+  stop() { clearInterval(this.timer); clearInterval(this.partTimer); clearInterval(this.tranSanTimer); for (const s of this.socks) s.stop(); }
+
+  /** Dựng lại trạng thái giá từ DB sau khi khởi động lại. Không đánh dấu dirty: chưa có gì đổi. */
+  async napLai() {
+    try {
+      const rows = await this.db('/market_quotes?select=symbol,data', { role: 'app_worker' });
+      for (const r of rows || []) if (r.data) this.state.quotes.set(r.symbol, { ...r.data });
+      // Bù mô tả mã (sàn, tên, ngành) cho bản ghi cũ và đánh dấu để lần ghi tới đẩy xuống DB.
+      // Không làm ở đây thì mã chỉ có mô tả khi nó khớp lệnh lần đầu — ngoài phiên là không bao giờ.
+      let bu = 0;
+      for (const s of this.roMa) {
+        if (this.state.quotes.get(s)?.name) continue;
+        this.state._lay(s); this.state.dirty.add(s); bu++;
+      }
+      log(`nạp lại ${rows?.length || 0} mã giá từ DB${bu ? `, bù mô tả cho ${bu} mã` : ''}`);
+    } catch (e) { log('không nạp lại được giá cũ từ DB:', e.message); }
+  }
+
+  /**
+   * Tính tham chiếu/trần/sàn cho CẢ RỔ, mỗi phiên một lần, rồi ghi kèm vào trade.market_quotes.
+   *
+   * Vì sao worker làm việc này chứ không phải API: /api/market trước đây tính trần/sàn từ nến ngày,
+   * mỗi mã một lượt gọi nguồn giá. Phục vụ 32 mã thì còn được, 150 mã thì mỗi lần bộ nhớ đệm nguội
+   * là 150 lượt gọi cùng lúc — đúng thứ làm nguồn giá chặn IP Vercel ngày 19/10/2026. Worker chạy ở
+   * nhà, gọi tuần tự, mỗi phiên một lần, nên nguồn giá chỉ thấy một dòng đều đặn.
+   */
+  async napTranSan() {
+    const homNay = vnNow().ymd;
+    let xong = 0, bo = 0, hong = 0;
+    for (const s of this.roMa) {
+      if (this.state.quotes.get(s)?.refDay === homNay) { bo++; continue; }
+      try {
+        const ref = refFromBars(await fetchBars(s, 6));
+        if (ref == null) { hong++; continue; }
+        const ex = this.state.thongTin.get(s)?.ex || 'HOSE';
+        this.state.datTranSan(s, { ref, ...limits(ref, ex), refDay: homNay });
+        xong++;
+      } catch { hong++; }
+    }
+    if (xong || hong) log(`trần/sàn: ${xong} mã tính mới, ${bo} mã đã có, ${hong} mã chưa lấy được`);
+    return { xong, bo, hong };
+  }
 
   ensurePartitions() {
     return this.db('/rpc/ensure_tape_partitions', { role: 'app_worker', method: 'POST', body: { p_days: 7 } })
@@ -269,6 +351,9 @@ export class MarketStream {
         reconnects: this.socks.reduce((n, s) => n + s.reconnects, 0),
         lastMsgAt: Math.max(...this.socks.map((s) => s.lastMsgAt || 0)) ? new Date(Math.max(...this.socks.map((s) => s.lastMsgAt || 0))).toISOString() : null,
         ...this.state.counts, symbols: this.state.quotes.size, indices: this.state.indices.size,
+        // Số mã đã có trần/sàn của phiên hôm nay. Thiếu thì /api/market không phục vụ được mã đó.
+        tranSan: [...this.state.quotes.values()].filter((q) => q.refDay === vnNow().ymd).length,
+        roMa: this.roMa.length,
         lastFlush: this.lastFlush ? new Date(this.lastFlush).toISOString() : null,
         tape: this.ghi.tape, depthRows: this.ghi.depth,
         choGhi: this.state.tapeRows.length + this.state.depthRows.length, boDong: this.state.bo,

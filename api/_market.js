@@ -106,6 +106,18 @@ const U = (p) => Math.round(p * 100);
 const P = (u) => u / 100;
 export const tickU = (u, ex) => (ex !== 'HOSE' ? 10 : u < 1000 ? 1 : u < 5000 ? 5 : 10);
 
+/**
+ * Giá tham chiếu = giá đóng cửa của phiên GẦN NHẤT TRƯỚC HÔM NAY. Nến của hôm nay không phải tham
+ * chiếu, kể cả khi phiên đã chạy. Tách riêng khỏi quoteFromBars để worker tính sẵn trần/sàn cho cả
+ * rổ 150 mã rồi ghi vào trade.market_quotes — nhờ vậy /api/market phục vụ được cả rổ mà không phải
+ * gọi nguồn nến một lượt cho mỗi mã.
+ */
+export function refFromBars(daily, ts = Date.now()) {
+  const today = vnNow(ts).ymd;
+  const past = (daily || []).filter((b) => vnNow(b.t * 1000).ymd !== today);
+  return past.length ? past[past.length - 1].c : null;
+}
+
 export function limits(ref, ex) {
   const refU = U(ref), t = tickU(refU, ex);
   return {
