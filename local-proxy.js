@@ -35,6 +35,13 @@ const FEED_KINDS = new Set(['stock', 'index', 'derivative']);
 const FEED_RES = new Set(['1', '3', '5', '15', '30', '60', '1D', '1W']);
 const FEED_TIMEOUT_MS = 10_000;
 
+const DNSE_ORIGIN = 'https://openapi.dnse.com.vn';
+const DNSE_PATHS = [/^\/accounts(\/|$)/, /^\/brokers\//, /^\/price\//, /^\/registration\//];
+const DNSE_METHODS = new Set(['GET', 'POST', 'DELETE']);
+// Chữ ký HMAC nằm ở các header này, phải chuyển nguyên văn; mọi header khác bị bỏ.
+const DNSE_HEADERS = ['x-api-key', 'date', 'x-signature', 'trading-token', 'content-type', 'accept'];
+const DNSE_TIMEOUT_MS = 15_000;
+
 function loadKey(name) {
   if (process.env[name]) return process.env[name].trim();
   try {
@@ -45,8 +52,10 @@ function loadKey(name) {
 }
 const PROXY_KEY = loadKey('PROXY_KEY');
 const FEED_KEY = loadKey('FEED_KEY');
+const RELAY_KEY = loadKey('RELAY_KEY');
 if (!PROXY_KEY) console.warn('[proxy] CẢNH BÁO: chưa có PROXY_KEY, mọi request tới Ollama sẽ bị từ chối.');
 if (!FEED_KEY) console.warn('[proxy] CẢNH BÁO: chưa có FEED_KEY, mọi request tới /feed sẽ bị từ chối.');
+if (!RELAY_KEY) console.warn('[proxy] CẢNH BÁO: chưa có RELAY_KEY, mọi request tới /dnse sẽ bị từ chối.');
 
 function same(given, want) {
   if (!want || !given) return false;
@@ -92,6 +101,50 @@ async function feed(req, res, url) {
   } finally { clearTimeout(timer); }
 }
 
+/**
+ * DNSE Open API — đường sống của bàn môi giới.
+ *
+ * Đo thật 19/10/2026 từ Vercel vùng sin1, năm lần liên tiếp: `openapi.dnse.com.vn` TREO đủ 8 giây
+ * rồi bỏ, trong khi `services.entrade.com.vn` trả lời trong 170ms. Máy này gọi được bình thường.
+ * Nghĩa là nếu không đi vòng qua đây thì care-by, số dư, danh mục, sổ lệnh và đặt lệnh đều chết
+ * trên production — tức cả bàn môi giới.
+ *
+ * Khác `/feed`, đây không phải một dạng request cố định mà là cả một REST API, nên không dựng lại
+ * được từ tham số đã lọc. Thay vào đó siết ba lớp:
+ *   - đích đến ĐÓNG CỨNG là openapi.dnse.com.vn, không bao giờ đi đâu khác;
+ *   - chỉ các nhánh đường dẫn và phương thức mà Lật Bài thật sự dùng;
+ *   - chỉ chuyển tiếp đúng các header của chữ ký, bỏ mọi header khác.
+ * Thêm nữa, DNSE vẫn tự kiểm HMAC: không có API secret thì có khoá relay cũng không ký nổi
+ * một request mới. Khoá relay dùng riêng, không chung với FEED_KEY hay PROXY_KEY.
+ */
+async function dnseRelay(req, res, url) {
+  if (!same(req.headers['x-relay-key'], RELAY_KEY)) return deny(res, 403, 'Forbidden');
+  if (!DNSE_METHODS.has(req.method)) return deny(res, 405, 'Method not allowed');
+
+  const cat = url.indexOf('?');
+  const duongDan = (cat === -1 ? url : url.slice(0, cat)).slice('/dnse'.length) || '/';
+  const truyVan = cat === -1 ? '' : url.slice(cat);
+  if (!DNSE_PATHS.some((re) => re.test(duongDan))) return deny(res, 404, 'Not found');
+
+  const headers = {};
+  for (const h of DNSE_HEADERS) if (req.headers[h] != null) headers[h] = req.headers[h];
+
+  const than = [];
+  for await (const c of req) than.push(c);
+  const body = than.length ? Buffer.concat(than) : undefined;
+
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), DNSE_TIMEOUT_MS);
+  try {
+    const r = await fetch(DNSE_ORIGIN + duongDan + truyVan, { method: req.method, headers, body, signal: ctl.signal });
+    const text = await r.text();
+    res.writeHead(r.status, { 'Content-Type': r.headers.get('content-type') || 'application/json', 'Cache-Control': 'no-store' });
+    res.end(text);
+  } catch (e) {
+    deny(res, 502, e?.name === 'AbortError' ? 'DNSE khong tra loi trong 15s' : 'DNSE unavailable');
+  } finally { clearTimeout(timer); }
+}
+
 function forward(req, res, port, urlPath) {
   const headers = { ...req.headers, host: `${HOST}:${port}` };
   delete headers['x-proxy-key'];
@@ -116,6 +169,7 @@ http.createServer((req, res) => {
 
   const pathname = url.split('?')[0];
   if (pathname.startsWith('/feed/')) return feed(req, res, url);
+  if (pathname === '/dnse' || pathname.startsWith('/dnse/')) return dnseRelay(req, res, url);
 
   if (!OLLAMA_ALLOW.some((re) => re.test(pathname))) return deny(res, 404, 'Not found');
   if (!keyOk(req.headers['x-proxy-key'])) return deny(res, 403, 'Forbidden');

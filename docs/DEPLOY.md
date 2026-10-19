@@ -12,20 +12,32 @@
 
 Nếu máy tắt hoặc ngrok rớt: **cả hai nguồn giá đều đi qua máy này**, nên bảng giá sẽ hỏng chứ không còn đường lui; đăng nhập, bàn môi giới, giao dịch thử báo "hệ thống tạm gián đoạn".
 
-### Vì sao nến giá phải đi vòng qua máy nhà
+### Vì sao nến giá và Open API phải đi vòng qua máy nhà
 
-Entrade chỉ phục vụ IP trong nước. Ngày 19/10/2026, sau một lần deploy, Vercel (vùng `sin1`) gọi thẳng
-`services.entrade.com.vn` bị treo tới hết giờ chờ 8 giây, làm `/api/market` và `/api/history` trả 502 liên tục
-suốt nhiều giờ — trong khi cùng lúc máy ở nhà gọi đủ 32 mã xong trong 237ms. Nhiều khả năng mỗi lần deploy
-là một instance mới với bộ nhớ đệm trống, nên request đầu tiên bắn 32 cuộc gọi cùng lúc và bị chặn IP.
+**Hai host, hai câu chuyện khác nhau — đừng gộp làm một.**
 
-Hai thay đổi để không lặp lại:
+`services.entrade.com.vn` (nến giá, đăng nhập DNSE): ngày 19/10/2026, sau một lần deploy, Vercel vùng `sin1`
+gọi thẳng bị treo tới hết giờ chờ 8 giây, `/api/market` và `/api/history` trả 502 suốt mấy tiếng, trong khi
+máy ở nhà gọi đủ 32 mã xong trong 237ms. **Đến chiều cùng ngày thì tự hồi phục** (170ms từ chính Vercel).
+Nên đây là chặn TẠM THỜI, nhiều khả năng do mỗi lần deploy là một instance mới với bộ nhớ đệm trống, request
+đầu tiên bắn 32 cuộc gọi cùng lúc và bị WAF chặn một lúc. Không phải chặn theo vùng.
+
+`openapi.dnse.com.vn` (toàn bộ bàn môi giới: care-by, số dư, danh mục, sổ lệnh, đặt lệnh): đo năm lần liên
+tiếp từ Vercel `sin1`, **lần nào cũng treo đủ 8 giây**, trong khi máy ở nhà gọi bình thường. Đây là chặn
+thường trực. Không đi vòng thì bàn môi giới không chạy được trên Vercel, chấm hết.
+
+Ba thay đổi:
 - `local-proxy.js` có thêm đường `/feed/*`, dựng lại request từ các tham số đã lọc (kind, symbol, from, to,
   resolution) rồi gọi Entrade bằng IP Việt Nam của máy này. Khóa riêng `FEED_KEY`, không dùng chung với
   `PROXY_KEY` của Ollama. Proxy không chuyển tiếp URL nguyên văn nên không thành proxy mở.
 - `api/_market.js` giữ tối đa 6 request đang bay tới nguồn giá, phần còn lại xếp hàng; và sau 5 lần nguồn
   **không trả lời** liên tiếp thì ngắt mạch 30 giây để API hỏng ngay thay vì treo 8 giây mỗi lần. Nguồn trả
   400 vì mã không tồn tại không tính vào ngắt mạch.
+- `local-proxy.js` có thêm đường `/dnse/*` chuyển tiếp tới `openapi.dnse.com.vn`, khóa riêng `RELAY_KEY`.
+  Khác `/feed`, đây là cả một REST API nên không dựng lại được từ tham số đã lọc; bù lại siết ba lớp: đích
+  đến đóng cứng, chỉ các nhánh `/accounts /brokers /price /registration` với GET/POST/DELETE, và chỉ chuyển
+  tiếp đúng các header của chữ ký. DNSE vẫn tự kiểm HMAC nên không có API secret thì có khóa relay cũng
+  không ký nổi request mới. Trên Vercel đặt `DNSE_BASE_URL` + `DNSE_RELAY_KEY`; ở máy nhà để trống cả hai.
 
 ## Dựng (hoặc dựng lại) backend và database
 
@@ -60,6 +72,8 @@ Giá và chỉ báo kỹ thuật thì worker tự cập nhật mỗi phiên, kh�
 | `DB_JWT_SECRET` | `.env.local` | mọi tính năng cần DB |
 | `PRICE_FEED_URL` | `https://<tên-ngrok>/feed` | bảng giá, lịch sử giá, hiệu suất danh mục |
 | `PRICE_FEED_KEY` | `FEED_KEY` trong `.env.local` | như trên |
+| `DNSE_BASE_URL` | `https://<tên-ngrok>/dnse` | **bắt buộc** — cả bàn môi giới và cổng khách |
+| `DNSE_RELAY_KEY` | `RELAY_KEY` trong `.env.local` | như trên |
 | `SESSION_SECRET` | `.env.local` | đăng nhập |
 | `BROKER_OWNER_USERNAME` | tên đăng nhập của bạn trên latbai.vn (đăng ký trước) | bàn môi giới, kết nối công ty chứng khoán |
 | `DNSE_LOGIN_CUSTODY` | số lưu ký DNSE của bạn (nhiều số cách nhau bằng dấu phẩy) | nút **Đăng nhập bằng DNSE**; các tài khoản này đồng thời là chủ hệ thống |

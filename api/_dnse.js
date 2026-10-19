@@ -11,6 +11,12 @@
  *   DNSE_MAX_DAILY_VND             hạn mức giá trị đặt trong ngày, TỪNG tiểu khoản (mặc định 100.000.000)
  *   DNSE_MAX_ORDERS_PER_DAY        hạn mức số lệnh trong ngày, TỪNG tiểu khoản (mặc định 20)
  *   DNSE_BASE_URL                  mặc định https://openapi.dnse.com.vn (sandbox: https://sb-openapi.dnse.com.vn)
+ *   DNSE_RELAY_KEY                 có khi DNSE_BASE_URL trỏ về local-proxy ở nhà
+ *
+ * VÌ SAO PHẢI ĐI VÒNG: đo thật 19/10/2026 từ Vercel sin1, năm lần liên tiếp, openapi.dnse.com.vn
+ * TREO đủ 8 giây rồi bỏ; cùng lúc máy ở nhà gọi bình thường. Không đi vòng thì care-by, số dư,
+ * danh mục, sổ lệnh, đặt lệnh đều chết trên production — tức cả bàn môi giới. Trên Vercel đặt
+ * DNSE_BASE_URL về `https://<tunnel>/dnse` và DNSE_RELAY_KEY; ở máy nhà để trống cả hai.
  */
 import crypto from 'node:crypto';
 import { rest } from './_db.js';
@@ -63,6 +69,12 @@ async function call(method, path, { query, body, tradingToken } = {}) {
     Accept: 'application/json',
     ...signatureHeaders(method, path, { apiKey: process.env.DNSE_API_KEY, apiSecret: process.env.DNSE_API_SECRET }),
   };
+  // Đi vòng qua local-proxy ở nhà (xem DNSE_BASE_URL bên dưới): thêm khóa relay. Chữ ký HMAC chỉ
+  // ký (request-target), date và nonce, nên header thừa này không làm hỏng chữ ký.
+  if (process.env.DNSE_RELAY_KEY) {
+    headers['x-relay-key'] = process.env.DNSE_RELAY_KEY;
+    headers['ngrok-skip-browser-warning'] = '1';
+  }
   if (tradingToken && path.includes('/orders')) headers['trading-token'] = tradingToken;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const qs = query ? '?' + new URLSearchParams(Object.entries(query).filter(([, v]) => v != null)).toString() : '';

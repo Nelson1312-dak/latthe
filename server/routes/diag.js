@@ -15,9 +15,13 @@ const MUC_TIEU = [
   { ten: 'openapi.dnse.com.vn (ban moi gioi)', url: 'https://openapi.dnse.com.vn/accounts', datKhi: 'tra ve bat ky ma HTTP nao' },
   { ten: 'services.entrade.com.vn (dang nhap DNSE + nen gia)', url: 'https://services.entrade.com.vn/chart-api/v2/ohlcs/stock?from=1792000000&to=1792300000&symbol=FPT&resolution=1D', datKhi: 'tra ve 200' },
   { ten: 'tunnel /feed (duong vong qua may nha)', url: (process.env.PRICE_FEED_URL || '') + '/stock?from=1792000000&to=1792300000&symbol=FPT&resolution=1D', datKhi: 'tra ve 200', khoaFeed: true },
+  // Không ký request, nên DNSE trả 401 "X-API-Key header required" — đúng 401 đó mới là bằng chứng
+  // đã đi tới nơi. Treo hoặc 403 nghĩa là relay chưa thông.
+  { ten: 'tunnel /dnse (Open API moi gioi qua may nha)', url: (process.env.DNSE_BASE_URL || '') + '/accounts', datKhi: 'tra ve 401 cua DNSE', khoaRelay: true },
 ];
 
 async function thu(m) {
+  // Biến môi trường chưa đặt thì url rơi về dạng '/accounts...' — không gọi, chỉ báo chưa cấu hình.
   if (!m.url || m.url.startsWith('/')) return { ten: m.ten, bo_qua: 'chua cau hinh' };
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 8000);
@@ -25,6 +29,7 @@ async function thu(m) {
   try {
     const headers = { Accept: 'application/json' };
     if (m.khoaFeed && process.env.PRICE_FEED_KEY) headers['x-feed-key'] = process.env.PRICE_FEED_KEY;
+    if (m.khoaRelay && process.env.DNSE_RELAY_KEY) headers['x-relay-key'] = process.env.DNSE_RELAY_KEY;
     const r = await fetch(m.url, { signal: ctl.signal, headers });
     return { ten: m.ten, goi_duoc: true, http: r.status, ms: Date.now() - t0, dat_khi: m.datKhi };
   } catch (e) {
