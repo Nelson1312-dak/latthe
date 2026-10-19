@@ -19,6 +19,7 @@ param(
     [string]$Owner = '',
     [string]$DnseCustody = '',
     [string]$SupabaseUrl = 'https://stiffness-glade-coliseum.ngrok-free.dev/postgrest',
+    [string]$PriceFeedUrl = 'https://stiffness-glade-coliseum.ngrok-free.dev/feed',
     [string]$Environment = 'production',
     [switch]$IncludeDnse, [switch]$EnableRealTrading, [switch]$IncludeGoogle, [switch]$DryRun
 )
@@ -39,6 +40,11 @@ foreach ($k in 'DB_JWT_SECRET', 'SESSION_SECRET') {
 }
 # On Vercel the database is reached through the ngrok tunnel, NOT the local 127.0.0.1 address from .env.local
 $vars['SUPABASE_URL'] = $SupabaseUrl
+# Price candles: Entrade only serves Vietnamese IPs, so Vercel goes through local-proxy /feed on this
+# machine. Without these two, /api/market and /api/history return 502 from Vercel. See docs/DEPLOY.md.
+if (-not $env_['FEED_KEY']) { throw "Missing FEED_KEY in .env.local (local-proxy /feed key; generate a random 32-byte value)" }
+$vars['PRICE_FEED_URL'] = $PriceFeedUrl
+$vars['PRICE_FEED_KEY'] = $env_['FEED_KEY']
 if ($Owner) { $vars['BROKER_OWNER_USERNAME'] = $Owner.ToLower() }
 if ($DnseCustody) { $vars['DNSE_LOGIN_CUSTODY'] = (($DnseCustody -split ',' | ForEach-Object { $_.Trim().ToUpper() } | Where-Object { $_ }) -join ',') }
 if ($IncludeDnse) {
@@ -54,7 +60,7 @@ if ($EnableRealTrading) {
 }
 
 Write-Host "Variables to set on Vercel ($Environment):"
-$vars.Keys | ForEach-Object { Write-Host ("  {0,-24} {1}" -f $_, $(if ($_ -eq 'SUPABASE_URL' -or $_ -eq 'BROKER_OWNER_USERNAME' -or $_ -eq 'DNSE_REAL_TRADING' -or $_ -eq 'DNSE_LOGIN_CUSTODY') { $vars[$_] } else { '(hidden)' })) }
+$vars.Keys | ForEach-Object { Write-Host ("  {0,-24} {1}" -f $_, $(if ($_ -eq 'SUPABASE_URL' -or $_ -eq 'PRICE_FEED_URL' -or $_ -eq 'BROKER_OWNER_USERNAME' -or $_ -eq 'DNSE_REAL_TRADING' -or $_ -eq 'DNSE_LOGIN_CUSTODY') { $vars[$_] } else { '(hidden)' })) }
 if ($vars.Contains('DNSE_REAL_TRADING')) { Write-Host 'WARNING: real order placement will be ENABLED on the public site.' -ForegroundColor Yellow }
 if ($DryRun) { Write-Host 'Dry run: nothing was changed.'; exit 0 }
 

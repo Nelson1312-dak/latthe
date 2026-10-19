@@ -46,8 +46,60 @@ export const UNIVERSE = [
 export const BY_SYMBOL = Object.fromEntries(UNIVERSE.map((x) => [x.s, x]));
 
 const BAND = { HOSE: 0.07, HNX: 0.10, UPCOM: 0.15 };
-const FEED = 'https://services.entrade.com.vn/chart-api/v2/ohlcs';
 export const INDICES = ['VNINDEX', 'VN30', 'HNX', 'UPCOM'];
+
+/**
+ * Nguồn nến. Mặc định gọi thẳng Entrade — đúng cho worker và mọi thứ chạy ở máy nhà (IP Việt Nam).
+ *
+ * Trên Vercel phải đặt PRICE_FEED_URL trỏ về `/feed` của local-proxy ở nhà. Entrade chỉ phục vụ IP
+ * trong nước: 19/10/2026 Vercel (sin1) gọi thẳng thì treo tới hết giờ chờ, /api/market và /api/history
+ * trả 502 suốt, trong khi máy nhà gọi 32 mã xong trong 237ms. Xem docs/DEPLOY.md.
+ */
+const FEED_DIRECT = 'https://services.entrade.com.vn/chart-api/v2/ohlcs';
+const feedBase = () => (process.env.PRICE_FEED_URL || FEED_DIRECT).replace(/\/+$/, '');
+const feedHeaders = () => (process.env.PRICE_FEED_KEY
+  ? { Accept: 'application/json', 'x-feed-key': process.env.PRICE_FEED_KEY, 'ngrok-skip-browser-warning': '1' }
+  : { Accept: 'application/json' });
+
+/**
+ * Trần số request đang bay tới nguồn giá, và ngắt mạch khi nguồn hỏng.
+ *
+ * Một lần khởi động nguội của serverless là bộ nhớ đệm trống, nên request đầu tiên vào /api/market
+ * bắn 32 cuộc gọi cùng lúc. Đó nhiều khả năng là thứ làm Entrade chặn IP Vercel ngày 19/10/2026:
+ * log cho thấy vài request ngay lúc deploy còn 200, sau đó 502 liên tục. Xếp hàng thì nguồn giá chỉ
+ * thấy một dòng đều đặn thay vì một cú dồn.
+ *
+ * Ngắt mạch để hỏng cho nhanh: nguồn giá chết thì mỗi lần gọi treo đủ 8 giây rồi mới bỏ, 32 mã xếp
+ * hàng sẽ vượt hạn chạy của function. Sau MAX_HONG lần hỏng liên tiếp thì từ chối ngay trong NGHI_MS,
+ * đủ để API rơi về dữ liệu WebSocket trong DB thay vì đứng chờ.
+ *
+ * CHỈ lỗi `nguonHong` mới tính vào ngắt mạch, tức là nguồn không trả lời (đứt mạng, hết giờ chờ, 5xx).
+ * Nguồn trả 400 vì mã không tồn tại thì nó vẫn sống — tra vài mã sai liên tiếp không được phép làm
+ * sập bảng giá của cả site trong 30 giây.
+ */
+const MAX_SONG_SONG = 6;
+const MAX_HONG = 5;
+const NGHI_MS = 30_000;
+let dangChay = 0, hongLienTiep = 0, moLai = 0;
+const hangDoi = [];
+
+async function khe(fn) {
+  if (hongLienTiep >= MAX_HONG && Date.now() < moLai) throw new Error('nguồn giá đang tạm ngắt mạch');
+  if (dangChay >= MAX_SONG_SONG) await new Promise((r) => hangDoi.push(r));
+  dangChay++;
+  try {
+    const v = await fn();
+    hongLienTiep = 0;
+    return v;
+  } catch (e) {
+    if (!e?.nguonHong) hongLienTiep = 0;                             // nguồn vẫn trả lời
+    else if (++hongLienTiep >= MAX_HONG) moLai = Date.now() + NGHI_MS;
+    throw e;
+  } finally {
+    dangChay--;
+    hangDoi.shift()?.();
+  }
+}
 
 // Giá làm việc theo đơn vị 10 đồng (số nguyên) để không lệch số thực.
 const U = (p) => Math.round(p * 100);
@@ -80,23 +132,34 @@ export function sessionState(ts = Date.now()) {
 
 /** Nến thô theo khoảng thời gian (giây epoch). resolution: '1' (phút), '1D' (ngày). */
 export async function fetchRange(symbol, from, to, resolution = '1D', kind = 'stock') {
-  const url = `${FEED}/${kind}?from=${Math.floor(from)}&to=${Math.floor(to)}&symbol=${symbol}&resolution=${resolution}`;
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 8000);
-  try {
-    const r = await fetch(url, { signal: ctl.signal, headers: { Accept: 'application/json' } });
-    if (!r.ok) throw new Error(`feed ${symbol} HTTP ${r.status}`);
-    const j = await r.json();
-    const n = Array.isArray(j.t) ? j.t.length : 0;
-    const bars = [];
-    for (let i = 0; i < n; i++) {
-      if ([j.o[i], j.h[i], j.l[i], j.c[i]].some((x) => !Number.isFinite(x))) continue;
-      bars.push({ t: j.t[i], o: j.o[i], h: j.h[i], l: j.l[i], c: j.c[i], v: j.v[i] || 0 });
+  const url = `${feedBase()}/${kind}?from=${Math.floor(from)}&to=${Math.floor(to)}&symbol=${symbol}&resolution=${resolution}`;
+  // Giờ chờ bắt đầu khi request thật sự đi, không tính lúc còn xếp hàng
+  return khe(async () => {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    try {
+      let r;
+      try {
+        r = await fetch(url, { signal: ctl.signal, headers: feedHeaders() });
+      } catch (e) {
+        // Đứt mạng hoặc hết giờ chờ: nguồn không trả lời. Đây mới là thứ đáng ngắt mạch.
+        throw Object.assign(new Error(`feed ${symbol} không trả lời (${e?.name === 'AbortError' ? 'quá 8s' : e?.name || 'lỗi mạng'})`), { nguonHong: true });
+      }
+      // 5xx là hỏng phía nguồn; 4xx thường chỉ là mã không tồn tại, nguồn vẫn sống
+      if (r.status >= 500) throw Object.assign(new Error(`feed ${symbol} HTTP ${r.status}`), { nguonHong: true });
+      if (!r.ok) throw new Error(`feed ${symbol} HTTP ${r.status}`);
+      const j = await r.json();
+      const n = Array.isArray(j.t) ? j.t.length : 0;
+      const bars = [];
+      for (let i = 0; i < n; i++) {
+        if ([j.o[i], j.h[i], j.l[i], j.c[i]].some((x) => !Number.isFinite(x))) continue;
+        bars.push({ t: j.t[i], o: j.o[i], h: j.h[i], l: j.l[i], c: j.c[i], v: j.v[i] || 0 });
+      }
+      return bars;
+    } finally {
+      clearTimeout(timer);
     }
-    return bars;
-  } finally {
-    clearTimeout(timer);
-  }
+  });
 }
 
 /** `days` nến gần nhất (mặc định nến ngày). */

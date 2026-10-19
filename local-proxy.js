@@ -1,11 +1,19 @@
 /**
  * local-proxy.js — một cổng duy nhất (11435) cho tunnel ngrok.
  *   /postgrest/*  -> 127.0.0.1:3002  (PostgREST của schema `trade`; bắt buộc có JWT)
+ *   /feed/*       -> services.entrade.com.vn (nến giá; bắt buộc header x-feed-key)
  *   còn lại       -> 127.0.0.1:11434 (Ollama; bắt buộc header x-proxy-key, chỉ cho vài đường dẫn)
  *
  * Tunnel này nằm trên internet công khai, nên proxy KHÔNG được tin ai cả:
  *   - PostgREST tự kiểm JWT (role ẩn danh không có quyền gì), proxy chỉ chặn sớm request không có Authorization.
  *   - Ollama không có xác thực riêng, nên proxy giữ khóa PROXY_KEY (đọc từ .env.local hoặc biến môi trường).
+ *   - /feed dùng khóa RIÊNG (FEED_KEY): lộ khóa này cũng không chạm được vào Ollama hay DB.
+ *
+ * Vì sao có /feed: Entrade chỉ phục vụ nến giá cho IP trong nước. Ngày 19/10/2026 Vercel (sin1) gọi
+ * services.entrade.com.vn bị treo tới hết giờ chờ, làm /api/market và /api/history trả 502 — trong khi
+ * cùng lúc máy ở nhà gọi 32 mã xong trong 237ms. Máy này có IP Việt Nam nên đi đường này là ra.
+ * Proxy KHÔNG chuyển tiếp nguyên văn URL: chỉ dựng lại đúng một dạng request từ các tham số đã lọc,
+ * để không biến tunnel thành proxy mở cho người khác xài.
  *
  * Chạy: node local-proxy.js   (watchdog-proxy.ps1 tự khởi động lại nếu chết)
  */
@@ -22,26 +30,66 @@ const POSTGREST_PORT = 3002;
 const OLLAMA_PORT = 11434;
 const OLLAMA_ALLOW = [/^\/api\/(chat|generate|embeddings|embed)$/, /^\/v1\/(chat\/completions|embeddings)$/];
 
-function loadProxyKey() {
-  if (process.env.PROXY_KEY) return process.env.PROXY_KEY.trim();
+const FEED_ORIGIN = 'https://services.entrade.com.vn/chart-api/v2/ohlcs';
+const FEED_KINDS = new Set(['stock', 'index', 'derivative']);
+const FEED_RES = new Set(['1', '3', '5', '15', '30', '60', '1D', '1W']);
+const FEED_TIMEOUT_MS = 10_000;
+
+function loadKey(name) {
+  if (process.env[name]) return process.env[name].trim();
   try {
     const dir = path.dirname(fileURLToPath(import.meta.url));
-    const m = fs.readFileSync(path.join(dir, '.env.local'), 'utf8').match(/^PROXY_KEY=(.+)$/m);
+    const m = fs.readFileSync(path.join(dir, '.env.local'), 'utf8').match(new RegExp(`^${name}=(.+)$`, 'm'));
     return m ? m[1].trim().replace(/^"|"$/g, '') : '';
   } catch { return ''; }
 }
-const PROXY_KEY = loadProxyKey();
+const PROXY_KEY = loadKey('PROXY_KEY');
+const FEED_KEY = loadKey('FEED_KEY');
 if (!PROXY_KEY) console.warn('[proxy] CẢNH BÁO: chưa có PROXY_KEY, mọi request tới Ollama sẽ bị từ chối.');
+if (!FEED_KEY) console.warn('[proxy] CẢNH BÁO: chưa có FEED_KEY, mọi request tới /feed sẽ bị từ chối.');
 
-function keyOk(given) {
-  if (!PROXY_KEY || !given) return false;
-  const a = Buffer.from(String(given)), b = Buffer.from(PROXY_KEY);
+function same(given, want) {
+  if (!want || !given) return false;
+  const a = Buffer.from(String(given)), b = Buffer.from(want);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+const keyOk = (given) => same(given, PROXY_KEY);
 
 function deny(res, code, msg) {
   res.writeHead(code, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: msg }));
+}
+
+/**
+ * Nến giá Entrade. Không chuyển tiếp URL do bên gọi đưa: đọc từng tham số, kiểm khuôn, rồi tự dựng
+ * lại request. Bên gọi vì vậy không chỉ được proxy đi đâu khác, và cũng không chèn được tham số lạ.
+ */
+async function feed(req, res, url) {
+  if (req.method !== 'GET') return deny(res, 405, 'Method not allowed');
+  if (!same(req.headers['x-feed-key'], FEED_KEY)) return deny(res, 403, 'Forbidden');
+
+  const u = new URL(url, 'http://x');
+  const kind = u.pathname.slice('/feed/'.length);
+  if (!FEED_KINDS.has(kind)) return deny(res, 404, 'Not found');
+  const symbol = String(u.searchParams.get('symbol') || '').toUpperCase();
+  const from = String(u.searchParams.get('from') || '');
+  const to = String(u.searchParams.get('to') || '');
+  const resolution = String(u.searchParams.get('resolution') || '1D');
+  if (!/^[A-Z0-9]{3,12}$/.test(symbol)) return deny(res, 400, 'Bad symbol');
+  if (!/^\d{1,11}$/.test(from) || !/^\d{1,11}$/.test(to)) return deny(res, 400, 'Bad range');
+  if (!FEED_RES.has(resolution)) return deny(res, 400, 'Bad resolution');
+
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), FEED_TIMEOUT_MS);
+  try {
+    const r = await fetch(`${FEED_ORIGIN}/${kind}?from=${from}&to=${to}&symbol=${symbol}&resolution=${resolution}`,
+      { signal: ctl.signal, headers: { Accept: 'application/json' } });
+    const body = await r.text();
+    res.writeHead(r.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.end(body);
+  } catch {
+    deny(res, 502, 'Feed unavailable');
+  } finally { clearTimeout(timer); }
 }
 
 function forward(req, res, port, urlPath) {
@@ -67,11 +115,14 @@ http.createServer((req, res) => {
   }
 
   const pathname = url.split('?')[0];
+  if (pathname.startsWith('/feed/')) return feed(req, res, url);
+
   if (!OLLAMA_ALLOW.some((re) => re.test(pathname))) return deny(res, 404, 'Not found');
   if (!keyOk(req.headers['x-proxy-key'])) return deny(res, 403, 'Forbidden');
   return forward(req, res, OLLAMA_PORT, url);
 }).listen(PORT, HOST, () => {
   console.log(`[proxy] Listening on ${HOST}:${PORT}`);
   console.log(`  /postgrest/* -> ${HOST}:${POSTGREST_PORT} (PostgREST, cần JWT)`);
+  console.log(`  /feed/*      -> ${FEED_ORIGIN} (nến giá, cần x-feed-key)`);
   console.log(`  Ollama (allowlist) -> ${HOST}:${OLLAMA_PORT} (cần x-proxy-key)`);
 });

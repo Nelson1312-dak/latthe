@@ -6,10 +6,26 @@
 |---|---|---|
 | Giao diện + API | Vercel (một function duy nhất `api/router.js`) | Gói Hobby giới hạn 12 function, nên mọi endpoint nằm ở `server/routes/` |
 | Database | Postgres + PostgREST trong Docker trên máy của bạn (`infra/docker-compose.yml`) | Vercel gọi qua tunnel ngrok → `local-proxy.js` → PostgREST (127.0.0.1:3002), luôn kèm JWT. Dữ liệu nằm ở `latthe-pgdata/` (ngoài Docker) |
+| Nến giá (nguồn dự phòng) | Entrade, nhưng **đi vòng qua máy của bạn** | Vercel → tunnel → `local-proxy.js /feed` → `services.entrade.com.vn`, kèm header `x-feed-key` |
 | Worker giá + worker lệnh khách | Máy của bạn (Task Scheduler) | Vercel không giữ được WebSocket |
 | Sao lưu DB | Máy của bạn, 03:00 mỗi ngày | `latthe-db-backup/` (ngoài repo) |
 
-Nếu máy tắt hoặc ngrok rớt: giá quay về nguồn dự phòng (trễ khoảng 1 phút), còn đăng nhập, bàn môi giới, giao dịch thử báo "hệ thống tạm gián đoạn".
+Nếu máy tắt hoặc ngrok rớt: **cả hai nguồn giá đều đi qua máy này**, nên bảng giá sẽ hỏng chứ không còn đường lui; đăng nhập, bàn môi giới, giao dịch thử báo "hệ thống tạm gián đoạn".
+
+### Vì sao nến giá phải đi vòng qua máy nhà
+
+Entrade chỉ phục vụ IP trong nước. Ngày 19/10/2026, sau một lần deploy, Vercel (vùng `sin1`) gọi thẳng
+`services.entrade.com.vn` bị treo tới hết giờ chờ 8 giây, làm `/api/market` và `/api/history` trả 502 liên tục
+suốt nhiều giờ — trong khi cùng lúc máy ở nhà gọi đủ 32 mã xong trong 237ms. Nhiều khả năng mỗi lần deploy
+là một instance mới với bộ nhớ đệm trống, nên request đầu tiên bắn 32 cuộc gọi cùng lúc và bị chặn IP.
+
+Hai thay đổi để không lặp lại:
+- `local-proxy.js` có thêm đường `/feed/*`, dựng lại request từ các tham số đã lọc (kind, symbol, from, to,
+  resolution) rồi gọi Entrade bằng IP Việt Nam của máy này. Khóa riêng `FEED_KEY`, không dùng chung với
+  `PROXY_KEY` của Ollama. Proxy không chuyển tiếp URL nguyên văn nên không thành proxy mở.
+- `api/_market.js` giữ tối đa 6 request đang bay tới nguồn giá, phần còn lại xếp hàng; và sau 5 lần nguồn
+  **không trả lời** liên tiếp thì ngắt mạch 30 giây để API hỏng ngay thay vì treo 8 giây mỗi lần. Nguồn trả
+  400 vì mã không tồn tại không tính vào ngắt mạch.
 
 ## Dựng (hoặc dựng lại) backend và database
 
@@ -42,6 +58,8 @@ Giá và chỉ báo kỹ thuật thì worker tự cập nhật mỗi phiên, kh�
 |---|---|---|
 | `SUPABASE_URL` | `https://<tên-ngrok>/postgrest` (không phải 127.0.0.1) | mọi tính năng cần DB |
 | `DB_JWT_SECRET` | `.env.local` | mọi tính năng cần DB |
+| `PRICE_FEED_URL` | `https://<tên-ngrok>/feed` | bảng giá, lịch sử giá, hiệu suất danh mục |
+| `PRICE_FEED_KEY` | `FEED_KEY` trong `.env.local` | như trên |
 | `SESSION_SECRET` | `.env.local` | đăng nhập |
 | `BROKER_OWNER_USERNAME` | tên đăng nhập của bạn trên latbai.vn (đăng ký trước) | bàn môi giới, kết nối công ty chứng khoán |
 | `DNSE_LOGIN_CUSTODY` | số lưu ký DNSE của bạn (nhiều số cách nhau bằng dấu phẩy) | nút **Đăng nhập bằng DNSE**; các tài khoản này đồng thời là chủ hệ thống |
