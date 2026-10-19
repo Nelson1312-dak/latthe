@@ -49,14 +49,25 @@ export function tapeSymbols() {
   }
 }
 
-/** Bản đồ mã -> { ex, ten } cho cả rổ ghi. UNIVERSE mô tả kỹ hơn (ngành, VN30) nên được ưu tiên. */
+/**
+ * Bản đồ mã -> { ex, name, sector, vn30, watch } cho cả rổ ghi.
+ *
+ * Ngành lấy từ `data/nganh.json` (phân ngành ICB) và GHI ĐÈ lên `sector` của UNIVERSE — cố ý. Nếu
+ * để UNIVERSE một kiểu còn phần còn lại một kiểu thì bộ lọc ngành trên bảng giá bị tách đôi: HPG
+ * nằm ở "Thép & vật liệu" còn NKG/HSG sang tên khác, cùng một ngành thành hai mục. Một hệ phân
+ * ngành duy nhất cho cả 150 mã.
+ */
 export function tapeInfo() {
   const m = new Map();
-  try {
-    const j = JSON.parse(fs.readFileSync(path.join(GOC, 'data/tape-universe.json'), 'utf8'));
-    for (const x of j.ma) m.set(x.s, { ex: x.ex, name: x.ten });
-  } catch { /* rổ giao diện bên dưới vẫn đủ để chạy */ }
+  const doc = (f) => { try { return JSON.parse(fs.readFileSync(path.join(GOC, f), 'utf8')); } catch { return null; } };
+  const ro = doc('data/tape-universe.json');
+  if (ro) for (const x of ro.ma) m.set(x.s, { ex: x.ex, name: x.ten });
   for (const x of UNIVERSE) m.set(x.s, { ex: x.ex, name: x.name, sector: x.sector, vn30: !!x.vn30, watch: !!x.watch });
+  const ng = doc('data/nganh.json');
+  if (ng) for (const [s, code] of Object.entries(ng.ma)) {
+    const ten = ng.ten[code];
+    if (ten && m.has(s)) m.get(s).sector = ten;
+  }
   return m;
 }
 
@@ -270,12 +281,17 @@ export class MarketStream {
     try {
       const rows = await this.db('/market_quotes?select=symbol,data', { role: 'app_worker' });
       for (const r of rows || []) if (r.data) this.state.quotes.set(r.symbol, { ...r.data });
-      // Bù mô tả mã (sàn, tên, ngành) cho bản ghi cũ và đánh dấu để lần ghi tới đẩy xuống DB.
+      // Đồng bộ mô tả mã (sàn, tên, ngành) cho bản ghi cũ và đánh dấu để lần ghi tới đẩy xuống DB.
       // Không làm ở đây thì mã chỉ có mô tả khi nó khớp lệnh lần đầu — ngoài phiên là không bao giờ.
+      // So từng trường chứ không chỉ kiểm "đã có tên chưa": đổi cách phân ngành mà chỉ kiểm tên thì
+      // 150 bản ghi cũ giữ nguyên ngành cũ vĩnh viễn. Đây là nguồn sự thật, cứ lệch là ghi lại.
       let bu = 0;
       for (const s of this.roMa) {
-        if (this.state.quotes.get(s)?.name) continue;
-        this.state._lay(s); this.state.dirty.add(s); bu++;
+        const meta = this.state.thongTin.get(s); if (!meta) continue;
+        const q = this.state.quotes.get(s);
+        if (q && Object.entries(meta).every(([k, v]) => q[k] === v)) continue;
+        Object.assign(this.state._lay(s), meta);
+        this.state.dirty.add(s); bu++;
       }
       log(`nạp lại ${rows?.length || 0} mã giá từ DB${bu ? `, bù mô tả cho ${bu} mã` : ''}`);
     } catch (e) { log('không nạp lại được giá cũ từ DB:', e.message); }

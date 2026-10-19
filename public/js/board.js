@@ -147,16 +147,17 @@
         <p class="bd-none">Bấm một nhóm để lọc bảng giá.</p></div>`;
   }
 
-  function buildSectors() {
-    const sel = $('bd-sector'), secs = [...new Set(UNIVERSE.map((x) => x.sector).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  /** Danh sách ngành dựng từ CẢ rổ đang hiển thị, không chỉ 32 mã có biểu đồ. */
+  function buildSectors(rows) {
+    const sel = $('bd-sector'), secs = [...new Set((rows || []).map((r) => r.sector).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
     sel.innerHTML = '<option value="">Mọi ngành</option>' + secs.map((s) => `<option>${esc(s)}</option>`).join('');
     sel.value = B.sector; B.built = true;
   }
 
   function render() {
     if ($('view-board').hidden || typeof UNIVERSE === 'undefined' || !UNIVERSE.length) return;
-    if (!B.built) buildSectors();
     const rows = allRows();
+    if (!B.built) buildSectors(rows);
     renderCards(rows.filter((r) => r.vn30));
     renderTable(rows);
     renderSide(rows.filter((r) => r.vn30));
