@@ -25,6 +25,7 @@ import r_broker_realtime from '../server/routes/broker/realtime.js';
 import r_broker_send from '../server/routes/broker/send.js';
 import r_broker_symbol from '../server/routes/broker/symbol.js';
 import r_broker_tickets from '../server/routes/broker/tickets.js';
+import r_diag from '../server/routes/diag.js';   // TẠM THỜI — xoá cùng server/routes/diag.js
 import r_brokers from '../server/routes/brokers.js';
 import r_dnse_account from '../server/routes/dnse/account.js';
 import r_dnse_orders from '../server/routes/dnse/orders.js';
@@ -67,6 +68,7 @@ const ROUTES = {
   'broker/symbol': r_broker_symbol,
   'broker/tickets': r_broker_tickets,
   'brokers': r_brokers,
+  'diag': r_diag,                   // TẠM THỜI — xoá cùng server/routes/diag.js
   'dnse/account': r_dnse_account,
   'dnse/orders': r_dnse_orders,
   'dnse/otp': r_dnse_otp,
