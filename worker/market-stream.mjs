@@ -260,6 +260,7 @@ export class MarketStream {
     return this.db('/worker_status?on_conflict=name', {
       role: 'app_worker', method: 'POST', prefer: 'resolution=merge-duplicates',
       body: { name: 'market-stream', at: new Date().toISOString(), info: {
+        sha: process.env.WORKER_SHA || null,
         // Nhiều kết nối: báo trạng thái xấu nhất, để một kết nối chết không bị che bởi các kết nối còn sống
         state: this.socks.map((s) => s.state).find((x) => x !== 'live') || 'live',
         ketNoi: this.socks.map((s) => s.state),

@@ -112,6 +112,7 @@ export class Manager {
   report(error) {
     const feeds = [...this.feeds.values()];
     const info = {
+      sha: process.env.WORKER_SHA || null,
       connections: feeds.length, live: feeds.filter((f) => f.state === 'live').length,
       investors: feeds.map((f) => ({ id: f.investorId, state: f.state, events: f.events, lastEventAt: f.lastEventAt })),
       events: feeds.reduce((a, f) => a + f.events, 0), ...(error ? { error } : {}),

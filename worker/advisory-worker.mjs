@@ -200,7 +200,7 @@ async function main() {
         ready = await modelReady(cfg);
         if (!ready) log(`chưa thấy model ${cfg.model} trong Ollama (ollama pull ${cfg.model})`);
         await rest('/worker_status?on_conflict=name', { ...W, method: 'POST', prefer: 'resolution=merge-duplicates',
-          body: { name: 'advisory', at: new Date().toISOString(), info: { model: cfg.model, modelReady: ready, jobsDone: done, lastSnapshot: lastSnap, lastKnowledge: lastKb } } });
+          body: { name: 'advisory', at: new Date().toISOString(), info: { sha: process.env.WORKER_SHA || null, model: cfg.model, modelReady: ready, jobsDone: done, lastSnapshot: lastSnap, lastKnowledge: lastKb } } });
         lastBeat = Date.now();
       }
       if (ready && await processOne(rest, callOllama, cfg)) { done++; continue; }

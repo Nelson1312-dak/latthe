@@ -33,11 +33,24 @@ $node = (Get-Command node -ErrorAction Stop).Source
 Set-Location $root
 Write-Log "supervisor start ($Name), node=$node"
 
+# Commit the worker is actually running. Read fresh on every restart below, and passed to the worker
+# so it can report it in trade.worker_status.
+#
+# WHY: on 2026-10-13 a fix landed at 23:31 but all three workers had started earlier that day and
+# never exited, so they kept running the pre-fix code for SIX DAYS. broker-stream silently held zero
+# connections and advisory-worker snapshotted zero clients the whole time, with nothing anywhere
+# saying why. A worker that cannot say which commit it is running cannot be caught doing this.
+function Get-Sha {
+    try { $s = (& git -C $root rev-parse --short HEAD 2>$null); if ($LASTEXITCODE -eq 0 -and $s) { return "$s".Trim() } } catch { }
+    return 'unknown'
+}
+
 $fails = 0
 while ($true) {
     Trim-Log
     $started = Get-Date
-    Write-Log "starting $script"
+    $env:WORKER_SHA = Get-Sha
+    Write-Log "starting $script (commit $($env:WORKER_SHA))"
     # Merge stdout+stderr into the log. Child process inherits no console window.
     $p = Start-Process -FilePath $node -ArgumentList @('--env-file=.env.local', $script) -WorkingDirectory $root `
         -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir "$Name.out") -RedirectStandardError (Join-Path $logDir "$Name.err")

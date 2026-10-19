@@ -111,6 +111,21 @@ Giá và chỉ báo kỹ thuật thì worker tự cập nhật mỗi phiên, kh�
 
 ## Vận hành hằng ngày
 
+- **Sau mỗi lần deploy chạm vào `api/` hoặc `worker/`: PHẢI khởi động lại worker.** `supervise.ps1` chỉ
+  khởi động lại tiến trình con khi nó chết, nên worker có thể chạy code cũ vô thời hạn. Ngày 13/10/2026 một
+  bản vá landed lúc 23:31 nhưng cả ba worker đã chạy từ sớm hôm đó và không thoát lần nào — chúng chạy code
+  trước bản vá suốt **sáu ngày**: `broker-stream` giữ 0 kết nối, `advisory-worker` chụp được 0 khách, không
+  chỗ nào báo gì.
+
+  Cách khởi động lại cho đúng: dừng **cả tiến trình `powershell.exe` chạy `supervise.ps1`** lẫn tiến trình
+  `node.exe` con, rồi `Start-ScheduledTask -TaskName 'Latbai worker market'` (và `broker`, `advisory`).
+  Chỉ giết mỗi node là không đủ — supervisor cũng là tiến trình sống lâu và cũng chạy bản script cũ.
+
+  Kiểm tra: `https://latbai.vn/api/health` → mảng `workers`. Mỗi worker có `sha` (commit đang chạy),
+  `im_lang` (quá 10 phút không báo) và `lech_ban_deploy` (khác bản đang deploy). Lệch ngay sau khi deploy là
+  bình thường và có nghĩa là **cần khởi động lại worker**; lệch kéo dài là dấu hiệu quên mất việc đó. Lệch
+  không tính vào `ok` vì commit ở máy chưa push cũng làm lệch.
+
 - **Worker giá**: `worker/README.md`. Kiểm tra: thanh trạng thái dưới cùng của trang giao dịch ghi "DNSE realtime" trong phiên.
 - **Sao lưu**: tự chạy 03:00. Chạy tay: `powershell -ExecutionPolicy Bypass -File db\backup.ps1`. Mỗi bản được kiểm tra đọc lại được trước khi giữ; bản lỗi bị xóa. Hệ thống **không** tự xóa bản cũ, bạn dọn tay khi cần.
 
