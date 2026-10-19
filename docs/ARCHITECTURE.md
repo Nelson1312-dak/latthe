@@ -81,18 +81,36 @@ Khách liên kết thế nào: môi giới tạo **link mời một lần** cho 
 
 ```
 draft ──(gửi khách duyệt)──► pending_client ──(khách xác nhận)──► approved ──(môi giới gửi)──► sent
-  │                                │                                                  │
-  │                                └──(khách từ chối / quá hạn)──► rejected / expired  └──► failed
-  └──(môi giới ghi nhận chỉ thị phone/chat/in_person)──► approved
+  │                                │                                              │     ▲
+  │                                │                                              │     │(đối soát: có lệnh)
+  │                                └──(khách từ chối / quá hạn)──► rejected/expired│   unknown
+  │                                                                                │     │(đối soát: sổ lệnh trống)
+  └──(môi giới ghi nhận chỉ thị phone/chat/in_person)──► approved                  └──► failed ◄┘
 ```
 
 Kiểm tra trước khi gửi, theo thứ tự:
 1. Môi giới đã đăng nhập và là `broker`.
 2. Tiểu khoản nằm trong care-by và có `role = BROKER` cho `UNDERLYING_STOCK` (kiểm tra lại ngay lúc gửi, không dùng bản cache).
 3. Phiếu ở trạng thái `approved`, còn hạn (phiếu do khách duyệt hết hạn sau 15 phút để giá không lệch).
-4. Giá nằm trong trần/sàn lấy từ `secdef` tại thời điểm gửi; giá trị lệnh không vượt hạn mức.
-5. Có trading token (OTP môi giới) còn hạn.
-6. Ghi nhật ký với nonce duy nhất trước khi gọi DNSE, cập nhật kết quả sau.
+4. Giá nằm trong trần/sàn lấy từ `secdef` tại thời điểm gửi; giá trị lệnh không vượt hạn mức mỗi lệnh.
+5. Tiểu khoản chưa chạm trần ngày (số lệnh và tổng giá trị, xem mục 7). Kiểm **trước** khi khóa phiếu, nên bị chặn thì phiếu vẫn ở `approved` để gửi lại sau.
+6. Có trading token (OTP môi giới) còn hạn.
+7. Ghi nhật ký với nonce duy nhất trước khi gọi DNSE, cập nhật kết quả sau.
+
+**Gửi xong có BA kết quả, không phải hai.** Hết 12 giây chờ hoặc DNSE trả 5xx thì request đã rời đi và
+lệnh VẪN có thể đang nằm trên sàn — ghi `failed` lúc đó là nói dối màn hình, và hậu quả thật là môi giới
+tạo phiếu mới rồi khách khớp gấp đôi.
+
+| Kết quả | Trạng thái | Nghĩa là |
+|---|---|---|
+| DNSE trả lời và nhận | `sent` | có `dnse_order_id` |
+| DNSE trả lời và từ chối (4xx, 429, 401) | `failed` | chắc chắn không có lệnh nào trên sàn |
+| Không có câu trả lời dứt khoát (hết giờ chờ, DNSE 5xx) | `unknown` | **phải đối soát**, tuyệt đối không gửi lại |
+
+Đối soát phiếu `unknown`: `POST /api/broker/tickets {action:'reconcile', id}` đọc sổ lệnh của khách từ DNSE và
+liệt kê lệnh trùng mã + chiều + khối lượng; `{action:'resolve', id, dnseOrderId?}` chốt lại (`sent` với số hiệu
+môi giới chọn, hoặc `failed` nếu sổ lệnh không có gì). Hệ thống **không tự ghép**: một lệnh trùng mô tả có thể là
+lệnh môi giới đặt thẳng trên EntradeX, nên người quyết định phải là môi giới.
 
 ### 5.2 Khuyến nghị
 
@@ -178,7 +196,12 @@ RLS: môi giới chỉ thấy dữ liệu khách của mình; khách chỉ thấ
 - API key/secret của môi giới chỉ nằm ở biến môi trường máy chủ.
 - Trading token nằm trong cookie HttpOnly mã hóa, gắn với user môi giới.
 - Mật khẩu của khách tại DNSE không bao giờ đi qua Lật Bài.
-- Đặt lệnh thật có công tắc tổng `DNSE_REAL_TRADING`, hạn mức mỗi lệnh `DNSE_MAX_ORDER_VND`, và hạn mức theo ngày cho từng khách.
+- Đặt lệnh thật có công tắc tổng `DNSE_REAL_TRADING`, hạn mức mỗi lệnh `DNSE_MAX_ORDER_VND` (mặc định 20 triệu),
+  và **trần theo ngày cho từng tiểu khoản**: `DNSE_MAX_ORDERS_PER_DAY` (mặc định 20 lệnh) và `DNSE_MAX_DAILY_VND`
+  (mặc định 100 triệu). Trần ngày tính từ `trade.dnse_audit` kể từ 00:00 giờ Việt Nam (`api/_dnse.js dailyUsage`).
+  Hạn mức mỗi lệnh không giới hạn được thiệt hại trong ngày: một vòng lặp hỏng hay một phiếu bị bấm gửi nhiều lần
+  vẫn rải được vô số lệnh đúng hạn mức. Lệnh **chưa rõ kết quả vẫn bị tính vào trần** — chặn nhầm còn hơn bỏ sót
+  một lệnh đã vào sàn. Mặc định có sẵn trong code nên trần vẫn chạy dù chưa đặt biến môi trường nào.
 - Mọi request ghi lên DNSE đều có nhật ký kiểm toán.
 
 ## 8. Lộ trình

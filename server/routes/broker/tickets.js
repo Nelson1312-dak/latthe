@@ -5,6 +5,9 @@
  *        source = 'app'                  -> chờ khách xác nhận trong app (cổng khách hàng, giai đoạn 2)
  *        source = phone|chat|in_person   -> môi giới ghi nhận chỉ thị, bắt buộc có thời điểm khách ra chỉ thị
  *   POST /api/broker/tickets { action: 'cancel', id }       hủy phiếu chưa gửi
+ *   POST /api/broker/tickets { action: 'reconcile', id }    phiếu 'unknown': liệt kê lệnh trong sổ DNSE khớp mô tả
+ *   POST /api/broker/tickets { action: 'resolve', id, dnseOrderId? }
+ *        có dnseOrderId -> phiếu thành 'sent' với số hiệu đó; không có -> 'failed' (sổ lệnh không có gì)
  * Gửi lệnh lên DNSE ở /api/broker/send.
  */
 import { route } from '../../../api/_http.js';
@@ -32,6 +35,44 @@ export default route('GET, POST, OPTIONS', async ({ req, res, uid, body }) => {
       sub: uid, method: 'PATCH', prefer: 'return=representation', body: { status: 'cancelled' },
     });
     if (!rows.length) return res.status(409).json({ error: 'Phiếu đã gửi hoặc không còn hủy được.' });
+    return { ticket: rows[0] };
+  }
+
+  // ---- Đối soát phiếu 'unknown' (gửi đi mà không biết DNSE có nhận không) ----
+  // Không tự ghép: một lệnh trùng mã/chiều/khối lượng có thể là lệnh môi giới đặt thẳng trên
+  // EntradeX. Hệ thống chỉ liệt kê ứng viên, người quyết định là môi giới, và lựa chọn đó mới
+  // chuyển trạng thái phiếu.
+  if (body.action === 'reconcile' || body.action === 'resolve') {
+    const id = Number(body.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Thiếu mã phiếu.' });
+    const t = (await rest(`/order_tickets?id=eq.${id}&select=${COLS}&limit=1`, { sub: uid }))[0];
+    if (!t) return res.status(404).json({ error: 'Không tìm thấy phiếu lệnh.' });
+    if (t.status !== 'unknown') return res.status(409).json({ error: 'Chỉ đối soát được phiếu đang ở trạng thái "chưa rõ".' });
+    await requireClient(t.account_no, { need: 'view' });
+
+    if (body.action === 'reconcile') {
+      const book = await dnse.orderBook(t.account_no);
+      const list = Array.isArray(book) ? book : book?.orders || book?.data || [];
+      const side = t.side === 'B' ? 'NB' : 'NS';
+      const candidates = list
+        .filter((o) => String(o.symbol || '').toUpperCase() === t.symbol && String(o.side || '') === side && Number(o.quantity) === Number(t.qty))
+        .map((o) => ({
+          id: String(o.id ?? ''), symbol: o.symbol, side: o.side, qty: Number(o.quantity) || null,
+          price: o.price ?? null, status: o.orderStatus || o.status || null, at: o.createdDate || o.transTime || o.modifiedDate || null,
+        }));
+      return { ticket: t, candidates, totalInBook: list.length };
+    }
+
+    // resolve: môi giới chốt — có lệnh tương ứng (ghi số hiệu) hoặc không có lệnh nào
+    const dnseOrderId = body.dnseOrderId == null ? null : String(body.dnseOrderId).trim();
+    if (dnseOrderId !== null && !/^[0-9A-Za-z-]{1,40}$/.test(dnseOrderId)) return res.status(400).json({ error: 'Số hiệu lệnh DNSE không hợp lệ.' });
+    const patch = dnseOrderId
+      ? { status: 'sent', dnse_order_id: dnseOrderId, dnse_status: body.dnseStatus ? String(body.dnseStatus).slice(0, 40) : null, error: null }
+      : { status: 'failed', error: 'Đối soát sổ lệnh DNSE: không có lệnh tương ứng, phiếu coi như chưa gửi.' };
+    const rows = await rest(`/order_tickets?id=eq.${id}&status=eq.unknown&select=${COLS}`, {
+      sub: uid, method: 'PATCH', prefer: 'return=representation', body: patch,
+    });
+    if (!rows.length) return res.status(409).json({ error: 'Phiếu đã được đối soát ở nơi khác.' });
     return { ticket: rows[0] };
   }
 

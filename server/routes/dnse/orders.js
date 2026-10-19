@@ -6,6 +6,7 @@
  *          -> gửi ĐÚNG lệnh đã xem trước (nội dung lấy từ mã xác nhận đã ký, không lấy từ body), mỗi mã một lần
  *   DELETE /api/dnse/orders?account=...&id=... -> hủy lệnh
  * Đặt/hủy chỉ chạy khi DNSE_REAL_TRADING=1 và đã xác thực OTP. Mọi lần gửi đều ghi trade.dnse_audit.
+ * Ngoài hạn mức mỗi lệnh còn có trần ngày theo tiểu khoản (api/_dnse.js assertDailyLimit).
  */
 import crypto from 'node:crypto';
 import { route } from '../../../api/_http.js';
@@ -19,9 +20,10 @@ async function preview(uid, b) {
   const built = await buildOrder({ accountNo: acc.id, symbol: b.symbol, side: b.side, type: b.type, price: b.price, qty: b.qty });
   return {
     summary: { text: `${built.text}, tiểu khoản ${acc.id}`, estValueVnd: built.estValueVnd, ceilingVnd: built.ceilingVnd, floorVnd: built.floorVnd },
-    confirm: dnse.makeConfirm(uid, built.order),
+    confirm: dnse.makeConfirm(uid, built.order, built.estValueVnd),
     expiresInSec: 90,
     realTrading: dnse.realTradingEnabled(),
+    daily: await dnse.dailyUsage(uid, acc.id),
   };
 }
 
@@ -39,13 +41,22 @@ export default route('POST, DELETE, OPTIONS', async ({ req, res, uid, body }) =>
   if (req.method === 'POST' && body.step === 'place') {
     const c = dnse.readConfirm(uid, body.confirm);
     if (!c) return res.status(400).json({ error: 'Mã xác nhận không hợp lệ hoặc đã quá 90 giây, hãy xem trước lệnh lại.', code: 'confirm' });
-    const auditId = await dnse.auditStart(uid, 'place', c.nonce, c.order);
+    await dnse.assertDailyLimit(uid, c.order.accountNo, c.estValueVnd);
+    const auditId = await dnse.auditStart(uid, 'place', c.nonce, { ...c.order, estValueVnd: c.estValueVnd ?? null });
     try {
       const result = await dnse.placeOrder(tt.token, c.order);
       await dnse.auditFinish(uid, auditId, { ok: true, result });
       return res.status(201).json({ order: result });
     } catch (e) {
-      await dnse.auditFinish(uid, auditId, { ok: false, error: e.message });
+      // Xem ghi chú ở broker/send.js: timeout hay DNSE 5xx KHÔNG chứng minh được là lệnh chưa vào.
+      const chuaRo = !!e.chuaRo;
+      await dnse.auditFinish(uid, auditId, { ok: false, chuaRo, error: e.message });
+      if (chuaRo) {
+        return res.status(502).json({
+          error: 'Không rõ DNSE đã nhận lệnh hay chưa. ĐỪNG đặt lại — mở sổ lệnh kiểm tra trước.',
+          code: 'unknown',
+        });
+      }
       throw e;
     }
   }

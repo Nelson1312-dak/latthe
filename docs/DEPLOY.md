@@ -48,6 +48,9 @@ Giá và chỉ báo kỹ thuật thì worker tự cập nhật mỗi phiên, kh�
 | `DNSE_API_KEY`, `DNSE_API_SECRET` | EntradeX → LightSpeed API | bàn môi giới, cổng khách (xem tài sản) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud Console (bên dưới) | đăng nhập Google |
 | `DNSE_REAL_TRADING=1` | chỉ đặt khi sẵn sàng gửi lệnh thật | gửi/hủy lệnh thật |
+| `DNSE_MAX_ORDER_VND` | tùy chọn, mặc định 20.000.000 | trần giá trị **mỗi lệnh** |
+| `DNSE_MAX_ORDERS_PER_DAY` | tùy chọn, mặc định 20 | trần **số lệnh mỗi ngày** cho từng tiểu khoản |
+| `DNSE_MAX_DAILY_VND` | tùy chọn, mặc định 100.000.000 | trần **giá trị đặt mỗi ngày** cho từng tiểu khoản |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | tùy chọn (upstash.com, gói miễn phí) | giới hạn tần suất đăng nhập dùng chung giữa các instance |
 
 ## Các bước
@@ -64,7 +67,15 @@ Giá và chỉ báo kỹ thuật thì worker tự cập nhật mỗi phiên, kh�
    Biến chỉ áp dụng cho bản deploy mới: chạy `vercel --prod` hoặc đẩy một commit.
 4. **Kiểm tra**: mở `https://latbai.vn/api/health`. `ok: true` nghĩa là database và đăng nhập sẵn sàng; các cờ `google`, `dnse`, `brokerOwner`, `realTrading` cho biết nhóm nào đã bật (kể cả `dnseLogin`).
 5. **Đăng nhập Google** (tùy chọn): Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID → loại *Web application*. Thêm **Authorized redirect URI** đúng bằng `https://latbai.vn/api/auth/google-callback`. Lấy Client ID và Secret dán vào `.env.local`, rồi chạy lại bước 3 với `-IncludeGoogle`.
-6. **Gửi lệnh thật** (sau khi đã thử kỹ): chạy lại bước 3 với thêm `-EnableRealTrading`. Lệnh đầu tiên nên là 100 cổ phiếu ở giá sàn rồi hủy ngay. Hạn mức mỗi lệnh mặc định 20 triệu (`DNSE_MAX_ORDER_VND`).
+6. **Gửi lệnh thật** (sau khi đã thử kỹ): chạy lại bước 3 với thêm `-EnableRealTrading`. Lệnh đầu tiên nên là 100 cổ phiếu ở giá sàn rồi hủy ngay. Hạn mức mỗi lệnh mặc định 20 triệu (`DNSE_MAX_ORDER_VND`), thêm trần ngày 20 lệnh / 100 triệu cho từng tiểu khoản.
+
+   **Kiểm tra công tắc đang bật hay tắt:** `https://latbai.vn/api/health` → `config.realTrading`. Đang bật mà
+   `trade.dnse_audit` chưa có dòng nào nghĩa là đường gửi lệnh thật chưa chạy lần nào — hãy làm bài thử 100 cổ
+   phiếu ở trên trước, hoặc tắt công tắc lại cho tới lúc làm:
+   ```
+   vercel env rm DNSE_REAL_TRADING production --yes
+   vercel --prod
+   ```
 
 ## Vận hành hằng ngày
 

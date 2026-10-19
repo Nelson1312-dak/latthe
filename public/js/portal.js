@@ -47,7 +47,7 @@
   }
 
   /* ---------- Hiển thị ---------- */
-  const STATUS = { approved: 'Đã xác nhận, môi giới sẽ gửi lệnh', sent: 'Đã gửi lên DNSE', failed: 'Gửi lỗi', rejected: 'Bạn đã từ chối', expired: 'Hết hạn', cancelled: 'Môi giới đã hủy' };
+  const STATUS = { approved: 'Đã xác nhận, môi giới sẽ gửi lệnh', sent: 'Đã gửi lên DNSE', failed: 'Gửi lỗi', unknown: 'Đang đối soát với DNSE', rejected: 'Bạn đã từ chối', expired: 'Hết hạn', cancelled: 'Môi giới đã hủy' };
   const tkText = (t) => `${t.side === 'B' ? 'MUA' : 'BÁN'} ${Number(t.qty).toLocaleString('vi-VN')} ${t.symbol} ${t.type === 'LO' ? 'giá ' + Number(t.price).toFixed(2) : 'lệnh ' + t.type}`;
 
   function pendingCard(t) {

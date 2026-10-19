@@ -10,7 +10,7 @@
 #      The file is readable only by your Windows user. Passwords are never printed or put in the repo.
 #   2. creates the data folder D:\Claude projects\Project\latthe-pgdata (outside Docker)
 #   3. docker compose up (Postgres first, then PostgREST), both bound to 127.0.0.1 only
-#   4. on a fresh database: applies db\001, 004..011 in order (002/003 only clean up the old RAG tables, not needed here)
+#   4. on a fresh database: applies db\001, 004..016 in order (002/003 only clean up the old RAG tables, not needed here)
 #   5. checks PostgREST with deploy\check-local-db.mjs (no token = 401, forged token = 401, valid token = 200, old tables not exposed)
 #
 # NOTE: ASCII-only on purpose (Windows PowerShell 5.1 reads .ps1 files as ANSI without a BOM).
@@ -80,7 +80,7 @@ try {
     $has = (cmd.exe /c "docker exec postgres_latthe psql -U postgres -d latthe -tAc `"select to_regnamespace('trade') is not null`" 2>nul" | Out-String).Trim()
     if ($has -ne 't') {
         Say 'Fresh database: applying migrations'
-        foreach ($f in '001-trade-schema', '004-trade-functions', '005-dnse', '006-auth-google', '007-broker-links', '008-order-tickets', '009-client-portal', '010-market', '011-dnse-login', '012-advisory', '013-advisory-ai', '014-knowledge', '015-tape') {
+        foreach ($f in '001-trade-schema', '004-trade-functions', '005-dnse', '006-auth-google', '007-broker-links', '008-order-tickets', '009-client-portal', '010-market', '011-dnse-login', '012-advisory', '013-advisory-ai', '014-knowledge', '015-tape', '016-ticket-unknown') {
             $path = Join-Path $repo "db\$f.sql"
             if (-not (Test-Path $path)) { throw "Missing migration $path" }
             # cmd.exe redirect keeps the file bytes (UTF-8) intact

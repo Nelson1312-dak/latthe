@@ -33,12 +33,13 @@
   const STATUS = {
     draft: ['Nháp', ''], pending_client: ['Chờ khách xác nhận', 'wait'], pending_broker: ['Chờ môi giới', 'wait'],
     approved: ['Đã duyệt, chờ gửi', 'approved'], sent: ['Đã gửi DNSE', 'sent'], failed: ['Gửi lỗi', 'failed'],
+    unknown: ['Chưa rõ — cần đối soát', 'failed'],
     rejected: ['Khách từ chối', 'rejected'], expired: ['Hết hạn', 'cx'], cancelled: ['Đã hủy', 'cx'],
   };
   const SOURCE = { app: 'Khách xác nhận trong app', phone: 'Điện thoại', chat: 'Tin nhắn', in_person: 'Gặp trực tiếp' };
 
   const D = { broker: false, clients: [], sel: null, tickets: [], side: 'B', trading: { active: false, realTrading: false }, q: '', armed: null,
-    invite: null, links: [], advice: [], rt: null };
+    invite: null, links: [], advice: [], rt: null, recon: {} };
 
   async function api(url, opts = {}) {
     const r = await fetch(url, { method: opts.method || 'GET', headers: opts.body ? { 'Content-Type': 'application/json' } : undefined, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -137,8 +138,28 @@
       <small>${esc(t.client_name || t.account_no)} · ${esc(SOURCE[t.source] || t.source)}${t.instructed_at ? ' lúc ' + esc(hhmm(t.instructed_at)) : ''}${t.dnse_order_id ? ' · Lệnh DNSE #' + esc(t.dnse_order_id) : ''}</small>
       ${t.instruction_note ? `<div><small>“${esc(t.instruction_note)}”</small></div>` : ''}
       ${t.error ? `<div class="tk-err">${esc(t.error)}</div>` : ''}
+      ${t.status === 'unknown' ? reconHtml(t) : ''}
       ${canSend || canCancel ? `<div class="tk-actions">${canSend ? `<button class="go${D.armed === t.id ? ' arm' : ''}" data-send="${t.id}">${D.armed === t.id ? 'Bấm lần nữa để gửi' : 'Gửi lệnh'}</button>` : ''}${canCancel ? `<button data-cancel-ticket="${t.id}">Hủy phiếu</button>` : ''}</div>` : ''}
     </div>`;
+  }
+
+  /**
+   * Phiếu "chưa rõ": lệnh có thể đã nằm trên sàn. Không bao giờ tự kết luận hộ môi giới —
+   * chỉ lấy sổ lệnh của khách ra đối chiếu rồi để môi giới chọn.
+   */
+  function reconHtml(t) {
+    const r = D.recon[t.id];
+    if (!r) return `<div class="tk-actions"><button data-reconcile="${t.id}">Đối soát sổ lệnh</button></div>`;
+    if (r.loading) return '<div><small>Đang đọc sổ lệnh của khách từ DNSE…</small></div>';
+    if (r.error) return `<div class="tk-err">${esc(r.error)}</div><div class="tk-actions"><button data-reconcile="${t.id}">Thử lại</button></div>`;
+    const list = r.candidates || [];
+    return `<div><small>${list.length
+      ? `Sổ lệnh hôm nay có ${list.length} lệnh khớp mô tả (trong tổng ${r.totalInBook}). Lệnh nào là của phiếu này?`
+      : `Sổ lệnh hôm nay (${r.totalInBook} lệnh) không có lệnh nào khớp mô tả.`}</small></div>
+      <div class="tk-actions">
+        ${list.map((o) => `<button data-resolve="${t.id}" data-oid="${esc(o.id)}" data-ostatus="${esc(o.status || '')}">#${esc(o.id)}${o.price != null ? ' giá ' + esc(px(o.price)) : ''}${o.status ? ' · ' + esc(o.status) : ''}</button>`).join('')}
+        <button data-resolve="${t.id}">Sổ lệnh không có lệnh nào</button>
+      </div>`;
   }
   function renderTickets() {
     $('desk-tickets').innerHTML = D.tickets.length ? D.tickets.slice(0, 30).map(ticketHtml).join('') : '<div class="empty">Chưa có phiếu lệnh nào.</div>';
@@ -249,6 +270,24 @@
     if (D.sel) selectClient(D.sel.client.accountNo);
   }
 
+  async function reconcile(id) {
+    D.recon[id] = { loading: true }; renderTickets();
+    try {
+      const r = await api('/api/broker/tickets', { method: 'POST', body: { action: 'reconcile', id } });
+      D.recon[id] = { candidates: r.candidates || [], totalInBook: r.totalInBook ?? 0 };
+    } catch (e) { D.recon[id] = { error: e.message }; }
+    renderTickets();
+  }
+  async function resolve(id, dnseOrderId, dnseStatus) {
+    try {
+      await api('/api/broker/tickets', { method: 'POST', body: { action: 'resolve', id, dnseOrderId: dnseOrderId || null, dnseStatus: dnseStatus || null } });
+      say(dnseOrderId ? `Đã chốt phiếu khớp với lệnh #${dnseOrderId}.` : 'Đã chốt: phiếu coi như chưa gửi.');
+      delete D.recon[id];
+    } catch (e) { say(e.message); }
+    await loadTickets();
+    if (D.sel) selectClient(D.sel.client.accountNo);
+  }
+
   async function invite() {
     const c = D.sel?.client; if (!c) return;
     try {
@@ -283,6 +322,8 @@
     if (t.dataset.dside) { D.side = t.dataset.dside; return renderForm(); }
     if (t.hasAttribute('data-refresh-client') && D.sel) return selectClient(D.sel.client.accountNo);
     if (t.dataset.send) return sendTicket(Number(t.dataset.send));
+    if (t.dataset.reconcile) return reconcile(Number(t.dataset.reconcile));
+    if (t.dataset.resolve) return resolve(Number(t.dataset.resolve), t.dataset.oid || null, t.dataset.ostatus || null);
     if (t.dataset.cancelTicket) {
       return api('/api/broker/tickets', { method: 'POST', body: { action: 'cancel', id: Number(t.dataset.cancelTicket) } })
         .then(() => { say('Đã hủy phiếu.'); loadTickets(); }).catch((err) => say(err.message));

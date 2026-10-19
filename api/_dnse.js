@@ -8,6 +8,8 @@
  *   DNSE_OWNER_USERNAME            username trên latbai.vn được phép dùng (mọi user khác bị 403)
  *   DNSE_REAL_TRADING              '1' mới cho đặt/hủy lệnh thật (mặc định TẮT, chỉ xem)
  *   DNSE_MAX_ORDER_VND             hạn mức giá trị mỗi lệnh (mặc định 20.000.000)
+ *   DNSE_MAX_DAILY_VND             hạn mức giá trị đặt trong ngày, TỪNG tiểu khoản (mặc định 100.000.000)
+ *   DNSE_MAX_ORDERS_PER_DAY        hạn mức số lệnh trong ngày, TỪNG tiểu khoản (mặc định 20)
  *   DNSE_BASE_URL                  mặc định https://openapi.dnse.com.vn (sandbox: https://sb-openapi.dnse.com.vn)
  */
 import crypto from 'node:crypto';
@@ -15,12 +17,17 @@ import { rest } from './_db.js';
 import { assertOwner as assertBrokerOwner } from './_broker.js';
 
 export class DnseError extends Error {
-  constructor(message, status = 502, code = 'dnse') { super(message); this.status = status; this.code = code; this.expose = true; }
+  /** `chuaRo` = gọi đi rồi nhưng không có câu trả lời dứt khoát, nên KHÔNG kết luận được là lệnh đã vào hay chưa. */
+  constructor(message, status = 502, code = 'dnse', { chuaRo = false } = {}) {
+    super(message); this.status = status; this.code = code; this.expose = true; this.chuaRo = chuaRo;
+  }
 }
 
 const base = () => (process.env.DNSE_BASE_URL || 'https://openapi.dnse.com.vn').replace(/\/+$/, '');
 export const realTradingEnabled = () => process.env.DNSE_REAL_TRADING === '1';
 export const maxOrderVnd = () => parseInt(process.env.DNSE_MAX_ORDER_VND || '', 10) || 20_000_000;
+export const maxDailyVnd = () => parseInt(process.env.DNSE_MAX_DAILY_VND || '', 10) || 100_000_000;
+export const maxOrdersPerDay = () => parseInt(process.env.DNSE_MAX_ORDERS_PER_DAY || '', 10) || 20;
 
 /** Chỉ user chủ sở hữu (đã đăng nhập site) mới được chạm vào tài khoản DNSE thật. */
 export async function assertOwner(uid) {
@@ -65,8 +72,10 @@ async function call(method, path, { query, body, tradingToken } = {}) {
   try {
     res = await fetch(base() + path + qs, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: ctl.signal });
   } catch (e) {
-    // Câu chữ phải khác bên đăng nhập (_dnselogin.js) để nhìn màn hình là biết hỏng ở đâu
-    const err = new DnseError('Không gọi được API giao dịch DNSE, thử lại sau.', 503, 'unreachable');
+    // Câu chữ phải khác bên đăng nhập (_dnselogin.js) để nhìn màn hình là biết hỏng ở đâu.
+    // chuaRo: request đã rời máy chủ, hết giờ chờ hay đứt mạng đều KHÔNG chứng minh được là DNSE
+    // chưa nhận. Bên gọi phải đối soát chứ không được coi như thất bại rồi gửi lại.
+    const err = new DnseError('Không gọi được API giao dịch DNSE, thử lại sau.', 503, 'unreachable', { chuaRo: true });
     err.detail = `openapi:${e?.name === 'AbortError' ? 'quá 12s' : e?.cause?.code || e?.name || 'lỗi mạng'}`;
     throw err;
   } finally { clearTimeout(timer); }
@@ -77,7 +86,10 @@ async function call(method, path, { query, body, tradingToken } = {}) {
   const msg = data?.message || data?.error || `DNSE HTTP ${res.status}`;
   if (res.status === 401) throw new DnseError(tradingToken ? 'Phiên giao dịch DNSE đã hết hạn, cần xác thực OTP lại.' : 'DNSE từ chối API key (sai key/secret hoặc key đã bị thu hồi).', 401, 'dnse_auth');
   if (res.status === 429) throw new DnseError('DNSE đang giới hạn tần suất gọi, thử lại sau ít giây.', 429, 'rate');
-  throw new DnseError(`DNSE: ${msg}`, res.status >= 400 && res.status < 500 ? 400 : 502, data?.code || 'dnse');
+  // 4xx = DNSE đã xét và từ chối, chắc chắn không có lệnh nào. 5xx = hỏng ở phía DNSE sau khi đã
+  // nhận request, lệnh có thể đã vào sổ — không được kết luận là thất bại.
+  const loiPhiaDnse = res.status >= 500;
+  throw new DnseError(`DNSE: ${msg}`, loiPhiaDnse ? 502 : 400, data?.code || 'dnse', { chuaRo: loiPhiaDnse });
 }
 
 // ---------- Đọc tài khoản ----------
@@ -171,8 +183,8 @@ export function readTradingCookie(req, uid) {
 function confirmSign(data) {
   return crypto.createHmac('sha256', process.env.SESSION_SECRET || '').update('dnse-confirm:' + data).digest('base64url');
 }
-export function makeConfirm(uid, order) {
-  const payload = Buffer.from(JSON.stringify({ uid, order, exp: Date.now() + 90e3, nonce: crypto.randomBytes(12).toString('base64url') })).toString('base64url');
+export function makeConfirm(uid, order, estValueVnd = null) {
+  const payload = Buffer.from(JSON.stringify({ uid, order, estValueVnd, exp: Date.now() + 90e3, nonce: crypto.randomBytes(12).toString('base64url') })).toString('base64url');
   return `${payload}.${confirmSign(payload)}`;
 }
 export function readConfirm(uid, token) {
@@ -197,4 +209,53 @@ export async function auditStart(uid, action, nonce, request) {
 }
 export async function auditFinish(uid, id, result) {
   try { await rest(`/dnse_audit?id=eq.${id}`, { sub: uid, method: 'PATCH', body: { result } }); } catch (e) { console.error('[dnse-audit]', e?.message); }
+}
+
+// ---------- Hạn mức theo ngày cho từng tiểu khoản ----------
+// `DNSE_MAX_ORDER_VND` chỉ chặn MỘT lệnh. Không có trần theo ngày thì một vòng lặp hỏng, một cú
+// bấm liên tục hay một phiếu bị gửi đi gửi lại vẫn rải được vô số lệnh đúng hạn mức. Trần ngày là
+// thứ giới hạn thiệt hại trong ngày đầu bật `DNSE_REAL_TRADING`, nên nó phải có mặc định an toàn
+// và chạy ngay cả khi chưa đặt biến môi trường nào.
+
+const fmtVnd = (n) => Math.round(n).toLocaleString('vi-VN');
+
+/** Mốc 00:00 giờ Việt Nam của hôm nay (UTC+7, không có giờ mùa hè), dạng ISO UTC. */
+export function startOfVnDay(now = Date.now()) {
+  const VN = 7 * 3600e3;
+  return new Date(Math.floor((now + VN) / 86400e3) * 86400e3 - VN).toISOString();
+}
+
+/**
+ * Đã đặt bao nhiêu lệnh và bao nhiêu tiền trên một tiểu khoản kể từ 00:00 hôm nay, theo nhật ký
+ * kiểm toán. Lệnh chưa biết kết quả (`result` rỗng, hoặc kết thúc ở trạng thái chưa rõ) VẪN TÍNH:
+ * hạn mức phải tính theo hướng an toàn, thà chặn nhầm còn hơn cho qua một lệnh đã vào sàn.
+ */
+export async function dailyUsage(uid, accountNo = null) {
+  const rows = await rest(`/dnse_audit?action=eq.place&at=gte.${startOfVnDay()}&select=request,result&limit=500`, { sub: uid });
+  let orders = 0, vnd = 0;
+  for (const r of rows || []) {
+    if (r.result && r.result.ok === false && !r.result.chuaRo) continue;   // DNSE từ chối dứt khoát
+    if (accountNo && String(r.request?.accountNo || '') !== String(accountNo)) continue;
+    orders++;
+    vnd += Number(r.request?.estValueVnd) || 0;
+  }
+  return { orders, vnd, maxOrders: maxOrdersPerDay(), maxVnd: maxDailyVnd() };
+}
+
+/** Chặn TRƯỚC khi gọi DNSE. Ném DnseError 429 khi lệnh này sẽ vượt trần ngày của tiểu khoản. */
+export async function assertDailyLimit(uid, accountNo, estValueVnd) {
+  const used = await dailyUsage(uid, accountNo);
+  if (used.orders >= used.maxOrders) {
+    throw new DnseError(
+      `Tiểu khoản ${accountNo} đã đặt ${used.orders} lệnh hôm nay, chạm hạn mức ${used.maxOrders} lệnh mỗi ngày (DNSE_MAX_ORDERS_PER_DAY).`,
+      429, 'daily_orders');
+  }
+  const sau = used.vnd + (Number(estValueVnd) || 0);
+  if (sau > used.maxVnd) {
+    throw new DnseError(
+      `Lệnh này nâng giá trị đặt trong ngày của tiểu khoản ${accountNo} lên khoảng ${fmtVnd(sau)} đ, `
+      + `vượt hạn mức ${fmtVnd(used.maxVnd)} đ mỗi ngày (DNSE_MAX_DAILY_VND).`,
+      429, 'daily_vnd');
+  }
+  return used;
 }

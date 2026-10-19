@@ -24,5 +24,6 @@ export default route('GET, OPTIONS', async ({ req, uid }) => {
     trading: { active: !!tt, expiresAt: tt ? new Date(tt.exp).toISOString() : null },
     realTrading: dnse.realTradingEnabled(),
     maxOrderVnd: dnse.maxOrderVnd(),
+    daily: await dnse.dailyUsage(uid, acc),
   };
 }, { auth: true });
