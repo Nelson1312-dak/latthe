@@ -814,3 +814,11 @@ td.warn{color:var(--ref);font-weight:600}
 .kb-fold{margin:8px 18px 0;border:1px solid var(--line-soft);border-radius:var(--radius-s);padding:8px 12px}
 .kb-fold summary{cursor:pointer;color:var(--faint);font-size:12px;font-weight:600}
 .kb-fold .kb-text{margin-top:8px;font-size:12px}
+
+/* Chuyển giữa tài khoản DNSE thật và tiền ảo trên phiếu lệnh. Phải nhìn là thấy ngay đang ở
+   tài khoản nào: nhầm hai cái này nghĩa là tưởng đang thử mà lại gửi lệnh thật, hoặc ngược lại. */
+.acct-switch{display:flex;gap:6px;margin-bottom:10px}
+.acct-switch .tool{flex:1}
+.acct-switch .tool[aria-pressed="true"]{background:var(--accent-soft,rgba(255,255,255,.08));border-color:var(--accent,currentColor);font-weight:600}
+.acct-which{grid-column:1/-1;margin-top:6px;font-size:12px;color:var(--muted)}
+.acct-which.that{color:var(--up,#3fb950)}
