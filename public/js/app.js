@@ -83,7 +83,7 @@ function book(m){
 /* mode: 'that' = tài khoản DNSE thật, 'ao' = giao dịch thử bằng tiền ảo.
    Mọi chỗ hiển thị đọc chung ACC, nên đổi tài khoản chỉ là đổi NGUỒN đổ vào đây - không phải
    viết lại phiếu lệnh, sổ lệnh hay danh mục. Chỉ đặt/hủy lệnh mới phải rẽ nhánh. */
-const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, daDo:false, tuChon:false, accountNo:null, otp:false, maxOrderVnd:0};
+const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
 const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
@@ -269,6 +269,7 @@ const TRANG_THAI_DNSE = {Filled:"ok", PartiallyFilled:"wait", Pending:"wait", Pe
 function applyReal(d){
   const old=new Map(ACC.orders.map(o=>[o.id,o.status]));
   ACC.accountNo=d.account||null;
+  ACC.dsTieuKhoan=(d.accounts||[]).map(a=>a.id).filter(Boolean);
   ACC.otp=!!d.trading?.active;
   ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
   ACC.cash=Number(d.balance?.stock?.availableCash ?? d.balance?.stock?.totalCash) || 0;
@@ -303,7 +304,9 @@ async function refreshAccount(){
   try{
     if(!ACC.daDo) await doTaiKhoanThat();   // lần dò trước chưa có câu trả lời thì hỏi lại
     if(ACC.mode==="that"){
-      const r=await fetch("/api/dnse/account"); const d=await r.json();
+      // Giữ đúng tiểu khoản đang chọn: tiền nằm ở tiểu khoản nào thì chỉ đặt lệnh được ở đó
+      const q=ACC.accountNo?"?account="+encodeURIComponent(ACC.accountNo):"";
+      const r=await fetch("/api/dnse/account"+q); const d=await r.json();
       if(r.ok){ applyReal(d); }
       else if(r.status===403||r.status===401){ ACC.coThat=false; ACC.mode="ao"; }   // mất quyền thì lui về tiền ảo
       else { ACC.cash=0; ACC.hold={}; ACC.orders=[]; }
@@ -330,7 +333,18 @@ async function doTaiKhoanThat(){
   if(ACC.coThat && !ACC.tuChon) ACC.mode="that";            // người dùng đã tự chọn thì tôn trọng
   renderAcctSwitch();
 }
+function renderTieuKhoan(){
+  const sel=$("acct-sub"); if(!sel) return;
+  const hien=ACC.user&&ACC.mode==="that"&&ACC.dsTieuKhoan.length>1;
+  sel.hidden=!hien;
+  if(!hien) return;
+  const can=ACC.dsTieuKhoan.map(id=>`<option value="${id}"${id===ACC.accountNo?" selected":""}>Tiểu khoản ${id}</option>`).join("");
+  if(sel.innerHTML!==can) sel.innerHTML=can;
+  sel.value=ACC.accountNo||"";
+}
+
 function renderAcctSwitch(){
+  renderTieuKhoan();
   const f=$("foot-acct");
   if(f) f.textContent="Giá và biểu đồ lấy từ DNSE."+(!ACC.user?"" : ACC.mode==="that"
     ? " Màn Giao dịch đang dùng TÀI KHOẢN DNSE THẬT — lệnh gửi thẳng lên sàn."
@@ -625,6 +639,15 @@ function openView(v, conLai=20){
   if(typeof setView==="function") return setView(v);
   if(conLai>0) setTimeout(()=>openView(v,conLai-1),250);
 }
+
+document.addEventListener("change", e=>{
+  if(e.target.id==="acct-sub"){
+    ACC.accountNo=e.target.value;
+    ACC.cash=0; ACC.hold={}; ACC.orders=[];   // xoá số của tiểu khoản cũ ngay
+    renderTicket(); renderPanel();
+    refreshAccount();
+  }
+});
 
 function openComposer(){
   const sel=$("d-where"); const def=CS.cat.startsWith("sym:")?CS.cat:(CS.cat==="all"?"chung":CS.cat);

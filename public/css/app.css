@@ -152,6 +152,8 @@ button{cursor:pointer}
 .msg{padding:7px 9px;border-radius:var(--radius-s);font-size:12px;line-height:1.4}
 .msg.err{background:rgba(246,70,93,.1);color:#ff8c9b}
 .msg.warn{background:rgba(233,179,8,.1);color:#f2cc5c}
+.msg.ok{background:rgba(63,185,80,.12);color:#56d364}
+.broker-acc.ok{color:#56d364}
 .cta{height:42px;border:0;border-radius:var(--radius-s);font-weight:700;font-size:14px}
 .cta.buy{background:var(--up);color:#00170d}.cta.sell{background:var(--down);color:#1f0006}
 .cta:disabled{background:var(--raise);color:var(--faint);cursor:not-allowed}
@@ -861,3 +863,8 @@ td.warn{color:var(--ref);font-weight:600}
 .dcard-special label{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:12px;min-width:0}
 .dcard-special .inp{height:34px}
 .dcard-special textarea.inp{height:auto}
+
+/* Chọn tiểu khoản: chủ tài khoản DNSE thường có nhiều tiểu khoản, và tiền nằm ở tiểu khoản nào
+   thì chỉ đặt được lệnh ở đó. Trước đây màn Giao dịch âm thầm lấy tiểu khoản đầu tiên, nên nhìn
+   thấy sức mua 33 đ mà không hiểu tiền của mình đi đâu. */
+.acct-sub{height:30px;margin:0 12px 10px;font-size:12px;width:calc(100% - 24px)}

@@ -121,8 +121,15 @@
     if (!b.available) {
       actions = '<div class="broker-acc">Chưa mở cho tài khoản của bạn.</div>';
     } else if (b.id === 'dnse') {
-      actions = `<div class="broker-actions"><button data-view-broker="dnse" class="primary">Xem tài khoản</button>${
-        b.can.trade ? '<button data-otp-broker="dnse">Xác thực OTP để giao dịch</button>' : ''}</div>`;
+      const t = S.trading || {};
+      const conLai = t.expiresAt ? Math.max(0, Math.round((Date.parse(t.expiresAt) - Date.now()) / 36e5)) : 0;
+      const phien = t.active
+        ? `<div class="broker-acc ok">Phiên giao dịch đang mở · còn khoảng ${conLai} giờ</div>`
+        : '<div class="broker-acc">Chưa mở phiên giao dịch — xác thực OTP mới đặt được lệnh.</div>';
+      actions = `${phien}<div class="broker-actions"><button data-view-broker="dnse" class="primary">Xem tài khoản</button>${
+        b.can.trade ? (t.active
+          ? '<button data-otp-end="dnse">Kết thúc phiên</button>'
+          : '<button data-otp-broker="dnse">Xác thực OTP để giao dịch</button>') : ''}</div>`;
     } else if (b.connected) {
       actions = `<div class="broker-actions"><button data-view-broker="shs" class="primary">Xem tài khoản</button><button data-disconnect="shs">Ngắt kết nối</button></div>`;
     } else {
@@ -147,7 +154,7 @@
     errBox($('broker-msg'), '');
     try {
       const r = await api('/api/brokers');
-      S.brokers = r.brokers;
+      S.brokers = r.brokers; S.trading = r.trading || {};
       $('broker-list').innerHTML = r.brokers.map(brokerCard).join('');
       if (r.note) errBox($('broker-msg'), r.note, 'warn');
     } catch (e) {
@@ -225,8 +232,20 @@
       // nào, nên máy chủ tự thử nốt loại còn lại nếu đoán sai (xem verifyOtp trong api/_dnse.js).
       const otp = prompt('Nhập mã Smart OTP trong app EntradeX (hoặc OTP email nếu tài khoản bạn dùng email):');
       if (!otp) return;
+      errBox($('broker-msg'), 'Đang xác thực…', 'warn');
       return api('/api/dnse/otp', { method: 'POST', body: { action: 'verify', otp: otp.trim() } })
-        .then(() => { say('Đã mở phiên giao dịch DNSE.'); openBrokers(); })
+        .then(async (d) => {
+          await openBrokers();   // vẽ lại để thấy phiên đã mở
+          // Báo ngay trong hộp thoại: hộp thoại là <dialog> mở bằng showModal nên toast nằm dưới
+          // lớp phủ, người dùng xác thực xong không thấy gì và tưởng vẫn hỏng.
+          const h = d.expiresAt ? Math.max(0, Math.round((Date.parse(d.expiresAt) - Date.now()) / 36e5)) : 8;
+          errBox($('broker-msg'), `Đã mở phiên giao dịch DNSE, hiệu lực khoảng ${h} giờ. Giờ đặt được lệnh thật.`, 'ok');
+        })
+        .catch((err) => errBox($('broker-msg'), err.message));
+    }
+    if (t.dataset.otpEnd === 'dnse') {
+      return api('/api/dnse/otp', { method: 'POST', body: { action: 'end' } })
+        .then(async () => { await openBrokers(); errBox($('broker-msg'), 'Đã kết thúc phiên giao dịch.', 'warn'); })
         .catch((err) => errBox($('broker-msg'), err.message));
     }
     if (t.id === 'menu-logout') {
