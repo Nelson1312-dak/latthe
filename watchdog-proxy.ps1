@@ -33,6 +33,13 @@ $scriptDir = $PSScriptRoot
 $proxyPort = 11435
 $proxyPath = Join-Path $scriptDir 'local-proxy.js'
 $logPath   = Join-Path $scriptDir 'watchdog-proxy.log'
+# Heartbeat. The log only gets a line when something is WRONG, which is right for a log but
+# leaves one question unanswerable: did the watchdog run at all? On 2026-10-20 the tunnel was
+# down for several minutes and there was no way to tell "the watchdog checked and saw nothing"
+# apart from "the watchdog never ran" - Task Scheduler's Operational log is disabled on this
+# machine, so there is no run history either. Every run now stamps this file; if it is stale,
+# the watchdog itself is the thing that died.
+$beatPath  = Join-Path $scriptDir 'watchdog-proxy.beat'
 
 # Public probe. /postgrest/ with no token must answer 401 "Missing token" - that exact
 # answer proves the whole chain is up: ngrok edge -> agent -> local-proxy. A tunnel that
@@ -110,8 +117,13 @@ function Restart-Ngrok {
     Write-Log "FAILED - tunnel still down after $($waited)s. Needs a human."
 }
 
-# Ngoặc quanh từng lời gọi là bắt buộc: `Test-Port $proxyPort -and ...` sẽ biến `-and` thành
-# tham số của hàm chứ không phải toán tử logic, và điều kiện luôn đúng.
+# Parentheses around each call are REQUIRED: `Test-Port $proxyPort -and ...` would pass `-and`
+# as an argument to the function instead of being a logical operator, so the condition would
+# always be true. (Kept ASCII on purpose - see the note at the top of this file.)
+# Stamp the heartbeat FIRST, before any check that could throw: the question it answers is
+# "did this script run", not "did it finish happily".
+try { Set-Content -Path $beatPath -Value (Get-Date -Format 'o') -Encoding ascii } catch { }
+
 if ((Test-Port $proxyPort) -and -not (Test-PublicTunnel)) { Restart-Ngrok }
 
 # ---- 2. local-proxy ----

@@ -10,3 +10,6 @@ worker/logs/
 infra/*.log
 infra/*.containers.txt
 .ngrok-restart.stamp
+
+# File nhip tim cua watchdog: ghi moi phut, khong phai ma nguon
+watchdog-proxy.beat

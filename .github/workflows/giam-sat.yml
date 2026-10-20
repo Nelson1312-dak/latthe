@@ -8,12 +8,23 @@
 #
 # Chạy ở GitHub nên độc lập hoàn toàn với máy ở nhà. Job hỏng => GitHub gửi email cho chủ repo.
 # watchdog-proxy.ps1 trên máy lo phần TỰ CHỮA (khởi động lại ngrok); đây là lưới an toàn cuối.
+#
+# VỀ CHU KỲ — đo thật chứ không phỏng đoán: đặt `*/15` nhưng ngày 20/10/2026 workflow này chỉ chạy
+# ĐÚNG MỘT LẦN trong cả ngày (05:23 UTC), dù repo hôm đó có hàng chục lần push. GitHub xếp lịch
+# cron theo kiểu "cố gắng hết sức" và bỏ qua rất nhiều lượt với chu kỳ dày trên máy chạy miễn phí.
+# Để `*/15` là tự lừa mình: tưởng có giám sát 15 phút một lần, thực tế gần như không có.
+#
+# Nên đổi về mỗi giờ — mức GitHub thực sự chạy đều — và nhận đúng vai trò của nó: đây là lưới bắt
+# trường hợp MÁY Ở NHÀ TẮT HẲN, mà việc đó thì biết sau một giờ vẫn còn kịp. Phần phát hiện nhanh
+# nằm ở watchdog-proxy.ps1, chu kỳ 1 phút, đo được 48 giây từ lúc tunnel chết đến lúc sống lại.
+# Muốn giám sát từ bên ngoài theo phút thì phải dùng dịch vụ theo dõi uptime riêng trỏ vào
+# /api/health — endpoint đó đã trả 503 đúng lúc hỏng, kể cả khi worker chết.
 
 name: Giám sát latbai.vn
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '7 * * * *'
   workflow_dispatch:
 
 permissions:

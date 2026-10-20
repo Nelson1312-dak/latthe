@@ -19,10 +19,18 @@ const IM_LANG_MS = 10 * 60e3;   // worker nào cũng tự báo trong vòng vài 
  *
  * Lệch SHA không phải lúc nào cũng là lỗi — commit ở máy chưa push thì cũng lệch — nên chỉ báo
  * `lech_ban_deploy` để người đọc tự xét, không tính vào `ok`.
+ *
+ * IM LẶNG thì NGƯỢC LẠI: nó tính vào `ok`, và đây là thay đổi quan trọng. Trước đây worker chết
+ * hẳn mà /api/health vẫn trả 200, nên mọi thứ theo dõi từ bên ngoài đều thấy "bình thường" —
+ * đúng kiểu broker-stream nằm chết sáu ngày không ai hay. Worker nào cũng tự báo trong vòng một
+ * phút và khởi động lại chỉ mất vài giây, nên im quá 10 phút là hỏng thật chứ không phải đang
+ * khởi động lại.
  */
-function soatWorker(rows) {
+export const WORKER_PHAI_CO = ['market-stream', 'broker-stream', 'advisory'];
+
+export function soatWorker(rows, gioThu = Date.now()) {
   const banDeploy = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || null;
-  const gio = Date.now();
+  const gio = gioThu;
   return (rows || []).map((r) => {
     const sha = r.info?.sha || null;
     const imLangGiay = r.at ? Math.round((gio - Date.parse(r.at)) / 1000) : null;
@@ -34,6 +42,22 @@ function soatWorker(rows) {
       lech_ban_deploy: !!(sha && banDeploy && sha !== banDeploy),
     };
   });
+}
+
+/**
+ * Worker nào chưa chạy hoặc đã im quá lâu. Worker chết cũng là hệ thống hỏng: không có giá
+ * realtime, không có sự kiện lệnh của khách, không có ảnh chụp danh mục. Đưa vào `missing` để
+ * /api/health trả 503 — thứ theo dõi từ bên ngoài mới nổ được.
+ */
+export function thieuWorker(workers) {
+  const co = new Map((workers || []).map((w) => [w.ten, w]));
+  const ra = [];
+  for (const ten of WORKER_PHAI_CO) {
+    const w = co.get(ten);
+    if (!w) ra.push(`worker_${ten}_chua_chay`);
+    else if (w.im_lang) ra.push(`worker_${ten}_im_lang`);
+  }
+  return ra;
 }
 
 export default async function handler(req, res) {
@@ -61,6 +85,7 @@ export default async function handler(req, res) {
   if (!config.database) missing.push('database');
   else if (!db) missing.push('database_unreachable');
   if (!config.login) missing.push('login');
+  if (db) missing.push(...thieuWorker(workers));
   const ok = missing.length === 0;
   return res.status(ok ? 200 : 503).json({
     ok,
