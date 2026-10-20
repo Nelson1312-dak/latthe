@@ -1,0 +1,25 @@
+# Chạy bộ test mỗi lần đẩy code. Test không ai chạy thì không bảo vệ được gì:
+# commit 3f1ab04 có nhắc tới test hồi quy cho lỗi care-by, nhưng file đó chưa bao giờ được commit,
+# nên lỗi vẫn sống thêm sáu ngày. Đây là chỗ bắt buộc nó phải chạy.
+
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Chạy test
+        run: npm test

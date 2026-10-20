@@ -6,6 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
     "worker": "node --env-file=.env.local worker/broker-stream.mjs",
     "worker:market": "node --env-file=.env.local worker/market-stream.mjs"
   }

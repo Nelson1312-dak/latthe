@@ -118,12 +118,23 @@ export function refFromBars(daily, ts = Date.now()) {
   return past.length ? past[past.length - 1].c : null;
 }
 
+/**
+ * Trần/sàn theo biên độ của sàn, làm tròn về bước giá sao cho luôn nằm TRONG biên.
+ *
+ * Hai chỗ trước đây làm sai, test bắt được và đã đối chiếu với secdef thật của DNSE:
+ *  - Bước giá phải lấy theo mức giá KẾT QUẢ, không theo tham chiếu. Tham chiếu nằm sát mốc đổi
+ *    bước (10.000đ, 50.000đ) thì trần hoặc sàn rơi sang khoảng bước khác.
+ *  - Không được làm tròn trước rồi mới cắt về bước giá: làm tròn đã đẩy giá ra khỏi biên.
+ * Ví dụ SHB tham chiếu 10.550đ: DNSE cho sàn 9.820đ; cách cũ ra 9.850đ (bước 50đ của 10.550 thay
+ * vì bước 10đ của 9.820), tức bàn giao dịch thử sẽ từ chối một mức giá hợp lệ.
+ */
 export function limits(ref, ex) {
-  const refU = U(ref), t = tickU(refU, ex);
-  return {
-    ceil:  P(Math.floor(Math.round(refU * (1 + BAND[ex])) / t) * t),
-    floor: P(Math.ceil(Math.round(refU * (1 - BAND[ex])) / t) * t),
+  const refU = U(ref);
+  const tron = (raw, xuong) => {
+    const t = tickU(Math.floor(raw), ex);
+    return P(xuong ? Math.floor(raw / t) * t : Math.ceil(raw / t) * t);
   };
+  return { ceil: tron(refU * (1 + BAND[ex]), true), floor: tron(refU * (1 - BAND[ex]), false) };
 }
 
 /** Giờ Việt Nam (UTC+7) dạng { ymd, dow, min }. */

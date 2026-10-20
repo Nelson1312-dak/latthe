@@ -28,15 +28,21 @@ export function normalizeClient(a) {
 
 /** Danh sách khách. Cache ngắn trong tiến trình để không đốt quota (Get Accounts chỉ 1.000/giờ). */
 let cache = { at: 0, data: null };
-export async function listClients({ fresh = false } = {}) {
-  if (!fresh && cache.data && Date.now() - cache.at < 60_000) return cache.data;
-  const r = await dnse.careBy();
+/**
+ * @param {{ fresh?: boolean, api?: { careBy: () => Promise<any> } }} [o]
+ *   `api` để test tiêm nguồn giả. Chỉ dùng bộ nhớ đệm cho nguồn thật, nếu không test sẽ làm bẩn
+ *   bộ đệm của tiến trình và ngược lại.
+ */
+export async function listClients({ fresh = false, api = dnse } = {}) {
+  const dungCache = api === dnse;
+  if (dungCache && !fresh && cache.data && Date.now() - cache.at < 60_000) return cache.data;
+  const r = await api.careBy();
   // DNSE bọc danh sách trong khóa `careBy` (kèm `total`), không phải `accounts`/`data`.
   // Đọc sai khóa thì mảng rỗng và bàn môi giới hiện "chưa có khách" trong khi thực tế có —
   // lỗi im lặng, không báo gì, nên giữ cả các tên cũ để phòng DNSE đổi.
   const raw = Array.isArray(r) ? r : r?.careBy || r?.accounts || r?.data || [];
   const data = raw.map(normalizeClient).filter((c) => c.accountNo);
-  cache = { at: Date.now(), data };
+  if (dungCache) cache = { at: Date.now(), data };
   return data;
 }
 
