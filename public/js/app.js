@@ -95,7 +95,7 @@ function cls(m,u){ if(u>=m.ceilU) return "ceil"; if(u<=m.floorU) return "floor";
 const $ = id => document.getElementById(id);
 
 /* ---------------- State ---------------- */
-const S = {sym:"HPG", tf:"D", style:"candle", ind:{ma20:true,ma50:true,vol:true}, side:"B", type:"LO", pxU:null, qty:1000, tab:"orders"};
+const S = {sym:"HPG", tf:"D", style:"candle", ind:{ma20:true,ma50:true,vol:true}, side:"B", type:"LO", pxU:null, qty:100, tab:"orders"};
 
 /* ---------------- Chart ---------------- */
 const LWC = window.LightweightCharts;
@@ -228,11 +228,34 @@ function renderTicket(){
   if(document.activeElement!==pxIn) pxIn.value = S.type==="LO" ? (S.pxU?fP(S.pxU):"") : S.type;
   if(document.activeElement!==$("f-qty")) $("f-qty").value = S.qty?fN(S.qty):"";
   $("tick-note").textContent = S.type==="LO" ? `Bước giá ${tickU(S.pxU||m.lastU,m.ex)*10} đ` : "Khớp theo thị trường";
-  $("b-floor").textContent="Sàn "+fP(m.floorU); $("b-ref").textContent="TC "+fP(m.refU); $("b-ceil").textContent="Trần "+fP(m.ceilU);
-  const mx=Math.max(maxQty(),0); $("max-note").textContent=`Tối đa ${fN(mx)}`;
+  // Sàn / TC / Trần bấm được để đặt luôn giá đó: ba mức này là thứ hay dùng nhất, mà trước đây
+  // chỉ là chữ để đọc nên vẫn phải gõ tay hoặc bấm nút cộng trừ hàng chục lần.
+  for(const [id,nhan,gia] of [["b-floor","Sàn",m.floorU],["b-ref","TC",m.refU],["b-ceil","Trần",m.ceilU]]){
+    const b=$(id); b.textContent=`${nhan} ${fP(gia)}`; b.dataset.fill=gia;
+    b.setAttribute("aria-label",`Đặt giá ${nhan.toLowerCase()} ${fP(gia)}`);
+    // Cố ý KHÔNG khoá khi đang ở lệnh thị trường: bấm vào là chuyển về LO với đúng giá đó,
+    // giống hệt khi bấm một mức trong sổ lệnh.
+    b.setAttribute("aria-pressed",String(S.type==="LO"&&S.pxU===gia));
+  }
+  const mx=Math.max(maxQty(),0);
+  // Chưa đăng nhập thì "Tối đa 0" là con số vô nghĩa, dễ hiểu nhầm là hết sức mua.
+  $("max-note").textContent=ACC.user?`Tối đa ${fN(mx)}`:"";
   const u=ticketPxU(), val=u?P(u)*1000*S.qty:0;
   $("s-val").textContent=fVND(val); $("s-fee").textContent=fVND(val*FEE);
   $("s-tax-l").style.display=$("s-tax").style.display=S.side==="S"?"":"none"; $("s-tax").textContent=fVND(val*TAX);
+  // Còn lại SAU lệnh này. Đây mới là con số chặn người ta đặt quá tay: nhìn sức mua hiện tại thì
+  // vẫn phải tự trừ nhẩm, mà trừ nhẩm lúc thị trường đang chạy là lúc dễ sai nhất.
+  const nhanConLai=$("s-left-l"), oConLai=$("s-left"), hienConLai=ACC.user&&S.qty>0;
+  nhanConLai.style.display=oConLai.style.display=hienConLai?"":"none";
+  if(hienConLai){
+    if(S.side==="B"){ const sau=ACC.cash-val-val*FEE;
+      nhanConLai.textContent="Sức mua còn lại"; oConLai.textContent=fVND(sau);
+      oConLai.className=sau<0?"down":"";
+    } else { const sau=Math.max(banDuoc(S.sym),0)-S.qty;
+      nhanConLai.textContent=`Còn lại ${m.s}`; oConLai.textContent=fN(sau)+" CP";
+      oConLai.className=sau<0?"down":"";
+    }
+  }
   $("a-pp").textContent=ACC.user?fVND(ACC.cash):"Đăng nhập để xem"; $("a-sell").textContent=ACC.user?fN(Math.max(banDuoc(S.sym),0))+" CP":"–";
   const {errs,warns}=validate();
   $("msgs").innerHTML=errs.map(e=>`<div class="msg err">${e}</div>`).join("")+warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
