@@ -106,7 +106,11 @@ const chart = LWC.createChart($("chart"),{
   grid:{vertLines:{color:"#141212"},horzLines:{color:"#141212"}},
   crosshair:{mode:LWC.CrosshairMode.Normal,vertLine:{color:"#5e5756",labelBackgroundColor:"#b3122b"},horzLine:{color:"#5e5756",labelBackgroundColor:"#b3122b"}},
   rightPriceScale:{borderColor:"#262222"},
-  timeScale:{borderColor:"#262222",rightOffset:6,barSpacing:7}
+  timeScale:{borderColor:"#262222",rightOffset:6,barSpacing:7},
+  // Trên điện thoại, vuốt dọc trong vùng biểu đồ trước đây bị biểu đồ nuốt: trang đứng im còn
+  // biểu đồ chạy. Mà vuốt ngay giữa màn hình là thói quen, nên người dùng tưởng trang bị treo.
+  // Tắt kéo DỌC bằng ngón tay; kéo ngang để xem lịch sử giá vẫn giữ nguyên.
+  handleScroll:{vertTouchDrag:false},
 });
 const candle = chart.addCandlestickSeries({upColor:"#2ebd85",downColor:"#f6465d",borderVisible:false,wickUpColor:"#2ebd85",wickDownColor:"#f6465d",priceFormat:{type:"price",precision:2,minMove:.01}});
 const line = chart.addLineSeries({color:"#ece7e6",lineWidth:2,visible:false,priceLineVisible:true});
@@ -707,17 +711,37 @@ const VIEWS={trade:["view-trade","#giao-dich"],community:["view-community","#con
    ngày 19/10/2026 khi /api/market trả 502. Vô lý ở chỗ Khách hàng, Tư vấn và Tài khoản của tôi không
    đọc giá, còn màn Giao dịch không có giá thì hiện khung rỗng kèm dòng trạng thái báo lỗi — vẫn tốt
    hơn là bấm không ăn. */
-function setView(v){
+function setView(v, ghiLichSu=true){
   if(!SOCIAL_DEMO&&(v==="community"||v==="chat")) v="trade";
   CS.view=v; Object.entries(VIEWS).forEach(([k,[id]])=>$(id).hidden=k!==v);
   const navV=NAV_OF[v]||v; // màn Tư vấn nằm trong mục "Khách hàng"
   document.querySelectorAll(".nav a[data-view]").forEach(a=>{if(a.dataset.view===navV)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
   if(v==="community"){renderCNav();renderFeed();renderTrend();CS.forceScroll=true;renderChat();}
   if(v==="chat"){renderInbox();renderThreadV();}
-  if(history.replaceState) history.replaceState(null,"",VIEWS[v][1]);
+  // Đổi màn là MỘT BƯỚC trong lịch sử trình duyệt. Trước đây chỗ này luôn replaceState, nên bấm
+  // Quay lại không trả về màn trước mà nhảy thẳng ra khỏi trang — và vì không ai nghe popstate,
+  // địa chỉ trên thanh đổi còn màn hình đứng im, hai bên nói hai đằng.
+  const hash=VIEWS[v][1];
+  if(location.hash!==hash){
+    if(ghiLichSu&&history.pushState) history.pushState(null,"",hash);
+    else if(history.replaceState) history.replaceState(null,"",hash);
+  }
   document.dispatchEvent(new CustomEvent("lb:view",{detail:v}));
   window.scrollTo(0,0);
 }
+
+/* Quay lại / Tiến tới, và dán thẳng một địa chỉ có #… vào tab đang mở. Màn nào chưa mở cho người
+   dùng này thì mục điều hướng của nó đang ẩn — bỏ qua, nếu không sẽ hiện ra một khung trắng. */
+const VIEW_THEO_HASH=Object.fromEntries(Object.entries(VIEWS).map(([k,[,h]])=>[h,k]));
+function dongBoTheoHash(){
+  const v=VIEW_THEO_HASH[location.hash||"#giao-dich"];
+  if(!v||v===CS.view) return;
+  const muc=document.querySelector(`.nav a[data-view="${NAV_OF[v]||v}"]`);
+  if(muc&&muc.hidden) return;
+  setView(v,false);
+}
+window.addEventListener("popstate",dongBoTheoHash);
+window.addEventListener("hashchange",dongBoTheoHash);
 /**
  * Mở một màn theo deep link, chờ app.js nạp xong nếu cần.
  * Dùng chung cho board/desk/portal/advisory: trước đây mỗi file tự viết một vòng chờ

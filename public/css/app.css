@@ -49,6 +49,13 @@ button{cursor:pointer}
 
 .workspace{display:grid;min-height:0;grid-template-columns:224px minmax(0,1fr) 252px 304px;grid-template-rows:auto minmax(0,1fr) 236px;
   grid-template-areas:"wl head head ticket""wl chart book ticket""wl panel panel ticket";gap:1px;background:var(--line)}
+/* Thẻ giới thiệu phải có Ô RIÊNG. Trước đây nó không khai báo grid-area nên bị lưới xếp tự động
+   vào ô trống đầu tiên, rơi đúng vào cột watchlist và che mất khoảng 5 mã. Ghi chú cũ nói đã
+   chuyển từ position:fixed sang nằm trong luồng — đúng, nhưng nằm trong một CSS grid thì "trong
+   luồng" vẫn chưa đủ. Chỉ thêm hàng khi thẻ CÓ MẶT, nếu không sẽ thừa một đường kẻ 1px ở đỉnh. */
+.workspace:has(>.intro){grid-template-rows:auto auto minmax(0,1fr) 236px;
+  grid-template-areas:"intro intro intro intro""wl head head ticket""wl chart book ticket""wl panel panel ticket"}
+.intro{grid-area:intro}
 .workspace>section{background:var(--black);min-width:0;min-height:0}
 .statusbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border-top:1px solid var(--line);color:var(--faint);font-size:11px;white-space:nowrap;overflow:hidden}
 .statusbar .live{display:flex;align-items:center;gap:6px}
@@ -380,11 +387,32 @@ dialog::backdrop{background:rgba(0,0,0,.72)}
   .search{order:5;flex:1 1 100%}
   .nav{padding-right:0;border-right:0}
   .indices{display:none}
-  .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 340px auto auto 300px auto;
-    grid-template-areas:"head""chart""ticket""book""panel""wl"}
+  /* Danh sách Theo dõi là cách đổi mã, nên nó phải nằm ngay dưới tiêu đề mã chứ không phải dưới
+     đáy trang sau cả biểu đồ, phiếu lệnh, bước giá và sổ lệnh như trước. Giới hạn chiều cao để
+     nó không đẩy biểu đồ ra khỏi màn hình: trong khung này cuộn được. */
+  .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 340px auto auto 300px;
+    grid-template-areas:"head""wl""chart""ticket""book""panel"}
+  .workspace:has(>.intro){grid-template-rows:auto auto auto 340px auto auto 300px;
+    grid-template-areas:"intro""head""wl""chart""ticket""book""panel"}
+  /* Đúng 3 hàng (hàng cao 53,8px): cắt giữa chừng một hàng thì phần chữ bị xén nhìn như lỗi,
+     còn số mã tổng cộng đã nói ở nhãn "10 mã" bên phải tiêu đề. */
+  .wl-list{max-height:162px}
   .head{gap:12px}
   .head-stats{gap:14px}
-  .workspace>.ticket{min-height:600px}
+  /* Phiếu lệnh trên điện thoại cao ĐÚNG BẰNG nội dung. Trước đây nó bị ép min-height:600px, mà
+     nội dung lúc chưa đăng nhập chỉ khoảng 500px, nên `margin:auto` của ô Sức mua đẩy ô đó xuống
+     đáy và để lại một mảng đen rỗng ~180px ngay giữa phiếu.
+     Bỏ min-height thôi thì KHÔNG đủ và còn hỏng nặng hơn: hai mặt phiếu là `position:absolute`
+     nên `.card{flex:1}` co về 0 và cả phiếu lệnh BIẾN MẤT khỏi màn hình. Vậy nên ở đây cho mặt
+     trước chảy theo luồng bình thường, và chỉ mặt đang hiện mới chiếm chỗ. */
+  .workspace>.ticket{min-height:0}
+  .card{flex:0 0 auto}
+  .face{position:relative;inset:auto;overflow:visible}
+  .face.back{display:none;transform:none}
+  .card.flipped .front{display:none}
+  .card.flipped .back{display:flex}
+  .card,.card.flipped{transform:none;transition:none}
+  .acct-box{position:static;margin:12px}
   .workspace>.book{max-height:none}
   .tape-list{max-height:190px}
   .chart-credit{right:52px}
@@ -780,7 +808,12 @@ td.warn{color:var(--ref);font-weight:600}
   .bd-table th:nth-child(4),.bd-table td:nth-child(4),.bd-table th:nth-child(6),.bd-table td:nth-child(6),
   .bd-table th:nth-child(n+9),.bd-table td:nth-child(n+9){display:none}
   .bd-table td[colspan]{display:table-cell}
-  .bd-table{min-width:0}
+  /* Bốn cột còn lại vẫn rộng hơn màn 375px vì padding 10px và nowrap, nên cột KL bị CẮT (bảng
+     rộng 371px trong khung 355px, phần thừa bị .bd-main overflow:hidden xén mất) chứ không cuộn
+     được. Thu padding và bỏ nowrap ở ô tiêu đề là vừa. */
+  .bd-table{min-width:0;width:100%}
+  .bd-table td,.bd-table .th{padding-left:6px;padding-right:6px}
+  .bd-table .th{white-space:normal}
 }
 
 /* ---------- Khuyến nghị có AI, nhận xét gửi khách ---------- */
