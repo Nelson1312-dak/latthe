@@ -45,6 +45,7 @@ import r_portal_summary from '../server/routes/portal/summary.js';
 import r_symbol from '../server/routes/symbol.js';
 import r_shs_account from '../server/routes/shs/account.js';
 import r_shs_connect from '../server/routes/shs/connect.js';
+import r_shs_orders from '../server/routes/shs/orders.js';
 
 const ROUTES = {
   'ai/jobs': r_ai_jobs,
@@ -86,6 +87,7 @@ const ROUTES = {
   'symbol': r_symbol,
   'shs/account': r_shs_account,
   'shs/connect': r_shs_connect,
+  'shs/orders': r_shs_orders,
 };
 
 export default async function handler(req, res) {

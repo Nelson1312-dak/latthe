@@ -279,7 +279,9 @@ export function startOfVnDay(now = Date.now()) {
  * hạn mức phải tính theo hướng an toàn, thà chặn nhầm còn hơn cho qua một lệnh đã vào sàn.
  */
 export async function dailyUsage(uid, accountNo = null) {
-  const rows = await rest(`/dnse_audit?action=eq.place&at=gte.${startOfVnDay()}&select=request,result&limit=500`, { sub: uid });
+  // `broker=eq.dnse` bắt buộc từ khi có công ty chứng khoán thứ hai: không lọc thì một lệnh SHS
+  // ăn vào trần ngày của DNSE, và bên nào đặt nhiều sẽ khóa bên kia lại mà không ai hiểu vì sao.
+  const rows = await rest(`/dnse_audit?broker=eq.dnse&action=eq.place&at=gte.${startOfVnDay()}&select=request,result&limit=500`, { sub: uid });
   let orders = 0, vnd = 0;
   for (const r of rows || []) {
     if (r.result && r.result.ok === false && !r.result.chuaRo) continue;   // DNSE từ chối dứt khoát

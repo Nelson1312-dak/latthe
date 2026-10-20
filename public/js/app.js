@@ -83,7 +83,7 @@ function book(m){
 /* mode: 'that' = tài khoản DNSE thật, 'ao' = giao dịch thử bằng tiền ảo.
    Mọi chỗ hiển thị đọc chung ACC, nên đổi tài khoản chỉ là đổi NGUỒN đổ vào đây - không phải
    viết lại phiếu lệnh, sổ lệnh hay danh mục. Chỉ đặt/hủy lệnh mới phải rẽ nhánh. */
-const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
+const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, coShs:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
 const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
@@ -187,7 +187,7 @@ function renderBook(){
 const ticketPxU = () => S.type==="LO" ? S.pxU : M[S.sym].lastU; // MTL/ATO/ATC ước tính theo giá khớp gần nhất
 /* Tài khoản thật: lấy đúng số DNSE báo là bán được. Cổ phiếu chưa về tài khoản vẫn nằm trong
    danh mục nhưng chưa bán được, và DNSE đã trừ sẵn phần đang treo lệnh bán. */
-const banDuoc = s => ACC.mode==="that" ? (ACC.hold[s]?.ban ?? 0) : (ACC.hold[s]?.qty||0) - pendingSellQty(s);
+const banDuoc = s => (ACC.mode==="that"||ACC.mode==="shs") ? (ACC.hold[s]?.ban ?? 0) : (ACC.hold[s]?.qty||0) - pendingSellQty(s);
 function maxQty(){
   const m=M[S.sym];
   if(S.side==="S") return banDuoc(S.sym);
@@ -243,7 +243,7 @@ function flip(open){
     const m=M[S.sym], u=ticketPxU(), val=P(u)*1000*S.qty, {warns}=validate(), sideT=S.side==="B"?"Mua":"Bán";
     $("c-title").innerHTML=`${sideT} <span class="${S.side==="B"?"up":"down"}">${fN(S.qty)}</span> ${m.s}<br>${S.type==="LO"?"giá "+fP(u):"lệnh "+S.type}`;
     $("c-grid").innerHTML=`<span>Loại lệnh</span><b>${S.type}</b><span>Giá trị ${S.type==="LO"?"":"(ước tính)"}</span><b>${fVND(val)}</b><span>Phí</span><b>${fVND(val*FEE)}</b>`+
-      (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tài khoản</span><b>${ACC.mode==="that"?`DNSE thật · ${ACC.accountNo||""}`:"Giao dịch thử (tiền ảo)"}</b>`;
+      (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tài khoản</span><b>${ACC.mode==="that"?`DNSE thật · ${ACC.accountNo||""}`:ACC.mode==="shs"?`SHS thật · ${ACC.accountNo||""}`:"Giao dịch thử (tiền ảo)"}</b>`;
     $("c-msgs").innerHTML=warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
     const ok=$("c-ok"); ok.className="cta "+(S.side==="B"?"buy":"sell"); ok.textContent=`Gửi lệnh ${sideT.toLowerCase()}`;
     setTimeout(()=>ok.focus({preventScroll:true}),300);
@@ -298,6 +298,42 @@ function applyReal(d){
   ACC.orders.forEach(o=>{ if(old.get(o.id)==="wait"&&o.status==="ok") toast(`Lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym} đã khớp giá ${fP(o.avgU)}.`); });
 }
 
+/* ---- Tai khoan SHS THAT ----
+   SHS tra so lieu bang DONG va ten truong khac han DNSE, nen quy ve dung khuon ACC o day mot lan;
+   doi lai phieu lenh, so lenh va danh muc khong phai biet minh dang o cong ty chung khoan nao. */
+const TRANG_THAI_SHS={"2":"ok","1":"wait","4":"cx","5":"cx","6":"rej","7":"rej"};
+function applyShs(d){
+  const old=new Map(ACC.orders.map(o=>[o.id,o.status]));
+  ACC.accountNo=d.sub||null;
+  ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.type==="EQUITY").map(a=>a.sub).filter(Boolean);
+  ACC.otp=true;                                   // phien SHS da qua the ma tran moi ton tai
+  ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
+  ACC.cash=Number(d.cash?.buyingPower ?? d.cash?.depositAmount)||0;
+
+  const dsVT=Array.isArray(d.positions)?d.positions:(d.positions?.data||[]);
+  ACC.hold=Object.fromEntries(dsVT.map(p=>{
+    const qty=Number(p.balanceQuantity ?? p.quantity)||0;
+    // Co phieu chua ve tai khoan van nam trong danh muc nhung chua ban duoc: giu rieng `ban`.
+    const ban=Number(p.sellableQuantity ?? qty)||0;
+    const von=Number(p.avgPrice ?? p.costPrice)||0;
+    return [p.stockCode||p.symbol,{qty,ban,avg:von>1000?von/1000:von}];
+  }).filter(([k,v])=>k&&v.qty));
+
+  const dsL=Array.isArray(d.orders)?d.orders:(d.orders?.data||[]);
+  ACC.orders=dsL.map(o=>{
+    const gia=Number(o.orderPrice ?? o.ordPrice)||0, khop=Number(o.matchedPrice ?? o.mthPri)||0;
+    return {id:String(o.orderNumber ?? o.ordNo ?? ""),
+      time:String(o.orderTime ?? o.ordTime ?? "").slice(0,8),
+      sym:o.stockCode ?? o.symbol, side:String(o.sellBuyType ?? "").toUpperCase().startsWith("S")?"S":"B",
+      type:o.orderType ?? o.ordType ?? "LO",
+      u:gia?U(gia/1000):null, qty:Number(o.orderQuantity ?? o.ordQty)||0,
+      filled:Number(o.matchedQuantity ?? o.mthQty)||0,
+      status:TRANG_THAI_SHS[String(o.orderStatus ?? o.ordStatus)]||"wait",
+      avgU:khop?U(khop/1000):null};
+  }).filter(o=>o.id);
+  ACC.orders.forEach(o=>{ if(old.get(o.id)==="wait"&&o.status==="ok") toast(`Lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym} đã khớp giá ${fP(o.avgU)}.`); });
+}
+
 let accTimer=null, accBusy=false;
 async function refreshAccount(){
   if(!ACC.user||accBusy) return; accBusy=true;
@@ -309,6 +345,14 @@ async function refreshAccount(){
       const r=await fetch("/api/dnse/account"+q); const d=await r.json();
       if(r.ok){ applyReal(d); }
       else if(r.status===403||r.status===401){ ACC.coThat=false; ACC.mode="ao"; }   // mất quyền thì lui về tiền ảo
+      else { ACC.cash=0; ACC.hold={}; ACC.orders=[]; }
+    } else if(ACC.mode==="shs"){
+      const q=ACC.accountNo?"?sub="+encodeURIComponent(ACC.accountNo):"";
+      const r=await fetch("/api/shs/account"+q); const d=await r.json();
+      if(r.ok){ applyShs(d); }
+      // 401 o day la phien SHS het han chu khong phai mat quyen: lui ve tien ao va bao ro o thanh
+      // trang thai, de nguoi dung biet phai ket noi lai chu khong ngoi doi.
+      else if(r.status===403||r.status===401){ ACC.coShs=false; ACC.mode=ACC.coThat?"that":"ao"; }
       else { ACC.cash=0; ACC.hold={}; ACC.orders=[]; }
     } else {
       const r=await fetch("/api/me"); const d=await r.json();
@@ -329,13 +373,18 @@ async function doTaiKhoanThat(){
     if(!r.ok && r.status!==403 && r.status!==401) return;   // lỗi tạm thời: chưa kết luận, để hỏi lại
     const d=await r.json();
     ACC.coThat=!!d.owner; ACC.daDo=true;
+    // SHS chi dat duoc lenh khi DA KET NOI phien (qua the ma tran OTP). Chua noi thi giau han nut,
+    // vi bam vao chi de nhan loi 401 thi khong giup duoc gi.
+    const shs=(d.brokers||[]).find(b=>b.id==="shs");
+    ACC.coShs=!!(shs&&shs.connected&&shs.can&&shs.can.trade);
+    if(ACC.mode==="shs"&&!ACC.coShs) ACC.mode=ACC.coThat?"that":"ao";
   }catch(e){ return; }
   if(ACC.coThat && !ACC.tuChon) ACC.mode="that";            // người dùng đã tự chọn thì tôn trọng
   renderAcctSwitch();
 }
 function renderTieuKhoan(){
   const sel=$("acct-sub"); if(!sel) return;
-  const hien=ACC.user&&ACC.mode==="that"&&ACC.dsTieuKhoan.length>1;
+  const hien=ACC.user&&(ACC.mode==="that"||ACC.mode==="shs")&&ACC.dsTieuKhoan.length>1;
   sel.hidden=!hien;
   if(!hien) return;
   const can=ACC.dsTieuKhoan.map(id=>`<option value="${id}"${id===ACC.accountNo?" selected":""}>Tiểu khoản ${id}</option>`).join("");
@@ -343,23 +392,29 @@ function renderTieuKhoan(){
   sel.value=ACC.accountNo||"";
 }
 
+const LA_THAT=()=>ACC.mode==="that"||ACC.mode==="shs";
 function renderAcctSwitch(){
   renderTieuKhoan();
   const f=$("foot-acct");
-  if(f) f.textContent="Giá và biểu đồ lấy từ DNSE."+(!ACC.user?"" : ACC.mode==="that"
-    ? " Màn Giao dịch đang dùng TÀI KHOẢN DNSE THẬT — lệnh gửi thẳng lên sàn."
+  if(f) f.textContent="Giá và biểu đồ lấy từ DNSE."+(!ACC.user?"" : LA_THAT()
+    ? ` Màn Giao dịch đang dùng TÀI KHOẢN ${ACC.mode==="shs"?"SHS":"DNSE"} THẬT — lệnh gửi thẳng lên sàn.`
     : " Màn Giao dịch dùng tiền ảo để thử, không gửi lệnh tới công ty chứng khoán.");
   const box=$("acct-switch"); if(!box) return;
-  box.hidden=!(ACC.user&&ACC.coThat);
+  box.hidden=!(ACC.user&&(ACC.coThat||ACC.coShs));
+  // Nút SHS chỉ hiện khi đã kết nối được phiên SHS; chưa nối thì bấm vào chỉ nhận lỗi.
+  const bShs=box.querySelector('[data-acct="shs"]'); if(bShs) bShs.hidden=!ACC.coShs;
+  const bDnse=box.querySelector('[data-acct="that"]'); if(bDnse) bDnse.hidden=!ACC.coThat;
   box.querySelectorAll("[data-acct]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.acct===ACC.mode)));
   const w=$("a-which"); if(!w) return;
-  w.className="acct-which"+(ACC.mode==="that"?" that":"");
+  w.className="acct-which"+(LA_THAT()?" that":"");
   // Nói rõ VÌ SAO đang ở tiền ảo. Để trống thì người dùng thấy sức mua 500 triệu không có thật mà
-  // không biết tại sao mình không vào được tài khoản DNSE.
-  w.textContent=!ACC.user?"":ACC.mode==="that"
+  // không biết tại sao mình không vào được tài khoản thật.
+  w.textContent=!ACC.user?"":ACC.mode==="shs"
+    ? (ACC.accountNo?`Tài khoản SHS thật · tiểu khoản ${ACC.accountNo}`:"Tài khoản SHS thật")
+    : ACC.mode==="that"
     ? (ACC.accountNo?`Tài khoản DNSE thật · ${ACC.accountNo}`+(ACC.otp?"":" · chưa xác thực OTP"):"Tài khoản DNSE thật")
-    : !ACC.daDo ? "Tiền ảo · đang kiểm tra kết nối DNSE…"
-    : !ACC.coThat ? "Tiền ảo · tài khoản này chưa nối DNSE"
+    : !ACC.daDo ? "Tiền ảo · đang kiểm tra kết nối công ty chứng khoán…"
+    : !ACC.coThat&&!ACC.coShs ? "Tiền ảo · tài khoản này chưa nối công ty chứng khoán nào"
     : "Tiền ảo, không gửi lệnh tới công ty chứng khoán";
 }
 function resetAccount(){ ACC.cash=0; ACC.hold={}; ACC.orders=[]; renderTicket(); renderPanel(); }
@@ -395,12 +450,37 @@ async function datLenhThat(ok){
   flip(false); await refreshAccount();
 }
 
+/* Lệnh SHS đi đúng hai bước như DNSE. Khác một chỗ đáng nhớ: SHS KHÔNG có bước OTP riêng —
+   chính phiên đã qua thẻ ma trận lúc kết nối mới cho đặt lệnh, hết hạn thì phải kết nối lại. */
+async function datLenhShs(){
+  const m=M[S.sym], u=ticketPxU();
+  const than={sub:ACC.accountNo,symbol:m.s,side:S.side,type:S.type,qty:S.qty,...(S.type==="LO"?{price:P(u)}:{})};
+  const rx=await fetch("/api/shs/orders",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({step:"preview",...than})});
+  const dx=await rx.json();
+  if(!rx.ok){ $("c-msgs").innerHTML=`<div class="msg err">${dx.error||"Không xem trước được lệnh."}</div>`; return; }
+  if(dx.canhBao) $("c-msgs").innerHTML=`<div class="msg warn">${dx.canhBao}</div>`;
+
+  const rp=await fetch("/api/shs/orders",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({step:"place",confirm:dx.confirm})});
+  const dp=await rp.json();
+  if(!rp.ok){
+    const them=dp.code==="shs_expired"?' Mở tab <b>Khách hàng</b> &gt; Tài khoản chứng khoán để kết nối lại SHS.':"";
+    // 'unknown' = không rõ SHS đã nhận chưa. Tuyệt đối không mời người dùng bấm lại.
+    $("c-msgs").innerHTML=`<div class="msg err">${dp.error||"Không gửi được lệnh."}${them}</div>`;
+    return;
+  }
+  toast(`Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(S.qty)} ${m.s} lên SHS${dp.order?.orderNumber?" (#"+dp.order.orderNumber+")":""}.`);
+  flip(false); await refreshAccount();
+}
+
 async function placeOrder(){
   if(!ACC.user) return needLogin();
   const m=M[S.sym], u=ticketPxU(), ok=$("c-ok");
   ok.disabled=true; $("c-msgs").innerHTML="";
   try{
     if(ACC.mode==="that") return await datLenhThat(ok);
+    if(ACC.mode==="shs") return await datLenhShs();
     const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({symbol:m.s,side:S.side,type:S.type,qty:S.qty,...(S.type==="LO"?{price:P(u)}:{})})});
     const d=await r.json();
@@ -413,9 +493,15 @@ async function placeOrder(){
 }
 async function cancelOrder(id){
   try{
-    const url=ACC.mode==="that"
-      ? `/api/dnse/orders?account=${encodeURIComponent(ACC.accountNo||"")}&id=${encodeURIComponent(id)}`
-      : "/api/orders?id="+id;
+    let url="/api/orders?id="+id;
+    if(ACC.mode==="that") url=`/api/dnse/orders?account=${encodeURIComponent(ACC.accountNo||"")}&id=${encodeURIComponent(id)}`;
+    else if(ACC.mode==="shs"){
+      // SHS doi gui lai ca noi dung lenh khi huy, khong chi so hieu: lay tu so lenh dang hien.
+      const o=ACC.orders.find(x=>x.id===String(id));
+      if(!o) return toast("Không tìm thấy lệnh trong sổ, tải lại trang rồi thử lại.");
+      url="/api/shs/orders?"+new URLSearchParams({sub:ACC.accountNo||"",orderNumber:String(id),
+        symbol:o.sym,side:o.side==="S"?"SELL":"BUY",type:o.type,price:String(o.u!=null?Math.round(P(o.u)*1000):0),qty:String(o.qty)});
+    }
     const r=await fetch(url,{method:"DELETE"}), d=await r.json();
     if(!r.ok) return toast(d.error||"Không hủy được lệnh.");
     toast("Đã hủy lệnh."); await refreshAccount();
@@ -464,8 +550,10 @@ document.addEventListener("click",e=>{
   if(t.dataset.acct){
     if(t.dataset.acct===ACC.mode) return;
     ACC.mode=t.dataset.acct; ACC.tuChon=true;
-    // Xoá số của tài khoản cũ ngay, đừng để số dư tài khoản này nằm dưới nhãn tài khoản kia
-    ACC.cash=0; ACC.hold={}; ACC.orders=[];
+    // Xoá số của tài khoản cũ ngay, đừng để số dư tài khoản này nằm dưới nhãn tài khoản kia.
+    // Tiểu khoản cũng phải xoá: số tiểu khoản DNSE đem sang SHS là vô nghĩa, và nếu giữ lại thì
+    // lần nạp đầu tiên sẽ hỏi SHS về một tiểu khoản không tồn tại.
+    ACC.cash=0; ACC.hold={}; ACC.orders=[]; ACC.accountNo=null; ACC.dsTieuKhoan=[];
     renderAcctSwitch(); renderTicket(); renderPanel();
     return refreshAccount();
   }
@@ -830,14 +918,14 @@ function aiBacktest(s){
 }
 function aiPortfolio(){
   if(!ACC.user) return `<p>Bạn cần đăng nhập để mình xem danh mục giao dịch thử của bạn.</p>`;
-  const tenTK=ACC.mode==="that"?"Danh mục DNSE":"Danh mục demo";
+  const tenTK=ACC.mode==="that"?"Danh mục DNSE":ACC.mode==="shs"?"Danh mục SHS":"Danh mục demo";
   const rows=Object.entries(ACC.hold); if(!rows.length) return `<p>${tenTK} của bạn đang trống. Sức mua hiện có ${fVND(ACC.cash)}.</p>`;
   let tv=0,tc=0; const tr=rows.map(([s,h])=>{const px=P(M[s].lastU),v=px*1000*h.qty,c=h.avg*1000*h.qty;tv+=v;tc+=c;
     return `<tr><td><b>${s}</b></td><td class="r">${fN(h.qty)}</td><td class="r">${h.avg.toFixed(2)}</td><td class="r">${px.toFixed(2)}</td><td class="r ${v>=c?"up":"down"}">${sg(pct(v,c))}</td></tr>`;}).join("");
   const big=rows.map(([s,h])=>[s,P(M[s].lastU)*1000*h.qty]).sort((a,b)=>b[1]-a[1])[0];
   return `<p>Tổng giá trị cổ phiếu của bạn là <b>${fVND(tv)}</b>, lãi lỗ tạm tính <b class="${tv>=tc?"up":"down"}">${(tv-tc>=0?"+":"")+fN(tv-tc)} đ</b> (${sg(pct(tv,tc))}). Tiền mặt còn ${fVND(ACC.cash)}.</p>
    <div class="ai-card"><div style="overflow-x:auto"><table><thead><tr><th>Mã</th><th class="r">KL</th><th class="r">Giá vốn</th><th class="r">Giá TT</th><th class="r">Lãi/lỗ</th></tr></thead><tbody>${tr}</tbody></table></div></div>
-   <p>${big[0]} chiếm ${(big[1]/(tv+ACC.cash)*100).toFixed(0)}% tổng tài sản, là vị thế lớn nhất của bạn.</p><p class="ai-note">Số liệu từ ${ACC.mode==="that"?"tài khoản DNSE thật":"tài khoản demo"}, cập nhật theo giá đang chạy.</p>`;
+   <p>${big[0]} chiếm ${(big[1]/(tv+ACC.cash)*100).toFixed(0)}% tổng tài sản, là vị thế lớn nhất của bạn.</p><p class="ai-note">Số liệu từ ${ACC.mode==="that"?"tài khoản DNSE thật":ACC.mode==="shs"?"tài khoản SHS thật":"tài khoản demo"}, cập nhật theo giá đang chạy.</p>`;
 }
 const ORDER_TYPES={lo:"<b>LO (lệnh giới hạn)</b>: bạn nhập giá cụ thể, lệnh chỉ khớp ở giá đó hoặc tốt hơn.",mtl:"<b>MTL (thị trường giới hạn)</b>: khớp ngay ở giá tốt nhất đang có, phần chưa khớp chuyển thành lệnh LO. Chỉ dùng trong phiên liên tục.",
   ato:"<b>ATO</b>: chỉ đặt trong đợt khớp lệnh định kỳ mở cửa (9h00 đến 9h15 trên HOSE), không nhập giá, khớp tại giá mở cửa.",atc:"<b>ATC</b>: chỉ đặt trong đợt khớp lệnh định kỳ đóng cửa (14h30 đến 14h45 trên HOSE), không nhập giá, khớp tại giá đóng cửa."};

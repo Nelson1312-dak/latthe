@@ -1,10 +1,11 @@
 /**
- * GET /api/shs/account?sub=<tiểu khoản> — tài khoản SHS thật (chỉ đọc).
- * Bộ API SHS hiện có không cho đặt hay hủy lệnh, nên đây thuần là xem.
+ * GET /api/shs/account?sub=<tiểu khoản> — tài khoản SHS thật của chủ hệ thống.
+ * Đặt lệnh ở /api/shs/orders; ở đây chỉ đọc số dư, danh mục, sổ lệnh và cho biết có giao dịch được không.
  */
 import { route } from '../../../api/_http.js';
 import { assertOwner, readLink, BrokerError } from '../../../api/_broker.js';
 import * as shs from '../../../api/_shs.js';
+import { dailyUsage } from '../../../api/_broker.js';
 
 const val = (r) => (r.status === 'fulfilled' ? r.value : { error: r.reason?.message || 'Lỗi' });
 
@@ -34,8 +35,14 @@ export default route('GET, OPTIONS', async ({ req, uid }) => {
     cash,
     positions: positions?.data || positions,
     orders: orders?.data || orders,
-    canTrade: false,
-    note: 'Bộ API SHS đang dùng chỉ hỗ trợ xem tài khoản, chưa đặt được lệnh.',
+    // Chỉ tiểu khoản cơ sở mới đặt được lệnh qua đường này; phái sinh chưa làm.
+    canTrade: shs.realTradingEnabled() && subs.some((s) => s.type === 'EQUITY'),
+    realTrading: shs.realTradingEnabled(),
+    maxOrderVnd: shs.maxOrderVnd(),
+    daily: await dailyUsage('shs', uid, sub, shs.limits()),
+    note: shs.realTradingEnabled()
+      ? null
+      : 'Đặt lệnh SHS thật đang tắt trên máy chủ (SHS_REAL_TRADING), hiện chỉ xem được tài khoản.',
     expiresAt: link.expiresAt,
   };
 }, { auth: true });

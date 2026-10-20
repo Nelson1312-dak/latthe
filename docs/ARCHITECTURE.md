@@ -217,6 +217,7 @@ RLS: môi giới chỉ thấy dữ liệu khách của mình; khách chỉ thấ
 
 ## 9. Thay đổi so với bản trước
 
-- Bỏ hướng đăng nhập SHS cho nhiều người dùng: tài liệu SHS hiện có không có đặt lệnh, và mô hình hứng mật khẩu khách không phù hợp. Kết nối SHS giữ ở mức chỉ xem cho riêng chủ hệ thống.
+- Bỏ hướng đăng nhập SHS cho **nhiều người dùng**: mô hình hứng mật khẩu khách không phù hợp. SHS không có ủy quyền môi giới kiểu `careBy` của DNSE, nên đặt lệnh hộ khách qua đường này là đăng nhập dưới danh nghĩa khách chứ không phải với tư cách môi giới — và phía SHS cũng không ghi nhận được rằng khách đã chỉ thị. Kết nối SHS chỉ mở cho **tài khoản của chính chủ hệ thống**.
+- SHS đặt được lệnh cho tài khoản của chính chủ (20/10/2026). Trước đây ghi là "không có endpoint đặt lệnh" — sai, chỉ là chưa tìm. SHS không công bố Open API nên hình dạng request đọc từ bundle JavaScript của app SHSmart: `POST /api/v1/equity/order`, `PUT /api/v1/equity/order/cancel`, giá tính bằng **đồng**, cổ phiếu đi bằng `stockCode` (phái sinh mới là `code`), `sellBuyType` là `"BUY"`/`"SELL"`. Hệ quả phải nhớ: đây là API nội bộ, **không có hợp đồng**, SHS đổi lúc nào cũng được và không báo trước — nên mọi lệnh đều đi qua hạn mức và `trade.dnse_audit` (cột `broker` tách hai bên).
 - DNSE chuyển từ "tài khoản của riêng chủ" sang "tài khoản môi giới + khách ủy quyền".
 - Giao dịch thử bằng tiền ảo giữ lại cho người dùng chưa phải khách.
