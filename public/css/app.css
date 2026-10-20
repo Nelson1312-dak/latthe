@@ -537,7 +537,6 @@ nên `.card{flex:1}` co về 0 và cả phiếu lệnh BIẾN MẤT khỏi màn 
 .av-grid{flex:1;display:grid;grid-template-columns:280px minmax(0,1fr);gap:1px;background:var(--line);min-height:0}
 /* Màn Phân tích không còn cột danh sách khách riêng: chỗ chọn khách chỉ có một, ở màn Khách hàng. */
 .av-grid.one{grid-template-columns:minmax(0,1fr)}
-.dt-head-act{display:flex;gap:8px;align-items:center}
 .av-grid.models{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
 .av-grid>section{background:var(--black);min-width:0;min-height:0;overflow-y:auto}
 .av-list{display:flex;flex-direction:column}
@@ -727,6 +726,13 @@ td.warn{color:var(--ref);font-weight:600}
 .dcard-h{display:flex;align-items:center;justify-content:space-between;gap:8px;height:34px;padding:0 12px;
   border-bottom:1px solid var(--line-soft);font-weight:600;font-size:12px;color:var(--muted)}
 .dcard-h-sub{font-weight:400;color:var(--faint)}
+/* Chấm báo dòng trạng thái này vừa đến qua realtime chứ không phải số đọc lúc tải trang. */
+.rt-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);vertical-align:1px}
+.dt-note{display:flex;align-items:center;gap:6px;padding:8px 18px;color:var(--faint);font-size:11px}
+.dt-pad{padding:12px 18px}
+/* Nhóm nút ở tiêu đề khách hàng, dùng chung cho cả màn Khách hàng và màn Phân tích. */
+.dt-head-act{display:flex;align-items:center;gap:6px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.dt-head-act .ghost{height:32px;padding:0 12px;white-space:nowrap}
 .dcard-b{padding:10px 12px;display:flex;flex-direction:column;gap:10px}
 .dcard .desk-otp,.dcard .desk-rt{padding:0}
 .dcard-order{display:flex;flex-direction:column}

@@ -39,7 +39,7 @@
   const SOURCE = { app: 'Khách xác nhận trong app', phone: 'Điện thoại', chat: 'Tin nhắn', in_person: 'Gặp trực tiếp' };
 
   const D = { broker: false, clients: [], sel: null, tickets: [], side: 'B', trading: { active: false, realTrading: false }, q: '', armed: null,
-    invite: null, links: [], advice: [], rt: null, recon: {} };
+    invite: null, links: [], advice: [], rt: null, recon: {}, xemHet: false };
 
   async function api(url, opts = {}) {
     const r = await fetch(url, { method: opts.method || 'GET', headers: opts.body ? { 'Content-Type': 'application/json' } : undefined, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -91,7 +91,7 @@
     const { client: c, balance, positions, orders, loading } = D.sel;
     const head = `<div class="dt-head"><div><h1>${esc(c.name || c.accountNo)}</h1>
       <p>Tiểu khoản ${esc(c.accountNo)}${c.custodyCode ? ' · Lưu ký ' + esc(c.custodyCode) : ''} · ${c.canTrade ? '<span class="role trade">Ủy quyền giao dịch</span>' : '<span class="role view">Chỉ theo dõi</span>'}</p></div>
-      <div style="display:flex;gap:6px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end"><button class="ghost" data-to-adv style="height:32px;padding:0 12px;white-space:nowrap">Tư vấn &amp; danh mục</button><button class="ghost" data-invite style="height:32px;padding:0 12px;white-space:nowrap">Mời khách</button><button class="ghost" data-refresh-client style="height:32px;padding:0 12px;white-space:nowrap">Làm mới</button></div></div>`;
+      <div class="dt-head-act"><button class="ghost" data-to-adv>Phân tích</button><button class="ghost" data-invite>Mời khách</button><button class="ghost" data-refresh-client>Làm mới</button></div></div>`;
     const linked = D.links.some((l) => l.account_no === c.accountNo);
     const inv = D.invite && D.invite.account === c.accountNo
       ? `<div class="dt-invite"><b>Link mời cho ${esc(c.name || c.accountNo)}</b><small>Gửi riêng cho khách (Zalo, SMS). Dùng được một lần, hết hạn ${esc(hhmm(D.invite.expiresAt))}. Link này chỉ hiện ở đây một lần.</small>
@@ -115,18 +115,36 @@
             <td class="r ${cls}">${pl == null ? '–' : (pl >= 0 ? '+' : '') + Math.round(pl).toLocaleString('vi-VN')}</td><td class="r ${cls}">${pct == null ? '–' : (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%'}</td></tr>`;
         }).join('')}</tbody></table>`;
 
+    // MỘT bảng sổ lệnh. Trước đây có hai bảng cạnh nhau — "Sổ lệnh trong ngày (DNSE)" lấy bằng
+    // REST và "Sự kiện lệnh realtime (DNSE WebSocket)" — cùng nói về CÙNG những lệnh đó, chỉ khác
+    // đường lấy về. Môi giới chỉ có một câu hỏi: hôm nay khách đặt những lệnh gì, đến đâu rồi.
+    // Giờ lấy sổ lệnh REST làm gốc (đầy đủ) rồi phủ trạng thái realtime lên theo dnse_order_id khi
+    // có, vì dòng realtime đến sớm hơn. Bản thân đường realtime rút về một chấm trạng thái: nó là
+    // cách lấy dữ liệu, không phải thứ môi giới cần đọc thành bảng.
     const ords = listOf(orders, ['orders', 'data']);
-    const ordHtml = orders?.error ? `<div class="msg err" style="margin:0 18px">${esc(orders.error)}</div>`
+    const evAll = (D.rt?.events || []).filter((x) => x.account_no === c.accountNo);
+    const evTheoId = new Map(evAll.map((x) => [String(x.dnse_order_id), x]));
+    const moiNhat = evAll.length ? evAll.reduce((a, x) => (Date.parse(x.event_at) > Date.parse(a.event_at) ? x : a)) : null;
+    const ordHtml = orders?.error ? `<div class="msg err dt-pad">${esc(orders.error)}</div>`
       : !ords.length ? '<div class="empty">Chưa có lệnh nào trong ngày.</div>'
-      : `<table><thead><tr><th>Giờ</th><th>Mã</th><th>Lệnh</th><th>Loại</th><th class="r">Giá</th><th class="r">KL</th><th class="r">Khớp</th><th>Trạng thái</th></tr></thead><tbody>${ords.map((o) => `
-          <tr><td>${esc(hhmm(o.createdDate || o.transDate))}</td><td><b>${esc(o.symbol)}</b></td><td class="${o.side === 'NB' ? 'up' : 'down'}">${o.side === 'NB' ? 'Mua' : 'Bán'}</td><td>${esc(o.orderType)}</td>
-          <td class="r">${o.orderType === 'LO' ? px(o.price) : esc(o.orderType)}</td><td class="r">${(num(o.quantity) || 0).toLocaleString('vi-VN')}</td><td class="r">${(num(o.fillQuantity) || 0).toLocaleString('vi-VN')}</td><td>${esc(o.orderStatus)}</td></tr>`).join('')}</tbody></table>`;
+      : `<table><thead><tr><th>Giờ</th><th>Mã</th><th>Lệnh</th><th>Loại</th><th class="r">Giá</th><th class="r">KL</th><th class="r">Khớp</th><th>Trạng thái</th></tr></thead><tbody>${ords.map((o) => {
+          const e = evTheoId.get(String(o.id));
+          const khop = num(e?.fill_quantity) ?? num(o.fillQuantity) ?? 0;
+          const tt = e?.status || o.orderStatus;
+          return `<tr><td>${esc(hhmm(o.createdDate || o.transDate))}</td><td><b>${esc(o.symbol)}</b></td><td class="${o.side === 'NB' ? 'up' : 'down'}">${o.side === 'NB' ? 'Mua' : 'Bán'}</td><td>${esc(o.orderType)}</td>
+          <td class="r">${o.orderType === 'LO' ? px(o.price) : esc(o.orderType)}</td><td class="r">${(num(o.quantity) || 0).toLocaleString('vi-VN')}</td><td class="r">${(khop || 0).toLocaleString('vi-VN')}</td>
+          <td>${esc(tt)}${e ? ' <span class="rt-dot" title="Trạng thái vừa nhận qua realtime"></span>' : ''}</td></tr>`;
+        }).join('')}</tbody></table>`;
+    const rtNote = moiNhat
+      ? `<div class="dt-note"><span class="rt-dot"></span>Realtime đang chạy, sự kiện gần nhất ${esc(hhmm(moiNhat.event_at))}.</div>`
+      : '<div class="dt-note">Chưa nhận sự kiện realtime nào của khách này trong phiên.</div>';
 
-    const mine = D.tickets.filter((t) => t.account_no === c.accountNo);
-    const evs = (D.rt?.events || []).filter((x) => x.account_no === c.accountNo).slice(0, 8);
-    const evHtml = evs.length ? `<table><thead><tr><th>Giờ</th><th>Mã</th><th>Lệnh</th><th class="r">Khớp / KL</th><th>Trạng thái</th></tr></thead><tbody>${evs.map((x) => `<tr><td>${esc(hhmm(x.event_at))}</td><td><b>${esc(x.symbol)}</b></td><td class="${x.side === 'NB' ? 'up' : 'down'}">${x.side === 'NB' ? 'Mua' : 'Bán'}</td><td class="r">${(x.fill_quantity || 0).toLocaleString('vi-VN')} / ${(x.quantity || 0).toLocaleString('vi-VN')}</td><td>${esc(x.status)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Chưa nhận sự kiện lệnh realtime nào của khách này.</div>';
-    box.innerHTML = head + inv + kv + `<div class="dt-sec">Danh mục</div>${posHtml}<div class="dt-sec">Sổ lệnh trong ngày (DNSE)</div>${ordHtml}`
-      + `<div class="dt-sec">Sự kiện lệnh realtime (DNSE WebSocket)</div>${evHtml}<div class="dt-sec">Phiếu lệnh của khách trên Lật Bài</div>${mine.length ? mine.map(ticketHtml).join('') : '<div class="empty">Chưa có phiếu lệnh.</div>'}`;
+    // Phiếu lệnh CỐ Ý không hiện ở đây nữa: cột phải đã có đúng danh sách đó, cùng một hàm vẽ,
+    // nên khi chọn một khách thì phiếu của họ hiện HAI LẦN trên cùng màn hình. Cột phải là chỗ
+    // đúng vì nó nằm ngay dưới form tạo phiếu.
+    box.innerHTML = head + inv + kv
+      + `<div class="dt-sec">Danh mục</div>${posHtml}`
+      + `<div class="dt-sec">Sổ lệnh hôm nay</div>${ordHtml}${rtNote}`;
   }
 
   /* ---------- Phiếu lệnh ---------- */
@@ -161,8 +179,23 @@
         <button data-resolve="${t.id}">Sổ lệnh không có lệnh nào</button>
       </div>`;
   }
+  /* Phiếu lệnh giờ CHỈ hiện ở cột này (xem ghi chú trong renderDetail). Đang chọn một khách thì
+     mặc định lọc theo khách đó — đứng ở màn của một khách mà danh sách phiếu lại trộn cả người
+     khác thì rất dễ đọc nhầm phiếu. Vẫn xem được tất cả bằng một lần bấm. */
   function renderTickets() {
-    $('desk-tickets').innerHTML = D.tickets.length ? D.tickets.slice(0, 30).map(ticketHtml).join('') : '<div class="empty">Chưa có phiếu lệnh nào.</div>';
+    const c = D.sel?.client;
+    const cuaKhach = c ? D.tickets.filter((t) => t.account_no === c.accountNo) : [];
+    const locTheoKhach = !!c && !D.xemHet;
+    const ds = locTheoKhach ? cuaKhach : D.tickets;
+    const sub = $('desk-tickets-sub');
+    if (sub) {
+      sub.innerHTML = !c ? `tất cả · ${D.tickets.length}`
+        : locTheoKhach
+          ? `${esc(c.name || c.accountNo)} · ${cuaKhach.length}${D.tickets.length > cuaKhach.length ? ` <button class="link" data-ticket-scope="het">Xem tất cả (${D.tickets.length})</button>` : ''}`
+          : `tất cả · ${D.tickets.length} <button class="link" data-ticket-scope="khach">Chỉ khách này (${cuaKhach.length})</button>`;
+    }
+    $('desk-tickets').innerHTML = ds.length ? ds.slice(0, 30).map(ticketHtml).join('')
+      : `<div class="empty">${locTheoKhach ? 'Khách này chưa có phiếu lệnh nào.' : 'Chưa có phiếu lệnh nào.'}</div>`;
     if (D.sel && !D.sel.loading) renderDetail();
   }
 
@@ -342,6 +375,7 @@
   document.addEventListener('click', (e) => {
     const t = e.target.closest('button'); if (!t || !t.closest('#view-desk')) return;
     if (t.hasAttribute('data-refresh-list')) return loadDesk(true);
+    if (t.dataset.ticketScope) { D.xemHet = t.dataset.ticketScope === 'het'; return renderTickets(); }
     if (t.hasAttribute('data-invite')) return invite();
     if (t.hasAttribute('data-copy')) {
       const el = $('invite-link'); el.select();
