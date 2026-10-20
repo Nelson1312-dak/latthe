@@ -88,7 +88,7 @@ export function composition({ holdings, cash, debt, nav }) {
     flags.push({ level: lev > 50 ? 'high' : lev > 20 ? 'medium' : 'low', text: `Đang dùng ký quỹ: dư nợ bằng ${vi1(lev)}% tài sản ròng.` });
   }
   if (nav > 0 && cash / nav > 0.5) flags.push({ level: 'low', text: `Tiền mặt chiếm ${vi1(((cash / nav) * 100))}% tài sản ròng.` });
-  if (rows.some((r) => r.qty % 100)) flags.push({ level: 'low', text: 'Có cổ phiếu lô lẻ (dưới 100): phần lẻ không bán được trên bảng thường.' });
+  if (rows.some((r) => r.qty % 100)) flags.push({ level: 'low', text: 'Có cổ phiếu lô lẻ (dưới 100): phần lẻ khớp ở sổ riêng nên có thể lâu hơn và giá kém hơn lô chẵn.' });
   return {
     rows, sectors: sectorList,
     cashWeight: nav > 0 ? (cash / nav) * 100 : null,

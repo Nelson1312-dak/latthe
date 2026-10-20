@@ -4,6 +4,7 @@
  * Tài liệu: https://developers.dnse.com.vn/docs/guide/broker
  */
 import * as dnse from './_dnse.js';
+import { hopLe, moTaTach } from './_lot.js';
 
 const TYPES = ['LO', 'MTL', 'ATO', 'ATC'];
 const fmt = (n) => Math.round(n).toLocaleString('vi-VN');
@@ -89,7 +90,14 @@ export async function buildOrder({ accountNo, symbol, side, type, price, qty, lo
   if (side !== 'B' && side !== 'S') throw new dnse.DnseError('Lệnh phải là mua hoặc bán.', 400);
   if (!TYPES.includes(type)) throw new dnse.DnseError('Loại lệnh không hợp lệ.', 400);
   qty = Number(qty);
-  if (!Number.isInteger(qty) || qty <= 0 || qty % 100 !== 0) throw new dnse.DnseError('Khối lượng phải là bội số của 100.', 400);
+  // Lô chẵn (bội số 100) hoặc lô lẻ (1-99, chỉ LO). Giữa hai mức đó không có gì: 150 cổ phiếu
+  // không phải một lệnh hợp lệ, phải tách thành 100 + 50.
+  if (!Number.isInteger(qty) || qty <= 0) throw new dnse.DnseError('Khối lượng không hợp lệ.', 400);
+  if (!hopLe(qty, type)) {
+    throw new dnse.DnseError(qty < 100
+      ? 'Lô lẻ (1-99 cổ phiếu) chỉ đặt được bằng lệnh LO.'
+      : `Khối lượng phải là bội số của 100, hoặc 1-99 nếu là lô lẻ. ${moTaTach(qty)}.`, 400);
+  }
 
   const sec = await dnse.securityDef(symbol);
   if (!sec?.ceilingPrice || !sec?.floorPrice) throw new dnse.DnseError(`Không lấy được trần/sàn của ${symbol} từ DNSE.`, 502);

@@ -187,6 +187,23 @@ function renderBook(){
   $("tape").innerHTML=m.tape.map(t=>`<div class="tape-row"><span>${t.t}</span><span class="${cls(m,t.u)}">${fP(t.u)}</span><span class="${t.side==="M"?"up":"down"}">${fN(t.q)}</span></div>`).join("");
 }
 
+/* ---------------- Lô chẵn / lô lẻ ----------------
+   Bản sao của api/_lot.js cho phía trình duyệt (app.js là script thường, không import được file
+   của máy chủ). Sửa ở đây thì sửa cả bên kia — máy chủ mới là nơi chặn thật, phần này chỉ để
+   người dùng biết trước khi bấm.
+   Lô chẵn là bội số 100; lô lẻ 1-99 và chỉ đi được bằng lệnh LO; giữa hai mức đó không có gì. */
+const LO_CHAN=100;
+const loHopLe=(q,t)=>Number.isInteger(q)&&q>0&&(q%LO_CHAN===0||(q<LO_CHAN&&t==="LO"));
+function tachLo(q){
+  if(!Number.isInteger(q)||q<=0) return [];
+  const chan=Math.floor(q/LO_CHAN)*LO_CHAN, le=q-chan, ra=[];
+  if(chan) ra.push({qty:chan,le:false});
+  if(le) ra.push({qty:le,le:true});
+  return ra;
+}
+const moTaTachLo=q=>{const p=tachLo(q);return p.length<2?null:
+  `Tách thành ${p.length} lệnh: ${p.map(x=>`${fN(x.qty)} ${x.le?"(lô lẻ)":"(lô chẵn)"}`).join(" + ")}`;};
+
 /* ---------------- Order ticket ---------------- */
 const ticketPxU = () => S.type==="LO" ? S.pxU : M[S.sym].lastU; // MTL/ATO/ATC ước tính theo giá khớp gần nhất
 /* Tài khoản thật: lấy đúng số DNSE báo là bán được. Cổ phiếu chưa về tài khoản vẫn nằm trong
@@ -195,7 +212,9 @@ const banDuoc = s => (ACC.mode==="that"||ACC.mode==="shs") ? (ACC.hold[s]?.ban ?
 function maxQty(){
   const m=M[S.sym];
   if(S.side==="S") return banDuoc(S.sym);
-  const pu=P(ticketPxU()||m.lastU)*1000*(1+FEE); return Math.floor(ACC.cash/pu/100)*100;
+  // KHÔNG làm tròn xuống bội số 100 nữa: tròn xuống thì 213 cổ hiện thành 200 và 13 cổ lẻ biến
+  // mất khỏi màn hình, đúng chỗ người dùng muốn bán cho hết.
+  const pu=P(ticketPxU()||m.lastU)*1000*(1+FEE); return Math.floor(ACC.cash/pu);
 }
 const pendingSellQty = s => ACC.orders.filter(o=>o.sym===s&&o.side==="S"&&o.status==="wait").reduce((a,o)=>a+o.qty,0);
 function validate(){
@@ -208,7 +227,14 @@ function validate(){
     }
   }
   if(!S.qty||S.qty<=0) errs.push("Nhập khối lượng.");
-  else if(S.qty%100) errs.push("Khối lượng phải là bội số của 100.");
+  else if(!loHopLe(S.qty,S.type)){
+    // Số lẻ ở giữa (vd 213) KHÔNG phải lỗi: hệ thống tự tách khi gửi. Chỉ lô lẻ đi kèm lệnh thị
+    // trường mới là lỗi thật, vì sàn không nhận.
+    if(S.qty<LO_CHAN) errs.push(`Lô lẻ (1–99 cổ phiếu) chỉ đặt được bằng lệnh LO, không dùng ${S.type}.`);
+    else if(S.type!=="LO") errs.push(`${fN(S.qty)} không phải bội số của 100. Lệnh ${S.type} chỉ nhận lô chẵn.`);
+    else warns.push(moTaTachLo(S.qty)+". Lô lẻ khớp ở sổ riêng nên có thể lâu hơn và giá kém hơn lô chẵn.");
+  }
+  else if(S.qty<LO_CHAN) warns.push("Lệnh lô lẻ khớp ở sổ riêng, không khớp với lô chẵn, nên có thể lâu hơn và giá kém hơn.");
   const mx=maxQty();
   if(S.qty>0 && S.qty>mx) errs.push(S.side==="B"?`Không đủ sức mua. Tối đa ${fN(Math.max(mx,0))} cổ phiếu.`:`Không đủ cổ phiếu để bán. Khả dụng ${fN(Math.max(mx,0))}.`);
   if(!errs.length && u){
@@ -268,11 +294,16 @@ function flip(open){
   card.querySelector(".front").setAttribute("aria-hidden",open); card.querySelector(".back").setAttribute("aria-hidden",!open);
   if(open){
     const m=M[S.sym], u=ticketPxU(), val=P(u)*1000*S.qty, {warns}=validate(), sideT=S.side==="B"?"Mua":"Bán";
+    const phan=tachLo(S.qty), tach2=phan.length>1;
     $("c-title").innerHTML=`${sideT} <span class="${S.side==="B"?"up":"down"}">${fN(S.qty)}</span> ${m.s}<br>${S.type==="LO"?"giá "+fP(u):"lệnh "+S.type}`;
-    $("c-grid").innerHTML=`<span>Loại lệnh</span><b>${S.type}</b><span>Giá trị ${S.type==="LO"?"":"(ước tính)"}</span><b>${fVND(val)}</b><span>Phí</span><b>${fVND(val*FEE)}</b>`+
+    // Tách lệnh phải hiện Ở ĐÂY, trước khi bấm gửi: gửi hai lệnh mà người dùng tưởng một là
+    // chuyện phải biết trước, không phải chuyện đọc lại trong sổ lệnh.
+    $("c-grid").innerHTML=(tach2?`<span>Số lệnh gửi đi</span><b>${phan.length} lệnh · ${phan.map(x=>fN(x.qty)+(x.le?" lẻ":"")).join(" + ")}</b>`:"")
+      +`<span>Loại lệnh</span><b>${S.type}</b><span>Giá trị ${S.type==="LO"?"":"(ước tính)"}</span><b>${fVND(val)}</b><span>Phí</span><b>${fVND(val*FEE)}</b>`+
       (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tài khoản</span><b>${ACC.mode==="that"?`DNSE thật · ${ACC.accountNo||""}`:ACC.mode==="shs"?`SHS thật · ${ACC.accountNo||""}`:"Giao dịch thử (tiền ảo)"}</b>`;
     $("c-msgs").innerHTML=warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
-    const ok=$("c-ok"); ok.className="cta "+(S.side==="B"?"buy":"sell"); ok.textContent=`Gửi lệnh ${sideT.toLowerCase()}`;
+    const ok=$("c-ok"); ok.className="cta "+(S.side==="B"?"buy":"sell");
+    ok.textContent=tach2?`Gửi ${phan.length} lệnh ${sideT.toLowerCase()}`:`Gửi lệnh ${sideT.toLowerCase()}`;
     setTimeout(()=>ok.focus({preventScroll:true}),300);
   } else if(was) setTimeout(()=>$("cta").focus({preventScroll:true}),300);
 }
@@ -455,67 +486,86 @@ document.addEventListener("lb:user",async e=>{
 /* Lệnh THẬT đi hai bước, không có đường tắt: xem trước để máy chủ kiểm trần/sàn, sức mua và hạn
    mức rồi cấp một mã xác nhận ký sẵn (90 giây); bước gửi dùng ĐÚNG lệnh trong mã đó, không lấy lại
    từ trình duyệt. Nhờ vậy nội dung không đổi được giữa hai bước. */
-async function datLenhThat(ok){
+async function guiDnse(qty){
   const m=M[S.sym], u=ticketPxU();
-  const than={account:ACC.accountNo,symbol:m.s,side:S.side,type:S.type,qty:S.qty,...(S.type==="LO"?{price:P(u)}:{})};
+  const than={account:ACC.accountNo,symbol:m.s,side:S.side,type:S.type,qty,...(S.type==="LO"?{price:P(u)}:{})};
   const rx=await fetch("/api/dnse/orders",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({step:"preview",...than})});
   const dx=await rx.json();
-  if(!rx.ok){ $("c-msgs").innerHTML=`<div class="msg err">${dx.error||"Không xem trước được lệnh."}</div>`; return; }
-  if(dx.canhBao) $("c-msgs").innerHTML=`<div class="msg warn">${dx.canhBao}</div>`;
-
+  if(!rx.ok) return {ok:false,loi:dx.error||"Không xem trước được lệnh.",dung:true};
   const rp=await fetch("/api/dnse/orders",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({step:"place",confirm:dx.confirm})});
   const dp=await rp.json();
   if(!rp.ok){
     const them=dp.code==="need_otp"?' Mở tab <b>Khách hàng</b> để xác thực OTP DNSE (phiên sống 8 giờ).':"";
-    // 'unknown' = không rõ DNSE đã nhận chưa. Tuyệt đối không được mời người dùng bấm lại.
-    $("c-msgs").innerHTML=`<div class="msg ${dp.code==="unknown"?"err":"err"}">${dp.error||"Không gửi được lệnh."}${them}</div>`;
-    return;
+    return {ok:false,loi:(dp.error||"Không gửi được lệnh.")+them,dung:true,chuaRo:dp.code==="unknown"};
   }
-  toast(`Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(S.qty)} ${m.s} lên DNSE${dp.order?.id?" (#"+dp.order.id+")":""}.`);
-  flip(false); await refreshAccount();
+  return {ok:true,nhan:dp.order?.id?"#"+dp.order.id:"",canhBao:dx.canhBao};
 }
 
 /* Lệnh SHS đi đúng hai bước như DNSE. Khác một chỗ đáng nhớ: SHS KHÔNG có bước OTP riêng —
    chính phiên đã qua thẻ ma trận lúc kết nối mới cho đặt lệnh, hết hạn thì phải kết nối lại. */
-async function datLenhShs(){
+async function guiShs(qty){
   const m=M[S.sym], u=ticketPxU();
-  const than={sub:ACC.accountNo,symbol:m.s,side:S.side,type:S.type,qty:S.qty,...(S.type==="LO"?{price:P(u)}:{})};
+  const than={sub:ACC.accountNo,symbol:m.s,side:S.side,type:S.type,qty,...(S.type==="LO"?{price:P(u)}:{})};
   const rx=await fetch("/api/shs/orders",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({step:"preview",...than})});
   const dx=await rx.json();
-  if(!rx.ok){ $("c-msgs").innerHTML=`<div class="msg err">${dx.error||"Không xem trước được lệnh."}</div>`; return; }
-  if(dx.canhBao) $("c-msgs").innerHTML=`<div class="msg warn">${dx.canhBao}</div>`;
-
+  if(!rx.ok) return {ok:false,loi:dx.error||"Không xem trước được lệnh.",dung:true};
   const rp=await fetch("/api/shs/orders",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({step:"place",confirm:dx.confirm})});
   const dp=await rp.json();
   if(!rp.ok){
     const them=dp.code==="shs_expired"?' Mở tab <b>Khách hàng</b> &gt; Tài khoản chứng khoán để kết nối lại SHS.':"";
-    // 'unknown' = không rõ SHS đã nhận chưa. Tuyệt đối không mời người dùng bấm lại.
-    $("c-msgs").innerHTML=`<div class="msg err">${dp.error||"Không gửi được lệnh."}${them}</div>`;
-    return;
+    return {ok:false,loi:(dp.error||"Không gửi được lệnh.")+them,dung:true,chuaRo:dp.code==="unknown"};
   }
-  toast(`Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(S.qty)} ${m.s} lên SHS${dp.order?.orderNumber?" (#"+dp.order.orderNumber+")":""}.`);
-  flip(false); await refreshAccount();
+  return {ok:true,nhan:dp.order?.orderNumber?"#"+dp.order.orderNumber:"",canhBao:dx.canhBao};
 }
 
+async function guiAo(qty){
+  const m=M[S.sym], u=ticketPxU();
+  const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({symbol:m.s,side:S.side,type:S.type,qty,...(S.type==="LO"?{price:P(u)}:{})})});
+  const d=await r.json();
+  if(!r.ok) return {ok:false,loi:d.error||"Không đặt được lệnh.",dung:true};
+  return {ok:true,nhan:"",khop:d.order.status==="ok"};
+}
+
+/* Gửi lệnh. Khối lượng lẻ (vd 213) được TÁCH thành lô chẵn 200 rồi lô lẻ 13, gửi lần lượt — sàn
+   không nhận một lệnh 213. Lô chẵn đi trước vì đó là phần lớn tiền và là phần khớp nhanh.
+
+   Quy tắc dừng: lệnh nào hỏng là DỪNG, không gửi tiếp phần còn lại. Nhất là khi phần đầu trả về
+   "không rõ đã vào sàn chưa" — lúc đó gửi tiếp phần hai là có thể thành đặt gấp đôi. Thà để người
+   dùng mở sổ lệnh kiểm tra rồi tự đặt nốt phần còn thiếu. */
 async function placeOrder(){
   if(!ACC.user) return needLogin();
-  const m=M[S.sym], u=ticketPxU(), ok=$("c-ok");
+  const m=M[S.sym], ok=$("c-ok");
   ok.disabled=true; $("c-msgs").innerHTML="";
+  const gui=ACC.mode==="that"?guiDnse:ACC.mode==="shs"?guiShs:guiAo;
+  const noi=ACC.mode==="that"?" lên DNSE":ACC.mode==="shs"?" lên SHS":"";
+  const phan=tachLo(S.qty), xong=[];
   try{
-    if(ACC.mode==="that") return await datLenhThat(ok);
-    if(ACC.mode==="shs") return await datLenhShs();
-    const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({symbol:m.s,side:S.side,type:S.type,qty:S.qty,...(S.type==="LO"?{price:P(u)}:{})})});
-    const d=await r.json();
-    if(!r.ok){ $("c-msgs").innerHTML=`<div class="msg err">${d.error||"Không đặt được lệnh."}</div>`; return; }
-    const filled=d.order.status==="ok";
-    toast(`Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(S.qty)} ${m.s}${filled?" và khớp ngay":""}.${!filled&&MKT.session==="closed"?" Thị trường đang đóng cửa, lệnh chờ đến phiên sau.":""}`);
+    for(let k=0;k<phan.length;k++){
+      const p=phan[k];
+      if(phan.length>1) $("c-msgs").innerHTML=`<div class="msg warn">Đang gửi lệnh ${k+1}/${phan.length}: ${fN(p.qty)} ${p.le?"lô lẻ":"lô chẵn"}…</div>`;
+      const r=await gui(p.qty);
+      if(r.ok){ xong.push({...p,nhan:r.nhan,khop:r.khop}); if(r.canhBao&&phan.length===1) $("c-msgs").innerHTML=`<div class="msg warn">${r.canhBao}</div>`; continue; }
+      // Hỏng: báo rõ phần nào đã đi, phần nào chưa, rồi dừng hẳn.
+      const daGui=xong.length?`Đã gửi ${xong.map(x=>fN(x.qty)+(x.nhan?" "+x.nhan:"")).join(" và ")}. `:"";
+      const conLai=phan.slice(k).reduce((a,x)=>a+x.qty,0);
+      $("c-msgs").innerHTML=`<div class="msg err">${daGui}${r.loi}`
+        +(phan.length>1&&!r.chuaRo?` Còn ${fN(conLai)} ${m.s} CHƯA gửi.`:"")
+        +(r.chuaRo?" Mở sổ lệnh kiểm tra trước khi làm gì tiếp.":"")+"</div>";
+      await refreshAccount();
+      return;
+    }
+    const tong=xong.reduce((a,x)=>a+x.qty,0), khop=xong.every(x=>x.khop);
+    toast(xong.length>1
+      ? `Đã gửi ${xong.length} lệnh ${S.side==="B"?"mua":"bán"} ${m.s}${noi}: ${xong.map(x=>fN(x.qty)+(x.le?" lẻ":"")).join(" + ")}.`
+      : `Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(tong)} ${m.s}${noi}${xong[0]?.nhan?" ("+xong[0].nhan+")":""}${ACC.mode==="ao"&&khop?" và khớp ngay":""}.`
+        +(ACC.mode==="ao"&&!khop&&MKT.session==="closed"?" Thị trường đang đóng cửa, lệnh chờ đến phiên sau.":""));
     flip(false); await refreshAccount();
-  }catch(e){ $("c-msgs").innerHTML='<div class="msg err">Mất kết nối, thử lại.</div>'; }
+  }catch(e){ $("c-msgs").innerHTML='<div class="msg err">Mất kết nối, thử lại. Mở sổ lệnh kiểm tra xem lệnh đã đi chưa.</div>'; }
   finally{ ok.disabled=false; }
 }
 async function cancelOrder(id){
@@ -587,9 +637,16 @@ document.addEventListener("click",e=>{
   if(t.dataset.fill){ S.type="LO"; S.pxU=+t.dataset.fill; return renderTicket(); }
   if(t.dataset.step){ const m=M[S.sym], d=+t.dataset.d;
     if(t.dataset.step==="px"&&S.type==="LO"){ const base=S.pxU||m.lastU; S.pxU=Math.min(m.ceilU,Math.max(m.floorU,roundTo(base,tickU(base,m.ex))+d*tickU(base+(d<0?-1:0),m.ex))); }
-    if(t.dataset.step==="qty") S.qty=Math.max(0,(Math.round((S.qty||0)/100)*100)+d*100);
+    // Cộng trừ 100 nhưng GIỮ phần lẻ: 213 -> 313, không nhảy về 300. Người có cổ phiếu lẻ muốn
+    // thêm bớt một lô chứ không muốn bị làm tròn mất phần lẻ của mình.
+    if(t.dataset.step==="qty") S.qty=Math.max(0,(S.qty||0)+d*100);
     return renderTicket(); }
-  if(t.dataset.pct){ S.qty=Math.floor(Math.max(maxQty(),0)*(+t.dataset.pct)/100/100)*100; return renderTicket(); }
+  if(t.dataset.pct){
+    const mx=Math.max(maxQty(),0), pc=+t.dataset.pct;
+    // "Tối đa" lấy ĐÚNG số tối đa kể cả lẻ (để bán hết được); các mức dưới làm tròn về lô chẵn.
+    S.qty=pc===100?mx:Math.floor(mx*pc/100/100)*100;
+    return renderTicket();
+  }
   if(t.id==="cta") return ACC.user?flip(true):needLogin();
   if(t.id==="c-back") return flip(false);
   if(t.id==="c-ok"){ const {errs}=validate(); if(errs.length){flip(false);renderTicket();return;} return placeOrder(); }

@@ -12,6 +12,7 @@
  */
 import { rest, DbError } from './_db.js';
 import { BY_SYMBOL, fetchBars, fetchRange, quoteFromBars, sessionState, tickU } from './_market.js';
+import { hopLe, moTaTach } from './_lot.js';
 
 const ATO_END_S = 15 * 60;          // 9:15
 const ATC_END_S = (14 * 60 + 45 - 9 * 60) * 60; // 14:45, tính từ mốc 9:00 (t của nến ngày)
@@ -29,7 +30,14 @@ function validate(input) {
   const type = input.type;
   if (!['LO', 'MTL', 'ATO', 'ATC'].includes(type)) throw new TradeError('Loại lệnh không hợp lệ.');
   const qty = Number(input.qty);
-  if (!Number.isInteger(qty) || qty <= 0 || qty % 100 !== 0) throw new TradeError('Khối lượng phải là bội số của 100.');
+  // Giao dịch thử phải theo đúng luật của sàn, nếu không thì tập ở đây xong ra thật lại sai:
+  // lô chẵn là bội số 100, lô lẻ 1-99 và chỉ đi bằng LO.
+  if (!Number.isInteger(qty) || qty <= 0) throw new TradeError('Khối lượng không hợp lệ.');
+  if (!hopLe(qty, type)) {
+    throw new TradeError(qty < 100
+      ? 'Lô lẻ (1-99 cổ phiếu) chỉ đặt được bằng lệnh LO.'
+      : `Khối lượng phải là bội số của 100, hoặc 1-99 nếu là lô lẻ. ${moTaTach(qty)}.`);
+  }
   if (qty > 1_000_000) throw new TradeError('Khối lượng tối đa mỗi lệnh là 1.000.000.');
   let price = null;
   if (type === 'LO') {

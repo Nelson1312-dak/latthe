@@ -20,6 +20,7 @@ import {
   makeConfirm, readConfirm, auditStart, auditFinish, assertDailyLimit, dailyUsage,
 } from '../../../api/_broker.js';
 import * as shs from '../../../api/_shs.js';
+import { hopLe, moTaTach } from '../../../api/_lot.js';
 import { rest } from '../../../api/_db.js';
 
 const fmt = (n) => Math.round(n).toLocaleString('vi-VN');
@@ -40,7 +41,13 @@ async function dungLenh(link, b) {
   const type = String(b.type || 'LO').toUpperCase();
   if (!shs.ORDER_TYPES.includes(type)) throw new BrokerError('Loại lệnh không hợp lệ.', 400);
   const qty = Number(b.qty);
-  if (!Number.isInteger(qty) || qty <= 0 || qty % 100 !== 0) throw new BrokerError('Khối lượng phải là bội số của 100.', 400);
+  if (!Number.isInteger(qty) || qty <= 0) throw new BrokerError('Khối lượng không hợp lệ.', 400);
+  // Lô chẵn (bội số 100) hoặc lô lẻ (1-99, chỉ LO). Giữa hai mức đó không có gì.
+  if (!hopLe(qty, type)) {
+    throw new BrokerError(qty < 100
+      ? 'Lô lẻ (1-99 cổ phiếu) chỉ đặt được bằng lệnh LO.'
+      : `Khối lượng phải là bội số của 100, hoặc 1-99 nếu là lô lẻ. ${moTaTach(qty)}.`, 400);
+  }
 
   const subs = await shs.subAccounts(link.token, link.accountNo);
   const sub = (Array.isArray(subs) ? subs : []).find((s) => s.subNumber === String(b.sub || '') && s.type === 'EQUITY');
