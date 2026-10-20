@@ -226,40 +226,63 @@
     </section>
     <section class="desk-main" aria-label="Tài sản khách hàng" id="desk-detail"></section>
     <aside class="desk-side" aria-label="Phiếu lệnh">
-      <div class="pane-title">Phiên giao dịch</div>
-      <div class="desk-otp" id="desk-otp"></div>
-      <div class="desk-rt" id="desk-rt"></div>
-      <div class="pane-title">Tạo phiếu lệnh</div>
-      <form class="desk-form" id="desk-form" autocomplete="off" novalidate>
-        <div class="desk-for" id="desk-for">Chọn khách ở cột bên trái.</div>
-        <div class="sides">
-          <button type="button" class="side-btn buy" data-dside="B" aria-pressed="true">Mua</button>
-          <button type="button" class="side-btn sell" data-dside="S" aria-pressed="false">Bán</button>
+      <!-- 1. Điều kiện trước khi gửi được lệnh. Gọn lại khi đã xác thực. -->
+      <section class="dcard">
+        <div class="dcard-h">Phiên giao dịch</div>
+        <div class="dcard-b">
+          <div class="desk-otp" id="desk-otp"></div>
+          <div class="desk-rt" id="desk-rt"></div>
         </div>
-        <div class="desk-row">
-          <label>Mã<input class="inp" id="dk-sym" maxlength="10" placeholder="HPG"></label>
-          <label>Loại lệnh<select class="inp" id="dk-type"><option>LO</option><option>MTL</option><option>ATO</option><option>ATC</option></select></label>
+      </section>
+
+      <!-- 2. Phiếu lệnh. Bày đúng như một phiếu đặt lệnh thường: chiều, mã, giá kèm biên độ,
+           khối lượng, giá trị. Phần làm nó KHÁC một phiếu thường nằm riêng ở khối 3. -->
+      <form class="dcard dcard-order" id="desk-form" autocomplete="off" novalidate>
+        <div class="dcard-h">Phiếu lệnh<span class="dcard-h-sub" id="dk-head-acc"></span></div>
+        <div class="dcard-b">
+          <div class="desk-for" id="desk-for">Chọn khách ở cột bên trái.</div>
+          <div class="sides">
+            <button type="button" class="side-btn buy" data-dside="B" aria-pressed="true">Mua</button>
+            <button type="button" class="side-btn sell" data-dside="S" aria-pressed="false">Bán</button>
+          </div>
+          <div class="desk-row">
+            <label>Mã<input class="inp" id="dk-sym" maxlength="10" placeholder="HPG"></label>
+            <label>Loại lệnh<select class="inp" id="dk-type"><option>LO</option><option>MTL</option><option>ATO</option><option>ATC</option></select></label>
+          </div>
+          <div class="desk-row">
+            <label>Giá (nghìn đồng)<input class="inp" id="dk-px" inputmode="decimal" placeholder="20.10"></label>
+            <label>Khối lượng<input class="inp" id="dk-qty" inputmode="numeric" placeholder="100"></label>
+          </div>
+          <div class="band dk-band" id="dk-band" hidden><span class="floor"></span><span class="ref"></span><span class="ceil"></span></div>
+          <div class="dk-sum" id="dk-sum" hidden><span>Giá trị lệnh</span><b></b></div>
         </div>
-        <div class="desk-row">
-          <label>Giá (nghìn đồng)<input class="inp" id="dk-px" inputmode="decimal" placeholder="20.10"></label>
-          <label>Khối lượng<input class="inp" id="dk-qty" inputmode="numeric" placeholder="100"></label>
+
+        <!-- 3. Chỗ chuyên biệt: đây là lệnh đặt trên tài khoản NGƯỜI KHÁC, nên bắt buộc phải có
+             chỉ thị của khách. Làm nổi hẳn để không ai điền cho xong. -->
+        <div class="dcard-special">
+          <div class="special-h"><span>Chỉ thị của khách</span><span class="badge">bắt buộc</span></div>
+          <p class="special-why">Lệnh trên tài khoản khách phải xuất phát từ chỉ thị của khách. Phần ghi lại dưới đây là bằng chứng nếu sau này có tranh chấp.</p>
+          <label>Khách ra chỉ thị bằng cách nào<select class="inp" id="dk-src">
+            <option value="phone">Qua điện thoại</option><option value="chat">Qua tin nhắn</option><option value="in_person">Gặp trực tiếp</option><option value="app">Gửi khách xác nhận trong app</option>
+          </select></label>
+          <div class="desk-instr" id="dk-instr">
+            <label>Thời điểm khách ra chỉ thị<input class="inp" id="dk-at" type="datetime-local"></label>
+            <label>Nội dung chỉ thị<textarea class="inp" id="dk-note" rows="2" maxlength="1000" placeholder="Vd: KH gọi 9h40, đặt mua 1.000 HPG giá 20.10"></textarea></label>
+          </div>
+          <p class="special-why" id="dk-app-note" hidden>Khách sẽ thấy phiếu trong cổng của mình và tự bấm xác nhận. Đó là bằng chứng chắc nhất, không cần ghi tay.</p>
         </div>
-        <label>Chỉ thị của khách<select class="inp" id="dk-src">
-          <option value="phone">Qua điện thoại</option><option value="chat">Qua tin nhắn</option><option value="in_person">Gặp trực tiếp</option><option value="app">Gửi khách xác nhận trong app</option>
-        </select></label>
-        <div class="desk-instr" id="dk-instr">
-          <label>Thời điểm khách ra chỉ thị<input class="inp" id="dk-at" type="datetime-local"></label>
-          <label>Nội dung chỉ thị<textarea class="inp" id="dk-note" rows="2" maxlength="1000" placeholder="Vd: KH gọi 9h40, đặt mua 1.000 HPG giá 20.10"></textarea></label>
+
+        <div class="dcard-b">
+          <div class="msgs" id="dk-msg"></div>
+          <button type="submit" class="cta buy" id="dk-submit">Tạo phiếu</button>
         </div>
-        <div class="msgs" id="dk-msg"></div>
-        <button type="submit" class="cta buy" id="dk-submit">Tạo phiếu</button>
       </form>
-      <div class="pane-title">Phiếu lệnh gần đây</div>
-      <div class="desk-tickets" id="desk-tickets"></div>
-      <div class="pane-title">Khuyến nghị cho khách</div>
-      <div class="desk-advlink"><button type="button" class="ghost" data-subnav="advice">Soạn khuyến nghị (dữ liệu kỹ thuật + AI)</button>
-        <small>Gửi cho khách đã liên kết, kết quả từng khuyến nghị tự cập nhật theo giá.</small></div>
-      <div class="desk-tickets" id="advice-list"></div>
+
+      <!-- 4. Lịch sử -->
+      <section class="dcard">
+        <div class="dcard-h">Phiếu lệnh gần đây</div>
+        <div class="desk-tickets" id="desk-tickets"></div>
+      </section>
     </aside>
   </main>
 

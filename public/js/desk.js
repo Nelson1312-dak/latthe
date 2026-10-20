@@ -171,11 +171,38 @@
     $('desk-for').innerHTML = !c ? 'Chọn khách ở cột bên trái.'
       : c.canTrade ? `Đặt cho <b>${esc(c.name || c.accountNo)}</b> · ${esc(c.accountNo)}`
       : `<b>${esc(c.name || c.accountNo)}</b> chỉ ủy quyền theo dõi. Khách cần cấp quyền giao dịch trên Entrade X.`;
+    $('dk-head-acc').textContent = c?.canTrade ? c.accountNo : '';
     $('dk-submit').disabled = !c || !c.canTrade;
     document.querySelectorAll('[data-dside]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.dside === D.side));
     $('dk-submit').className = 'cta ' + (D.side === 'B' ? 'buy' : 'sell');
-    $('dk-px').disabled = $('dk-type').value !== 'LO';
-    $('dk-instr').hidden = $('dk-src').value === 'app';
+    const laLO = $('dk-type').value === 'LO';
+    $('dk-px').disabled = !laLO;
+
+    // Nguồn chỉ thị 'app' thì khách tự bấm xác nhận trong cổng, không phải ghi tay
+    const quaApp = $('dk-src').value === 'app';
+    $('dk-instr').hidden = quaApp;
+    $('dk-app-note').hidden = !quaApp;
+
+    // Biên độ và giá trị lệnh — lấy từ bảng giá đang chạy của app.js, không gọi thêm API.
+    // Chỉ là tham khảo khi soạn phiếu; trần/sàn RÀNG BUỘC vẫn do máy chủ lấy từ secdef DNSE
+    // ngay lúc gửi, nên phiếu không bao giờ qua mặt được biên độ thật.
+    const ma = $('dk-sym').value.trim().toUpperCase();
+    const q = (typeof MKT !== 'undefined' && MKT.all) ? MKT.all[ma] : null;
+    const band = $('dk-band');
+    if (q && Number.isFinite(q.ceil)) {
+      band.hidden = false;
+      band.querySelector('.floor').textContent = 'Sàn ' + q.floor.toFixed(2);
+      band.querySelector('.ref').textContent = 'TC ' + q.ref.toFixed(2);
+      band.querySelector('.ceil').textContent = 'Trần ' + q.ceil.toFixed(2);
+    } else band.hidden = true;
+
+    const gia = laLO ? num($('dk-px').value) : (q ? q.last : null);
+    const kl = num($('dk-qty').value);
+    const sum = $('dk-sum');
+    if (gia && kl) {
+      sum.hidden = false;
+      sum.querySelector('b').textContent = vnd(gia * 1000 * kl) + (laLO ? '' : ' (ước tính)');
+    } else sum.hidden = true;
   }
 
   /* ---------- Tải dữ liệu ---------- */
@@ -208,6 +235,8 @@
       : '<span class="dot off"></span>Worker realtime chưa chạy, trạng thái lệnh chỉ cập nhật khi bạn bấm Làm mới.';
   }
   function renderAdvice() {
+    // Khối tư vấn đã tách hẳn sang tab Khuyến nghị; cột phiếu lệnh không còn phần tử này nữa.
+    if (!$('advice-list')) return;
     $('advice-list').innerHTML = D.advice.length ? D.advice.slice(0, 15).map((a) => `<div class="tk"><div class="tk-top"><b class="${a.side === 'S' ? 'down' : a.side === 'B' ? 'up' : ''}">${esc(a.symbol)} ${a.side === 'B' ? 'Mua' : a.side === 'S' ? 'Bán' : 'Theo dõi'}</b><small>${esc(hhmm(a.created_at))}</small></div>
       <small>${a.outcome?.label ? `<b>${esc(a.outcome.label)}${a.outcome.retPct != null ? ` ${a.outcome.retPct > 0 ? '+' : ''}${String(a.outcome.retPct).replace('.', ',')}%` : ''}</b> · ` : ''}Mục tiêu ${a.target ? Number(a.target).toFixed(2) : '–'} · Cắt lỗ ${a.stop ? Number(a.stop).toFixed(2) : '–'} · đã xem ${a.seen}/${a.sent} khách</small></div>`).join('') : '<div class="empty">Chưa gửi khuyến nghị nào.</div>';
   }
@@ -335,8 +364,12 @@
     if (e.target.id === 'desk-q') { D.q = e.target.value; renderClients(); }
     if (e.target.id === 'dk-sym') { // gợi ý giá theo giá khớp hiện tại nếu mã có trên bảng giá
       const s = e.target.value.trim().toUpperCase();
-      if (typeof M !== 'undefined' && M[s] && !$('dk-px').value) $('dk-px').value = (M[s].lastU / 100).toFixed(2);
+      // Cả rổ 150 mã, không chỉ 32 mã có biểu đồ: môi giới hay đặt những mã ngoài rổ đó.
+      const q = (typeof MKT !== 'undefined' && MKT.all) ? MKT.all[s] : null;
+      if (q && Number.isFinite(q.last) && !$('dk-px').value) $('dk-px').value = q.last.toFixed(2);
     }
+    // Biên độ và giá trị lệnh phải đổi theo từng ký tự gõ vào, như mọi phiếu đặt lệnh
+    if (['dk-sym', 'dk-px', 'dk-qty'].includes(e.target.id)) renderForm();
   });
   document.addEventListener('change', (e) => { if (['dk-type', 'dk-src'].includes(e.target.id)) renderForm(); });
 
