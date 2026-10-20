@@ -107,14 +107,14 @@
   }
 
   /* ================= Môi giới: màn Tư vấn ================= */
-  const A = { broker: false, tab: 'clients', clients: [], q: '', sel: null, data: null, loading: false, perf: 'realized', models: [], edit: null, modelPerf: {}, ai: {}, worker: null, creating: false,
+  const A = { broker: false, tab: 'clients', clients: [], sel: null, data: null, loading: false, perf: 'realized', models: [], edit: null, modelPerf: {}, ai: {}, worker: null, creating: false,
     note: {}, notes: {}, adv: null, advList: null, record: null };
 
   function shell() {
     $('adv-body').innerHTML = `
       <div class="av-top"><nav class="subnav" aria-label="Khách hàng">
-        <button type="button" data-subnav="desk">Lệnh &amp; tài sản</button>
-        <button type="button" data-subnav="clients" ${A.tab === 'clients' ? 'aria-current="page"' : ''}>Tư vấn &amp; danh mục</button>
+        <button type="button" data-subnav="desk">Khách hàng</button>
+        <button type="button" data-subnav="clients" ${A.tab === 'clients' ? 'aria-current="page"' : ''}>Phân tích</button>
         <button type="button" data-subnav="advice" ${A.tab === 'advice' ? 'aria-current="page"' : ''}>Khuyến nghị</button>
         <button type="button" data-subnav="models" ${A.tab === 'models' ? 'aria-current="page"' : ''}>Danh mục mẫu</button></nav>
         <span class="av-ai-status" id="av-ai-status"></span></div>
@@ -132,24 +132,22 @@
     const g = $('av-grid'); if (!g) return;
     if (A.tab === 'advice') { g.className = 'av-grid advice'; g.innerHTML = '<section class="av-compose" id="av-compose"></section><section class="av-advlist" id="av-advlist"></section>'; renderCompose(); renderAdvList(); loadAdvice(); return; }
     if (A.tab === 'models') { g.className = 'av-grid models'; g.innerHTML = '<section class="av-models" id="av-models"></section><section class="av-editor" id="av-editor"></section>'; renderModels(); renderEditor(); return; }
-    g.className = 'av-grid';
-    g.innerHTML = `<section class="av-list"><div class="desk-search"><input class="inp" id="av-q" placeholder="Tìm khách" aria-label="Tìm khách hàng" autocomplete="off" value="${esc(A.q)}"></div><div class="desk-clients" id="av-clients"></div></section>
-      <section class="av-main" id="av-main" aria-live="polite"></section>`;
-    renderClients(); renderMain();
-  }
-  function renderClients() {
-    const box = $('av-clients'); if (!box) return;
-    const q = A.q.trim().toLowerCase();
-    const list = A.clients.filter((c) => !q || [c.name, c.accountNo, c.custodyCode].some((x) => String(x || '').toLowerCase().includes(q)));
-    box.innerHTML = list.length ? list.map((c) => `<button class="cl" data-aclient="${esc(c.accountNo)}" aria-current="${A.sel === c.accountNo}">
-        <span class="cl-name">${esc(c.name || c.accountNo)}</span><span class="cl-nav">${big(c.nav.total)}</span>
-        <span class="cl-sub">${esc(c.accountNo)}</span><span>${c.canTrade ? '<span class="role trade">Giao dịch</span>' : '<span class="role view">Theo dõi</span>'}</span></button>`).join('')
-      : `<div class="empty">${A.clients.length ? 'Không có khách khớp tìm kiếm.' : 'Chưa có khách care-by nào.'}</div>`;
+    // MỘT chỗ chọn khách cho cả mục này, nằm ở màn "Khách hàng". Trước đây màn Phân tích có
+    // danh sách khách riêng: hai danh sách giống hệt nhau, hai lần gọi /api/broker/clients, hai
+    // trạng thái "đang chọn ai" phải đồng bộ với nhau bằng sự kiện lb:pick-client. Bỏ một cái đi
+    // thì sự kiện kia trở thành đường truyền một chiều, không còn gì để lệch.
+    g.className = 'av-grid one';
+    g.innerHTML = '<section class="av-main" id="av-main" aria-live="polite"></section>';
+    renderMain();
   }
 
   function renderMain() {
     const box = $('av-main'); if (!box) return;
-    if (!A.sel) { box.innerHTML = '<div class="empty"><b>Chọn một khách hàng</b>Hiệu suất, rủi ro, độ lệch so với danh mục mẫu và đề xuất tái phân bổ sẽ hiện ở đây.</div>'; return; }
+    if (!A.sel) {
+      box.innerHTML = '<div class="empty"><b>Chưa chọn khách nào</b>Chọn khách ở màn <b>Khách hàng</b>, rồi quay lại đây để xem hiệu suất, rủi ro, độ lệch so với danh mục mẫu và đề xuất tái phân bổ.'
+        + '<button class="link" data-subnav="desk">Mở màn Khách hàng</button></div>';
+      return;
+    }
     if (A.loading) { box.innerHTML = '<div class="empty">Đang tính hiệu suất và rủi ro…</div>'; return; }
     const a = A.data;
     if (!a || a.error) { box.innerHTML = `<div class="empty"><b>Không tải được dữ liệu</b>${esc(a?.error || '')}</div>`; return; }
@@ -157,7 +155,7 @@
     const models = A.models.filter((m) => !m.archived || m.id === a.model?.id);
     box.innerHTML = `
       <div class="dt-head"><div><h1>${esc(c.name || c.accountNo)}</h1><p>${esc(c.accountNo)} · ${c.canTrade ? 'Ủy quyền giao dịch' : 'Chỉ theo dõi'}</p></div>
-        <button class="ghost" data-areload>Tính lại</button></div>
+        <div class="dt-head-act"><button class="ghost" data-subnav="desk">Đổi khách</button><button class="ghost" data-areload>Tính lại</button></div></div>
       <div class="av-kv wide"><div><span>Tài sản ròng</span><b>${big(a.account.nav)}</b></div><div><span>Tiền mặt</span><b>${f1(a.composition.cashWeight)}%</b></div>
         <div><span>Dư nợ</span><b>${f1(a.composition.debtWeight)}%</b></div><div><span>Số mã hiệu dụng</span><b>${f1(a.composition.effectiveN)}</b></div>
         ${['1M', '3M', 'YTD'].map((k) => s?.windows?.[k] ? `<div><span>${WIN_LABEL[k]} / VN-Index</span><b class="${cls(s.windows[k].ret)}">${pct(s.windows[k].ret)}</b> <small class="${cls(s.windows[k].bench)}">${pct(s.windows[k].bench)}</small></div>` : '').join('')}</div>
@@ -434,11 +432,11 @@
       const [c, m, j] = await Promise.all([api('/api/broker/clients'), api('/api/broker/models'), api('/api/ai/jobs').catch(() => null)]);
       A.clients = c.clients; A.models = m.models; A.worker = j?.worker || null;
     } catch (e) { A.clients = []; say(e.message); }
-    renderClients(); renderAiStatus();
+    renderAiStatus();
     if (A.tab === 'models') { renderModels(); renderEditor(); }
   }
   async function selectClient(acc) {
-    A.sel = acc; A.loading = true; A.data = null; A.made = null; renderClients(); renderMain();
+    A.sel = acc; A.loading = true; A.data = null; A.made = null; renderMain();
     loadNotes(acc);
     document.dispatchEvent(new CustomEvent('lb:pick-client', { detail: { account: acc, from: 'adv' } }));
     try {
@@ -578,7 +576,6 @@
   /* ---------- Sự kiện (môi giới) ---------- */
   document.addEventListener('click', (e) => {
     const t = e.target.closest('button'); if (!t || !t.closest('#view-advisory')) return;
-    if (t.dataset.aclient) return selectClient(t.dataset.aclient);
     if (t.hasAttribute('data-areload')) return selectClient(A.sel);
     if (t.dataset.perf && t.dataset.scope === 'broker') { A.perf = t.dataset.perf; return renderMain(); }
     if (t.hasAttribute('data-mktickets')) return createTickets();
@@ -603,7 +600,6 @@
     if (t.dataset.wdel) { syncEdit(form); A.edit.rows.splice(Number(t.dataset.wdel), 1); return renderEditor(); }
   });
   document.addEventListener('input', (e) => {
-    if (e.target.id === 'av-q') { A.q = e.target.value; return renderClients(); }
     const nf = e.target.closest('#av-note'); if (nf) return syncNote(nf);
     const af = e.target.closest('#av-adv');
     if (af && e.target.name && A.adv) {
