@@ -83,7 +83,7 @@ function book(m){
 /* mode: 'that' = tài khoản DNSE thật, 'ao' = giao dịch thử bằng tiền ảo.
    Mọi chỗ hiển thị đọc chung ACC, nên đổi tài khoản chỉ là đổi NGUỒN đổ vào đây - không phải
    viết lại phiếu lệnh, sổ lệnh hay danh mục. Chỉ đặt/hủy lệnh mới phải rẽ nhánh. */
-const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, accountNo:null, otp:false, maxOrderVnd:0};
+const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, daDo:false, tuChon:false, accountNo:null, otp:false, maxOrderVnd:0};
 const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
@@ -301,6 +301,7 @@ let accTimer=null, accBusy=false;
 async function refreshAccount(){
   if(!ACC.user||accBusy) return; accBusy=true;
   try{
+    if(!ACC.daDo) await doTaiKhoanThat();   // lần dò trước chưa có câu trả lời thì hỏi lại
     if(ACC.mode==="that"){
       const r=await fetch("/api/dnse/account"); const d=await r.json();
       if(r.ok){ applyReal(d); }
@@ -315,11 +316,18 @@ async function refreshAccount(){
   }catch(e){ /* lỗi mạng tạm thời: giữ số liệu cũ */ } finally{ accBusy=false; }
 }
 
-/* Ai đã nối DNSE thì mặc định vào tài khoản thật - đó là thứ người ta vào đây để xem. */
+/* Ai đã nối DNSE thì mặc định vào tài khoản thật - đó là thứ người ta vào đây để xem.
+   Chỉ coi là đã dò xong khi NHẬN ĐƯỢC câu trả lời. Trước đây một lỗi thoáng qua lúc đăng nhập
+   (tunnel chớp một nhịp, /api/brokers trả 503) là ghim luôn phiên đó vào tiền ảo cho tới khi tải
+   lại trang, vì hàm này chỉ chạy đúng một lần. Giờ chưa có câu trả lời thì lần làm mới sau hỏi lại. */
 async function doTaiKhoanThat(){
-  try{ const r=await fetch("/api/brokers"); const d=await r.json(); ACC.coThat=!!d.owner; }
-  catch(e){ ACC.coThat=false; }
-  if(ACC.coThat) ACC.mode="that";
+  try{
+    const r=await fetch("/api/brokers");
+    if(!r.ok && r.status!==403 && r.status!==401) return;   // lỗi tạm thời: chưa kết luận, để hỏi lại
+    const d=await r.json();
+    ACC.coThat=!!d.owner; ACC.daDo=true;
+  }catch(e){ return; }
+  if(ACC.coThat && !ACC.tuChon) ACC.mode="that";            // người dùng đã tự chọn thì tôn trọng
   renderAcctSwitch();
 }
 function renderAcctSwitch(){
@@ -339,7 +347,7 @@ function renderAcctSwitch(){
 function resetAccount(){ ACC.cash=0; ACC.hold={}; ACC.orders=[]; renderTicket(); renderPanel(); }
 document.addEventListener("lb:user",async e=>{
   ACC.user=e.detail||null; clearInterval(accTimer);
-  if(!ACC.user){ ACC.coThat=false; ACC.mode="ao"; renderAcctSwitch(); return resetAccount(); }
+  if(!ACC.user){ ACC.coThat=false; ACC.daDo=false; ACC.tuChon=false; ACC.mode="ao"; renderAcctSwitch(); return resetAccount(); }
   await doTaiKhoanThat();
   refreshAccount(); accTimer=setInterval(refreshAccount,10000);
 });
@@ -437,7 +445,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.ind){ S.ind[t.dataset.ind]=!S.ind[t.dataset.ind]; t.setAttribute("aria-pressed",S.ind[t.dataset.ind]); applyChartToggles(); return legend(shown[shown.length-1]); }
   if(t.dataset.acct){
     if(t.dataset.acct===ACC.mode) return;
-    ACC.mode=t.dataset.acct;
+    ACC.mode=t.dataset.acct; ACC.tuChon=true;
     // Xoá số của tài khoản cũ ngay, đừng để số dư tài khoản này nằm dưới nhãn tài khoản kia
     ACC.cash=0; ACC.hold={}; ACC.orders=[];
     renderAcctSwitch(); renderTicket(); renderPanel();

@@ -164,6 +164,10 @@ button{cursor:pointer}
 .back-grid span{color:var(--muted)}.back-grid b{text-align:right;font-weight:600}
 .back-actions{margin-top:auto;display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
 .acct-box{margin:auto 12px 12px;padding:10px;border:1px solid var(--line-soft);border-radius:var(--radius-m);display:grid;grid-template-columns:1fr auto;gap:4px 8px;color:var(--muted);font-size:12px}
+/* Sức mua phải LUÔN nhìn thấy. Thân phiếu cuộn được (nội dung 756px trong thẻ 585px), nên trước
+   đây ô này bị đẩy xuống dưới vùng nhìn thấy và người dùng tưởng nó biến mất - thêm nút chuyển
+   tài khoản càng đẩy sâu. Dán nó vào đáy khung cuộn thay vì để nó trôi theo nội dung. */
+.acct-box{position:sticky;bottom:0;z-index:1;background:var(--surface)}
 .acct-box b{color:var(--text);text-align:right;font-weight:600}
 
 /* ---------- Bottom panel ---------- */
@@ -817,8 +821,8 @@ td.warn{color:var(--ref);font-weight:600}
 
 /* Chuyển giữa tài khoản DNSE thật và tiền ảo trên phiếu lệnh. Phải nhìn là thấy ngay đang ở
    tài khoản nào: nhầm hai cái này nghĩa là tưởng đang thử mà lại gửi lệnh thật, hoặc ngược lại. */
-.acct-switch{display:flex;gap:6px;margin-bottom:10px}
-.acct-switch .tool{flex:1}
+.acct-switch{display:flex;gap:6px;margin:0 12px 8px}
+.acct-switch .tool{flex:1;height:28px;font-size:12px}
 .acct-switch .tool[aria-pressed="true"]{background:var(--accent-soft,rgba(255,255,255,.08));border-color:var(--accent,currentColor);font-weight:600}
 .acct-which{grid-column:1/-1;margin-top:6px;font-size:12px;color:var(--muted)}
 .acct-which.that{color:var(--up,#3fb950)}
