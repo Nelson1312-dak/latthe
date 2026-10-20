@@ -80,7 +80,7 @@ try {
     $has = (cmd.exe /c "docker exec postgres_latthe psql -U postgres -d latthe -tAc `"select to_regnamespace('trade') is not null`" 2>nul" | Out-String).Trim()
     if ($has -ne 't') {
         Say 'Fresh database: applying migrations'
-        foreach ($f in '001-trade-schema', '004-trade-functions', '005-dnse', '006-auth-google', '007-broker-links', '008-order-tickets', '009-client-portal', '010-market', '011-dnse-login', '012-advisory', '013-advisory-ai', '014-knowledge', '015-tape', '016-ticket-unknown') {
+        foreach ($f in '001-trade-schema', '004-trade-functions', '005-dnse', '006-auth-google', '007-broker-links', '008-order-tickets', '009-client-portal', '010-market', '011-dnse-login', '012-advisory', '013-advisory-ai', '014-knowledge', '015-tape', '016-ticket-unknown', '017-quan-ly-lien-ket') {
             $path = Join-Path $repo "db\$f.sql"
             if (-not (Test-Path $path)) { throw "Missing migration $path" }
             # cmd.exe redirect keeps the file bytes (UTF-8) intact

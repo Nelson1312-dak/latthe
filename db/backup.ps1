@@ -89,6 +89,23 @@ try {
         Log ("tape {0} OK ({1:N1} MB)" -f $d, ((Get-Item $tf).Length / 1MB))
         Write-Host ("Tape archived: {0} ({1:N1} MB)" -f $tf, ((Get-Item $tf).Length / 1MB))
     }
+
+    # ---- Drop tape partitions that are both old enough AND already archived ----
+    # trade.drop_old_tape_partitions() existed from the start but nothing ever called it, so raw
+    # tick data only ever grew: ~190 MB per session, ~17 GB a year. It drops purely by age, which
+    # is not safe enough on its own - tick data cannot be bought back, so a day with no archive
+    # file must never be dropped. Hence the check below rather than calling the function blindly.
+    $keepDays = 90
+    $cutoff = (Get-Date).ToUniversalTime().AddDays(-$keepDays).ToString('yyyyMMdd')
+    $tooOld = @($days | Where-Object { $_ -lt $cutoff })
+    $notArchived = @($tooOld | Where-Object { -not (Test-Path (Join-Path $tapeDir "tape-$_.dump")) })
+    if ($tooOld.Count -gt 0 -and $notArchived.Count -gt 0) {
+        Log ("prune SKIPPED: {0} day(s) past retention have no archive yet ({1})" -f $notArchived.Count, ($notArchived -join ','))
+    } elseif ($tooOld.Count -gt 0) {
+        $dropped = cmd.exe /c "docker exec $Container psql -U postgres -d $Db -t -A -c `"select trade.drop_old_tape_partitions($keepDays)`""
+        if ($LASTEXITCODE -ne 0) { Log "prune FAILED: psql exit $LASTEXITCODE" }
+        else { Log ("prune OK: dropped partitions older than $keepDays days -> $dropped") }
+    }
 } catch {
     if (Test-Path $file) { Remove-Item $file -Force }   # never leave a bad file that looks like a backup
     Log ("FAILED: " + $_.Exception.Message)
