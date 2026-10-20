@@ -366,15 +366,22 @@ function applyShs(d){
   ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.type==="EQUITY").map(a=>a.sub).filter(Boolean);
   ACC.otp=true;                                   // phien SHS da qua the ma tran moi ton tai
   ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
-  ACC.cash=Number(d.cash?.buyingPower ?? d.cash?.depositAmount)||0;
+  // `/api/v1/equity/cash/balance` tra `depositAmount` (tien gui) va `indAblAmt` (kha dung).
+  // Lay kha dung, vi depositAmount cua tieu khoan margin la 0 trong khi van mua duoc. Day chi la
+  // so de hien; suc mua THAT do chinh SHS tra ve o buoc xem truoc lenh (/equity/account/buyable).
+  ACC.cash=Number(d.cash?.indAblAmt ?? d.cash?.buyingPower ?? d.cash?.depositAmount)||0;
 
+  // Tên trường danh mục của SHS viết TẮT, không giống bên sổ lệnh: `stkCd`, `ownQty`, `sellAbleQty`,
+  // `costPri` (chú ý chữ A hoa giữa sellAbleQty). Bản đầu mình đoán theo kiểu DNSE (balanceQuantity,
+  // sellableQuantity) nên ACC.hold luôn rỗng: màn hình báo "không đủ cổ phiếu để bán" dù đang giữ
+  // hàng. Đối chiếu từ dữ liệu thật của /api/v2/stock/portfolio-investment.
   const dsVT=Array.isArray(d.positions)?d.positions:(d.positions?.data||[]);
   ACC.hold=Object.fromEntries(dsVT.map(p=>{
-    const qty=Number(p.balanceQuantity ?? p.quantity)||0;
-    // Co phieu chua ve tai khoan van nam trong danh muc nhung chua ban duoc: giu rieng `ban`.
-    const ban=Number(p.sellableQuantity ?? qty)||0;
-    const von=Number(p.avgPrice ?? p.costPrice)||0;
-    return [p.stockCode||p.symbol,{qty,ban,avg:von>1000?von/1000:von}];
+    const qty=Number(p.ownQty ?? p.balanceQuantity ?? p.quantity)||0;
+    // Cổ phiếu chưa về tài khoản vẫn nằm trong danh mục nhưng chưa bán được: giữ riêng `ban`.
+    const ban=Number(p.sellAbleQty ?? p.sellableQuantity ?? qty)||0;
+    const von=Number(p.costPri ?? p.avgPrice ?? p.costPrice)||0;
+    return [p.stkCd||p.stockCode||p.symbol,{qty,ban,avg:von>1000?von/1000:von}];
   }).filter(([k,v])=>k&&v.qty));
 
   const dsL=Array.isArray(d.orders)?d.orders:(d.orders?.data||[]);
@@ -382,7 +389,7 @@ function applyShs(d){
     const gia=Number(o.orderPrice ?? o.ordPrice)||0, khop=Number(o.matchedPrice ?? o.mthPri)||0;
     return {id:String(o.orderNumber ?? o.ordNo ?? ""),
       time:String(o.orderTime ?? o.ordTime ?? "").slice(0,8),
-      sym:o.stockCode ?? o.symbol, side:String(o.sellBuyType ?? "").toUpperCase().startsWith("S")?"S":"B",
+      sym:o.stkCd ?? o.stockCode ?? o.symbol, side:String(o.sellBuyType ?? "").toUpperCase().startsWith("S")?"S":"B",
       type:o.orderType ?? o.ordType ?? "LO",
       u:gia?U(gia/1000):null, qty:Number(o.orderQuantity ?? o.ordQty)||0,
       filled:Number(o.matchedQuantity ?? o.mthQty)||0,
