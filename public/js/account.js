@@ -221,7 +221,9 @@
         .catch((err) => errBox($('broker-msg'), err.message));
     }
     if (t.dataset.otpBroker === 'dnse') {
-      const otp = prompt('Nhập mã OTP từ email hoặc Smart OTP của DNSE:');
+      // Không hỏi loại OTP: tài khoản DNSE chỉ bật một loại và không có API nào cho biết là loại
+      // nào, nên máy chủ tự thử nốt loại còn lại nếu đoán sai (xem verifyOtp trong api/_dnse.js).
+      const otp = prompt('Nhập mã Smart OTP trong app EntradeX (hoặc OTP email nếu tài khoản bạn dùng email):');
       if (!otp) return;
       return api('/api/dnse/otp', { method: 'POST', body: { action: 'verify', otp: otp.trim() } })
         .then(() => { say('Đã mở phiên giao dịch DNSE.'); openBrokers(); })

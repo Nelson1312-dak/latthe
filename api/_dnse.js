@@ -144,10 +144,46 @@ export async function securityDef(symbol) {
 
 // ---------- OTP lớp 2 -> trading token (8 giờ) ----------
 export const sendEmailOtp = () => call('POST', '/registration/send-email-otp');
+
+const KHONG_DANG_KY = /otpType is not registered/i;
+
+/**
+ * Đổi OTP lấy trading token.
+ *
+ * Mỗi tài khoản DNSE chỉ bật MỘT loại OTP, và không có API nào cho biết là loại nào. Đo trên tài
+ * khoản thật 20/10/2026: `email_otp` trả "otpType is not registered for this account", còn
+ * `smart_otp` trả "The Smart OTP is not valid" — tức loại sau mới là loại đang bật.
+ *
+ * Vì vậy đoán sai loại thì thử nốt loại kia thay vì bắt người dùng tự mò. An toàn: DNSE từ chối
+ * ngay ở bước kiểm loại nên mã OTP KHÔNG bị tiêu, và cũng không gửi gì cho ai.
+ */
 export async function verifyOtp(passcode, otpType = 'email_otp') {
-  const r = await call('POST', '/registration/trading-token', { body: { otpType, passcode } });
-  if (!r?.tradingToken) throw new DnseError('OTP không đúng hoặc đã hết hạn.', 400, 'bad_otp');
-  return r.tradingToken;
+  const thu = async (loai) => {
+    let r;
+    try {
+      r = await call('POST', '/registration/trading-token', { body: { otpType: loai, passcode } });
+    } catch (e) {
+      // Câu của DNSE là tiếng Anh và không nói phải làm gì tiếp
+      if (/INVALID_OTP|not valid/i.test(e?.message || '')) {
+        throw new DnseError('Mã OTP không đúng hoặc đã hết hạn. Lấy mã mới trong app EntradeX rồi nhập lại.', 400, 'bad_otp');
+      }
+      throw e;
+    }
+    if (!r?.tradingToken) throw new DnseError('OTP không đúng hoặc đã hết hạn.', 400, 'bad_otp');
+    return r.tradingToken;
+  };
+  try {
+    return await thu(otpType);
+  } catch (e) {
+    const conLai = otpType === 'email_otp' ? 'smart_otp' : 'email_otp';
+    if (!KHONG_DANG_KY.test(e?.message || '')) throw e;
+    try {
+      return await thu(conLai);
+    } catch (e2) {
+      if (!KHONG_DANG_KY.test(e2?.message || '')) throw e2;
+      throw new DnseError('Tài khoản DNSE chưa bật loại OTP nào dùng được. Bật Smart OTP trong app EntradeX rồi thử lại.', 400, 'otp_chua_bat');
+    }
+  }
 }
 
 // ---------- Lệnh thật ----------

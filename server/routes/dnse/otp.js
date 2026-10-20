@@ -14,7 +14,15 @@ export default route('POST, OPTIONS', async ({ req, res, uid, body }) => {
   if (!rl.allowed) return res.status(429).json({ error: 'Thao tác OTP quá nhanh, đợi một chút rồi thử lại.' });
 
   if (body.action === 'send') {
-    await dnse.sendEmailOtp();
+    // Tài khoản chỉ bật Smart OTP thì DNSE từ chối gửi email. Nói thẳng phải làm gì thay vì
+    // trả nguyên câu tiếng Anh của DNSE.
+    try { await dnse.sendEmailOtp(); }
+    catch (e) {
+      if (/not registered|not support/i.test(e?.message || '')) {
+        return res.status(400).json({ error: 'Tài khoản DNSE này không bật OTP email. Mở app EntradeX lấy mã Smart OTP rồi nhập thẳng vào ô bên dưới, không cần bấm gửi.', code: 'khong_co_email_otp' });
+      }
+      throw e;
+    }
     return { sent: true, note: 'OTP đã gửi về email đăng ký với DNSE, có hiệu lực trong thời gian ngắn và chỉ dùng một lần.' };
   }
   if (body.action === 'verify') {
