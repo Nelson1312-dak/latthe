@@ -80,7 +80,11 @@ export default async function handler(req, res) {
   // Trần/sàn do worker tính sẵn mỗi phiên một lần, nên ở đây KHÔNG gọi nguồn nến lượt nào — chính vì
   // vậy mở rộng rổ không làm tăng tải lên nguồn giá.
   for (const [s, w] of Object.entries(ws.quotes)) {
-    if (quotes[s] || !usable(w, session)) continue;
+    if (quotes[s]) continue;
+    // KHÔNG lọc theo độ tươi ở đây. Trước có `usable()` và hậu quả là mã thanh khoản thấp BIẾN MẤT
+    // khỏi bảng giá giữa phiên chỉ vì 20 giây chưa khớp lệnh nào — đo lúc 10:11 ngày 20/10 thì 32
+    // trong 150 mã bị rụng. Bảng giá phải giữ mã và hiện giá gần nhất; `lastSession` nói rõ giá đó
+    // thuộc phiên nào. Độ tươi chỉ dùng để quyết định có gắn độ sâu sổ lệnh hay không, bên dưới.
     if (!Number.isFinite(w.last) || !Number.isFinite(w.ref) || !Number.isFinite(w.ceil)) continue;
     const q = {
       s, ex: w.ex || null, name: w.name || null, sector: w.sector || null, vn30: !!w.vn30, watch: !!w.watch,
