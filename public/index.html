@@ -17,8 +17,6 @@
     <nav class="nav" aria-label="Chính">
       <a href="#giao-dich" data-view="trade" aria-current="page">Giao dịch</a>
       <a href="#bang-gia" data-view="board">Bảng giá</a>
-      <a href="#cong-dong" data-view="community" data-social hidden>Cộng đồng</a>
-      <a href="#tin-nhan" data-view="chat" data-social hidden>Tin nhắn<span class="nbadge" id="nav-unread"></span></a>
       <a href="#khach-hang" data-view="desk" id="nav-desk" hidden>Khách hàng</a>
       <a href="#tai-khoan" data-view="portal" id="nav-portal" hidden>Tài khoản của tôi<span class="nbadge" id="portal-badge"></span></a>
     </nav>
@@ -156,31 +154,12 @@
         <button class="tool" role="tab" data-tab="orders" aria-selected="true">Sổ lệnh</button>
         <button class="tool" role="tab" data-tab="pos" aria-selected="false">Danh mục</button>
         <button class="tool" role="tab" data-tab="brief" aria-selected="false">Tóm tắt mã</button>
-        <button class="tool" role="tab" data-tab="cond" aria-selected="false">Lệnh điều kiện</button>
       </div>
       <div class="tab-body" id="tab-body"></div>
     </section>
   </main>
 
-  <main class="msgv" id="view-chat" hidden>
-    <section class="inbox" aria-label="Hộp thư">
-      <div class="pane-title">Tin nhắn</div>
-      <div class="inbox-list" id="inbox"></div>
-    </section>
-    <section class="thread-v" aria-label="Cuộc trò chuyện">
-      <div class="th-head" id="th-head"></div>
-      <div class="th-body" id="th-body" aria-live="polite"></div>
-      <div class="prompts" id="prompts"></div>
-      <form class="composer" id="composer" autocomplete="off">
-        <textarea class="inp" id="m-in" rows="1" aria-label="Nhập tin nhắn"></textarea>
-        <button type="submit">Gửi</button>
-      </form>
-      <div class="composer-note" id="m-note"></div>
-    </section>
-    <aside class="ctx" id="ctx" aria-label="Thông tin"></aside>
-  </main>
-
-  <main class="board" id="view-board" hidden>
+    <main class="board" id="view-board" hidden>
     <div class="board-wrap">
       <section class="mkt-cards" id="mkt-cards" aria-label="Chỉ số thị trường"></section>
       <div class="board-grid">
@@ -288,39 +267,11 @@
     </aside>
   </main>
 
-  <main class="community" id="view-community" hidden>
-    <section class="cnav" id="cnav" aria-label="Chuyên mục"></section>
-    <section class="feed" id="feed" aria-label="Bài viết"></section>
-    <section class="cside" aria-label="Phòng chung">
-      <div class="pane-title">Mã được bàn nhiều <span class="online">24 giờ qua</span></div>
-      <div class="trend" id="trend"></div>
-      <div class="chat">
-        <div class="pane-title">Phòng chung <span class="online"><span class="dot" aria-hidden="true"></span><span id="online"></span></span></div>
-        <div class="chat-list" id="chat" aria-live="polite"></div>
-        <form class="chat-form" id="chat-form" autocomplete="off">
-          <input class="inp" id="chat-in" placeholder="Nhắn vào phòng chung, gõ $ để gắn mã" aria-label="Tin nhắn" maxlength="300">
-          <button type="submit">Gửi</button>
-        </form>
-      </div>
-    </section>
-  </main>
-
-  <footer class="statusbar">
+    <footer class="statusbar">
     <span class="live"><span class="dot" aria-hidden="true"></span><span id="session"></span></span>
     <span class="hide-s" id="foot-acct">Giá và biểu đồ lấy từ DNSE.</span>
   </footer>
 </div>
-<dialog id="dlg" aria-labelledby="dlg-title">
-  <form class="dlg" id="dlg-form" method="dialog" novalidate>
-    <h2 id="dlg-title">Viết bài mới</h2>
-    <label>Đăng vào<select class="inp" id="d-where"></select></label>
-    <label>Tiêu đề<input class="inp" id="d-title" maxlength="140" placeholder="Ví dụ: $HPG có giữ được vùng 20 không?"></label>
-    <label>Nội dung<textarea id="d-body" rows="6" placeholder="Chia sẻ số liệu, lập luận và nguồn. Gõ $MÃ để gắn giá trực tiếp."></textarea></label>
-    <label class="check"><input type="checkbox" id="d-hold"> Tôi đang nắm giữ mã được nhắc trong bài</label>
-    <div class="msgs" id="d-err"></div>
-    <div class="dlg-actions"><button type="button" class="ghost" id="d-cancel">Hủy</button><button type="submit" class="btn-primary" id="d-submit">Đăng bài</button></div>
-  </form>
-</dialog>
 <dialog id="dlg-auth" aria-labelledby="auth-title">
   <div class="dlg">
     <div class="auth-head">
