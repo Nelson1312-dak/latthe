@@ -340,8 +340,12 @@ function renderAcctSwitch(){
   box.querySelectorAll("[data-acct]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.acct===ACC.mode)));
   const w=$("a-which"); if(!w) return;
   w.className="acct-which"+(ACC.mode==="that"?" that":"");
+  // Nói rõ VÌ SAO đang ở tiền ảo. Để trống thì người dùng thấy sức mua 500 triệu không có thật mà
+  // không biết tại sao mình không vào được tài khoản DNSE.
   w.textContent=!ACC.user?"":ACC.mode==="that"
     ? (ACC.accountNo?`Tài khoản DNSE thật · ${ACC.accountNo}`+(ACC.otp?"":" · chưa xác thực OTP"):"Tài khoản DNSE thật")
+    : !ACC.daDo ? "Tiền ảo · đang kiểm tra kết nối DNSE…"
+    : !ACC.coThat ? "Tiền ảo · tài khoản này chưa nối DNSE"
     : "Tiền ảo, không gửi lệnh tới công ty chứng khoán";
 }
 function resetAccount(){ ACC.cash=0; ACC.hold={}; ACC.orders=[]; renderTicket(); renderPanel(); }
