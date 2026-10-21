@@ -73,11 +73,15 @@ export async function verifyDnseAccount(username, password) {
   // Cố ý KHÔNG lưu token: lấy tên NGAY ở đây rồi trả ra cùng hồ sơ, token vẫn bị bỏ như cũ.
   // Tên tiểu khoản gần như không bao giờ đổi, nên lấy một lần mỗi khi đăng nhập là đủ.
   // Hỏng thì bỏ qua, tuyệt đối không chặn đăng nhập vì một cái nhãn.
-  let subNames = null;
+  // `chanDoan` ghi lại HÌNH DẠNG của lần gọi này để còn đọc được từ DB. console.log không dùng
+  // được: `vercel logs` trên dự án này chỉ hiện dòng request, cột message luôn là "(no message)",
+  // và còn bỏ sót cả request - đã thử gọi /api/auth/dnse rồi tìm trong log, không thấy.
+  // Chỉ ghi hình dạng: mã HTTP, số tiểu khoản, tên trường. Không bao giờ ghi giá trị.
+  let subNames = null, chanDoan = null;
   try {
     const conLai = TONG_HAN - (Date.now() - batDau);
     if (conLai <= 1200) {
-      console.log('[sub-names] bo qua, chi con', conLai, 'ms');
+      chanDoan = `bo qua, chi con ${conLai}ms`;
     } else {
       const a = await call('/dnse-order-service/accounts', { token: r.data.token, step: 'accounts', budget: Math.min(conLai, 2500) });
       // Chấp nhận nhiều dạng vỏ: {accounts:[...]}, {data:[...]}, hoặc mảng thẳng.
@@ -89,19 +93,15 @@ export async function verifyDnseAccount(username, password) {
         if (x?.id && ten) m[String(x.id)] = String(ten).slice(0, 60);
       }
       if (Object.keys(m).length) subNames = m;
-      // Chẩn đoán: CHỈ ghi hình dạng (mã HTTP, số phần tử, tên các trường), không ghi giá trị -
-      // đây là dữ liệu tài khoản thật. Có dòng này thì lần đăng nhập sau nói thẳng hỏng ở đâu.
-      console.log('[sub-names] HTTP', a.status, '| so tieu khoan', ma.length,
-        '| truong', ma[0] ? Object.keys(ma[0]).join(',') : '(rong)',
-        '| lay duoc', Object.keys(m).length);
+      chanDoan = `HTTP ${a.status} | ${ma.length} tieu khoan | truong: ${ma[0] ? Object.keys(ma[0]).join(',') : '(rong)'} | lay duoc ${Object.keys(m).length}`;
     }
-  } catch (e) { console.log('[sub-names] loi:', e?.detail || e?.message || 'khong ro'); }
+  } catch (e) { chanDoan = 'loi: ' + (e?.detail || e?.message || 'khong ro'); }
 
   if (vuong) {
     // Người dùng gõ thẳng số lưu ký thì chính nó là danh tính, và DNSE vừa xác nhận mật khẩu thuộc về nó:
     // không cần hồ sơ vẫn nhận ra được ai, nên cho vào thay vì chặn chỉ vì một endpoint phụ đang trục trặc.
     if (CUSTODY_LIKE.test(username)) {
-      return { custodyCode: username.toUpperCase(), investorId: null, name: null, email: null, subNames, thieuHoSo: vuong };
+      return { custodyCode: username.toUpperCase(), investorId: null, name: null, email: null, subNames, chanDoan, thieuHoSo: vuong };
     }
     const e = new DnseLoginError('Không đọc được hồ sơ tài khoản DNSE. Thử đăng nhập bằng số lưu ký.', 502, 'no_profile');
     e.detail = vuong;
@@ -113,6 +113,7 @@ export async function verifyDnseAccount(username, password) {
     name: me.data.name || null,
     email: me.data.email ? String(me.data.email).toLowerCase() : null,
     subNames,
+    chanDoan,
   };
 }
 

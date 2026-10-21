@@ -25,7 +25,7 @@ export default route('GET, OPTIONS', async ({ req, uid }) => {
     // `ten` lấy từ users.dnse_sub_names - đọc được lúc đăng nhập bằng mật khẩu DNSE, vì API key
     // HMAC mà route này dùng không trả về tên tiểu khoản. Chưa đăng nhập DNSE lần nào thì không
     // có tên, giao diện hiện số tiểu khoản như cũ.
-    accounts: list.map((a) => ({ id: a.id, ten: ten[a.id] || null, dealAccount: a.dealAccount, derivativeAccount: a.derivativeAccount })),
+    accounts: list.map((a) => ({ id: a.id, ten: (typeof ten[a.id] === 'string' ? ten[a.id] : null), dealAccount: a.dealAccount, derivativeAccount: a.derivativeAccount })),
     account: acc,
     balance, positions, orders,
     trading: { active: !!tt, expiresAt: tt ? new Date(tt.exp).toISOString() : null },
