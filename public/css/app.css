@@ -525,14 +525,17 @@ nên `.card{flex:1}` co về 0 và cả phiếu lệnh BIẾN MẤT khỏi màn 
 .bd-table{min-width:760px}
 .bd-table th{padding:0;background:var(--surface);border-bottom:1px solid var(--line)}
 .bd-table th.r{text-align:right}
-.bd-table .th{width:100%;padding:8px 10px;border:0;background:none;color:var(--faint);font-size:11px;font-weight:600;text-align:inherit;white-space:nowrap}
+.bd-table .th{width:100%;padding:7px 10px;border:0;background:none;color:var(--faint);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;text-align:inherit;white-space:nowrap}
 .bd-table .th:hover{color:var(--text)}
 .bd-table th:first-child .th{text-align:left}
-.bd-table td{padding:6px 10px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
+/* Hang cua bang gia do duoc 46px - gan gap doi mot bang gia that, nen man 1000px chi nhin duoc
+   14 trong 30 ma. Thu phan nganh nam DUOI ma lam moi hang thanh hai dong. Dua nganh ve cung
+   dong, mo di, va bot dem doc: hang xuong con khoang 28px, nhin duoc hon gap ruoi so ma. */
+.bd-table td{padding:4px 10px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
 .bd-table td.r{text-align:right}
 .bd-table td.sym{white-space:nowrap}
 .bd-table td.sym .link{font-weight:700;font-size:13px;color:var(--text)}
-.bd-table td.sym small{display:block;color:var(--faint);font-size:10px;font-weight:400}
+.bd-table td.sym small{color:var(--faint);font-size:10px;font-weight:400;margin-left:7px}
 .bd-table td.px{font-weight:700}
 .bd-table tr:hover td{background:var(--raise)}
 .bd-table th:first-child,.bd-table td:first-child{position:sticky;left:0;background:var(--surface);z-index:1}
@@ -692,12 +695,18 @@ td.warn{color:var(--ref);font-weight:600}
 .pmore summary:hover{color:var(--text)}
 
 /* ---------- Giới thiệu cho người mới ---------- */
-.intro{position:relative;margin:0 0 14px;max-width:760px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);display:flex;flex-direction:column;gap:8px;line-height:1.5}
-.intro b{font-size:14px}
-.intro ul{margin:0;padding-left:18px;color:var(--muted)}
-.intro-act{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:2px}
-.intro-act .btn-primary{height:34px;padding:0 14px}
-.intro-x{position:absolute;top:6px;right:8px;width:28px;height:28px;border:0;background:none;color:var(--faint);font-size:18px;line-height:1}
+/* Mot DAI MONG, khong phai mot hop quang cao.
+   Truoc day day la mot the bo goc cao gan 90px voi tieu de dam va ba gach dau dong - chiem dung
+   dai dat dep nhat man hinh, va la thu khien trang trong giong mot landing page hon la mot ban
+   giao dich. Gop thanh mot dong: cau gioi thieu + hai nut, cao khoang 38px. Noi dung ba gach dau
+   dong khong mat gi dang ke - ai chua dang nhap cung thay ngay bang gia chay that o ngay duoi. */
+.intro{position:relative;display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;margin:0;
+  padding:8px 40px 8px 14px;border-bottom:1px solid var(--line);background:var(--surface);line-height:1.4}
+.intro b{font-size:var(--fs-nen);font-weight:600}
+.intro ul{display:none}
+.intro-act{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto}
+.intro-act .btn-primary{height:28px;padding:0 12px;font-size:12px}
+.intro-x{position:absolute;top:50%;transform:translateY(-50%);right:8px;width:28px;height:28px;border:0;background:none;color:var(--faint);font-size:18px;line-height:1}
 .intro-x:hover{color:var(--text)}
 @media (max-width:720px){
 .mkt-cards{grid-template-columns:1fr 1fr;gap:8px}
