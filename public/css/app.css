@@ -135,11 +135,11 @@ button{cursor:pointer}
 .face.back{transform:none;visibility:hidden}
 .card.flipped .back{visibility:visible}
 }
-.sides{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:12px 12px 0}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:2px 12px 0}
 .side-btn{height:38px;border-radius:var(--radius-s);border:1px solid var(--line);background:var(--surface);font-weight:600;color:var(--muted)}
 .side-btn[aria-pressed="true"].buy{background:var(--up);border-color:var(--up);color:#00170d}
 .side-btn[aria-pressed="true"].sell{background:var(--down);border-color:var(--down);color:#1f0006}
-.types{display:flex;gap:2px;padding:10px 12px 0}
+.types{display:flex;gap:2px;padding:8px 12px 0}
 .types .tool{flex:1}
 .form{padding:12px;display:flex;flex-direction:column;gap:12px}
 .field label{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:5px}
@@ -184,11 +184,14 @@ button{cursor:pointer}
 .back-grid{display:grid;grid-template-columns:1fr auto;gap:8px 12px;padding:14px 0;border-block:1px solid var(--line)}
 .back-grid span{color:var(--muted)}.back-grid b{text-align:right;font-weight:600}
 .back-actions{margin-top:auto;display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
-.acct-box{margin:auto 12px 12px;padding:10px;border:1px solid var(--line-soft);border-radius:var(--radius-m);display:grid;grid-template-columns:1fr auto;gap:4px 8px;color:var(--muted);font-size:12px}
-/* Sức mua phải LUÔN nhìn thấy. Thân phiếu cuộn được (nội dung 756px trong thẻ 585px), nên trước
-   đây ô này bị đẩy xuống dưới vùng nhìn thấy và người dùng tưởng nó biến mất - thêm nút chuyển
-   tài khoản càng đẩy sâu. Dán nó vào đáy khung cuộn thay vì để nó trôi theo nội dung. */
-.acct-box{position:sticky;bottom:0;z-index:1;background:var(--surface)}
+.acct-box{margin:0 12px 10px;padding:9px 10px;border:1px solid var(--line-soft);border-radius:var(--radius-m);display:grid;grid-template-columns:1fr auto;gap:4px 8px;color:var(--muted);font-size:12px}
+/* Khối tài khoản nằm NGAY DƯỚI chỗ chọn tiểu khoản, không còn bị đẩy xuống đáy phiếu.
+   Trước đây nó dùng `margin-top:auto` để dán vào đáy khung cuộn - cách chữa cũ cho việc "Sức mua
+   biến mất". Hậu quả là một mảng đen rỗng 60-250px (tùy chiều cao cửa sổ) nằm giữa nút đặt lệnh
+   và khối này, và tệ hơn: cùng một chủ đề bị xé ra hai đầu panel - chọn tài khoản ở trên cùng,
+   còn tiền của chính tài khoản đó ở tận dưới cùng.
+   Gom lại: TÀI KHOẢN (chọn + tiền + trạng thái) ở trên, PHIẾU LỆNH ở dưới, nút gửi cuối cùng.
+   Đọc từ trên xuống đúng thứ tự người ta nghĩ, và Sức mua thì luôn trong tầm mắt. */
 .acct-box b{color:var(--text);text-align:right;font-weight:600}
 
 /* ---------- Bottom panel ---------- */
@@ -311,7 +314,6 @@ nên `.card{flex:1}` co về 0 và cả phiếu lệnh BIẾN MẤT khỏi màn 
 .card.flipped .front{display:none}
 .card.flipped .back{display:flex}
 .card,.card.flipped{transform:none;transition:none}
-.acct-box{position:static;margin:12px}
 .workspace>.book{max-height:none}
 .tape-list{max-height:190px}
 .chart-credit{right:52px}
