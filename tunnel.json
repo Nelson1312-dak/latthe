@@ -1,0 +1,12 @@
+{
+  "_doc": "Duong ra internet cua may nha. watchdog-proxy.ps1 doc file nay thay vi viet cung URL. Doi tunnel thi sua o DAY va doi bien SUPABASE_URL / PRICE_FEED_URL / DNSE_BASE_URL tren Vercel cho khop - hai noi phai tro cung mot cho.",
+  "kind": "cloudflare-quick",
+  "publicUrl": "https://laughing-twisted-kelkoo-petersburg.trycloudflare.com",
+  "probePath": "/postgrest/",
+  "expectStatus": 401,
+  "localPort": 11435,
+  "autoHeal": false,
+  "_autoHeal": "false voi cloudflare-quick: moi lan khoi dong lai la mot URL MOI, nen khoi dong lai xong Vercel van tro vao URL cu va site van chet - chua kem gi khong chua. Watchdog se bao that to thay vi gia vo da xu ly. Dat true khi nao chuyen sang named tunnel (ten co dinh) hoac quay lai ngrok con bang thong.",
+  "ngrokTunnelName": "latthe",
+  "_lichSu": "20/10/2026 ngrok chet 2 lan trong 12 gio, watchdog tu chua duoc. 21/10/2026 08:32 ngrok tra ERR_NGROK_725 - tai khoan het 1 GB bang thong thang, restart bao nhieu lan cung vo ich. Chuyen tam sang cloudflare quick tunnel."
+}

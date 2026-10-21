@@ -28,9 +28,9 @@
 # slow, killing and restarting would have two instances fighting over the port.
 
 $ErrorActionPreference = 'Stop'
+$script:lastDownWhy = $null
 
 $scriptDir = $PSScriptRoot
-$proxyPort = 11435
 $proxyPath = Join-Path $scriptDir 'local-proxy.js'
 $logPath   = Join-Path $scriptDir 'watchdog-proxy.log'
 # Heartbeat. The log only gets a line when something is WRONG, which is right for a log but
@@ -41,13 +41,25 @@ $logPath   = Join-Path $scriptDir 'watchdog-proxy.log'
 # the watchdog itself is the thing that died.
 $beatPath  = Join-Path $scriptDir 'watchdog-proxy.beat'
 
-# Public probe. /postgrest/ with no token must answer 401 "Missing token" - that exact
-# answer proves the whole chain is up: ngrok edge -> agent -> local-proxy. A tunnel that
-# is down gives a connection/TLS error or an ngrok error page, never 401.
-$publicUrl   = 'https://stiffness-glade-coliseum.ngrok-free.dev/postgrest/'
-$ngrokTunnel = 'latthe'          # named tunnel in ngrok.yml - carries the reserved domain
+# Which tunnel is in use is read from tunnel.json, not hard-coded here. It was hard-coded until
+# 2026-10-21, and that morning the ngrok account hit its monthly bandwidth cap (ERR_NGROK_725),
+# which no restart can fix; switching to another tunnel then meant editing this script. One file
+# that both a human and this script read is less error-prone - though note the SAME url must also
+# be set on Vercel (SUPABASE_URL / PRICE_FEED_URL / DNSE_BASE_URL) or the two disagree.
+$cfgPath = Join-Path $scriptDir 'tunnel.json'
+if (-not (Test-Path $cfgPath)) { Write-Host "Missing $cfgPath"; exit 1 }
+$cfg = Get-Content $cfgPath -Raw | ConvertFrom-Json
+
+# Public probe. /postgrest/ with no token must answer 401 "Missing token" - that exact answer
+# proves the WHOLE chain is up: tunnel edge -> agent -> local-proxy -> PostgREST. A dead tunnel
+# gives a connection/TLS error or the provider's own error page, never 401.
+$publicUrl   = ($cfg.publicUrl.TrimEnd('/')) + $cfg.probePath
+$expectCode  = [int]$cfg.expectStatus
+$proxyPort   = [int]$cfg.localPort
+$autoHeal    = [bool]$cfg.autoHeal
+$ngrokTunnel = $cfg.ngrokTunnelName
 $stampPath   = Join-Path $scriptDir '.ngrok-restart.stamp'
-$coolDownMin = 15                # never restart ngrok more often than this
+$coolDownMin = 15                # never restart the tunnel more often than this
 
 function Write-Log($message) {
     $line = '[{0}] {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $message
@@ -84,15 +96,36 @@ function Test-Port($port) {
 function Test-PublicTunnel {
     try {
         $r = Invoke-WebRequest $publicUrl -TimeoutSec 15 -UseBasicParsing -Headers @{ 'ngrok-skip-browser-warning' = '1' }
-        return $r.StatusCode -eq 401
+        return $r.StatusCode -eq $expectCode
     } catch {
         $resp = $_.Exception.Response
-        if ($resp -and [int]$resp.StatusCode -eq 401) { return $true }   # 401 arrives as an exception
+        # The expected answer is a 4xx, and PowerShell raises those as exceptions.
+        if ($resp -and [int]$resp.StatusCode -eq $expectCode) { return $true }
+        # Record WHY it is down. On 2026-10-21 the tunnel answered 403 ERR_NGROK_725 for hours
+        # while the agent looked perfectly healthy; without the provider's own error code in the
+        # log the only visible symptom was "down", and the real cause (monthly bandwidth cap,
+        # unfixable by restarting) took a manual investigation to find.
+        if ($resp) {
+            $maLoi = $null
+            try { $maLoi = $resp.Headers['Ngrok-Error-Code'] } catch { }
+            $script:lastDownWhy = 'HTTP {0}{1}' -f [int]$resp.StatusCode, $(if ($maLoi) { " $maLoi" } else { '' })
+        } else {
+            $script:lastDownWhy = $_.Exception.Message
+        }
         return $false
     }
 }
 
 function Restart-Ngrok {
+    # Some tunnels cannot be healed by restarting, and pretending otherwise is worse than doing
+    # nothing: a cloudflare QUICK tunnel gets a brand new hostname every start, so the restart
+    # succeeds while Vercel still points at the old one and the site stays down - with a reassuring
+    # "OK - tunnel came back" in the log. Say plainly that a human is needed instead.
+    if (-not $autoHeal) {
+        Write-Log ("tunnel is DOWN ({0}) and autoHeal is off for kind '{1}' - a human must fix it. {2}" -f `
+            $(if ($script:lastDownWhy) { $script:lastDownWhy } else { 'no response' }), $cfg.kind, 'See tunnel.json.')
+        return
+    }
     # Cool-down so a tunnel that keeps failing does not get hammered every run.
     if (Test-Path $stampPath) {
         $last = (Get-Item $stampPath).LastWriteTime
@@ -101,7 +134,7 @@ function Restart-Ngrok {
             return
         }
     }
-    Write-Log 'public tunnel is DOWN - restarting ngrok.'
+    Write-Log ("public tunnel is DOWN ({0}) - restarting ngrok." -f $(if ($script:lastDownWhy) { $script:lastDownWhy } else { 'no response' }))
     Get-Process ngrok -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.Id -Force } catch { } }
     Start-Sleep -Seconds 3
     # MUST be the named tunnel: "ngrok http 11435" comes up on a random domain and would
