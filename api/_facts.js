@@ -131,9 +131,31 @@ export function symbolFacts({ symbol, tech, fundamentals: f, priceK, fundAt }) {
   return out;
 }
 
-/** Dấu vân tay dữ liệu: đổi thì mới cần viết lại bản tóm tắt. */
+/**
+ * Dấu vân tay dữ liệu: đổi thì mới cần viết lại bản tóm tắt.
+ *
+ * Bản đầu băm thẳng ngày, giá, RSI và hiệu suất 1 tháng — cả bốn đều đổi MỖI NGÀY, nên vân tay
+ * ngày nào cũng khác và cả 32 mã đều được LLM viết lại hằng ngày. Tốn vô ích: bản tóm tắt là một
+ * đoạn văn kể chuyện, giá nhúc nhích 0,5% thì câu chữ y như cũ.
+ *
+ * Giờ băm theo MỨC chứ không theo số thô, nên chỉ viết lại khi có thay đổi đáng kể:
+ *   - bỏ hẳn ngày: sang ngày mới không phải là một thay đổi về nội dung
+ *   - giá: chia mức ~3% một bậc
+ *   - RSI: chia mức 10 điểm, nên các ngưỡng hay nhắc tới (30 và 70) rơi đúng vào ranh giới bậc
+ *   - hiệu suất 1 tháng: chia mức 5 điểm %
+ *   - xu hướng và toàn bộ phần cơ bản: giữ NGUYÊN, vì chúng đổi là đổi thật
+ * Bản tóm tắt vẫn không bao giờ cũ quá lâu: worker còn ngưỡng maxAgeDays bắt viết lại định kỳ.
+ */
+const mucLog = (v, buoc) => (Number.isFinite(v) && v > 0 ? Math.round(Math.log(v) / Math.log(1 + buoc)) : null);
+const mucDeu = (v, buoc) => (Number.isFinite(v) ? Math.floor(v / buoc) : null);
+
 export function factsHash(tech, fund) {
-  const t = tech ? { d: tech.ngay, g: tech.gia, x: tech.xu_huong, r: tech.rsi14, m: tech.hieu_suat?.['1M']?.ma } : null;
+  const t = tech ? {
+    g: mucLog(tech.gia, 0.03),
+    x: tech.xu_huong,
+    r: mucDeu(tech.rsi14, 10),
+    m: mucDeu(tech.hieu_suat?.['1M']?.ma, 5),
+  } : null;
   const f = fund ? { e: fund.eps, b: fund.gia_tri_so_sach, r: fund.roe_pct, p: fund.loi_nhuan_12t, s: (fund.su_kien || [])[0]?.ngay_gdkhq } : null;
   return crypto.createHash('sha256').update(JSON.stringify({ t, f })).digest('hex').slice(0, 16);
 }

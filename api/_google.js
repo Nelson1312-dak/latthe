@@ -31,16 +31,25 @@ export function originOf(req) {
 }
 export const redirectUri = (req) => `${originOf(req)}/api/auth/google-callback`;
 
-/** state chống CSRF: gửi kèm Google và lưu trong cookie ngắn hạn, hai bên phải khớp. */
+/**
+ * state chống CSRF: gửi kèm Google và lưu trong cookie ngắn hạn, hai bên phải khớp.
+ *
+ * Path phải là `/api/auth/`, KHÔNG phải `/api/auth/google`. Cookie được đặt ở /api/auth/google
+ * rồi đọc lại ở /api/auth/google-callback. Theo RFC 6265 mục 5.1.4, cookie có Path=/api/auth/google
+ * chỉ được gửi khi đường dẫn request bằng đúng chuỗi đó, hoặc dài hơn nhưng phần dư bắt đầu bằng
+ * "/". Ở đây phần dư là "-callback", nên trình duyệt KHÔNG gửi cookie và callback luôn báo "phiên
+ * không hợp lệ" — đăng nhập Google hỏng 100%, không phải thỉnh thoảng. Google đang tắt nên chưa
+ * ai vấp, nhưng bật lên là gặp ngay.
+ */
 export function makeState(res, next) {
   const state = crypto.randomBytes(16).toString('base64url');
   const payload = `${state}.${Buffer.from(next || '/').toString('base64url')}`;
-  res.setHeader('Set-Cookie', `${STATE_COOKIE}=${payload}; HttpOnly; SameSite=Lax; Path=/api/auth/google; Max-Age=600${IS_PROD ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `${STATE_COOKIE}=${payload}; HttpOnly; SameSite=Lax; Path=/api/auth/; Max-Age=600${IS_PROD ? '; Secure' : ''}`);
   return state;
 }
 export function checkState(req, res, got) {
   const m = (req.headers.cookie || '').match(new RegExp(`(?:^|;\\s*)${STATE_COOKIE}=([^;]+)`));
-  res.setHeader('Set-Cookie', `${STATE_COOKIE}=; HttpOnly; SameSite=Lax; Path=/api/auth/google; Max-Age=0${IS_PROD ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `${STATE_COOKIE}=; HttpOnly; SameSite=Lax; Path=/api/auth/; Max-Age=0${IS_PROD ? '; Secure' : ''}`);
   if (!m) return null;
   const [want, nextB64] = m[1].split('.');
   const a = Buffer.from(want || ''), b = Buffer.from(String(got || ''));
