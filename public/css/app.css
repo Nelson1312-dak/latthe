@@ -11,6 +11,16 @@
   --brand-ink:#ff4d63;
   --up:#2ebd85; --down:#f6465d; --ref:#e9b308; --ceil:#c77dff; --floor:#38bdf8;
   --radius-s:4px; --radius-m:8px;
+  /* THANG CHU. Do truoc khi sua: giao dien dang co 12 cap co/dam khac nhau, gan het nam trong
+     khoang 10-13px, va rieng 13px da co ba do dam 400/500/600. Nhieu bac den muc khong con bac
+     nao - nhin vao khong biet cai gi quan trong hon cai gi. Day la thu lam mot ban giao dich
+     trong nhu mot trang quan tri chung chung.
+     Bon bac, moi bac mot viec, khong them bac nao nua:
+       --fs-gia   con so lon nhat man hinh: gia khop
+       --fs-ma    ten ma, tieu de cot
+       --fs-nen   chu va so trong bang
+       --fs-nhan  nhan truong, chu thich - luon mo hon mot bac mau */
+  --fs-gia:30px; --fs-ma:19px; --fs-nen:13px; --fs-nhan:11px;
   --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:dark;
   box-sizing:border-box;
@@ -47,13 +57,18 @@ button{cursor:pointer}
 .nav{padding-right:16px;border-right:1px solid var(--line)}
 .acct .avatar{width:26px;height:26px;border-radius:50%;background:var(--raise);border:1px solid var(--line);display:grid;place-items:center;color:var(--text);font-weight:600;font-size:11px}
 
-.workspace{display:grid;min-height:0;grid-template-columns:224px minmax(0,1fr) 252px 304px;grid-template-rows:auto minmax(0,1fr) 236px;
+/* Hang duoi cung CAO THEO NOI DUNG, khong con chiem cung 236px. Truoc day no luon lay 236px ke
+   ca khi ben trong chi co mot dong "Dang nhap de xem so lenh", de lai mot mang den rong gan het
+   chieu ngang man hinh - cho trong lon nhat va de thay nhat cua ca trang. Gio so lenh it thi
+   bang ngan, bieu do an not cho thua; so lenh nhieu thi gian ra toi 236px roi cuon trong. */
+.workspace{display:grid;min-height:0;grid-template-columns:224px minmax(0,1fr) 252px 304px;grid-template-rows:auto minmax(0,1fr) minmax(min-content,auto);
   grid-template-areas:"wl head head ticket""wl chart book ticket""wl panel panel ticket";gap:1px;background:var(--line)}
+.workspace>.panel{max-height:236px}
 /* Thẻ giới thiệu phải có Ô RIÊNG. Trước đây nó không khai báo grid-area nên bị lưới xếp tự động
    vào ô trống đầu tiên, rơi đúng vào cột watchlist và che mất khoảng 5 mã. Ghi chú cũ nói đã
    chuyển từ position:fixed sang nằm trong luồng — đúng, nhưng nằm trong một CSS grid thì "trong
    luồng" vẫn chưa đủ. Chỉ thêm hàng khi thẻ CÓ MẶT, nếu không sẽ thừa một đường kẻ 1px ở đỉnh. */
-.workspace:has(>.intro){grid-template-rows:auto auto minmax(0,1fr) 236px;
+.workspace:has(>.intro){grid-template-rows:auto auto minmax(0,1fr) minmax(min-content,auto);
   grid-template-areas:"intro intro intro intro""wl head head ticket""wl chart book ticket""wl panel panel ticket"}
 .intro{grid-area:intro}
 .workspace>section{background:var(--black);min-width:0;min-height:0}
@@ -61,31 +76,42 @@ button{cursor:pointer}
 .statusbar .live{display:flex;align-items:center;gap:6px}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--up)}
 
-.pane-title{display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 12px;border-bottom:1px solid var(--line-soft);font-weight:600;color:var(--muted);font-size:12px}
+/* Nhan muc: nho, gian cach rong, viet hoa - de no lui han ve sau va khong tranh cho voi du lieu.
+   Truoc day nhan muc va so lieu cung co 12-13px nen nhin ngang nhau. */
+.pane-title{display:flex;align-items:center;justify-content:space-between;height:32px;padding:0 12px;border-bottom:1px solid var(--line-soft);font-weight:600;color:var(--faint);font-size:10px;letter-spacing:.07em;text-transform:uppercase}
 
 /* ---------- Watchlist ---------- */
 .wl{grid-area:wl;display:flex;flex-direction:column}
 .wl-list{overflow-y:auto;flex:1}
-.wl-row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;width:100%;padding:8px 12px;background:none;border:0;border-bottom:1px solid var(--line-soft);text-align:left}
+/* Mot ma MOT DONG. Truoc day moi ma chiem hai dong (ten cong ty o duoi ma, % o duoi gia) nen
+   cao 53px va chi nhin duoc 10 ma trong cot - trong khi cot nay chinh la cho de LUOT qua nhieu
+   ma. Ten cong ty day sang cot giua, co nho, cat bot khi chat; gia va % ve cung mot hang.
+   Ket qua: ~28px mot dong, nhin duoc hon gap doi so ma trong cung chieu cao. */
+.wl-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:baseline;gap:0 8px;width:100%;padding:5px 12px;background:none;border:0;border-bottom:1px solid var(--line-soft);text-align:left}
 .wl-row:hover{background:var(--surface)}
 .wl-row[aria-pressed="true"]{background:var(--raise);box-shadow:inset 2px 0 0 var(--brand)}
-.wl-sym{font-weight:600}
-.wl-name{color:var(--faint);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wl-px{text-align:right;font-weight:600}
-.wl-ch{text-align:right;font-size:11px}
+.wl-sym{font-weight:700;font-size:var(--fs-nen);letter-spacing:-.01em}
+.wl-name{color:var(--faint);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wl-px{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.wl-ch{text-align:right;font-size:var(--fs-nhan);font-variant-numeric:tabular-nums}
+.wl-so{display:flex;align-items:baseline;gap:8px;justify-content:flex-end}
 .flash{animation:flash .6s ease-out}
 @keyframes flash{from{background:rgba(255,255,255,.08)}to{background:transparent}}
 
 /* ---------- Symbol header ---------- */
 .head{grid-area:head;display:flex;align-items:center;gap:22px;padding:10px 14px;flex-wrap:wrap}
 .head-sym{display:flex;align-items:baseline;gap:10px}
-.head-sym h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.head-sym h1{margin:0;font-size:var(--fs-ma);font-weight:700;letter-spacing:-.015em}
 .head-sym small{color:var(--muted)}
 .head-px{display:flex;align-items:baseline;gap:10px}
-.head-px strong{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1}
-.head-stats{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted)}
-.head-stats div{display:flex;flex-direction:column;line-height:1.3}
-.head-stats b{color:var(--text);font-weight:600}
+/* Gia khop la con so nguoi ta nhin dau tien va nhin nhieu nhat. Cho no ap dao han, va dung
+   font-variant tabular de chu so khong nhay ngang khi gia doi. */
+.head-px strong{font-size:var(--fs-gia);font-weight:700;letter-spacing:-.025em;line-height:1;font-variant-numeric:tabular-nums}
+/* Dai so lieu ben canh: lui han ve sau. Nhan viet hoa nho, so o co nen. */
+.head-stats{display:flex;gap:16px;flex-wrap:wrap;color:var(--faint)}
+.head-stats div{display:flex;flex-direction:column;gap:1px;line-height:1.25}
+.head-stats span{font-size:9px;letter-spacing:.07em;text-transform:uppercase}
+.head-stats b{color:var(--text);font-weight:600;font-size:var(--fs-nen);font-variant-numeric:tabular-nums}
 
 /* ---------- Chart ---------- */
 .chart-pane{grid-area:chart;display:flex;flex-direction:column}
@@ -208,7 +234,7 @@ th.r,td.r{text-align:right}
 .pill.wait{background:rgba(233,179,8,.12);color:var(--ref)}
 .pill.cx{color:var(--faint)}
 .link{border:0;background:none;color:var(--brand-ink);font-weight:500;padding:0}
-.empty{padding:28px 16px;color:var(--muted);max-width:420px}
+.empty{padding:18px 16px;color:var(--muted);max-width:460px}
 .empty b{display:block;color:var(--text);margin-bottom:4px;font-weight:600}
 
 .toast{position:fixed;left:50%;bottom:calc(40px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;padding:10px 16px;border-radius:var(--radius-m);background:var(--raise);border:1px solid var(--line);font-weight:500;transition:.25s;z-index:20;pointer-events:none;max-width:90vw}

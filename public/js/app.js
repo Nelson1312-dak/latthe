@@ -160,9 +160,10 @@ function renderWL(){
   const WL=UNIVERSE.filter(x=>x.watch);
   $("wl-count").textContent=WL.length+" mã";
   $("wl").innerHTML=WL.map(x=>{const m=M[x.s],ch=(m.lastU-m.refU)/m.refU*100,c=cls(m,m.lastU);
+    // Thu tu DOM doi theo luoi moi: ma | ten | gia va % cung mot o ben phai.
     return `<button class="wl-row" data-sym="${x.s}" aria-pressed="${x.s===S.sym}">
-      <span class="wl-sym">${x.s}</span><span class="wl-px ${c}" data-px="${x.s}">${fP(m.lastU)}</span>
-      <span class="wl-name">${x.name}</span><span class="wl-ch ${c}" data-ch="${x.s}">${(ch>=0?"+":"")+ch.toFixed(2)}%</span></button>`;}).join("");
+      <span class="wl-sym">${x.s}</span><span class="wl-name">${x.name}</span>
+      <span class="wl-so"><span class="wl-px ${c}" data-px="${x.s}">${fP(m.lastU)}</span><span class="wl-ch ${c}" data-ch="${x.s}">${(ch>=0?"+":"")+ch.toFixed(2)}%</span></span></button>`;}).join("");
 }
 function updateWLPrices(){
   UNIVERSE.forEach(x=>{const m=M[x.s],c=cls(m,m.lastU),ch=(m.lastU-m.refU)/m.refU*100,px=document.querySelector(`[data-px="${x.s}"]`),cc=document.querySelector(`[data-ch="${x.s}"]`);
