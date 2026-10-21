@@ -828,7 +828,7 @@
     box.id = 'lb-intro'; box.className = 'intro'; box.setAttribute('aria-label', 'Giới thiệu Lật Bài');
     box.innerHTML = `<button class="intro-x" data-intro-close aria-label="Đóng giới thiệu">×</button>
       <b>Lật Bài: đầu tư cùng môi giới của bạn</b>
-      <ul><li>Bảng giá và biểu đồ realtime từ DNSE</li><li>Giao dịch thử bằng tiền ảo, không mất tiền thật</li>
+      <ul><li>Bảng giá và biểu đồ realtime từ DNSE</li><li>Đặt lệnh thẳng lên sàn qua tài khoản DNSE hoặc SHS của bạn</li>
         <li>Khách của môi giới: nhận khuyến nghị, xác nhận lệnh trong app, theo dõi hiệu suất danh mục</li></ul>
       <div class="intro-act"><button class="btn-primary" data-intro-login>Đăng nhập hoặc tạo tài khoản</button><button class="link" data-intro-board>Xem bảng giá</button></div>`;
     noi.prepend(box);

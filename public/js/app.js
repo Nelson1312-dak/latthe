@@ -78,12 +78,15 @@ function book(m){
   return {asks,bids};
 }
 
-/* ---------------- Account (demo) ---------------- */
-/* Tài khoản giao dịch thử (tiền ảo) nằm trên server, gắn với người dùng đã đăng nhập. */
-/* mode: 'that' = tài khoản DNSE thật, 'ao' = giao dịch thử bằng tiền ảo.
+/* ---------------- Tài khoản đặt lệnh ---------------- */
+/* Tài khoản đặt lệnh của màn Giao dịch. Chế độ tiền ảo đã bỏ ngày 21/10/2026: khi đã đặt được
+   lệnh thật trên cả DNSE lẫn SHS thì một ngăn tiền giả đứng cạnh chỉ làm người ta phải kiểm tra
+   xem mình đang ở đâu trước mỗi lệnh — rủi ro lớn hơn lợi ích. Engine giả lập vẫn còn ở
+   api/_trade.js và /api/orders, chỉ là màn Giao dịch không gọi tới nữa. */
+/* mode: 'that' = tài khoản DNSE thật, 'shs' = tài khoản SHS thật, null = chưa nối gì.
    Mọi chỗ hiển thị đọc chung ACC, nên đổi tài khoản chỉ là đổi NGUỒN đổ vào đây - không phải
    viết lại phiếu lệnh, sổ lệnh hay danh mục. Chỉ đặt/hủy lệnh mới phải rẽ nhánh. */
-const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, coShs:false, shsHetHan:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
+const ACC = {user:null, cash:0, hold:{}, orders:[], mode:null, coThat:false, coShs:false, shsHetHan:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
 const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
@@ -295,6 +298,11 @@ function renderTicket(){
   $("msgs").innerHTML=errs.map(e=>`<div class="msg err">${e}</div>`).join("")+warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
   const cta=$("cta"); cta.className="cta "+(S.side==="B"?"buy":"sell");
   if(!ACC.user){ cta.disabled=false; cta.textContent="Đăng nhập để đặt lệnh"; $("msgs").innerHTML=""; return; }
+  if(!ACC.mode){
+    cta.disabled=true; cta.textContent="Chưa nối tài khoản chứng khoán";
+    $("msgs").innerHTML='<div class="msg warn">Nối tài khoản DNSE hoặc SHS ở mục <b>Tài khoản chứng khoán</b> để đặt lệnh.</div>';
+    return;
+  }
   cta.disabled=!!errs.length; cta.textContent=`${S.side==="B"?"Mua":"Bán"} ${m.s}`;
 }
 function flip(open){
@@ -308,7 +316,7 @@ function flip(open){
     // chuyện phải biết trước, không phải chuyện đọc lại trong sổ lệnh.
     $("c-grid").innerHTML=(tach2?`<span>Số lệnh gửi đi</span><b>${phan.length} lệnh · ${phan.map(x=>fN(x.qty)+(x.le?" lẻ":"")).join(" + ")}</b>`:"")
       +`<span>Loại lệnh</span><b>${S.type}</b><span>Giá trị ${S.type==="LO"?"":"(ước tính)"}</span><b>${fVND(val)}</b><span>Phí</span><b>${fVND(val*FEE)}</b>`+
-      (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tài khoản</span><b>${ACC.mode==="that"?`DNSE thật · ${ACC.accountNo||""}`:ACC.mode==="shs"?`SHS thật · ${ACC.accountNo||""}`:"Giao dịch thử (tiền ảo)"}</b>`;
+      (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tài khoản</span><b>${ACC.mode==="that"?`DNSE thật · ${ACC.accountNo||""}`:ACC.mode==="shs"?`SHS thật · ${ACC.accountNo||""}`:"Chưa chọn tài khoản"}</b>`;
     $("c-msgs").innerHTML=warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
     const ok=$("c-ok"); ok.className="cta "+(S.side==="B"?"buy":"sell");
     ok.textContent=tach2?`Gửi ${phan.length} lệnh ${sideT.toLowerCase()}`:`Gửi lệnh ${sideT.toLowerCase()}`;
@@ -317,14 +325,6 @@ function flip(open){
 }
 /* ---------------- Tài khoản trên server ---------------- */
 const needLogin = () => { toast("Đăng nhập để đặt lệnh và lưu danh mục."); document.getElementById("btn-login")?.click(); };
-function applyAccount(d){
-  const old=new Map(ACC.orders.map(o=>[o.id,o.status]));
-  ACC.cash=Number(d.cash)||0;
-  ACC.hold=Object.fromEntries((d.holdings||[]).map(h=>[h.symbol,{qty:h.qty,avg:Number(h.avg)}]));
-  ACC.orders=(d.orders||[]).map(o=>({id:o.id,time:new Date(o.created_at).toTimeString().slice(0,8),sym:o.symbol,side:o.side,type:o.type,
-    u:o.price!=null?U(Number(o.price)):null,qty:o.qty,filled:o.filled,status:o.status,avgU:o.avg_price!=null?U(Number(o.avg_price)):null}));
-  ACC.orders.forEach(o=>{ if(old.get(o.id)==="wait"&&o.status==="ok") toast(`Lệnh ${o.side==="B"?"mua":"bán"} ${fN(o.qty)} ${o.sym} đã khớp giá ${fP(o.avgU)}.`); });
-}
 /* ---- Tài khoản DNSE THẬT ----
    Đổ về đúng khuôn của ACC để toàn bộ phiếu lệnh, sổ lệnh và danh mục dùng lại được y nguyên.
    DNSE trả giá khi theo đồng khi theo nghìn đồng, nên quy về nghìn đồng như bảng giá. */
@@ -335,7 +335,9 @@ const TRANG_THAI_DNSE = {Filled:"ok", PartiallyFilled:"wait", Pending:"wait", Pe
 function applyReal(d){
   const old=new Map(ACC.orders.map(o=>[o.id,o.status]));
   ACC.accountNo=d.account||null;
-  ACC.dsTieuKhoan=(d.accounts||[]).map(a=>a.id).filter(Boolean);
+  // DNSE chỉ trả về số tiểu khoản, không có mã ngắn hay loại nào khác - nên nhãn đúng bằng số.
+  // Cố đặt tên "Tiểu khoản 1, 2" là tự bịa ra một thứ DNSE không hề có.
+  ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.id).map(a=>({id:a.id,nhan:a.id}));
   ACC.otp=!!d.trading?.active;
   ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
   ACC.cash=Number(d.balance?.stock?.availableCash ?? d.balance?.stock?.totalCash) || 0;
@@ -371,7 +373,12 @@ const TRANG_THAI_SHS={"2":"ok","1":"wait","4":"cx","5":"cx","6":"rej","7":"rej"}
 function applyShs(d){
   const old=new Map(ACC.orders.map(o=>[o.id,o.status]));
   ACC.accountNo=d.sub||null;
-  ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.type==="EQUITY").map(a=>a.sub).filter(Boolean);
+  // SHS đánh số tiểu khoản theo mã ngắn 00/01/06/08 và phân biệt thường / margin - đó mới là
+  // thứ chủ tài khoản nhận ra, chứ không phải dãy 10 chữ số.
+  ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.type==="EQUITY"&&a.sub).map(a=>({
+    id:a.sub,
+    nhan:(a.ma?`${a.ma} · `:"")+(a.margin?"Margin":"Thường")+` · ${a.sub}`,
+  }));
   ACC.otp=true;                                   // phien SHS da qua the ma tran moi ton tai
   ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
   // `/api/v1/equity/cash/balance` tra `depositAmount` (tien gui) va `indAblAmt` (kha dung).
@@ -417,7 +424,7 @@ async function refreshAccount(){
       const q=ACC.accountNo?"?account="+encodeURIComponent(ACC.accountNo):"";
       const r=await fetch("/api/dnse/account"+q); const d=await r.json();
       if(r.ok){ applyReal(d); }
-      else if(r.status===403||r.status===401){ ACC.coThat=false; ACC.mode="ao"; }   // mất quyền thì lui về tiền ảo
+      else if(r.status===403||r.status===401){ ACC.coThat=false; ACC.mode=ACC.coShs?"shs":null; }   // mất quyền thì bỏ chế độ này
       else { ACC.cash=0; ACC.hold={}; ACC.orders=[]; }
     } else if(ACC.mode==="shs"){
       const q=ACC.accountNo?"?sub="+encodeURIComponent(ACC.accountNo):"";
@@ -425,12 +432,14 @@ async function refreshAccount(){
       if(r.ok){ applyShs(d); }
       // 401 o day la phien SHS het han chu khong phai mat quyen: lui ve tien ao va bao ro o thanh
       // trang thai, de nguoi dung biet phai ket noi lai chu khong ngoi doi.
-      else if(r.status===403||r.status===401){ ACC.coShs=false; ACC.mode=ACC.coThat?"that":"ao"; }
+      else if(r.status===403||r.status===401){ ACC.coShs=false; ACC.mode=ACC.coThat?"that":null; }
       else { ACC.cash=0; ACC.hold={}; ACC.orders=[]; }
     } else {
+      // Chưa nối công ty chứng khoán nào: không có gì để hiện, và KHÔNG dựng số giả. Chỉ xác nhận
+      // phiên đăng nhập còn sống rồi để màn hình nói thẳng là chưa nối tài khoản.
       const r=await fetch("/api/me"); const d=await r.json();
       if(!d.user){ ACC.user=null; return resetAccount(); }
-      applyAccount(d);
+      ACC.cash=0; ACC.hold={}; ACC.orders=[]; ACC.accountNo=null; ACC.dsTieuKhoan=[];
     }
     renderAcctSwitch(); renderTicket(); renderPanel();
   }catch(e){ /* lỗi mạng tạm thời: giữ số liệu cũ */ } finally{ accBusy=false; }
@@ -453,9 +462,11 @@ async function doTaiKhoanThat(){
     // Phiên hết hạn thì VẪN hiện nút, chỉ là bấm vào nó nhắc kết nối lại. Ẩn hẳn đi thì người
     // dùng thấy lựa chọn SHS tự dưng biến mất và không biết tìm lại ở đâu.
     ACC.shsHetHan=!!(shs&&shs.expired&&shs.can&&shs.can.trade);
-    if(ACC.mode==="shs"&&!ACC.coShs) ACC.mode=ACC.coThat?"that":"ao";
+    if(ACC.mode==="shs"&&!ACC.coShs) ACC.mode=ACC.coThat?"that":null;
   }catch(e){ return; }
-  if(ACC.coThat && !ACC.tuChon) ACC.mode="that";            // người dùng đã tự chọn thì tôn trọng
+  // Mặc định vào tài khoản thật. Không còn chế độ tiền ảo để lui về, nên khi chưa nối công ty
+  // chứng khoán nào thì mode = null và phiếu lệnh nói thẳng điều đó.
+  if(!ACC.tuChon) ACC.mode=ACC.coThat?"that":ACC.coShs?"shs":null;
   renderAcctSwitch();
 }
 function renderTieuKhoan(){
@@ -463,7 +474,7 @@ function renderTieuKhoan(){
   const hien=ACC.user&&(ACC.mode==="that"||ACC.mode==="shs")&&ACC.dsTieuKhoan.length>1;
   sel.hidden=!hien;
   if(!hien) return;
-  const can=ACC.dsTieuKhoan.map(id=>`<option value="${id}"${id===ACC.accountNo?" selected":""}>Tiểu khoản ${id}</option>`).join("");
+  const can=ACC.dsTieuKhoan.map(t=>`<option value="${t.id}"${t.id===ACC.accountNo?" selected":""}>${t.nhan}</option>`).join("");
   if(sel.innerHTML!==can) sel.innerHTML=can;
   sel.value=ACC.accountNo||"";
 }
@@ -474,7 +485,7 @@ function renderAcctSwitch(){
   const f=$("foot-acct");
   if(f) f.textContent="Giá và biểu đồ lấy từ DNSE."+(!ACC.user?"" : LA_THAT()
     ? ` Màn Giao dịch đang dùng TÀI KHOẢN ${ACC.mode==="shs"?"SHS":"DNSE"} THẬT — lệnh gửi thẳng lên sàn.`
-    : " Màn Giao dịch dùng tiền ảo để thử, không gửi lệnh tới công ty chứng khoán.");
+    : " Chưa nối tài khoản chứng khoán nào.");
   const box=$("acct-switch"); if(!box) return;
   box.hidden=!(ACC.user&&(ACC.coThat||ACC.coShs));
   // Nút SHS chỉ hiện khi đã kết nối được phiên SHS; chưa nối thì bấm vào chỉ nhận lỗi.
@@ -488,20 +499,22 @@ function renderAcctSwitch(){
   box.querySelectorAll("[data-acct]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.acct===ACC.mode)));
   const w=$("a-which"); if(!w) return;
   w.className="acct-which"+(LA_THAT()?" that":"");
-  // Nói rõ VÌ SAO đang ở tiền ảo. Để trống thì người dùng thấy sức mua 500 triệu không có thật mà
-  // không biết tại sao mình không vào được tài khoản thật.
+  // Nói rõ đang đứng ở đâu, và nếu chưa vào được tài khoản nào thì nói rõ VÌ SAO - để trống thì
+  // người dùng chỉ thấy phiếu lệnh bị khoá mà không biết thiếu bước nào.
   w.textContent=!ACC.user?"":ACC.mode==="shs"
     ? (ACC.accountNo?`Tài khoản SHS thật · tiểu khoản ${ACC.accountNo}`:"Tài khoản SHS thật")
     : ACC.mode==="that"
     ? (ACC.accountNo?`Tài khoản DNSE thật · ${ACC.accountNo}`+(ACC.otp?"":" · chưa xác thực OTP"):"Tài khoản DNSE thật")
-    : !ACC.daDo ? "Tiền ảo · đang kiểm tra kết nối công ty chứng khoán…"
-    : !ACC.coThat&&!ACC.coShs ? "Tiền ảo · tài khoản này chưa nối công ty chứng khoán nào"
-    : "Tiền ảo, không gửi lệnh tới công ty chứng khoán";
+    : !ACC.daDo ? "Đang kiểm tra kết nối công ty chứng khoán…"
+    : "Chưa nối công ty chứng khoán nào";
 }
 function resetAccount(){ ACC.cash=0; ACC.hold={}; ACC.orders=[]; renderTicket(); renderPanel(); }
+// Liên kết công ty chứng khoán vừa đổi (nối thêm, ngắt, hoặc xác thực OTP): dò lại ngay thay vì
+// để thanh chuyển tài khoản đứng ở trạng thái cũ tới lần tải trang sau.
+document.addEventListener("lb:brokers",async()=>{ if(!ACC.user) return; await doTaiKhoanThat(); refreshAccount(); });
 document.addEventListener("lb:user",async e=>{
   ACC.user=e.detail||null; clearInterval(accTimer);
-  if(!ACC.user){ ACC.coThat=false; ACC.daDo=false; ACC.tuChon=false; ACC.mode="ao"; renderAcctSwitch(); return resetAccount(); }
+  if(!ACC.user){ ACC.coThat=false; ACC.coShs=false; ACC.daDo=false; ACC.tuChon=false; ACC.mode=null; renderAcctSwitch(); return resetAccount(); }
   await doTaiKhoanThat();
   refreshAccount(); accTimer=setInterval(refreshAccount,10000);
 });
@@ -545,14 +558,6 @@ async function guiShs(qty){
   return {ok:true,nhan:dp.order?.orderNumber?"#"+dp.order.orderNumber:"",canhBao:dx.canhBao};
 }
 
-async function guiAo(qty){
-  const m=M[S.sym], u=ticketPxU();
-  const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({symbol:m.s,side:S.side,type:S.type,qty,...(S.type==="LO"?{price:P(u)}:{})})});
-  const d=await r.json();
-  if(!r.ok) return {ok:false,loi:d.error||"Không đặt được lệnh.",dung:true};
-  return {ok:true,nhan:"",khop:d.order.status==="ok"};
-}
 
 /* Gửi lệnh. Khối lượng lẻ (vd 213) được TÁCH thành lô chẵn 200 rồi lô lẻ 13, gửi lần lượt — sàn
    không nhận một lệnh 213. Lô chẵn đi trước vì đó là phần lớn tiền và là phần khớp nhanh.
@@ -564,8 +569,9 @@ async function placeOrder(){
   if(!ACC.user) return needLogin();
   const m=M[S.sym], ok=$("c-ok");
   ok.disabled=true; $("c-msgs").innerHTML="";
-  const gui=ACC.mode==="that"?guiDnse:ACC.mode==="shs"?guiShs:guiAo;
-  const noi=ACC.mode==="that"?" lên DNSE":ACC.mode==="shs"?" lên SHS":"";
+  if(!ACC.mode) return;
+  const gui=ACC.mode==="shs"?guiShs:guiDnse;
+  const noi=ACC.mode==="shs"?" lên SHS":" lên DNSE";
   const phan=tachLo(S.qty), xong=[];
   try{
     for(let k=0;k<phan.length;k++){
@@ -585,8 +591,8 @@ async function placeOrder(){
     const tong=xong.reduce((a,x)=>a+x.qty,0), khop=xong.every(x=>x.khop);
     toast(xong.length>1
       ? `Đã gửi ${xong.length} lệnh ${S.side==="B"?"mua":"bán"} ${m.s}${noi}: ${xong.map(x=>fN(x.qty)+(x.le?" lẻ":"")).join(" + ")}.`
-      : `Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(tong)} ${m.s}${noi}${xong[0]?.nhan?" ("+xong[0].nhan+")":""}${ACC.mode==="ao"&&khop?" và khớp ngay":""}.`
-        +(ACC.mode==="ao"&&!khop&&MKT.session==="closed"?" Thị trường đang đóng cửa, lệnh chờ đến phiên sau.":""));
+      : `Đã gửi lệnh ${S.side==="B"?"mua":"bán"} ${fN(tong)} ${m.s}${noi}${xong[0]?.nhan?" ("+xong[0].nhan+")":""}.`
+        );
     flip(false); await refreshAccount();
   }catch(e){ $("c-msgs").innerHTML='<div class="msg err">Mất kết nối, thử lại. Mở sổ lệnh kiểm tra xem lệnh đã đi chưa.</div>'; }
   finally{ ok.disabled=false; }
@@ -686,7 +692,7 @@ $("f-px").addEventListener("blur",renderTicket);
 $("f-qty").addEventListener("input",e=>{const v=parseInt(e.target.value.replace(/[^\d]/g,""),10);S.qty=isNaN(v)?0:v;renderTicket();});
 $("f-qty").addEventListener("blur",renderTicket);
 $("search").addEventListener("keydown",e=>{ if(e.key!=="Enter") return; const s=e.target.value.trim().toUpperCase();
-  if(M[s]){selectSym(s);e.target.value="";} else toast(`Chưa có mã ${s} trong bản demo.`); });
+  if(M[s]){selectSym(s);e.target.value="";} else toast(`Chưa có mã ${s} trong rổ theo dõi.`); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("card").classList.contains("flipped")) flip(false); });
 let toastT; function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2600);}
 

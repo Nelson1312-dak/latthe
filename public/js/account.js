@@ -148,6 +148,11 @@
     </div>`;
   }
 
+  /* Màn Giao dịch chỉ dò /api/brokers MỘT LẦN lúc đăng nhập, nên nối thêm SHS giữa chừng thì
+     thanh chuyển tài khoản vẫn hiện trạng thái cũ cho tới khi tải lại trang - đúng chuyện vừa
+     gặp: kết nối SHS xong mà nút vẫn mờ như chưa nối. Báo cho nó biết mỗi khi liên kết đổi. */
+  const baoDoiLienKet = () => document.dispatchEvent(new CustomEvent('lb:brokers'));
+
   async function openBrokers() {
     $('dlg-brokers').showModal();
     $('broker-list').innerHTML = '<p class="dlg-sub">Đang tải…</p>';
@@ -173,6 +178,7 @@
       await api('/api/shs/connect', { method: 'POST', body: { username, password } });
       form.password.value = '';
       say('Đã kết nối tài khoản SHS.');
+      baoDoiLienKet();
       await openBrokers();
     } catch (e) {
       errBox($('broker-msg'), e.message);
@@ -224,7 +230,7 @@
     if (t.dataset.viewBroker) return showBrokerAccount(t.dataset.viewBroker);
     if (t.dataset.disconnect) {
       return api(`/api/brokers?broker=${t.dataset.disconnect}`, { method: 'DELETE' })
-        .then(() => { say('Đã ngắt kết nối.'); openBrokers(); })
+        .then(() => { say('Đã ngắt kết nối.'); baoDoiLienKet(); openBrokers(); })
         .catch((err) => errBox($('broker-msg'), err.message));
     }
     if (t.dataset.otpBroker === 'dnse') {

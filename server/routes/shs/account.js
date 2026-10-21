@@ -30,7 +30,9 @@ export default route('GET, OPTIONS', async ({ req, uid }) => {
 
   return {
     profile: { display: acc.accountName || link.display, accountNo: acc.accountNumber },
-    accounts: subs.map((s) => ({ sub: s.subNumber, type: s.type, margin: s.mrType === 'T', feeRate: s.maxfeerate })),
+    // `cdcontent` chính là mã tiểu khoản SHS hiển thị cho khách (00, 01, 06, 08...). Trước đây
+    // không đưa ra ngoài nên màn hình chỉ có dãy số 10 chữ số, không ai biết đâu là tiểu khoản nào.
+    accounts: subs.map((s) => ({ sub: s.subNumber, ma: s.cdcontent || null, type: s.type, margin: s.mrType === 'T', feeRate: s.maxfeerate })),
     sub,
     cash,
     positions: positions?.data || positions,
