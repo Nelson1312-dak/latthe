@@ -76,16 +76,26 @@ export async function verifyDnseAccount(username, password) {
   let subNames = null;
   try {
     const conLai = TONG_HAN - (Date.now() - batDau);
-    if (conLai > 1200) {
+    if (conLai <= 1200) {
+      console.log('[sub-names] bo qua, chi con', conLai, 'ms');
+    } else {
       const a = await call('/dnse-order-service/accounts', { token: r.data.token, step: 'accounts', budget: Math.min(conLai, 2500) });
-      const ds = a.ok ? (a.data?.accounts || a.data || []) : [];
+      // Chấp nhận nhiều dạng vỏ: {accounts:[...]}, {data:[...]}, hoặc mảng thẳng.
+      const ds = a.ok ? (a.data?.accounts || a.data?.data || a.data || []) : [];
+      const ma = Array.isArray(ds) ? ds : [];
       const m = {};
-      for (const x of Array.isArray(ds) ? ds : []) {
-        if (x?.id && x.accountTypeName) m[String(x.id)] = String(x.accountTypeName).slice(0, 60);
+      for (const x of ma) {
+        const ten = x?.accountTypeName || x?.accountName || x?.name || x?.productName || null;
+        if (x?.id && ten) m[String(x.id)] = String(ten).slice(0, 60);
       }
       if (Object.keys(m).length) subNames = m;
+      // Chẩn đoán: CHỈ ghi hình dạng (mã HTTP, số phần tử, tên các trường), không ghi giá trị -
+      // đây là dữ liệu tài khoản thật. Có dòng này thì lần đăng nhập sau nói thẳng hỏng ở đâu.
+      console.log('[sub-names] HTTP', a.status, '| so tieu khoan', ma.length,
+        '| truong', ma[0] ? Object.keys(ma[0]).join(',') : '(rong)',
+        '| lay duoc', Object.keys(m).length);
     }
-  } catch { /* chỉ là nhãn, thiếu thì hiện số tiểu khoản */ }
+  } catch (e) { console.log('[sub-names] loi:', e?.detail || e?.message || 'khong ro'); }
 
   if (vuong) {
     // Người dùng gõ thẳng số lưu ký thì chính nó là danh tính, và DNSE vừa xác nhận mật khẩu thuộc về nó:
