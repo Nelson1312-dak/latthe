@@ -129,7 +129,8 @@
       actions = `${phien}<div class="broker-actions"><button data-view-broker="dnse" class="primary">Xem tài khoản</button>${
         b.can.trade ? (t.active
           ? '<button data-otp-end="dnse">Kết thúc phiên</button>'
-          : '<button data-otp-broker="dnse">Xác thực OTP để giao dịch</button>') : ''}</div>`;
+          : '<button data-otp-broker="dnse">Xác thực OTP để giao dịch</button>') : ''
+        }<button data-ten-tk>Lấy tên tiểu khoản</button></div>`;
     } else if (b.connected) {
       actions = `<div class="broker-actions"><button data-view-broker="shs" class="primary">Xem tài khoản</button><button data-disconnect="shs">Ngắt kết nối</button></div>`;
     } else {
@@ -166,6 +167,39 @@
       $('broker-list').innerHTML = '';
       errBox($('broker-msg'), e.message);
     }
+  }
+
+  /* Tên tiểu khoản DNSE chỉ đọc được bằng token đăng nhập mật khẩu, mà token đó chỉ có trong
+     khoảnh khắc đăng nhập. Trước đây muốn lấy là phải ĐĂNG XUẤT rồi đăng nhập lại bằng DNSE -
+     phiền, và dễ bấm nhầm sang "Ngắt kết nối" ngay bên dưới, mất luôn phiên SHS đã quẹt thẻ. */
+  function moFormTenTk() {
+    const o = $('broker-list').querySelector('[data-broker="dnse"] .broker-actions');
+    if (!o || $('ten-tk-form')) return;
+    o.insertAdjacentHTML('afterend', `<form class="ten-tk" id="ten-tk-form" autocomplete="off">
+      <label>Mật khẩu DNSE<input class="inp" name="password" type="password" autocomplete="current-password" maxlength="200"></label>
+      <small>Chỉ dùng một lần để hỏi DNSE tên các tiểu khoản. Lật Bài không lưu mật khẩu, cũng không lưu phiên đăng nhập DNSE.</small>
+      <div class="broker-actions"><button type="submit" class="primary">Lấy tên</button><button type="button" data-ten-tk-huy>Hủy</button></div></form>`);
+    $('ten-tk-form').querySelector('[name=password]').focus();
+  }
+  async function layTenTieuKhoan(form) {
+    const pw = form.password.value;
+    if (!pw) return errBox($('broker-msg'), 'Nhập mật khẩu DNSE.');
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'Đang hỏi DNSE…'; errBox($('broker-msg'), '');
+    try {
+      const r = await api('/api/dnse/sub-names', { method: 'POST', body: { password: pw } });
+      form.password.value = '';
+      if (r.ok) {
+        errBox($('broker-msg'), `Đã lấy ${r.soTen} tên tiểu khoản: ${Object.values(r.ten).join(', ')}. Mở lại màn Giao dịch để thấy.`, 'ok');
+        document.dispatchEvent(new CustomEvent('lb:brokers'));
+        $('ten-tk-form')?.remove();
+      } else {
+        // Nói thẳng DNSE trả về gì, thay vì một câu "không lấy được" rỗng tuếch.
+        errBox($('broker-msg'), `DNSE không trả về tên tiểu khoản. Chi tiết: ${r.chanDoan}`, 'warn');
+      }
+    } catch (e) {
+      errBox($('broker-msg'), e.message);
+    } finally { btn.disabled = false; btn.textContent = 'Lấy tên'; }
   }
 
   async function connectShs(form) {
@@ -227,6 +261,8 @@
     if (t.id === 'btn-google') { location.href = '/api/auth/google?next=' + encodeURIComponent(location.pathname + location.hash); return; }
     if (t.hasAttribute('data-open-brokers')) { $('acct-menu').hidden = true; return openBrokers(); }
     if (t.id === 'brokers-close') return $('dlg-brokers').close();
+    if (t.hasAttribute('data-ten-tk')) return moFormTenTk();
+    if (t.hasAttribute('data-ten-tk-huy')) return $('ten-tk-form')?.remove();
     if (t.dataset.viewBroker) return showBrokerAccount(t.dataset.viewBroker);
     if (t.dataset.disconnect) {
       return api(`/api/brokers?broker=${t.dataset.disconnect}`, { method: 'DELETE' })
@@ -267,6 +303,7 @@
     if (e.target.id === 'auth-form') return submitAuth(e);
     if (e.target.id === 'dnse-form') return submitDnse(e);
     if (e.target.dataset.loginBroker === 'shs') { e.preventDefault(); return connectShs(e.target); }
+    if (e.target.id === 'ten-tk-form') { e.preventDefault(); return layTenTieuKhoan(e.target); }
   });
 
   // Lỗi quay về từ Google nằm ở ?loi=

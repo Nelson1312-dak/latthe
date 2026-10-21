@@ -27,6 +27,7 @@ import r_broker_symbol from '../server/routes/broker/symbol.js';
 import r_broker_tickets from '../server/routes/broker/tickets.js';
 import r_brokers from '../server/routes/brokers.js';
 import r_dnse_account from '../server/routes/dnse/account.js';
+import r_dnse_sub_names from '../server/routes/dnse/sub-names.js';
 import r_dnse_orders from '../server/routes/dnse/orders.js';
 import r_dnse_otp from '../server/routes/dnse/otp.js';
 import r_health from '../server/routes/health.js';
@@ -68,6 +69,7 @@ const ROUTES = {
   'broker/tickets': r_broker_tickets,
   'brokers': r_brokers,
   'dnse/account': r_dnse_account,
+  'dnse/sub-names': r_dnse_sub_names,
   'dnse/orders': r_dnse_orders,
   'dnse/otp': r_dnse_otp,
   'health': r_health,

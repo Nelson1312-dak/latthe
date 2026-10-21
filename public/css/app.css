@@ -363,6 +363,11 @@ nên `.card{flex:1}` co về 0 và cả phiếu lệnh BIẾN MẤT khỏi màn 
 .broker form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft)}
 .broker form label{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:12px}
 .broker .inp{height:34px}
+/* Form hỏi mật khẩu để lấy tên tiểu khoản: tách khỏi nhóm nút để không ai bấm nhầm sang
+   "Ngắt kết nối" ngay bên dưới. */
+.ten-tk{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.ten-tk label{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:12px}
+.ten-tk small{color:var(--faint);font-size:11px;line-height:1.45}
 
 /* ---------- Bàn làm việc môi giới ---------- */
 .desk{display:grid;min-height:0;grid-template-columns:288px minmax(0,1fr) 340px;gap:1px;background:var(--line)}
