@@ -13,9 +13,17 @@ import { verifyDnseAccount, allowedCustody, dnseLoginEnabled, usernameFromCustod
 
 const COLS = 'id,username,display_name,role,avatar_url,email';
 
+/** Tên tiểu khoản vừa đọc được lúc đăng nhập. Chỉ là nhãn hiển thị nên hỏng thì bỏ qua. */
+async function luuTenTieuKhoan(uid, subNames) {
+  if (!uid || !subNames) return;
+  try {
+    await rest(`/users?id=eq.${uid}`, { role: 'app_auth', method: 'PATCH', body: { dnse_sub_names: subNames } });
+  } catch (e) { console.error('[dnse-sub-names]', e?.message); }
+}
+
 async function findOrCreate(p) {
   const found = await rest(`/users?dnse_custody=eq.${encodeURIComponent(p.custodyCode)}&select=${COLS}&limit=1`, { role: 'app_auth' });
-  if (found[0]) return found[0];
+  if (found[0]) { await luuTenTieuKhoan(found[0].id, p.subNames); return found[0]; }
   const base = usernameFromCustody(p.custodyCode);
   const display = (p.name || base).slice(0, 40);
   // Email hoặc tên đăng nhập có thể đã dùng bởi tài khoản khác: thử lại bỏ email, rồi thêm hậu tố
@@ -29,6 +37,7 @@ async function findOrCreate(p) {
         role: 'app_auth', method: 'POST', prefer: 'return=representation',
         body: { ...a, display_name: display, dnse_custody: p.custodyCode },
       });
+      await luuTenTieuKhoan(rows[0]?.id, p.subNames);
       return rows[0];
     } catch (e) { if (e.pgCode !== '23505') throw e; }
   }

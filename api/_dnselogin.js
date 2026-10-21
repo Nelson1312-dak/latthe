@@ -3,7 +3,8 @@
  * https://hdsd.dnse.com.vn/san-pham-dich-vu/api-lightspeed/ii.-trading-api/2.-dang-nhap-va-xac-thuc/2.1.-dang-nhap
  * Underscore prefix => không phải route.
  *
- * Chỉ dùng để NHẬN DIỆN người dùng. Mật khẩu chỉ đi qua hàm login() tới DNSE; token trả về dùng một lần để đọc hồ sơ rồi bỏ.
+ * Chỉ dùng để NHẬN DIỆN người dùng. Mật khẩu chỉ đi qua hàm login() tới DNSE; token trả về dùng
+ * một lần để đọc hồ sơ VÀ tên các tiểu khoản, rồi bỏ.
  * Không ghi log nội dung request/response. Không lưu mật khẩu hay token ở bất kỳ đâu.
  *
  * Biến môi trường: DNSE_LOGIN_CUSTODY (danh sách số lưu ký được phép, cách nhau bằng dấu phẩy).
@@ -67,11 +68,30 @@ export async function verifyDnseAccount(username, password) {
     if (!me.ok || !me.data?.custodyCode) vuong = `me:HTTP ${me.status}${me.data ? ', thiếu custodyCode' : ', không phải JSON'}`;
   } catch (e) { vuong = e.detail || 'me:lỗi mạng'; }
 
+  // Tên tiểu khoản. CHỈ gọi được bằng token đăng nhập mật khẩu này; API key HMAC mà đường đặt
+  // lệnh dùng thì /accounts không trả tên, và /accounts/{id} là 404 - đã đo cả hai.
+  // Cố ý KHÔNG lưu token: lấy tên NGAY ở đây rồi trả ra cùng hồ sơ, token vẫn bị bỏ như cũ.
+  // Tên tiểu khoản gần như không bao giờ đổi, nên lấy một lần mỗi khi đăng nhập là đủ.
+  // Hỏng thì bỏ qua, tuyệt đối không chặn đăng nhập vì một cái nhãn.
+  let subNames = null;
+  try {
+    const conLai = TONG_HAN - (Date.now() - batDau);
+    if (conLai > 1200) {
+      const a = await call('/dnse-order-service/accounts', { token: r.data.token, step: 'accounts', budget: Math.min(conLai, 2500) });
+      const ds = a.ok ? (a.data?.accounts || a.data || []) : [];
+      const m = {};
+      for (const x of Array.isArray(ds) ? ds : []) {
+        if (x?.id && x.accountTypeName) m[String(x.id)] = String(x.accountTypeName).slice(0, 60);
+      }
+      if (Object.keys(m).length) subNames = m;
+    }
+  } catch { /* chỉ là nhãn, thiếu thì hiện số tiểu khoản */ }
+
   if (vuong) {
     // Người dùng gõ thẳng số lưu ký thì chính nó là danh tính, và DNSE vừa xác nhận mật khẩu thuộc về nó:
     // không cần hồ sơ vẫn nhận ra được ai, nên cho vào thay vì chặn chỉ vì một endpoint phụ đang trục trặc.
     if (CUSTODY_LIKE.test(username)) {
-      return { custodyCode: username.toUpperCase(), investorId: null, name: null, email: null, thieuHoSo: vuong };
+      return { custodyCode: username.toUpperCase(), investorId: null, name: null, email: null, subNames, thieuHoSo: vuong };
     }
     const e = new DnseLoginError('Không đọc được hồ sơ tài khoản DNSE. Thử đăng nhập bằng số lưu ký.', 502, 'no_profile');
     e.detail = vuong;
@@ -82,6 +102,7 @@ export async function verifyDnseAccount(username, password) {
     investorId: me.data.investorId != null ? String(me.data.investorId) : null,
     name: me.data.name || null,
     email: me.data.email ? String(me.data.email).toLowerCase() : null,
+    subNames,
   };
 }
 

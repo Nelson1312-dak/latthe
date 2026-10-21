@@ -335,9 +335,9 @@ const TRANG_THAI_DNSE = {Filled:"ok", PartiallyFilled:"wait", Pending:"wait", Pe
 function applyReal(d){
   const old=new Map(ACC.orders.map(o=>[o.id,o.status]));
   ACC.accountNo=d.account||null;
-  // DNSE chỉ trả về số tiểu khoản, không có mã ngắn hay loại nào khác - nên nhãn đúng bằng số.
-  // Cố đặt tên "Tiểu khoản 1, 2" là tự bịa ra một thứ DNSE không hề có.
-  ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.id).map(a=>({id:a.id,nhan:a.id}));
+  // Tên tiểu khoản DNSE đọc được lúc đăng nhập bằng mật khẩu DNSE (API key HMAC không trả tên).
+  // Chưa có tên thì hiện số - cố bịa ra "Tiểu khoản 1, 2" là tự nghĩ ra một thứ DNSE không có.
+  ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.id).map(a=>({id:a.id,nhan:a.ten?`${a.ten} · ${a.id}`:a.id}));
   nhoTieuKhoan("that");
   ACC.otp=!!d.trading?.active;
   ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
