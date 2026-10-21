@@ -223,6 +223,15 @@ th.r,td.r{text-align:right}
 .badge.hold{background:rgba(56,189,248,.12);color:var(--floor)}
 
 textarea,.inp{width:100%;padding:9px 11px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);outline:none;resize:vertical;line-height:1.5}
+/* Ô một dòng: để CHIỀU CAO quyết định, đệm dọc bằng 0.
+   Trước đây mọi ô đều dùng chung `padding:9px 11px; line-height:1.5`, trong khi khắp nơi lại ép
+   `height:30..34px`. Cộng lại: 19,5px chữ + 18px đệm + 2px viền = gần 40px nhồi vào khung 34px,
+   nên phần dưới chữ bị cắt — rõ nhất ở tiếng Việt vì dấu nặng và chữ "ườ" nằm đúng chỗ bị xén.
+   Đây là lỗi của CẢ MỘT LỚP ô nhập chứ không riêng ô chọn tiểu khoản: ô tìm khách, ô OTP, phiếu
+   lệnh môi giới, bảng khuyến nghị đều đang cắt chữ ở các mức khác nhau.
+   textarea giữ nguyên đệm vì nó cao theo số dòng, không theo height. */
+input.inp,select.inp{padding-top:0;padding-bottom:0;height:36px;line-height:normal}
+textarea.inp{height:auto;padding:9px 11px;line-height:1.5}
 textarea:focus,.inp:focus{border-color:var(--brand)}
 .row-end{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--faint);font-size:12px}
 .online{display:flex;align-items:center;gap:6px;font-weight:400;color:var(--faint)}
@@ -765,4 +774,4 @@ td.warn{color:var(--ref);font-weight:600}
 /* Chọn tiểu khoản: chủ tài khoản DNSE thường có nhiều tiểu khoản, và tiền nằm ở tiểu khoản nào
    thì chỉ đặt được lệnh ở đó. Trước đây màn Giao dịch âm thầm lấy tiểu khoản đầu tiên, nên nhìn
    thấy sức mua 33 đ mà không hiểu tiền của mình đi đâu. */
-.acct-sub{height:30px;margin:0 12px 10px;font-size:12px;width:calc(100% - 24px)}
+.acct-sub{height:34px;margin:0 12px 10px;font-size:12px;width:calc(100% - 24px)}
