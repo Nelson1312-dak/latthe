@@ -6,7 +6,6 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { tickU, limits, refFromBars, vnNow, sessionState } from '../api/_market.js';
-import { decideFill } from '../api/_trade.js';
 
 describe('bước giá', () => {
   test('HOSE đổi bước theo mức giá', () => {
@@ -79,35 +78,6 @@ describe('giờ giao dịch', () => {
   test('vnNow đổi ngày lúc 00:00 giờ VN', () => {
     assert.equal(vnNow(Date.parse('2026-10-19T16:59:00Z')).ymd, '2026-10-19');
     assert.equal(vnNow(Date.parse('2026-10-19T17:00:00Z')).ymd, '2026-10-20');
-  });
-});
-
-describe('luật khớp của giao dịch thử', () => {
-  const t0 = Date.parse('2026-10-19T03:00:00Z');                 // 10:00 VN
-  const lenh = (o) => ({ created_at: new Date(t0).toISOString(), ...o });
-  const phut = (phutSau, { o, h, l }) => ({ t: Math.floor(t0 / 1000) + phutSau * 60, o, h, l, c: o, v: 1 });
-  const nowS = Math.floor(t0 / 1000) + 3600;
-
-  test('LO mua khớp khi nến CHẠM giá đặt', () => {
-    const bars = [phut(2, { o: 20.6, h: 20.7, l: 20.5 })];
-    assert.equal(decideFill(lenh({ type: 'LO', side: 'B', price: 20.5 }), bars, [], nowS), 20.5);
-    assert.equal(decideFill(lenh({ type: 'LO', side: 'B', price: 20.4 }), bars, [], nowS), null, 'chưa chạm thì chưa khớp');
-  });
-
-  test('LO mua khớp ở giá TỐT HƠN khi nến mở thấp hơn giá đặt', () => {
-    const bars = [phut(2, { o: 20.3, h: 20.7, l: 20.2 })];
-    assert.equal(decideFill(lenh({ type: 'LO', side: 'B', price: 20.5 }), bars, [], nowS), 20.3);
-  });
-
-  test('LO bán đối xứng', () => {
-    const bars = [phut(2, { o: 20.6, h: 20.9, l: 20.5 })];
-    assert.equal(decideFill(lenh({ type: 'LO', side: 'S', price: 20.8 }), bars, [], nowS), 20.8);
-    assert.equal(decideFill(lenh({ type: 'LO', side: 'S', price: 21.0 }), bars, [], nowS), null);
-  });
-
-  test('chỉ xét nến SAU phút đặt lệnh, không khớp ngược vào quá khứ', () => {
-    const truoc = [{ t: Math.floor(t0 / 1000) - 600, o: 20.0, h: 20.0, l: 19.0, c: 20.0, v: 1 }];
-    assert.equal(decideFill(lenh({ type: 'LO', side: 'B', price: 19.5 }), truoc, [], nowS), null);
   });
 });
 

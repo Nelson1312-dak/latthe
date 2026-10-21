@@ -33,7 +33,6 @@ import r_health from '../server/routes/health.js';
 import r_history from '../server/routes/history.js';
 import r_market from '../server/routes/market.js';
 import r_me from '../server/routes/me.js';
-import r_orders from '../server/routes/orders.js';
 import r_portal_accept from '../server/routes/portal/accept.js';
 import r_portal_advice_seen from '../server/routes/portal/advice-seen.js';
 import r_portal_analytics from '../server/routes/portal/analytics.js';
@@ -75,7 +74,6 @@ const ROUTES = {
   'history': r_history,
   'market': r_market,
   'me': r_me,
-  'orders': r_orders,
   'portal/accept': r_portal_accept,
   'portal/advice-seen': r_portal_advice_seen,
   'portal/analytics': r_portal_analytics,
