@@ -8,5 +8,8 @@
   "autoHeal": false,
   "_autoHeal": "false voi cloudflare-quick: moi lan khoi dong lai la mot URL MOI, nen khoi dong lai xong Vercel van tro vao URL cu va site van chet - chua kem gi khong chua. Watchdog se bao that to thay vi gia vo da xu ly. Dat true khi nao chuyen sang named tunnel (ten co dinh) hoac quay lai ngrok con bang thong.",
   "ngrokTunnelName": "latthe",
-  "_lichSu": "20/10/2026 ngrok chet 2 lan trong 12 gio, watchdog tu chua duoc. 21/10/2026 08:32 ngrok tra ERR_NGROK_725 - tai khoan het 1 GB bang thong thang, restart bao nhieu lan cung vo ich. Chuyen tam sang cloudflare quick tunnel."
+  "_lichSu": "20/10/2026 ngrok chet 2 lan trong 12 gio, watchdog tu chua duoc. 21/10/2026 08:32 ngrok tra ERR_NGROK_725 - tai khoan het 1 GB bang thong thang, restart bao nhieu lan cung vo ich. Chuyen tam sang cloudflare quick tunnel.",
+  "serviceName": "cloudflared",
+  "_serviceName": "Chi dung khi kind = cloudflare-named: watchdog khoi dong lai SERVICE nay thay vi giet tien trinh, de khong gianh viec voi service manager.",
+  "_khiNaoDoiSangNamed": "Sau khi latbai.vn ve Cloudflare: doi kind thanh 'cloudflare-named', publicUrl thanh https://db.latbai.vn, autoHeal thanh true. Va doi ba bien tren Vercel cho khop."
 }

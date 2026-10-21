@@ -130,17 +130,33 @@ function Restart-Ngrok {
     if (Test-Path $stampPath) {
         $last = (Get-Item $stampPath).LastWriteTime
         if ((Get-Date) - $last -lt [TimeSpan]::FromMinutes($coolDownMin)) {
-            Write-Log "tunnel still down, but ngrok was restarted $([int]((Get-Date) - $last).TotalMinutes)m ago - waiting."
+            Write-Log "tunnel still down, but it was restarted $([int]((Get-Date) - $last).TotalMinutes)m ago - waiting."
             return
         }
     }
-    Write-Log ("public tunnel is DOWN ({0}) - restarting ngrok." -f $(if ($script:lastDownWhy) { $script:lastDownWhy } else { 'no response' }))
-    Get-Process ngrok -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.Id -Force } catch { } }
-    Start-Sleep -Seconds 3
-    # MUST be the named tunnel: "ngrok http 11435" comes up on a random domain and would
-    # strand production, because Vercel points at the reserved hostname.
-    try { Start-Process 'ngrok' -ArgumentList "start $ngrokTunnel" -WindowStyle Minimized }
-    catch { Write-Log "ERROR starting ngrok: $($_.Exception.Message)"; return }
+    Write-Log ("public tunnel is DOWN ({0}) - restarting [{1}]." -f `
+        $(if ($script:lastDownWhy) { $script:lastDownWhy } else { 'no response' }), $cfg.kind)
+
+    if ($cfg.kind -eq 'cloudflare-named') {
+        # A named tunnel keeps its hostname across restarts, which is the whole reason this branch
+        # can heal at all. cloudflared runs as a Windows service so it also comes back after a
+        # reboot - restart the SERVICE, do not kill the process, or the service manager will fight
+        # us over it.
+        $svc = $cfg.serviceName
+        try {
+            Restart-Service -Name $svc -Force -ErrorAction Stop
+        } catch {
+            Write-Log "ERROR restarting service ${svc}: $($_.Exception.Message)"
+            return
+        }
+    } else {
+        Get-Process ngrok -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.Id -Force } catch { } }
+        Start-Sleep -Seconds 3
+        # MUST be the named tunnel: "ngrok http 11435" comes up on a random domain and would
+        # strand production, because Vercel points at the reserved hostname.
+        try { Start-Process 'ngrok' -ArgumentList "start $ngrokTunnel" -WindowStyle Minimized }
+        catch { Write-Log "ERROR starting ngrok: $($_.Exception.Message)"; return }
+    }
     Set-Content -Path $stampPath -Value (Get-Date -Format 'o') -Encoding utf8
     $waited = 0
     while ($waited -lt 30) {
