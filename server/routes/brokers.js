@@ -24,6 +24,10 @@ export default route('GET, DELETE, OPTIONS', async ({ req, res, uid }) => {
       ...b,
       available: owner,
       connected: !!link?.connected,
+      // Phân biệt "chưa nối bao giờ" với "đã nối nhưng phiên hết hạn". Giao diện cần biết để còn
+      // hiện lối quay lại: ẩn hẳn lựa chọn SHS khi phiên hết hạn thì người dùng chỉ thấy nó biến
+      // mất, không biết vì sao và không biết làm gì.
+      expired: !!link && !link.connected && !!link.expiresAt,
       accountNo: link?.accountNo || null,
       display: link?.display || null,
       expiresAt: link?.expiresAt || null,

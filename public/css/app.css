@@ -151,7 +151,10 @@ button{cursor:pointer}
 .stepper input:disabled{color:var(--faint)}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
 .chips button{height:24px;border:1px solid var(--line-soft);border-radius:var(--radius-s);background:none;color:var(--muted);font-size:11px}
-.chips button:hover{color:var(--text);border-color:var(--line)}
+.chips button:hover:not(:disabled){color:var(--text);border-color:var(--line)}
+.chips button:disabled{opacity:.35}
+/* Nút SHS khi phien da het han: van hien de con loi quay lai, nhung nhat di cho khac voi dang dung. */
+.acct-switch .tool.het-han{opacity:.55}
 .band{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font-size:11px;margin-top:5px}
 /* Sàn / TC / Trần là nút, không phải chữ để đọc: bấm một cái là đặt đúng giá đó. */
 .band button{height:24px;padding:0 4px;border:1px solid var(--line-soft);border-radius:var(--radius-s);background:none;font:inherit;font-weight:600;white-space:nowrap}

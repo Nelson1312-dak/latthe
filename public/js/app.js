@@ -83,7 +83,7 @@ function book(m){
 /* mode: 'that' = tài khoản DNSE thật, 'ao' = giao dịch thử bằng tiền ảo.
    Mọi chỗ hiển thị đọc chung ACC, nên đổi tài khoản chỉ là đổi NGUỒN đổ vào đây - không phải
    viết lại phiếu lệnh, sổ lệnh hay danh mục. Chỉ đặt/hủy lệnh mới phải rẽ nhánh. */
-const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, coShs:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
+const ACC = {user:null, cash:0, hold:{}, orders:[], mode:'ao', coThat:false, coShs:false, shsHetHan:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
 const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
@@ -264,14 +264,22 @@ function renderTicket(){
     b.setAttribute("aria-pressed",String(S.type==="LO"&&S.pxU===gia));
   }
   const mx=Math.max(maxQty(),0);
-  // Chưa đăng nhập thì "Tối đa 0" là con số vô nghĩa, dễ hiểu nhầm là hết sức mua.
-  $("max-note").textContent=ACC.user?`Tối đa ${fN(mx)}`:"";
+  // "Tối đa 0" không nói thêm được gì: chưa đăng nhập thì vô nghĩa, mà hết sức mua thì dòng lỗi
+  // bên dưới đã nói rõ hơn nhiều. Chỉ hiện khi nó thực sự là một con số dùng được.
+  $("max-note").textContent=ACC.user&&mx>0?`Tối đa ${fN(mx)}`:"";
   const u=ticketPxU(), val=u?P(u)*1000*S.qty:0;
   $("s-val").textContent=fVND(val); $("s-fee").textContent=fVND(val*FEE);
   $("s-tax-l").style.display=$("s-tax").style.display=S.side==="S"?"":"none"; $("s-tax").textContent=fVND(val*TAX);
   // Còn lại SAU lệnh này. Đây mới là con số chặn người ta đặt quá tay: nhìn sức mua hiện tại thì
   // vẫn phải tự trừ nhẩm, mà trừ nhẩm lúc thị trường đang chạy là lúc dễ sai nhất.
-  const nhanConLai=$("s-left-l"), oConLai=$("s-left"), hienConLai=ACC.user&&S.qty>0;
+  // Nhưng khi lệnh đã KHÔNG hợp lệ thì giấu đi: lúc đó màn hình đang nói cùng một chuyện ba lần
+  // - "Tối đa 0", "Sức mua còn lại -2.148.184 đ", và dòng lỗi đỏ. Giữ lại đúng dòng lỗi, vì nó
+  // là dòng duy nhất nói cho người ta biết phải làm gì.
+  const nhanConLai=$("s-left-l"), oConLai=$("s-left");
+  const hienConLai=ACC.user&&S.qty>0&&S.qty<=mx;
+  // Nút 25/50/75/Tối đa không làm được gì khi không còn sức mua: để sáng là mời người ta bấm vào
+  // một thứ không phản hồi.
+  document.querySelectorAll("[data-pct]").forEach(b=>{ b.disabled=!(mx>0); });
   nhanConLai.style.display=oConLai.style.display=hienConLai?"":"none";
   if(hienConLai){
     if(S.side==="B"){ const sau=ACC.cash-val-val*FEE;
@@ -442,6 +450,9 @@ async function doTaiKhoanThat(){
     // vi bam vao chi de nhan loi 401 thi khong giup duoc gi.
     const shs=(d.brokers||[]).find(b=>b.id==="shs");
     ACC.coShs=!!(shs&&shs.connected&&shs.can&&shs.can.trade);
+    // Phiên hết hạn thì VẪN hiện nút, chỉ là bấm vào nó nhắc kết nối lại. Ẩn hẳn đi thì người
+    // dùng thấy lựa chọn SHS tự dưng biến mất và không biết tìm lại ở đâu.
+    ACC.shsHetHan=!!(shs&&shs.expired&&shs.can&&shs.can.trade);
     if(ACC.mode==="shs"&&!ACC.coShs) ACC.mode=ACC.coThat?"that":"ao";
   }catch(e){ return; }
   if(ACC.coThat && !ACC.tuChon) ACC.mode="that";            // người dùng đã tự chọn thì tôn trọng
@@ -467,7 +478,12 @@ function renderAcctSwitch(){
   const box=$("acct-switch"); if(!box) return;
   box.hidden=!(ACC.user&&(ACC.coThat||ACC.coShs));
   // Nút SHS chỉ hiện khi đã kết nối được phiên SHS; chưa nối thì bấm vào chỉ nhận lỗi.
-  const bShs=box.querySelector('[data-acct="shs"]'); if(bShs) bShs.hidden=!ACC.coShs;
+  const bShs=box.querySelector('[data-acct="shs"]');
+  if(bShs){
+    bShs.hidden=!(ACC.coShs||ACC.shsHetHan);
+    bShs.classList.toggle("het-han",!ACC.coShs&&ACC.shsHetHan);
+    bShs.title=ACC.coShs?"":"Phiên SHS đã hết hạn — bấm để kết nối lại";
+  }
   const bDnse=box.querySelector('[data-acct="that"]'); if(bDnse) bDnse.hidden=!ACC.coThat;
   box.querySelectorAll("[data-acct]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.acct===ACC.mode)));
   const w=$("a-which"); if(!w) return;
@@ -630,6 +646,11 @@ document.addEventListener("click",e=>{
   if(t.dataset.style){ S.style=t.dataset.style; document.querySelectorAll("[data-style]").forEach(b=>b.setAttribute("aria-pressed",b===t)); return applyChartToggles(); }
   if(t.dataset.ind){ S.ind[t.dataset.ind]=!S.ind[t.dataset.ind]; t.setAttribute("aria-pressed",S.ind[t.dataset.ind]); applyChartToggles(); return legend(shown[shown.length-1]); }
   if(t.dataset.acct){
+    // Bấm SHS lúc phiên đã hết hạn: mở thẳng chỗ kết nối lại thay vì im lặng không làm gì.
+    if(t.dataset.acct==="shs"&&!ACC.coShs&&ACC.shsHetHan){
+      toast("Phiên SHS đã hết hạn. Kết nối lại để đặt lệnh.");
+      return document.querySelector("[data-open-brokers]")?.click();
+    }
     if(t.dataset.acct===ACC.mode) return;
     ACC.mode=t.dataset.acct; ACC.tuChon=true;
     // Xoá số của tài khoản cũ ngay, đừng để số dư tài khoản này nằm dưới nhãn tài khoản kia.
