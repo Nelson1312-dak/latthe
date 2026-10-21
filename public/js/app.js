@@ -86,7 +86,7 @@ function book(m){
 /* mode: 'that' = tài khoản DNSE thật, 'shs' = tài khoản SHS thật, null = chưa nối gì.
    Mọi chỗ hiển thị đọc chung ACC, nên đổi tài khoản chỉ là đổi NGUỒN đổ vào đây - không phải
    viết lại phiếu lệnh, sổ lệnh hay danh mục. Chỉ đặt/hủy lệnh mới phải rẽ nhánh. */
-const ACC = {user:null, cash:0, hold:{}, orders:[], mode:null, coThat:false, coShs:false, shsHetHan:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], otp:false, maxOrderVnd:0};
+const ACC = {user:null, cash:0, hold:{}, orders:[], mode:null, coThat:false, coShs:false, shsHetHan:false, daDo:false, tuChon:false, accountNo:null, dsTieuKhoan:[], tkTheoCheDo:{}, otp:false, maxOrderVnd:0};
 const FEE=.0015, TAX=.001;
 
 /* ---------------- Formatting ---------------- */
@@ -338,6 +338,7 @@ function applyReal(d){
   // DNSE chỉ trả về số tiểu khoản, không có mã ngắn hay loại nào khác - nên nhãn đúng bằng số.
   // Cố đặt tên "Tiểu khoản 1, 2" là tự bịa ra một thứ DNSE không hề có.
   ACC.dsTieuKhoan=(d.accounts||[]).filter(a=>a.id).map(a=>({id:a.id,nhan:a.id}));
+  nhoTieuKhoan("that");
   ACC.otp=!!d.trading?.active;
   ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
   ACC.cash=Number(d.balance?.stock?.availableCash ?? d.balance?.stock?.totalCash) || 0;
@@ -379,6 +380,7 @@ function applyShs(d){
     id:a.sub,
     nhan:(a.ma?`${a.ma} · `:"")+(a.margin?"Margin":"Thường")+` · ${a.sub}`,
   }));
+  nhoTieuKhoan("shs");
   ACC.otp=true;                                   // phien SHS da qua the ma tran moi ton tai
   ACC.maxOrderVnd=Number(d.maxOrderVnd)||0;
   // `/api/v1/equity/cash/balance` tra `depositAmount` (tien gui) va `indAblAmt` (kha dung).
@@ -469,11 +471,26 @@ async function doTaiKhoanThat(){
   if(!ACC.tuChon) ACC.mode=ACC.coThat?"that":ACC.coShs?"shs":null;
   renderAcctSwitch();
 }
+/* Nhớ danh sách tiểu khoản và tiểu khoản đang chọn của TỪNG công ty chứng khoán.
+   Trước đây đổi DNSE <-> SHS là xoá sạch rồi đợi API trả về mới dựng lại, nên ô chọn tiểu khoản
+   biến mất một hai giây rồi mới hiện - qua tunnel thì lâu hơn nữa. Giữa lúc đó cái ô vẫn còn
+   danh sách cũ trong DOM, nên nếu đang mở dropdown thì thấy tiểu khoản của BÊN KIA.
+   Nhớ lại thì đổi qua đổi lại là tức thì, và còn giữ đúng tiểu khoản đã chọn ở mỗi bên. */
+function nhoTieuKhoan(cheDo){
+  ACC.tkTheoCheDo[cheDo]={ds:ACC.dsTieuKhoan,chon:ACC.accountNo};
+}
+function layLaiTieuKhoan(cheDo){
+  const c=ACC.tkTheoCheDo[cheDo];
+  ACC.dsTieuKhoan=c?.ds||[];
+  ACC.accountNo=c?.chon||null;
+}
 function renderTieuKhoan(){
   const sel=$("acct-sub"); if(!sel) return;
   const hien=ACC.user&&(ACC.mode==="that"||ACC.mode==="shs")&&ACC.dsTieuKhoan.length>1;
   sel.hidden=!hien;
-  if(!hien) return;
+  // Dọn luôn các lựa chọn cũ khi ẩn: để nguyên thì dropdown đang mở vẫn hiện tiểu khoản của
+  // công ty chứng khoán trước đó.
+  if(!hien){ if(sel.innerHTML) sel.innerHTML=""; return; }
   const can=ACC.dsTieuKhoan.map(t=>`<option value="${t.id}"${t.id===ACC.accountNo?" selected":""}>${t.nhan}</option>`).join("");
   if(sel.innerHTML!==can) sel.innerHTML=can;
   sel.value=ACC.accountNo||"";
@@ -508,7 +525,9 @@ function renderAcctSwitch(){
     : !ACC.daDo ? "Đang kiểm tra kết nối công ty chứng khoán…"
     : "Chưa nối công ty chứng khoán nào";
 }
-function resetAccount(){ ACC.cash=0; ACC.hold={}; ACC.orders=[]; renderTicket(); renderPanel(); }
+// Đăng xuất là quên sạch, kể cả bộ nhớ tiểu khoản: người khác đăng nhập trên cùng máy không
+// được thấy tiểu khoản của người trước.
+function resetAccount(){ ACC.cash=0; ACC.hold={}; ACC.orders=[]; ACC.accountNo=null; ACC.dsTieuKhoan=[]; ACC.tkTheoCheDo={}; renderTieuKhoan(); renderTicket(); renderPanel(); }
 // Liên kết công ty chứng khoán vừa đổi (nối thêm, ngắt, hoặc xác thực OTP): dò lại ngay thay vì
 // để thanh chuyển tài khoản đứng ở trạng thái cũ tới lần tải trang sau.
 document.addEventListener("lb:brokers",async()=>{ if(!ACC.user) return; await doTaiKhoanThat(); refreshAccount(); });
@@ -658,11 +677,11 @@ document.addEventListener("click",e=>{
       return document.querySelector("[data-open-brokers]")?.click();
     }
     if(t.dataset.acct===ACC.mode) return;
+    nhoTieuKhoan(ACC.mode);                    // cất lại lựa chọn của bên đang rời đi
     ACC.mode=t.dataset.acct; ACC.tuChon=true;
     // Xoá số của tài khoản cũ ngay, đừng để số dư tài khoản này nằm dưới nhãn tài khoản kia.
-    // Tiểu khoản cũng phải xoá: số tiểu khoản DNSE đem sang SHS là vô nghĩa, và nếu giữ lại thì
-    // lần nạp đầu tiên sẽ hỏi SHS về một tiểu khoản không tồn tại.
-    ACC.cash=0; ACC.hold={}; ACC.orders=[]; ACC.accountNo=null; ACC.dsTieuKhoan=[];
+    ACC.cash=0; ACC.hold={}; ACC.orders=[];
+    layLaiTieuKhoan(ACC.mode);                 // hiện ngay danh sách của bên vừa chuyển sang
     renderAcctSwitch(); renderTicket(); renderPanel();
     return refreshAccount();
   }
@@ -748,6 +767,7 @@ function openView(v, conLai=20){
 document.addEventListener("change", e=>{
   if(e.target.id==="acct-sub"){
     ACC.accountNo=e.target.value;
+    nhoTieuKhoan(ACC.mode);
     ACC.cash=0; ACC.hold={}; ACC.orders=[];   // xoá số của tiểu khoản cũ ngay
     renderTicket(); renderPanel();
     refreshAccount();
