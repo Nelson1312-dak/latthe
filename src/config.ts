@@ -28,6 +28,11 @@ export const GATHER_SECONDS = 2.0;
 export const BASE_STORAGE = 200;
 export const STORAGE_PER_GRANARY = 220;
 export const HOUSING_PER_HOUSE = 2;
+/**
+ * Thu phu tu no chua duoc may nguoi. Khong co dong nay thi vua mo game da thay 1/0 - mot dan
+ * dang lam viec trong khi cho o bang khong - nhin nhu loi chu khong nhu luat choi.
+ */
+export const HOUSING_FROM_TOWNHALL = 2;
 
 /** Xe thồ: sức mang gấp năm thợ, và cứ chừng này giây lại rời trạm một chuyến. */
 export const CART_CAPACITY_MULT = 5;

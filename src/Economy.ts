@@ -10,7 +10,7 @@
 import {
   AFK_CAP_SECONDS, AFK_EFFICIENCY, AFK_MIN_SECONDS, AUTOSAVE_INTERVAL_MS, BASE_CAPACITY,
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
-  HIRE_COST, HIRE_GROWTH, HOUSING_PER_HOUSE, PLOTS, SAVE_KEY, SPEED_PER_LEVEL, STARTING,
+  HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE, PLOTS, SAVE_KEY, SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH, biomeAt,
 } from './config';
 import type {
@@ -43,7 +43,9 @@ function freshState(): GameState {
     totalGold: 0,
     speedLevel: 1,
     capacityLevel: 1,
-    allocation: { food: 0, wood: 1, gold: 0, stone: 0, relics: 0, isAuto: true },
+    demand: null,
+    focusNodeId: null,
+    speedMult: 1,
   };
 }
 
@@ -63,14 +65,34 @@ export class Economy {
 
   // ------------------------------------------------------------- lưu và đọc
 
+  /**
+   * Đọc bản lưu, trộn SÂU ở phần kho.
+   *
+   * Trộn nông (`{...fresh, ...parsed}`) từng gây một lỗi khó thấy: bản lưu của phiên bản cũ
+   * chỉ có gỗ/đá/pha lê, nên nó thay nguyên cục `inv` và `food` với `relics` thành undefined.
+   * Từ đó mọi phép cộng ra NaN, và NaN lan sang cả chỗ hiển thị vàng — người chơi thấy
+   * "undefined" mà không biết nó đến từ đâu. Giờ từng loại được điền khuyết riêng.
+   */
   static load(): Economy {
     let state = freshState();
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<GameState>;
-        if (parsed && parsed.inv && Array.isArray(parsed.buildings)) {
-          state = { ...freshState(), ...parsed } as GameState;
+        if (parsed && Array.isArray(parsed.buildings)) {
+          const base = freshState();
+          state = { ...base, ...parsed } as GameState;
+          state.inv = { ...base.inv };
+          for (const k of RESOURCE_KINDS) {
+            const v = Number(parsed.inv?.[k]);
+            state.inv[k] = Number.isFinite(v) ? v : 0;
+          }
+          // Mấy trường thêm về sau có thể thiếu hẳn trong bản lưu cũ.
+          state.speedMult = parsed.speedMult === 2 ? 2 : 1;
+          state.demand = parsed.demand ?? null;
+          state.focusNodeId = parsed.focusNodeId ?? null;
+          state.storageLimit = Number(parsed.storageLimit) || base.storageLimit;
+          state.totalGold = Number(parsed.totalGold) || 0;
         }
       }
     } catch {
@@ -162,7 +184,8 @@ export class Economy {
   // ------------------------------------------------------- số liệu suy ra
 
   housing(): number {
-    return this.sumLevels('house') * HOUSING_PER_HOUSE;
+    return this.sumLevels('townhall') * HOUSING_FROM_TOWNHALL
+      + this.sumLevels('house') * HOUSING_PER_HOUSE;
   }
 
   villagers(): Unit[] {
@@ -239,6 +262,37 @@ export class Economy {
 
   // ----------------------------------------------------------------- hành động
 
+  // --------------------------------------------------- nhu cầu xây dựng
+
+  /**
+   * Người chơi bấm xây hay nâng cấp mà chưa đủ vật liệu: thay vì chỉ báo nút xám, ghi lại
+   * thành một ĐƠN HÀNG rồi cả làng quay sang gom đúng thứ còn thiếu. Đủ thì tự xoá.
+   */
+  setDemand(cost: Cost, label: string): void {
+    this.state.demand = { cost, label };
+    this.save();
+    this.onChange?.();
+  }
+
+  clearDemand(): void {
+    if (!this.state.demand) return;
+    this.state.demand = null;
+    this.save();
+    this.onChange?.();
+  }
+
+  /** Những loại còn thiếu cho đơn hàng đang mở. Rỗng nghĩa là gom đủ rồi. */
+  demandKinds(): ResourceKind[] {
+    const d = this.state.demand;
+    if (!d) return [];
+    return this.missing(d.cost).map((m) => m.kind);
+  }
+
+  /** Gọi mỗi khung: đơn hàng đã đủ thì thôi giữ, để dân quay lại tự cân. */
+  checkDemand(): void {
+    if (this.state.demand && this.demandKinds().length === 0) this.clearDemand();
+  }
+
   build(plotId: string, type: BuildingType): boolean {
     const plot = PLOTS.find((p) => p.id === plotId);
     if (!plot || this.buildingAt(plotId)) return false;
@@ -252,6 +306,7 @@ export class Economy {
       biome: biomeAt(plot.pos[0], plot.pos[1]),
       stock: {}, cartTimer: 0,
     });
+    this.state.demand = null;
     this.after();
     return true;
   }
@@ -260,6 +315,7 @@ export class Economy {
     if (b.level >= BUILDINGS[b.type].maxLevel) return false;
     if (!this.pay(this.costFor(b.type, b.level))) return false;
     b.level += 1;
+    this.state.demand = null;
     this.after();
     return true;
   }
@@ -296,6 +352,7 @@ export class Economy {
   // -------------------------------------------------------------- mỗi khung
 
   tick(dt: number): void {
+    this.checkDemand();
     const k = Math.min(1, dt / RATE_TAU);
     for (const kind of RESOURCE_KINDS) {
       this.rates[kind] += (this.gained[kind] / Math.max(dt, 1e-6) - this.rates[kind]) * k;

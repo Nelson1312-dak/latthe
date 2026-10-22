@@ -8,7 +8,6 @@
 <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-<!-- Lớp WebGL. Mọi thứ còn lại là DOM nằm đè lên trên, nên HUD luôn sắc nét. -->
 <canvas id="scene"></canvas>
 
 <!-- ------------------------------------------------------------------ thanh trên -->
@@ -16,7 +15,6 @@
   <div class="res" id="resbar"></div>
   <div class="spacer"></div>
   <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
-  <div class="afk" id="afk" title="Trần tích luỹ khi bạn rời đi">⏳ <span id="afkcap">2 giờ</span></div>
   <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm">🔊</button>
   <button class="icon" id="pause" title="Tạm dừng (Esc)" aria-label="Tạm dừng">⏸</button>
 </header>
@@ -27,11 +25,15 @@
   <span class="maphint">Kéo chuột · WASD · lăn để thu phóng</span>
 </aside>
 
-<!-- ------------------------------------------------------------------ thanh dưới -->
-<footer class="bar bar-bottom">
-  <section class="panel crew" id="crew"></section>
-  <section class="panel" id="panel"></section>
-</footer>
+<!-- ------------------------------------- thẻ công trình, trượt lên trên dock -->
+<section class="inspector" id="inspector" hidden></section>
+
+<!-- ------------------------------------------------------------------ dock nổi -->
+<nav class="dock" id="dock">
+  <div class="crewpill" id="crewpill"></div>
+  <div class="tiles" id="tiles"></div>
+  <button class="tile speed" id="speed" title="Tốc độ game">1×</button>
+</nav>
 
 <!-- --------------------------------------------------------- bảng quay lại -->
 <div class="veil" id="welcome" hidden>

@@ -124,8 +124,16 @@ export interface GameState {
   totalGold: number;
   speedLevel: number;
   capacityLevel: number;
-  /** Hạn ngạch thợ theo loại tài nguyên; `isAuto` bật thì bỏ qua và tự dàn theo kho vơi nhất. */
-  allocation: Record<ResourceKind, number> & { isAuto: boolean };
+  /**
+   * Đơn hàng xây dựng đang mở. Khi người chơi bấm xây hoặc nâng cấp mà chưa đủ vật liệu, cả
+   * làng quay sang gom đúng những thứ còn thiếu cho tới khi đủ. Đây là thứ thay cho hạn ngạch
+   * tay: người chơi nói MUỐN GÌ, không phải điều ai đi đâu.
+   */
+  demand: { cost: Cost; label: string } | null;
+  /** Mỏ đang được ghim. 70% nhân lực dồn về đó. */
+  focusNodeId: string | null;
+  /** Hệ số tốc độ game: 1 hoặc 2. */
+  speedMult: number;
 }
 
 /** Kết quả tính lúc quay lại sau khi vắng mặt. */

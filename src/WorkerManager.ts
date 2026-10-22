@@ -275,51 +275,55 @@ export class WorkerManager {
       }
     }
 
-    const kind = this.pickKind();
+    const kind = this.pickKind(u);
     if (!kind) return;
-    const node = this.nearestNode(u.position, kind);
+    const pinned = this.economy.state.focusNodeId
+      ? this.map.nodeById(this.economy.state.focusNodeId) : undefined;
+    const node = (pinned && pinned.kind === kind
+      && this.fog.isRevealed(pinned.position[0], pinned.position[2]))
+      ? pinned : this.nearestNode(u.position, kind);
     if (!node) return;
     u.targetId = node.id;
     u.targetPos = node.position;
     u.state = 'moving';
   }
 
-  /** Tự cân: kho nào vơi nhất. Thủ công: hạn ngạch nào còn thiếu người. */
-  private pickKind(): ResourceKind | null {
-    const alloc = this.economy.state.allocation;
+  /**
+   * Dân tự nghĩ, theo đúng ba mức ưu tiên.
+   *
+   * 1. ĐƠN HÀNG XÂY DỰNG. Người chơi bấm xây mà thiếu vật liệu thì cả làng quay sang gom đúng
+   *    thứ còn thiếu. Đây là chỗ thay cho mấy nút +/- cũ: người chơi nói muốn GÌ, không phải
+   *    điều ai đi ĐÂU.
+   * 2. MỎ ĐƯỢC GHIM. Bảy phần mười nhân lực dồn về đó; phần còn lại vẫn tự cân, nếu không
+   *    thì ghim một mỏ là mọi kho khác cạn dần mà người chơi không hiểu vì sao.
+   * 3. TỰ CÂN. Kho nào vơi nhất theo tỉ lệ thì đi lấy loại đó. Kho đầy thì bỏ qua hẳn — đào
+   *    thêm vào một kho đầy là ném đi công sức, vì phần thừa không vào được.
+   */
+  private pickKind(u: Unit): ResourceKind | null {
     const open = RESOURCE_KINDS.filter((k) =>
       !this.economy.isFull(k) && this.map.nodes.some((n) =>
         n.kind === k && this.fog.isRevealed(n.position[0], n.position[2])));
     if (open.length === 0) return null;
 
-    if (alloc.isAuto) {
-      return open.reduce((min, k) => this.economy.fillRatio(k) < this.economy.fillRatio(min) ? k : min);
+    const need = this.economy.demandKinds().filter((k) => open.includes(k));
+    if (need.length > 0) {
+      // Chia đều giữa những thứ còn thiếu, theo thứ tự người, nên không ai giẫm chân ai.
+      const i = Math.max(0, this.economy.villagers().indexOf(u));
+      return need[i % need.length];
     }
-    const counts: Record<string, number> = {};
-    for (const v of this.economy.villagers()) {
-      const n = v.targetId ? this.map.nodeById(v.targetId) : undefined;
-      if (n) counts[n.kind] = (counts[n.kind] ?? 0) + 1;
+
+    const pinned = this.economy.state.focusNodeId
+      ? this.map.nodeById(this.economy.state.focusNodeId) : undefined;
+    if (pinned && open.includes(pinned.kind)) {
+      const list = this.economy.villagers();
+      const i = Math.max(0, list.indexOf(u));
+      if (i < Math.ceil(list.length * 0.7)) return pinned.kind;
     }
-    let best: ResourceKind | null = null;
-    let deficit = 0;
-    for (const k of open) {
-      const d = (alloc[k] ?? 0) - (counts[k] ?? 0);
-      if (d > deficit) { deficit = d; best = k; }
-    }
-    return best ?? open[0];
+
+    return open.reduce((min, k) =>
+      this.economy.fillRatio(k) < this.economy.fillRatio(min) ? k : min);
   }
 
-  /**
-   * Chon mo theo TRON VONG, khong theo khoang cach toi nguoi.
-   *
-   * Lay mo gan nguoi nhat nghe thi hop ly nhung do ra la sai: tho sinh ra o thu phu, luon
-   * thay may mo quanh do la gan nhat, va cu quanh quan o giua mai - tram trung chuyen dung
-   * khong mot ngay nao, vi mo khong bao gio can kiet de buoc ho di xa.
-   *
-   * Cham diem bang quang duong ca vong - toi mo, roi tu mo ve diem giao gan nhat - thi mot mo
-   * xa ma canh tram se THANG mot mo gan ma phai cong bo ve tan thu phu. Dung cai ma tram cai
-   * thien that su, va tu nhien sinh ra chuyen tho toa ra bon vung.
-   */
   private nearestNode(from: Vec3, kind: ResourceKind) {
     let best = null;
     let bestScore = Infinity;

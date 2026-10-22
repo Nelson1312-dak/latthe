@@ -62,6 +62,10 @@ export class Game {
 
   onSelect: ((plotId: string | null) => void) | null = null;
   onReveal: ((chunkId: string) => void) | null = null;
+  onFocusNode: ((nodeId: string | null) => void) | null = null;
+
+  private readonly ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  private readonly hitPoint = new THREE.Vector3();
 
   constructor(canvas: HTMLCanvasElement, economy: Economy) {
     this.economy = economy;
@@ -242,10 +246,47 @@ export class Game {
     this.dragging = false;
     // Đã kéo thì đừng coi là bấm chọn — ngưỡng nhỏ để bấm nhanh vẫn ăn.
     if (this.dragged > 6) return;
+
     const hit = this.pick(e);
-    this.selectedId = hit ? (hit.userData.plotId as string) : null;
-    this.onSelect?.(this.selectedId);
+    if (hit) {
+      this.selectedId = hit.userData.plotId as string;
+      this.onSelect?.(this.selectedId);
+      return;
+    }
+
+    // Không trúng nền đất nào: thử xem có bấm vào một cụm tài nguyên không.
+    //
+    // Bắt tia vào MẶT ĐẤT rồi tìm mỏ gần điểm đó, thay vì dựng 67 khối vô hình chỉ để bắt
+    // tia. Cây cối và đá đều nằm trong InstancedMesh, mà bắt tia vào từng thực thể của
+    // InstancedMesh thì vừa chậm vừa trả về chỉ số chứ không phải mỏ.
+    const node = this.nodeUnder(e);
+    if (node) {
+      const cur = this.economy.state.focusNodeId;
+      this.economy.state.focusNodeId = cur === node.id ? null : node.id;
+      this.economy.save();
+      this.onFocusNode?.(this.economy.state.focusNodeId);
+      return;
+    }
+    this.selectedId = null;
+    this.onSelect?.(null);
   };
+
+  /** Mỏ nằm dưới con trỏ, trong bán kính chấp nhận được. */
+  private nodeUnder(e: PointerEvent): { id: string } | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    if (!this.raycaster.ray.intersectPlane(this.ground, this.hitPoint)) return null;
+    let best = null;
+    let bestDist = 3.4;
+    for (const n of this.map.nodes) {
+      if (!this.fog.isRevealed(n.position[0], n.position[2])) continue;
+      const d = Math.hypot(n.position[0] - this.hitPoint.x, n.position[2] - this.hitPoint.z);
+      if (d < bestDist) { bestDist = d; best = n; }
+    }
+    return best;
+  }
 
   private pick(e: PointerEvent): THREE.Object3D | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
@@ -278,7 +319,9 @@ export class Game {
     const w = window.innerWidth;
     const h = window.innerHeight;
     const topPx = document.querySelector('.bar-top')?.getBoundingClientRect().height ?? 0;
-    const botPx = document.querySelector('.bar-bottom')?.getBoundingClientRect().height ?? 0;
+    const dockPx = document.querySelector('.dock')?.getBoundingClientRect().height ?? 0;
+    const inspPx = document.querySelector('.inspector:not([hidden])')?.getBoundingClientRect().height ?? 0;
+    const botPx = dockPx + inspPx + 24;
     const freeH = Math.max(h * 0.34, h - topPx - botPx);
 
     const aspect = w / h;
@@ -297,7 +340,7 @@ export class Game {
   private watchHud(): void {
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(() => this.resize());
-    for (const sel of ['.bar-top', '.bar-bottom']) {
+    for (const sel of ['.bar-top', '.dock', '.inspector']) {
       const node = document.querySelector(sel);
       if (node) ro.observe(node);
     }
@@ -329,11 +372,14 @@ export class Game {
 
     this.moveCamera(dt);
     if (!this.paused) {
-      this.elapsed += dt;
-      this.workers.update(dt);
-      this.fog.update(dt, this.economy.state.units);
-      this.economy.tick(dt);
-      this.map.update(dt, this.target);
+      // Nut 1x/2x chi nhan cho MO PHONG, khong nhan cho camera - keo tha ma nhanh gap doi
+      // thi tay khong theo kip.
+      const sim = dt * (this.economy.state.speedMult === 2 ? 2 : 1);
+      this.elapsed += sim;
+      this.workers.update(sim);
+      this.fog.update(sim, this.economy.state.units);
+      this.economy.tick(sim);
+      this.map.update(sim, this.target);
       const water = this.map.group.getObjectByName('water');
       if (water) water.position.y = -8 + Math.sin(this.elapsed * 0.9) * 0.18;
     }

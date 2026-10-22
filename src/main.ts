@@ -9,14 +9,14 @@
  */
 import { Economy } from './Economy';
 import { Game } from './Game';
-import { UI } from './UI';
+import { UIManager } from './UIManager';
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('Thiếu <canvas id="scene"> trong index.html');
 
 const economy = Economy.load();
 const game = new Game(canvas, economy);
-const ui = new UI(economy, game);
+const ui = new UIManager(economy, game);
 
 /**
  * Bù giờ bằng cách tua nhanh chính ván game. Tua cả MÀN MÂY nữa, nên người chơi đi ăn trưa
