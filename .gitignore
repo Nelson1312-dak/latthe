@@ -13,3 +13,6 @@ infra/*.containers.txt
 
 # File nhip tim cua watchdog: ghi moi phut, khong phai ma nguon
 watchdog-proxy.beat
+
+# San pham dung, Vercel tu build
+dist/
