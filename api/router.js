@@ -33,6 +33,7 @@ import r_dnse_otp from '../server/routes/dnse/otp.js';
 import r_health from '../server/routes/health.js';
 import r_history from '../server/routes/history.js';
 import r_market from '../server/routes/market.js';
+import r_tape from '../server/routes/tape.js';
 import r_me from '../server/routes/me.js';
 import r_portal_accept from '../server/routes/portal/accept.js';
 import r_portal_advice_seen from '../server/routes/portal/advice-seen.js';
@@ -75,6 +76,7 @@ const ROUTES = {
   'health': r_health,
   'history': r_history,
   'market': r_market,
+  'tape': r_tape,
   'me': r_me,
   'portal/accept': r_portal_accept,
   'portal/advice-seen': r_portal_advice_seen,

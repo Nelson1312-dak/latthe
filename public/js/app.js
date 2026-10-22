@@ -181,6 +181,31 @@ function renderHead(){
   $("h-hl").innerHTML=`<span class="${cls(m,m.hiU)}">${fP(m.hiU)}</span> / <span class="${cls(m,m.loU)}">${fP(m.loU)}</span>`;
   $("h-vol").textContent=fN(m.vol);
 }
+/* Sổ khớp lệnh THẬT, lấy từ trade.tape mà worker đã ghi tick-by-tick. Giữ lại bảng tự dựng ở
+   dưới làm phương án lui: khi route hỏng hoặc mã chưa có tick nào, vẫn còn thứ để hiện. */
+const TAPE={sym:null,rows:null,dangTai:false,luc:0};
+async function napSoKhop(sym,ep=false){
+  if(TAPE.dangTai) return;
+  if(!ep && TAPE.sym===sym && Date.now()-TAPE.luc<2500) return;
+  TAPE.dangTai=true;
+  try{
+    const r=await fetch("/api/tape?symbol="+encodeURIComponent(sym));
+    const d=await r.json();
+    if(d.symbol!==S.sym) return;                       // đã chuyển mã trong lúc chờ
+    TAPE.sym=sym; TAPE.rows=d.trades?.length?d.trades:null; TAPE.luc=Date.now();
+    veSoKhop();
+  }catch(e){ /* giữ bảng cũ */ } finally{ TAPE.dangTai=false; }
+}
+function veSoKhop(){
+  const m=M[S.sym]; if(!m) return;
+  const el=$("tape"); if(!el) return;
+  if(TAPE.sym===S.sym&&TAPE.rows){
+    el.innerHTML=TAPE.rows.map(t=>`<div class="tape-row"><span>${t.t}</span><span class="${cls(m,U(t.p))}">${t.p.toFixed(2)}</span><span class="${t.side==="B"?"up":"down"}">${fN(t.q)}</span></div>`).join("");
+    return;
+  }
+  el.innerHTML=m.tape.map(t=>`<div class="tape-row"><span>${t.t}</span><span class="${cls(m,t.u)}">${fP(t.u)}</span><span class="${t.side==="M"?"up":"down"}">${fN(t.q)}</span></div>`).join("");
+}
+
 function renderBook(){
   const m=M[S.sym], {asks,bids,real}=book(m);
   const mx=Math.max(1,...asks.map(a=>a.q||0),...bids.map(b=>b.q||0));
@@ -190,7 +215,7 @@ function renderBook(){
   $("ob").innerHTML=asks.slice().reverse().map(a=>row(a,"ask")).join("")+
     `<div class="ob-mid"><span class="${cls(m,m.lastU)}">${fP(m.lastU)}</span><small>${(ch>=0?"+":"")+ch.toFixed(2)}%</small></div>`+
     bids.map(b=>row(b,"bid")).join("");
-  $("tape").innerHTML=m.tape.map(t=>`<div class="tape-row"><span>${t.t}</span><span class="${cls(m,t.u)}">${fP(t.u)}</span><span class="${t.side==="M"?"up":"down"}">${fN(t.q)}</span></div>`).join("");
+  veSoKhop(); napSoKhop(S.sym);
   // Canh giá khớp vào GIỮA khung. Với HNX/UPCoM giờ có 21 dòng, nếu không canh thì mở ra chỉ
   // thấy toàn bên bán còn bên mua nằm dưới tầm nhìn - trong khi chỗ người ta cần nhìn nhất là
   // ranh giới mua/bán. Chỉ canh khi người dùng KHÔNG đang tự cuộn, để không giật tay họ.
@@ -306,7 +331,12 @@ function renderTicket(){
       oConLai.className=sau<0?"down":"";
     }
   }
-  $("a-pp").textContent=ACC.user?fVND(ACC.cash):"Đăng nhập để xem"; $("a-sell").textContent=ACC.user?fN(Math.max(banDuoc(S.sym),0))+" CP":"–";
+  // Sức mua (tiền) + mua tối đa và bán tối đa (cổ phiếu) đứng cạnh nhau: nhìn một chỗ là biết
+  // mình làm được gì ở CẢ HAI chiều mà không phải bấm qua lại giữa Mua và Bán để xem.
+  $("a-pp").textContent=ACC.user?fVND(ACC.cash):"Đăng nhập để xem";
+  const muaToiDa=(()=>{ const pu=P(ticketPxU()||m.lastU)*1000*(1+FEE); return pu>0?Math.floor(ACC.cash/pu):0; })();
+  $("a-maxbuy").textContent=ACC.user?fN(Math.max(muaToiDa,0))+" CP":"–";
+  $("a-sell").textContent=ACC.user?fN(Math.max(banDuoc(S.sym),0))+" CP":"–";
   const {errs,warns}=validate();
   $("msgs").innerHTML=errs.filter(Boolean).map(e=>`<div class="msg err">${e}</div>`).join("")+warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
   const cta=$("cta"); cta.className="cta "+(S.side==="B"?"buy":"sell");
@@ -673,7 +703,7 @@ function renderPanel(){
 function selectSym(s){
   if(!M[s]) return; S.sym=s; S.pxU=M[s].lastU;
   document.querySelectorAll(".wl-row").forEach(r=>r.setAttribute("aria-pressed",r.dataset.sym===s));
-  flip(false); renderHead(); renderBook(); renderTicket(); drawChart(true);
+  TAPE.rows=null; flip(false); renderHead(); renderBook(); renderTicket(); drawChart(true); napSoKhop(s,true);
   if(S.tab==="brief") document.dispatchEvent(new CustomEvent("lb:brief",{detail:S.sym}));
 }
 document.addEventListener("click",e=>{
