@@ -71,6 +71,11 @@ export default async function handler(req, res) {
     brokerOwner: has('BROKER_OWNER_USERNAME'),
     dnse: has('DNSE_API_KEY', 'DNSE_API_SECRET'),
     realTrading: process.env.DNSE_REAL_TRADING === '1',
+    // Cua SHS bao rieng. Ngay 22/10 mot lenh ban that khong de lai dong nao trong dnse_audit
+    // va khong co cach nao doc duoc co nay tu ben ngoai: `vercel env pull` tra ve rong cho
+    // MOI bien ma hoa, nen nhin vao do ma ket luan la ket luan nham. Bat/tat la thong tin
+    // khong nhay cam - co DNSE ngay tren day van bao the - nen cho no ra health luon.
+    shsRealTrading: process.env.SHS_REAL_TRADING === '1',
   };
   let db = false, dbMs = null, workers = null;
   if (config.database) {
