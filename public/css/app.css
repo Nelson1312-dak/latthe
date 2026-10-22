@@ -46,8 +46,12 @@ button{cursor:pointer}
 .search svg{position:absolute;left:9px;top:8px;opacity:.55}
 .indices{display:flex;gap:18px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1}
 .indices::-webkit-scrollbar{display:none}
-.idx{white-space:nowrap;display:flex;gap:6px;align-items:baseline}
-.idx b{font-weight:600;color:var(--muted)}
+/* Dai chi so la du lieu that chay lien tuc, nhung dang duoc bay ra nhu mot dong chu thuong.
+   Cho ten chi so lui lai (nho, viet hoa, mo) va cho SO noi len, canh theo cot so tabular de khi
+   gia nhay thi con so khong giat ngang. */
+.idx{white-space:nowrap;display:flex;gap:7px;align-items:baseline}
+.idx b{font-weight:600;color:var(--faint);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.idx span{font-variant-numeric:tabular-nums;font-weight:600}
 .nav{display:flex;gap:2px}
 .nav a{padding:6px 10px;border-radius:var(--radius-s);color:var(--muted);text-decoration:none;font-weight:500;white-space:nowrap}
 .nav a[aria-current="page"]{color:var(--text);box-shadow:inset 0 -2px 0 var(--brand)}
@@ -243,8 +247,23 @@ th.r,td.r{text-align:right}
 /* ---------- Dùng chung: nút, thẻ, ô nhập ---------- */
 [hidden]{display:none!important}
 
-.btn-primary{height:34px;padding:0 14px;border:0;border-radius:var(--radius-s);background:var(--brand);color:#fff;font-weight:600;white-space:nowrap}
-.btn-primary:hover{background:#c91631}
+/* KY LUAT MAU. Truoc day mau do lam BA viec cung luc tren cung mot man hinh:
+     1. nhan dien thuong hieu (logo)
+     2. nut hanh dong chinh (Dang nhap, Xem tai khoan)
+     3. GIA GIAM - y nghia quan trong nhat cua mau do tren mot ban giao dich
+   Ba viec dam vao nhau. Te nhat la trong hop Tai khoan chung khoan: "Xem tai khoan" to mau do
+   nam canh "Ngat ket noi" mau xam - mau do dang chi vao dung cai nut KHONG pha gi, con cai nut
+   that su pha thi nhat nhoa. Nguoi dung doc mau truoc khi doc chu.
+   Chia lai: do = GIAM hoac PHA HUY. Xanh la = TANG hoac MUA. Hanh dong chinh = tuong phan cao,
+   khong mau - de no noi bat ma khong noi doi ve y nghia.
+   Thuong hieu van giu mau do o logo va cac vach 2px bao "dang chon" - nhung cho do nho, khong
+   ai doc nham thanh gia giam. */
+.btn-primary{height:34px;padding:0 14px;border:0;border-radius:var(--radius-s);background:var(--text);color:var(--black);font-weight:700;white-space:nowrap}
+.btn-primary:hover{background:#fff}
+/* Nut thuc su pha huy moi duoc mang mau do, va la vien chu khong phai nen day - du de nhan ra,
+   khong du de rinh rang hon hanh dong chinh. */
+.btn-pha,[data-disconnect]{border-color:var(--down)!important;color:var(--down)!important}
+.btn-pha:hover,[data-disconnect]:hover{background:rgba(246,70,93,.1)!important}
 
 .badge{display:inline-block;padding:0 6px;border-radius:3px;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px}
 .badge.admin{background:var(--brand);color:#fff}
@@ -384,7 +403,7 @@ nên `.card{flex:1}` co về 0 và cả phiếu lệnh BIẾN MẤT khỏi màn 
 .broker-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .broker-actions button{height:30px;padding:0 11px;border:1px solid var(--line);border-radius:var(--radius-s);background:none;color:var(--text);font-weight:500;font-size:12px}
 .broker-actions button:hover{border-color:var(--muted)}
-.broker-actions .primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.broker-actions .primary{background:var(--text);border-color:var(--text);color:var(--black);font-weight:700}
 .broker-actions .primary:hover{background:#c91631}
 .broker form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft)}
 .broker form label{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:12px}
