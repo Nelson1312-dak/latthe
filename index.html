@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Trại Nhỏ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🏕️</text></svg>" />
+<link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+<!-- Lớp WebGL. Mọi thứ còn lại là DOM nằm đè lên trên, nên HUD luôn sắc nét. -->
+<canvas id="scene"></canvas>
+
+<!-- ------------------------------------------------------------------ thanh trên -->
+<header class="bar bar-top">
+  <!-- Thanh tài nguyên. UI.ts dựng từng ô, vì số loại còn đổi theo cấp người chơi. -->
+  <div class="res" id="resbar"></div>
+
+  <div class="spacer"></div>
+
+  <div class="stat" title="Cấp căn cứ">
+    <small>Cấp</small><strong id="level">1</strong>
+  </div>
+  <button class="icon wide" id="expand" title="Mở rộng lãnh thổ">🗺️ <span id="expand-label">Mở rộng đất</span></button>
+  <div class="afk" id="afk" title="Trần tích luỹ khi bạn rời đi">⏳ <span id="afkcap">2 giờ</span></div>
+  <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm">🔊</button>
+  <button class="icon" id="pause" title="Tạm dừng (Esc)" aria-label="Tạm dừng">⏸</button>
+</header>
+
+<!-- ------------------------------------------------------------------ thanh dưới -->
+<footer class="bar bar-bottom">
+  <!-- Đội thợ: ai đào gì. Luôn hiện, vì đây là thứ người chơi chỉnh nhiều nhất. -->
+  <section class="panel crew" id="crew"></section>
+  <!-- Ô đang chọn. Trống thì hiện gợi ý việc tiếp theo. -->
+  <section class="panel" id="panel"></section>
+</footer>
+
+<!-- --------------------------------------------------------- bảng chào mừng quay lại -->
+<div class="veil" id="welcome" hidden>
+  <div class="card">
+    <h2>Trong lúc bạn đi vắng</h2>
+    <p class="away" id="away-time"></p>
+    <p class="earned"><span id="away-coins">0</span> xu</p>
+    <p class="capped" id="away-capped" hidden></p>
+    <button class="primary" id="away-ok">Nhận</button>
+  </div>
+</div>
+
+<!-- ------------------------------------------------------------------ tạm dừng -->
+<div class="veil veil-soft" id="paused" hidden>
+  <div class="card">
+    <h2>Tạm dừng</h2>
+    <p class="away">Không ai làm việc cả. Nhấn Esc hoặc bấm nút dưới để chạy tiếp.</p>
+    <button class="primary" id="resume">Chạy tiếp</button>
+  </div>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

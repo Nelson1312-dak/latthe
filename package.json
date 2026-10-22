@@ -1,13 +1,19 @@
 {
   "name": "latbai",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
-  "engines": {
-    "node": ">=22"
-  },
   "scripts": {
-    "test": "node --test \"test/*.test.mjs\"",
-    "worker": "node --env-file=.env.local worker/broker-stream.mjs",
-    "worker:market": "node --env-file=.env.local worker/market-stream.mjs"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.169.0",
+    "typescript": "5.6.3",
+    "vite": "5.4.10"
   }
 }
