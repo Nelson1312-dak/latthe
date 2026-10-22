@@ -20,10 +20,6 @@
       <a href="#khach-hang" data-view="desk" id="nav-desk" hidden>Khách hàng</a>
       <a href="#tai-khoan" data-view="portal" id="nav-portal" hidden>Tài khoản của tôi<span class="nbadge" id="portal-badge"></span></a>
     </nav>
-    <div class="search">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="search" placeholder="Tìm mã, ví dụ HPG" aria-label="Tìm mã chứng khoán" autocomplete="off">
-    </div>
     <div class="indices" id="indices"></div>
     <div class="acct">
       <button class="btn-primary" id="btn-login" hidden>Đăng nhập</button>
@@ -94,6 +90,10 @@
     <section class="ticket" aria-label="Đặt lệnh">
       <div class="card" id="card">
         <div class="face front">
+          <div class="search">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="search" placeholder="Tìm mã, ví dụ HPG" aria-label="Tìm mã chứng khoán" autocomplete="off">
+          </div>
           <div class="acct-switch" id="acct-switch" role="group" aria-label="Tài khoản đặt lệnh" hidden>
             <button class="tool" data-acct="that" aria-pressed="true">DNSE</button>
             <button class="tool" data-acct="shs" aria-pressed="false" hidden>SHS</button>
@@ -122,7 +122,7 @@
             </div>
             <div class="field">
               <label for="f-qty"><span>Khối lượng</span><span id="max-note"></span></label>
-              <div class="stepper"><button type="button" data-step="qty" data-d="-1" aria-label="Giảm khối lượng">−</button><input id="f-qty" inputmode="numeric" value="100"><button type="button" data-step="qty" data-d="1" aria-label="Tăng khối lượng">+</button></div>
+              <div class="stepper"><button type="button" data-step="qty" data-d="-1" aria-label="Giảm khối lượng">−</button><input id="f-qty" inputmode="numeric" placeholder="Nhập khối lượng"><button type="button" data-step="qty" data-d="1" aria-label="Tăng khối lượng">+</button></div>
               <div class="chips"><button data-pct="25">25%</button><button data-pct="50">50%</button><button data-pct="75">75%</button><button data-pct="100">Tối đa</button></div>
             </div>
             <div class="summary">

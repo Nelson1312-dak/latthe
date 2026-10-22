@@ -40,10 +40,14 @@ button{cursor:pointer}
 .topbar{display:flex;align-items:center;gap:20px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--black);min-width:0}
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px;letter-spacing:-.01em;white-space:nowrap}
 .logo-card{width:14px;height:19px;border-radius:2px;background:var(--brand);transform:rotate(-12deg);box-shadow:5px 2px 0 -1px var(--black),5px 2px 0 0 #5a0a16}
-.search{position:relative;flex:0 0 200px}
-.search input{width:100%;height:30px;padding:0 10px 0 30px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);outline:none}
+/* O tim ma nam TRONG khung dat lenh, khong phai tren thanh dau. Tim mot ma la de DAT LENH ma
+   do, nen cho tim phai o ngay tren phieu lenh - go ma xong la mat nhin thang xuong gia va nut
+   mua ban, khong phai di tu goc tren cung xuong goc duoi cung. Cac ban giao dich trong nuoc deu
+   dat o day. */
+.search{position:relative;margin:10px 12px 8px}
+.search input{width:100%;height:32px;padding:0 10px 0 30px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);outline:none;font-weight:600}
 .search input:focus{border-color:var(--brand)}
-.search svg{position:absolute;left:9px;top:8px;opacity:.55}
+.search svg{position:absolute;left:9px;top:10px;opacity:.55;pointer-events:none}
 .indices{display:flex;gap:18px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1}
 .indices::-webkit-scrollbar{display:none}
 /* Dai chi so la du lieu that chay lien tuc, nhung dang duoc bay ra nhu mot dong chu thuong.
@@ -134,8 +138,9 @@ button{cursor:pointer}
 
 /* ---------- Order book + tape ---------- */
 .book{grid-area:book;display:flex;flex-direction:column}
-.ob{padding:6px 0}
-.ob-row{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:3px 12px;width:100%;border:0;background:none;text-align:left}
+/* Cuon duoc: HNX/UPCoM co 10 muc moi ben nen tong 21 dong, khong con vua mot khung co dinh. */
+.ob{padding:4px 0;overflow-y:auto;flex:1;min-height:0}
+.ob-row{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:2px 12px;width:100%;border:0;background:none;text-align:left}
 .ob-row:hover{background:var(--surface)}
 .ob-row .bar{position:absolute;top:2px;bottom:2px;right:0;opacity:.14;pointer-events:none}
 .ob-row.ask .bar{background:var(--down)}.ob-row.bid .bar{background:var(--up)}

@@ -66,8 +66,10 @@ function applyQuote(m,q){
 /* Độ sâu thị trường (khối lượng chờ mua/bán) không có trong nguồn dữ liệu công khai, nên chỉ hiển thị các bước giá liền kề giá khớp. */
 function book(m){
   if(m.depth && (m.depth.bid.length||m.depth.offer.length)){
-    const n=m.ex==="HOSE"?3:5;   // HOSE có 3 mức giá; HNX/UPCoM có 10 nhưng bảng này chỉ hiện 5
-    return {asks:m.depth.offer.slice(0,n), bids:m.depth.bid.slice(0,n), real:true};
+    // Hiện ĐỦ số mức mà sàn công bố, không cắt. Đo thật 22/10: HOSE trả về 3 mức mỗi bên,
+    // HNX và UPCoM trả về 10. Trước đây cắt còn 5 với HNX/UPCoM, tức là vứt đi đúng một nửa
+    // độ sâu sổ lệnh mà nguồn đã gửi về - thông tin đã có trong tay mà không cho người ta xem.
+    return {asks:m.depth.offer, bids:m.depth.bid, real:true};
   }
   const t=tickU(m.lastU,m.ex), asks=[], bids=[];
   for(let i=1;i<=3;i++){
@@ -98,7 +100,7 @@ function cls(m,u){ if(u>=m.ceilU) return "ceil"; if(u<=m.floorU) return "floor";
 const $ = id => document.getElementById(id);
 
 /* ---------------- State ---------------- */
-const S = {sym:"HPG", tf:"D", style:"candle", ind:{ma20:true,ma50:true,vol:true}, side:"B", type:"LO", pxU:null, qty:100, tab:"orders"};
+const S = {sym:"HPG", tf:"D", style:"candle", ind:{ma20:true,ma50:true,vol:true}, side:"B", type:"LO", pxU:null, qty:0, tab:"orders"};
 
 /* ---------------- Chart ---------------- */
 const LWC = window.LightweightCharts;
@@ -189,6 +191,13 @@ function renderBook(){
     `<div class="ob-mid"><span class="${cls(m,m.lastU)}">${fP(m.lastU)}</span><small>${(ch>=0?"+":"")+ch.toFixed(2)}%</small></div>`+
     bids.map(b=>row(b,"bid")).join("");
   $("tape").innerHTML=m.tape.map(t=>`<div class="tape-row"><span>${t.t}</span><span class="${cls(m,t.u)}">${fP(t.u)}</span><span class="${t.side==="M"?"up":"down"}">${fN(t.q)}</span></div>`).join("");
+  // Canh giá khớp vào GIỮA khung. Với HNX/UPCoM giờ có 21 dòng, nếu không canh thì mở ra chỉ
+  // thấy toàn bên bán còn bên mua nằm dưới tầm nhìn - trong khi chỗ người ta cần nhìn nhất là
+  // ranh giới mua/bán. Chỉ canh khi người dùng KHÔNG đang tự cuộn, để không giật tay họ.
+  const ob=$("ob"), giua=ob.querySelector(".ob-mid");
+  if(giua && !ob.matches(":hover")){
+    ob.scrollTop = Math.max(0, giua.offsetTop - ob.clientHeight / 2 + giua.offsetHeight / 2);
+  }
 }
 
 /* ---------------- Lô chẵn / lô lẻ ----------------
@@ -230,7 +239,10 @@ function validate(){
       else if(u%tickU(u,m.ex)) errs.push(`Giá chưa đúng bước giá ${tickU(u,m.ex)*10} đ.`);
     }
   }
-  if(!S.qty||S.qty<=0) errs.push("Nhập khối lượng.");
+  // Chưa nhập khối lượng KHÔNG phải lỗi - đó là trạng thái ban đầu của một phiếu trống. Trước
+  // đây ô này điền sẵn 100, một con số không ai yêu cầu; bỏ số mặc định đi thì cũng đừng thay nó
+  // bằng một dòng đỏ ngay khi người ta vừa mở phiếu ra. Nút gửi tự khoá là đủ.
+  if(!S.qty||S.qty<=0) errs.push(S.qty===0?"":"Nhập khối lượng.");
   else if(!loHopLe(S.qty,S.type)){
     // Số lẻ ở giữa (vd 213) KHÔNG phải lỗi: hệ thống tự tách khi gửi. Chỉ lô lẻ đi kèm lệnh thị
     // trường mới là lỗi thật, vì sàn không nhận.
@@ -296,7 +308,7 @@ function renderTicket(){
   }
   $("a-pp").textContent=ACC.user?fVND(ACC.cash):"Đăng nhập để xem"; $("a-sell").textContent=ACC.user?fN(Math.max(banDuoc(S.sym),0))+" CP":"–";
   const {errs,warns}=validate();
-  $("msgs").innerHTML=errs.map(e=>`<div class="msg err">${e}</div>`).join("")+warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
+  $("msgs").innerHTML=errs.filter(Boolean).map(e=>`<div class="msg err">${e}</div>`).join("")+warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
   const cta=$("cta"); cta.className="cta "+(S.side==="B"?"buy":"sell");
   if(!ACC.user){ cta.disabled=false; cta.textContent="Đăng nhập để đặt lệnh"; $("msgs").innerHTML=""; return; }
   if(!ACC.mode){
@@ -318,7 +330,7 @@ function flip(open){
     $("c-grid").innerHTML=(tach2?`<span>Số lệnh gửi đi</span><b>${phan.length} lệnh · ${phan.map(x=>fN(x.qty)+(x.le?" lẻ":"")).join(" + ")}</b>`:"")
       +`<span>Loại lệnh</span><b>${S.type}</b><span>Giá trị ${S.type==="LO"?"":"(ước tính)"}</span><b>${fVND(val)}</b><span>Phí</span><b>${fVND(val*FEE)}</b>`+
       (S.side==="S"?`<span>Thuế</span><b>${fVND(val*TAX)}</b>`:"")+`<span>Tài khoản</span><b>${ACC.mode==="that"?`DNSE thật · ${ACC.accountNo||""}`:ACC.mode==="shs"?`SHS thật · ${ACC.accountNo||""}`:"Chưa chọn tài khoản"}</b>`;
-    $("c-msgs").innerHTML=warns.map(w=>`<div class="msg warn">${w}</div>`).join("");
+    $("c-msgs").innerHTML=warns.filter(Boolean).map(w=>`<div class="msg warn">${w}</div>`).join("");
     const ok=$("c-ok"); ok.className="cta "+(S.side==="B"?"buy":"sell");
     ok.textContent=tach2?`Gửi ${phan.length} lệnh ${sideT.toLowerCase()}`:`Gửi lệnh ${sideT.toLowerCase()}`;
     setTimeout(()=>ok.focus({preventScroll:true}),300);
