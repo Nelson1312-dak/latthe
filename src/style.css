@@ -256,3 +256,77 @@ button.primary:active { transform: translateY(1px); }
   button.act { flex: 1; align-items: center; }
   .hint { font-size: 12.5px; }
 }
+
+/* ------------------------------------------------------------------ minimap */
+
+/*
+ * Minimap bám góc dưới bên phải và KHÔNG nằm trong hai thanh HUD, vì nó cần ở yên một chỗ
+ * trong khi bảng dưới co giãn. Ở cửa sổ hẹp thì ẩn hẳn: 168 điểm ảnh vuông chiếm quá nhiều
+ * của một màn điện thoại, mà kéo bản đồ bằng ngón tay vẫn đi được khắp nơi.
+ */
+.map {
+  position: fixed;
+  right: 14px;
+  bottom: 86px;
+  z-index: 11;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 6px 3px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#minimap {
+  display: block;
+  width: 168px;
+  height: 168px;
+  border-radius: 9px;
+  cursor: crosshair;
+  background: #cfe8f3;
+}
+.maphint {
+  font-size: 10px;
+  color: var(--ink-soft);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+/* ------------------------------------------------------------------- toast */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: 72px;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.toast[hidden] { display: none; }
+
+/* --------------------------------------------------- chiến lợi phẩm vắng mặt */
+
+.loot {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.loot li { display: flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.loot .ico { font-size: 17px; }
+.loot strong { font-size: 19px; color: var(--coin); }
+
+@media (max-width: 860px), (max-height: 640px) {
+  .map { display: none; }
+  .toast { top: 60px; font-size: 12.5px; padding: 6px 14px; }
+}

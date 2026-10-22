@@ -1,17 +1,11 @@
 /**
  * Điểm vào. Ghép Economy + Game + UI, rồi trông chừng việc tab bị ẩn.
  *
- * CHỖ DỄ SAI NHẤT nằm ở đây, nên nói rõ: khi tab bị ẩn thì phải DỪNG HẲN ba thứ cùng lúc —
- * mô phỏng, vòng render, VÀ tự động lưu.
- *
- * Bỏ quên cái thứ ba là hỏng toàn bộ phần tính tiền vắng mặt: bộ đếm 5 giây sẽ dập
- * lastSavedTimestamp thành "bây giờ" suốt cả lúc bạn đi họp, nên lúc quay lại khoảng cách đo
- * được chỉ còn vài giây và người chơi không nhận được gì. Trình duyệt có bóp setInterval
- * xuống một lần mỗi giây khi chạy nền, nhưng bóp không phải là dừng.
- *
- * Trình tự lúc ẩn:  lưu một lần (đóng dấu mốc) -> tắt tự động lưu -> dừng mô phỏng.
- * Trình tự lúc hiện: tua bù giờ -> bật lại tự động lưu -> chạy tiếp, trừ khi chính người chơi
- * đã bấm tạm dừng trước đó.
+ * CHỖ DỄ SAI NHẤT nằm ở đây: khi tab bị ẩn phải DỪNG HẲN ba thứ cùng lúc — mô phỏng, vòng
+ * render, VÀ tự động lưu. Bỏ quên cái thứ ba là hỏng toàn bộ phần bù giờ: bộ đếm 5 giây sẽ
+ * dập lastSavedTimestamp thành "bây giờ" suốt lúc bạn đi họp, nên quay lại chẳng được gì.
+ * Trình duyệt có bóp setInterval xuống một lần mỗi giây khi chạy nền, nhưng bóp không phải
+ * là dừng.
  */
 import { Economy } from './Economy';
 import { Game } from './Game';
@@ -25,15 +19,16 @@ const game = new Game(canvas, economy);
 const ui = new UI(economy, game);
 
 /**
- * Bù giờ vắng mặt bằng cách TUA NHANH CHÍNH VÁN GAME — Economy gọi ngược lại hàm này để
- * nhích thợ. Nhờ vậy số xu trả cho người chơi đến từ đúng đoạn mã chạy lúc họ đang ngồi nhìn,
- * kể cả khi kho đầy giữa chừng hay xưởng phải dừng vì hàng ùn.
+ * Bù giờ bằng cách tua nhanh chính ván game. Tua cả MÀN MÂY nữa, nên người chơi đi ăn trưa
+ * về có thể thấy đội thám hiểm đã vén thêm được một vùng — đúng như khi ngồi nhìn.
  */
-const stepWorkers = (dt: number): void => game.workers.update(dt);
+const stepWorld = (dt: number): void => {
+  game.workers.update(dt);
+  game.fog.update(dt, economy.state.units);
+};
 
-// Lần mở trang cũng là một lần "quay lại": mốc thời gian lấy từ bản lưu của phiên trước.
-const firstReport = economy.collectOffline(Date.now(), stepWorkers);
-if (firstReport) ui.showOffline(firstReport);
+const first = economy.collectOffline(Date.now(), stepWorld);
+if (first) ui.showOffline(first);
 
 economy.startAutosave();
 game.start();
@@ -45,7 +40,7 @@ document.addEventListener('visibilitychange', () => {
     game.setPaused(true);
     return;
   }
-  const report = economy.collectOffline(Date.now(), stepWorkers);
+  const report = economy.collectOffline(Date.now(), stepWorld);
   if (report) ui.showOffline(report);
   economy.startAutosave();
   // Người chơi tự bấm tạm dừng thì quay lại vẫn phải thấy nó dừng, không tự chạy tiếp.
@@ -61,5 +56,5 @@ window.addEventListener('keydown', (e) => {
   ui.setPaused(!game.isPaused);
 });
 
-// Để nghịch trong Console: __game.economy.addCoins(5000)
+// Để nghịch trong Console: __game.economy.deposit('gold', 5000)
 Object.assign(window as unknown as Record<string, unknown>, { __game: { economy, game, ui } });

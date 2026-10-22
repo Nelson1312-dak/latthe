@@ -1,543 +1,458 @@
 /**
- * Thợ: phân việc, đi lại theo lưới phố, và chạy vòng đào–vác–giao.
+ * Dân làng và xe thồ: phân việc, đi lại, đào, giao hàng, và thám hiểm.
  *
- * HAI LOẠI VIỆC
+ * TOÀN BỘ đơn vị vẽ bằng ba InstancedMesh — thân người, kiện hàng trên lưng, và xe thồ. Hai
+ * chục dân mỗi người sáu khối là một trăm hai mươi lệnh vẽ; gom lại còn ba, và con số đó
+ * không đổi dù sau này có hai trăm dân. Nhịp lắc khi đi nướng thẳng vào ma trận của từng thực
+ * thể nên không mất gì: xoay theo hướng đi, nghiêng người, nhún lên xuống đều là một phép
+ * compose duy nhất.
  *
- *   Thợ đào   : cây/mỏ --> chợ, đổ nguyên liệu thô vào kho.
- *   Thợ chở   : xưởng --> chợ, mang hàng đã chế (ván, gạch) về kho.
+ * VÒNG ĐỜI dân làng:
+ *     idle --> moving(tới mỏ) --> gathering --> delivering(về trạm gần nhất) --> idle
+ * Trạm trung chuyển là lý do cả bản đồ 60×60 chơi được: không có nó, một chuyến từ rìa về
+ * giữa mất hơn một phút và bốn biến sinh thái ngoài xa thành vô dụng.
  *
- * Hạn ngạch của người chơi chỉ nói về thợ ĐÀO. Thợ không nằm trong hạn ngạch nào sẽ đi chở
- * hàng — nên "thợ rảnh" không phải thợ đứng chơi mà là lực lượng hậu cần, và để rảnh quá
- * nhiều hay quá ít đều thấy hậu quả ngay: đống hàng ở xưởng đầy thì XƯỞNG DỪNG.
- *
- * VÒNG ĐỜI, đúng bốn trạng thái:
- *
- *     (mới thuê, đứng ở nhà) --> moving --> gathering --> delivering --> idle
- *                                  ^                                      |
- *                                  +------------ nhận việc mới -----------+
- *
- * Việc chỉ được chọn lại khi thợ đã ĐỔ HÀNG XONG ở chợ. Nhờ vậy đổi hạn ngạch giữa chừng
- * không làm ai bỏ dở chuyến đang vác — đúng như đặc tả: giảm Gỗ từ 2 xuống 1 thì đúng một
- * thợ gỗ sẽ đổi sang đá ở chuyến kế tiếp, không phải ngay lập tức.
- *
- * Điều hướng cố tình đơn giản: không tránh vật cản, không lái mượt, không A*. Lưới phố trong
- * config đã đặt sao cho không đoạn nào cắt qua nền nhà, nên đi thẳng từ ngã tư này sang ngã
- * tư kia là đủ.
+ * Xe thồ chạy riêng: rời trạm theo chu kỳ, ôm hàng đã gom, bám trục đường về thủ phủ.
  */
 import * as THREE from 'three';
-import { PALETTE, RECIPES, RESOURCES, slotWaypointId } from './config';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {
+  CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, GATHER_SECONDS, OUTPOST_RANGE, PALETTE, RESOURCES,
+} from './config';
 import type { Economy } from './Economy';
-import { distance, pathLength, positionOf, shortestPath } from './nav';
-import { ECONOMY } from './EconomyMath';
-import type {
-  RawKind, ResourceKind, ResourceNode, Slot, Vec3, Worker, WorkerAllocation,
-} from './types';
+import type { FogOfWar } from './FogOfWar';
+import type { MapManager } from './MapManager';
+import type { Building, ResourceKind, Unit, Vec3 } from './types';
+import { RESOURCE_KINDS } from './types';
 
-/** Coi là tới nơi khi còn cách ngần này — tránh rung quanh đích vì bước nhảy của delta. */
-const ARRIVE_EPSILON = 0.06;
-
-/** Dưới ngần này đơn thì chưa bõ một chuyến chở hàng. */
-const CARRY_WORTH_IT = 0.5;
-
-/**
- * Tra mỏ theo mã. Dựng lại từ kinh tế mỗi lần hỏi vì vị trí mỏ ĐỔI khi mở rộng đảo — giữ một
- * bảng tĩnh ở đây là đúng kiểu lỗi chỉ lộ ra sau khi người chơi đã mở bậc 3.
- */
+const ARRIVE = 0.35;
+const MAX_UNITS = 220;
 
 export class WorkerManager {
-  private readonly scene: THREE.Scene;
   private readonly economy: Economy;
-  private readonly meshes = new Map<string, THREE.Group>();
-  private readonly geo: {
-    body: THREE.CylinderGeometry; head: THREE.SphereGeometry; hatCone: THREE.ConeGeometry;
-    hatBrim: THREE.CylinderGeometry; log: THREE.CylinderGeometry; cube: THREE.BoxGeometry;
-    gem: THREE.OctahedronGeometry; dust: THREE.IcosahedronGeometry;
-  };
-  private readonly mat: {
-    body: THREE.MeshLambertMaterial; hat: THREE.MeshLambertMaterial;
-    gem: THREE.MeshStandardMaterial; dust: THREE.MeshLambertMaterial;
-  };
-  private readonly cargoMats = new Map<ResourceKind, THREE.MeshLambertMaterial>();
+  private readonly map: MapManager;
+  private readonly fog: FogOfWar;
+  readonly group = new THREE.Group();
+
+  private readonly bodies: THREE.InstancedMesh;
+  private readonly cargo: THREE.InstancedMesh;
+  private readonly carts: THREE.InstancedMesh;
   private elapsed = 0;
 
-  /**
-   * Tra mo theo ma. Dung lai moi lan hoi vi vi tri mo DOI khi mo rong dao - giu mot bang
-   * tinh o day la dung kieu loi chi lo ra sau khi nguoi choi da mo bac 3.
-   */
-  private nodeById(): Map<string, ResourceNode> {
-    return new Map(this.economy.unlockedNodes().map((n) => [n.id, n]));
-  }
+  private readonly m = new THREE.Matrix4();
+  private readonly q = new THREE.Quaternion();
+  private readonly v = new THREE.Vector3();
+  private readonly s = new THREE.Vector3();
+  private readonly axis = new THREE.Vector3(0, 1, 0);
+  private readonly hidden = new THREE.Matrix4().makeScale(0, 0, 0);
+  private readonly color = new THREE.Color();
 
-  constructor(scene: THREE.Scene, economy: Economy) {
-    this.scene = scene;
+  constructor(economy: Economy, map: MapManager, fog: FogOfWar) {
     this.economy = economy;
+    this.map = map;
+    this.fog = fog;
 
-    // Cỡ dân làng chọn theo MÀN HÌNH chứ không theo tỉ lệ thật: bản đồ rộng 50 đơn vị nằm
-    // gọn trong khoảng 700 điểm ảnh, nên một người cao 0,3 đơn vị chỉ còn bốn năm điểm ảnh.
-    // Mà ngắm mấy người bé chạy đi chạy lại lại chính là thứ đáng xem nhất ở thể loại này.
-    // Tỉ lệ chibi: thân trụ lùn, đầu tròn to, nón rơm — nhận ra ngay dù chỉ hai chục điểm ảnh.
-    this.geo = {
-      body: new THREE.CylinderGeometry(0.26, 0.3, 0.5, 7),
-      head: new THREE.SphereGeometry(0.28, 9, 7),
-      hatCone: new THREE.ConeGeometry(0.34, 0.26, 8),
-      hatBrim: new THREE.CylinderGeometry(0.42, 0.42, 0.045, 8),
-      log: new THREE.CylinderGeometry(0.1, 0.1, 0.52, 5),
-      cube: new THREE.BoxGeometry(0.34, 0.34, 0.34),
-      gem: new THREE.OctahedronGeometry(0.21, 0),
-      dust: new THREE.IcosahedronGeometry(0.16, 0),
+    this.bodies = new THREE.InstancedMesh(
+      this.villagerGeometry(),
+      new THREE.MeshLambertMaterial({ flatShading: true }), MAX_UNITS);
+    this.cargo = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.38, 0.38, 0.3),
+      new THREE.MeshLambertMaterial(), MAX_UNITS);
+    this.carts = new THREE.InstancedMesh(
+      this.cartGeometry(),
+      new THREE.MeshLambertMaterial({ flatShading: true }), 24);
+
+    for (const mesh of [this.bodies, this.cargo, this.carts]) {
+      mesh.castShadow = true;
+      mesh.frustumCulled = false;
+      this.group.add(mesh);
+    }
+    const seed = () => {
+      if (this.economy.state.units.length === 0) {
+        this.spawnVillager(this.economy.state.buildings[0]);
+      }
     };
-    this.mat = {
-      body: new THREE.MeshLambertMaterial({ color: PALETTE.villager }),
-      hat: new THREE.MeshLambertMaterial({ color: PALETTE.hat, flatShading: true }),
-      gem: new THREE.MeshStandardMaterial({
-        color: RESOURCES.gold.color, roughness: 0.2, metalness: 0.15,
-        emissive: RESOURCES.gold.color, emissiveIntensity: 0.5,
-      }),
-      dust: new THREE.MeshLambertMaterial({ color: 0xe8dcc0, transparent: true, opacity: 0.5 }),
-    };
-    for (const kind of Object.keys(RESOURCES) as ResourceKind[]) {
-      this.cargoMats.set(kind, new THREE.MeshLambertMaterial({ color: RESOURCES[kind].color }));
-    }
-    this.sync();
+    seed();
+    this.economy.onReset = seed;
   }
 
-  // ------------------------------------------------------------- phân bổ
+  // ----------------------------------------------------------- hình học
 
-  get allocation(): WorkerAllocation {
-    return this.economy.state.allocation;
+  /** Thân, đầu, nón rơm — hàn thành một hình học để một dân làng là một thực thể. */
+  private villagerGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    const body = new THREE.CylinderGeometry(0.26, 0.3, 0.5, 7);
+    body.translate(0, 0.25, 0);
+    parts.push(body);
+    const head = new THREE.SphereGeometry(0.27, 8, 6);
+    head.translate(0, 0.65, 0);
+    parts.push(head);
+    const brim = new THREE.CylinderGeometry(0.42, 0.42, 0.05, 8);
+    brim.translate(0, 0.83, 0);
+    parts.push(brim);
+    const cone = new THREE.ConeGeometry(0.33, 0.26, 8);
+    cone.translate(0, 0.96, 0);
+    parts.push(cone);
+    return mergeGeometries(parts, false) ?? body;
   }
 
-  /** Gọi mỗi khi người chơi bấm (+/-) hoặc gạt công tắc Tự cân. */
-  setAllocation(next: Partial<WorkerAllocation>): void {
-    const merged = { ...this.allocation, ...next };
-    const total = this.economy.state.workers.length;
-    for (const k of ['wood', 'stone', 'gold'] as const) {
-      merged[k] = Math.max(0, Math.floor(merged[k] || 0));
-    }
-    // Không cho đặt nhiều hơn số thợ đang có: cắt từ loại được sửa sau cùng trở về trước.
-    let budget = total;
-    for (const k of ['wood', 'stone', 'gold'] as const) {
-      merged[k] = Math.min(merged[k], Math.max(0, budget));
-      budget -= merged[k];
-    }
-    this.economy.state.allocation = merged;
-    this.rebalanceWorkerAssignments();
-    this.economy.save();
-  }
-
-  /**
-   * Thợ đang RẢNH thì nhận việc mới ngay. Thợ đang vác hàng thì không bị đụng tới — họ giao
-   * xong mới đổi. Đó là lý do hàm này không hề đặt lại `targetId` của ai đang đi.
-   */
-  rebalanceWorkerAssignments(): void {
-    for (const w of this.economy.state.workers) {
-      if (w.state === 'idle') this.dispatch(w);
-    }
-  }
-
-  /** Số thợ đang nhắm từng loại thô. Dùng để biết hạn ngạch nào còn thiếu người. */
-  private counts(): Record<RawKind, number> {
-    const out: Record<RawKind, number> = { wood: 0, stone: 0, gold: 0 };
-    for (const w of this.economy.state.workers) {
-      const node = w.targetId ? this.nodeById().get(w.targetId) : undefined;
-      if (node) out[node.kind] += 1;
-    }
-    return out;
-  }
-
-  /**
-   * Loại tài nguyên mà thợ vừa giao hàng xong nên đi đào tiếp.
-   *
-   * Tự cân: chọn kho VƠI NHẤT theo tỉ lệ đầy, bỏ qua hẳn loại đã đầy — đào thêm vào một kho
-   * đầy là ném đi công sức, vì phần thừa không vào kho được.
-   * Thủ công: chọn loại đang thiếu người so với hạn ngạch.
-   */
-  getNextTargetResource(): RawKind | null {
-    const available = this.economy.unlockedRaw().filter((k) => !this.economy.isFull(k));
-    if (available.length === 0) return null;
-
-    if (this.allocation.isAuto) {
-      return available.reduce((min, k) =>
-        this.economy.fillRatio(k) < this.economy.fillRatio(min) ? k : min);
-    }
-    return this.findUnderAllocatedResource(available);
-  }
-
-  private findUnderAllocatedResource(available: RawKind[]): RawKind | null {
-    const have = this.counts();
-    let best: RawKind | null = null;
-    let bestDeficit = 0;
-    for (const kind of available) {
-      const deficit = this.allocation[kind] - have[kind];
-      if (deficit > bestDeficit) {
-        bestDeficit = deficit;
-        best = kind;
+  private cartGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    const bed = new THREE.BoxGeometry(1.0, 0.36, 0.72);
+    bed.translate(0, 0.46, 0);
+    parts.push(bed);
+    for (const dx of [-0.32, 0.32]) {
+      for (const dz of [-0.42, 0.42]) {
+        const wheel = new THREE.CylinderGeometry(0.26, 0.26, 0.1, 8);
+        wheel.rotateX(Math.PI / 2);
+        wheel.translate(dx, 0.26, dz);
+        parts.push(wheel);
       }
     }
-    return best;
+    const ox = new THREE.BoxGeometry(0.5, 0.4, 0.38);
+    ox.translate(0.82, 0.4, 0);
+    parts.push(ox);
+    return mergeGeometries(parts, false) ?? bed;
   }
 
-  /**
-   * Xưởng nào đang cần người chở hàng nhất. Ưu tiên đống nào to nhất, vì đống đầy là xưởng
-   * đó dừng hẳn — tốn hơn nhiều so với việc chở chậm một chuyến.
-   */
-  private neediestProcessor(worker: Worker): Slot | null {
-    const busy = new Set(
-      this.economy.state.workers
-        .filter((w) => w !== worker && w.role === 'carrier' && w.targetId)
-        .map((w) => w.targetId as string));
+  // ------------------------------------------------------------- sinh đơn vị
 
-    let best: Slot | null = null;
-    for (const slot of this.economy.processors()) {
-      if (slot.buffer < CARRY_WORTH_IT) continue;
-      const recipe = RECIPES[slot.type];
-      if (!recipe || this.economy.isFull(recipe.to)) continue;
-      // Mỗi xưởng chỉ cần thêm người khi đống hàng vượt sức một người đang trên đường tới.
-      if (busy.has(slot.id) && slot.buffer < worker.capacity * 2) continue;
-      if (!best || slot.buffer > best.buffer) best = slot;
-    }
-    return best;
+  spawnVillager(home: Building): void {
+    if (this.economy.state.units.length >= MAX_UNITS) return;
+    this.economy.state.units.push({
+      id: `v${this.economy.state.units.length}-${Math.random().toString(36).slice(2, 6)}`,
+      kind: 'villager', state: 'idle',
+      speed: this.economy.speed(), capacity: this.economy.capacity(),
+      position: [home.position[0], 0, home.position[2]],
+      targetId: null, targetPos: null, facing: 0,
+      carrying: 0, carryingKind: null, gatherTimer: 0,
+      homeId: 'core',
+    });
   }
 
-  // --------------------------------------------------------------- mesh
-
-  sync(): void {
-    const alive = new Set<string>();
-    for (const w of this.economy.state.workers) {
-      alive.add(w.id);
-      if (!this.meshes.has(w.id)) this.meshes.set(w.id, this.createMesh(w));
-    }
-    for (const [id, group] of this.meshes) {
-      if (alive.has(id)) continue;
-      this.scene.remove(group);
-      this.meshes.delete(id);
-    }
+  /** Suc cho mot chuyen xe. Tran gom tai tram rong gap boi so nay de khong nghen. */
+  private cartLoad(o: Building): number {
+    return this.economy.capacity() * CART_CAPACITY_MULT * o.level;
   }
 
-  /**
-   * Một dân làng. Hàng vác dựng sẵn cả ba kiểu rồi ẩn đi, chỉ bật kiểu đúng với thứ đang
-   * cầm — đổi vật liệu thì rẻ, nhưng dựng rồi huỷ mesh mỗi chuyến thì không.
-   */
-  private createMesh(w: Worker): THREE.Group {
-    const group = new THREE.Group();
-    const lean = new THREE.Group();          // chỉ phần này lắc lư; bụi đất đứng yên tại chỗ
-    lean.name = 'lean';
-    group.add(lean);
-
-    const body = new THREE.Mesh(this.geo.body, this.mat.body);
-    body.position.y = 0.25;
-    body.castShadow = true;
-    lean.add(body);
-
-    const head = new THREE.Mesh(this.geo.head, this.mat.body);
-    head.position.y = 0.66;
-    head.castShadow = true;
-    lean.add(head);
-
-    const brim = new THREE.Mesh(this.geo.hatBrim, this.mat.hat);
-    brim.position.y = 0.84;
-    lean.add(brim);
-    const cone = new THREE.Mesh(this.geo.hatCone, this.mat.hat);
-    cone.position.y = 0.97;
-    cone.castShadow = true;
-    lean.add(cone);
-
-    // Hàng vác: hai khúc gỗ sau lưng, một khối vuông, một viên vàng lơ lửng.
-    const logs = new THREE.Group();
-    logs.name = 'cargo-logs';
-    for (const dx of [-0.11, 0.11]) {
-      const log = new THREE.Mesh(this.geo.log, this.mat.body);
-      log.position.set(dx, 0.46, -0.3);
-      log.rotation.z = Math.PI / 2;
-      log.castShadow = true;
-      logs.add(log);
+  private spawnCart(outpost: Building): void {
+    // Cho loai dang ton nhieu nhat truoc.
+    let kind: ResourceKind | null = null;
+    let most = 0;
+    for (const k of RESOURCE_KINDS) {
+      const v = outpost.stock[k] ?? 0;
+      if (v > most) { most = v; kind = k; }
     }
-    logs.visible = false;
-    lean.add(logs);
-
-    const block = new THREE.Mesh(this.geo.cube, this.mat.body);
-    block.name = 'cargo-block';
-    block.position.set(0, 0.52, -0.32);
-    block.castShadow = true;
-    block.visible = false;
-    lean.add(block);
-
-    const gem = new THREE.Mesh(this.geo.gem, this.mat.gem);
-    gem.name = 'cargo-gem';
-    gem.position.set(0, 0.62, -0.42);
-    gem.visible = false;
-    lean.add(gem);
-
-    // Bụi bốc lên khi đang đào. Gắn vào người chứ không vào mỏ, nên hai thợ cùng đào một mỏ
-    // vẫn ra hai đám bụi riêng.
-    const dust = new THREE.Mesh(this.geo.dust, this.mat.dust.clone());
-    dust.name = 'dust';
-    dust.visible = false;
-    group.add(dust);
-
-    group.position.set(w.position[0], 0, w.position[2]);
-    this.scene.add(group);
-    return group;
+    if (!kind) return;
+    const load = Math.min(most, this.cartLoad(outpost));
+    outpost.stock[kind] = most - load;
+    this.economy.state.units.push({
+      id: `c${Date.now().toString(36)}`,
+      kind: 'cart', state: 'delivering',
+      speed: this.economy.speed() * 0.85,
+      capacity: this.economy.capacity() * CART_CAPACITY_MULT * outpost.level,
+      position: [outpost.position[0], 0, outpost.position[2]],
+      targetId: 'core', targetPos: [0, 0, 0], facing: 0,
+      carrying: load, carryingKind: kind, gatherTimer: 0,
+      homeId: outpost.id,
+    });
   }
 
   // --------------------------------------------------------------- mô phỏng
 
   update(dt: number): void {
     this.elapsed += dt;
-    for (const w of this.economy.state.workers) {
-      this.step(w, dt);
-      this.draw(w);
-    }
-  }
+    const units = this.economy.state.units;
 
-  private step(w: Worker, dt: number): void {
-    switch (w.state) {
-      case 'idle':
-        this.dispatch(w);
-        break;
-
-      case 'moving':
-        if (this.advance(w, dt)) this.onArrive(w);
-        break;
-
-      case 'gathering':
-        w.gatherTimer -= dt;
-        if (w.gatherTimer <= 0) this.finishGathering(w);
-        break;
-
-      case 'delivering':
-        if (this.advance(w, dt)) this.dropOff(w);
-        break;
-    }
-  }
-
-  /** Giao việc mới. Chở hàng được xét trước, vì đống hàng đầy làm xưởng dừng hẳn. */
-  private dispatch(w: Worker): void {
-    const from = this.nearestGraphId(w.position);
-
-    const shop = this.neediestProcessor(w);
-    if (shop) {
-      w.role = 'carrier';
-      w.targetId = shop.id;
-      w.path = shortestPath(from, slotWaypointId(shop.id));
-      w.pathIndex = 0;
-      w.state = 'moving';
-      if (w.path.length === 0) this.onArrive(w);
-      return;
-    }
-
-    const kind = this.getNextTargetResource();
-    if (!kind) {
-      // Không có gì để làm: kho đầy hết và không xưởng nào cần chở. Đứng nghỉ ở chợ.
-      w.targetId = null;
-      w.role = 'carrier';
-      return;
-    }
-
-    const node = this.pickNode(w, kind);
-    if (!node) return;
-    w.role = kind === 'wood' ? 'forester' : 'miner';
-    w.targetId = node.id;
-    w.path = shortestPath(from, node.id);
-    w.pathIndex = 0;
-    w.state = 'moving';
-    if (w.path.length === 0) this.onArrive(w);
-  }
-
-  /**
-   * Chọn mỏ nào trong số các mỏ cùng loại. Chia theo thứ tự thợ chứ không phải lúc nào cũng
-   * lấy mỏ gần nhất: để cả đám chọn chung một mỏ thì chúng xuất phát cùng lúc, đi cùng tốc
-   * độ và chồng khít lên nhau — ba người thợ nhìn ra đúng một người.
-   *
-   * Nhưng phải SẮP THEO KHOẢNG CÁCH trước khi chia. Lấy thứ tự khai báo trong config thì thợ
-   * đầu tiên nhận mỏ gỗ ở góc tây bắc, xa 30,5 đơn vị, trong khi có mỏ ngay trên trục chỉ
-   * cách 16,5 — đo ra đúng một nửa thu nhập đáng lẽ phải có, và không ai nhìn màn hình mà
-   * đoán được vì sao.
-   */
-  private pickNode(w: Worker, kind: RawKind): ResourceNode | null {
-    const nodes = this.economy.unlockedNodes()
-      .filter((n) => n.kind === kind)
-      .sort((a, b) =>
-        pathLength('hub', shortestPath('hub', a.id)) - pathLength('hub', shortestPath('hub', b.id)));
-    if (nodes.length === 0) return null;
-    const index = Math.max(0, this.economy.state.workers.indexOf(w));
-    return nodes[index % nodes.length];
-  }
-
-  private onArrive(w: Worker): void {
-    if (w.role === 'carrier' && w.targetId) {
-      const slot = this.economy.state.slots.find((s) => s.id === w.targetId);
-      const recipe = slot ? RECIPES[slot.type] : undefined;
-      if (!slot || !recipe || slot.buffer <= 0) {
-        w.state = 'idle';           // ai đó chở mất rồi, tìm việc khác
-        w.targetId = null;
-        return;
+    // Xe roi ben khi DU TAI, khong cho het chu ky.
+    //
+    // Ban dau chi cho dong ho: 26 giay mot chuyen, moi chuyen toi da 50 don. Do duoc la sau
+    // tho do vao nhanh hon the nhieu, nen hang un lai o tram va thu nhap TUT tu 936 xuong
+    // 550 trong 300 giay - tram tro thanh nut that chu khong phai loi the. Gio du tai la di
+    // ngay; dong ho chi con de vet not cho hang le khong nam mai o tram.
+    for (const o of this.economy.outposts()) {
+      o.cartTimer -= dt;
+      const total = RESOURCE_KINDS.reduce((s, k) => s + (o.stock[k] ?? 0), 0);
+      const full = this.cartLoad(o);
+      if (total >= full || (o.cartTimer <= 0 && total > 0)) {
+        o.cartTimer = CART_INTERVAL_SECONDS;
+        this.spawnCart(o);
       }
-      const take = Math.min(w.capacity, slot.buffer);
-      slot.buffer -= take;
-      w.carrying = take;
-      w.carryingKind = recipe.to;
-      w.state = 'delivering';
-      w.path = shortestPath(slotWaypointId(slot.id), 'hub');
-      w.pathIndex = 0;
-      return;
     }
 
-    if (w.targetId && this.nodeById().has(w.targetId)) {
-      w.state = 'gathering';
-      w.gatherTimer = ECONOMY.gatheringDuration;
-      return;
-    }
-    w.state = 'idle';               // vừa đi từ nhà về chợ xong
-  }
-
-  private finishGathering(w: Worker): void {
-    const node = w.targetId ? this.nodeById().get(w.targetId) : undefined;
-    w.carrying = w.capacity;
-    w.carryingKind = node ? node.kind : 'wood';
-    w.state = 'delivering';
-    w.path = shortestPath(w.targetId ?? 'hub', 'hub');
-    w.pathIndex = 0;
-  }
-
-  private dropOff(w: Worker): void {
-    if (w.carryingKind && w.carrying > 0) {
-      // deposit() tự chặn ở trần kho; phần không vào được coi như bỏ lại, và lần giao việc
-      // ngay sau đây sẽ thấy kho đầy mà chuyển thợ sang loại khác.
-      this.economy.deposit(w.carryingKind, w.carrying);
-    }
-    w.carrying = 0;
-    w.carryingKind = null;
-    w.state = 'idle';
-    w.targetId = null;
-  }
-
-  /**
-   * Nhích thợ dọc `path`. Trả về true khi đã đi hết đường.
-   *
-   * Dùng vòng while vì một khung hình dài có thể vượt qua nhiều chặng ngắn cùng lúc; nếu chỉ
-   * xử lý một chặng mỗi khung hình thì sau một lần giật, thợ sẽ lết chậm lại đúng bằng số
-   * chặng bị dồn. Chuyện này không phải lý thuyết: lúc tua bù giờ vắng mặt, bước là 0,5 giây.
-   */
-  private advance(w: Worker, dt: number): boolean {
-    let budget = w.speed * dt;
-    while (budget > 0) {
-      if (w.pathIndex >= w.path.length) return true;
-      let target: Vec3;
-      try {
-        target = positionOf(w.path[w.pathIndex]);
-      } catch {
-        // Đường trỏ tới điểm không còn tồn tại (đổi bố cục giữa hai bản lưu). Thả việc chứ
-        // không để thợ kẹt vĩnh viễn.
-        w.path = [];
-        w.pathIndex = 0;
-        w.targetId = null;
-        w.state = 'idle';
-        return false;
-      }
-      const dx = target[0] - w.position[0];
-      const dz = target[2] - w.position[2];
-      const dist = Math.hypot(dx, dz);
-
-      if (dist <= budget + ARRIVE_EPSILON) {
-        w.position[0] = target[0];
-        w.position[2] = target[2];
-        w.pathIndex += 1;
-        budget -= dist;
+    for (let i = units.length - 1; i >= 0; i -= 1) {
+      const u = units[i];
+      if (u.kind === 'cart') {
+        if (this.step(u, dt)) {
+          if (u.carryingKind) this.economy.deposit(u.carryingKind, u.carrying);
+          units.splice(i, 1);          // xe giao xong là về kho bãi, không lảng vảng
+        }
         continue;
       }
-      w.position[0] += (dx / dist) * budget;
-      w.position[2] += (dz / dist) * budget;
-      const group = this.meshes.get(w.id);
-      if (group) group.rotation.y = Math.atan2(dx, dz);
-      return false;
+      this.villager(u, dt);
     }
-    return w.pathIndex >= w.path.length;
+    this.draw();
   }
 
-  /** Điểm trong đồ thị gần thợ nhất — dùng khi giao việc cho thợ đang đứng giữa đường. */
-  private nearestGraphId(pos: Vec3): string {
-    let best = 'hub';
-    let bestDist = distance(pos, positionOf('hub'));
-    for (const node of this.economy.unlockedNodes()) {
-      const d = distance(pos, node.position);
-      if (d < bestDist) { bestDist = d; best = node.id; }
+  private villager(u: Unit, dt: number): void {
+    switch (u.state) {
+      case 'idle':
+        this.dispatch(u);
+        break;
+      case 'moving':
+        if (this.step(u, dt)) {
+          if (u.targetId === 'scout') { u.state = 'idle'; u.targetId = null; break; }
+          u.state = 'gathering';
+          u.gatherTimer = GATHER_SECONDS;
+        }
+        break;
+      case 'gathering':
+        u.gatherTimer -= dt;
+        if (u.gatherTimer <= 0) {
+          const node = u.targetId ? this.map.nodeById(u.targetId) : undefined;
+          u.carrying = Math.max(1, Math.round(u.capacity * (node?.richness ?? 1)));
+          u.carryingKind = node?.kind ?? 'wood';
+          const drop = this.dropPoint(u.position);
+          u.homeId = drop.id;
+          u.targetId = drop.id;
+          u.targetPos = [drop.position[0], 0, drop.position[2]];
+          u.state = 'delivering';
+        }
+        break;
+      case 'delivering':
+        if (this.step(u, dt)) {
+          this.unload(u);
+          u.state = 'idle';
+          u.targetId = null;
+        }
+        break;
     }
-    for (const slot of this.economy.visibleSlots()) {
-      if (slot.id === 'core') continue;
-      const d = distance(pos, slot.position);
-      if (d < bestDist) { bestDist = d; best = slotWaypointId(slot.id); }
+  }
+
+  /** Trạm gần nhất trong tầm, nếu không thì thủ phủ. Đây là toàn bộ giá trị của trạm. */
+  private dropPoint(from: Vec3): Building {
+    const core = this.economy.state.buildings.find((b) => b.type === 'townhall')!;
+    let best = core;
+    let bestDist = Math.hypot(from[0], from[2]);
+    for (const o of this.economy.outposts()) {
+      const d = Math.hypot(o.position[0] - from[0], o.position[2] - from[2]);
+      if (d < bestDist && d <= OUTPOST_RANGE) { best = o; bestDist = d; }
     }
     return best;
   }
 
-  // ------------------------------------------------------------------- vẽ
-
-  private draw(w: Worker): void {
-    const group = this.meshes.get(w.id);
-    if (!group) return;
-
-    // Lệch làn. Thợ cùng mỏ xuất phát cùng lúc và đi cùng tốc độ nên toạ độ TRÙNG KHÍT; đẩy
-    // mỗi người sang ngang một chút là đủ tách thành hàng nối đuôi. Thuần tuý chuyện nhìn:
-    // không đụng vào w.position nên không ảnh hưởng quãng đường hay thu nhập.
-    const lane = this.laneOf(w.id);
-    const rot = group.rotation.y;
-    group.position.x = w.position[0] + Math.cos(rot) * lane;
-    group.position.z = w.position[2] - Math.sin(rot) * lane;
-
-    const lean = group.getObjectByName('lean');
-    const walking = w.state === 'moving' || w.state === 'delivering';
-    const phase = this.elapsed * 12 + w.id.charCodeAt(w.id.length - 1);
-
-    if (lean) {
-      // Nhịp đi: nghiêng người qua lại và nhún lên xuống cùng tần số. Lệch pha theo mã người
-      // để cả đoàn không bước răm rắp như duyệt binh.
-      lean.rotation.z = walking ? Math.sin(phase) * 0.15 : 0;
-      lean.position.y = walking ? Math.abs(Math.sin(phase)) * 0.1 : 0;
-      // Đang đào thì bổ nhát một: chúi tới trước rồi bật lại.
-      lean.rotation.x = w.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7)) * 0.5 : 0;
+  private unload(u: Unit): void {
+    if (!u.carryingKind || u.carrying <= 0) return;
+    const target = this.economy.state.buildings.find((b) => b.id === u.targetId);
+    if (target && target.type === 'outpost') {
+      // Gom tại trạm; xe thồ sẽ chở về sau. Trần gom rộng rãi để trạm không tự nghẽn.
+      // Tran gom rong gap bon lan mot chuyen xe: tram chi la cho trung chuyen, khong duoc
+      // phep day den muc chan tho lai.
+      const cap = this.cartLoad(target) * 4;
+      target.stock[u.carryingKind] =
+        Math.min(cap, (target.stock[u.carryingKind] ?? 0) + u.carrying);
+    } else {
+      this.economy.deposit(u.carryingKind, u.carrying);
     }
-
-    const logs = group.getObjectByName('cargo-logs');
-    const block = group.getObjectByName('cargo-block') as THREE.Mesh | undefined;
-    const gem = group.getObjectByName('cargo-gem');
-    const carrying = w.carrying > 0 && w.carryingKind !== null;
-    const kind = w.carryingKind;
-    if (logs) logs.visible = !!(carrying && kind === 'wood');
-    if (gem) gem.visible = !!(carrying && kind === 'gold');
-    if (block) {
-      block.visible = !!(carrying && kind !== 'wood' && kind !== 'gold');
-      if (block.visible && kind) block.material = this.cargoMats.get(kind) ?? this.mat.body;
-    }
-    if (gem && gem.visible) {
-      gem.rotation.y = this.elapsed * 2.5;
-      gem.position.y = 0.62 + Math.sin(this.elapsed * 3) * 0.06;
-    }
-
-    const dust = group.getObjectByName('dust') as THREE.Mesh | undefined;
-    if (dust) {
-      dust.visible = w.state === 'gathering';
-      if (dust.visible) {
-        const t = (this.elapsed * 1.6) % 1;
-        dust.position.set(0.34, 0.12 + t * 0.5, 0.34);
-        dust.scale.setScalar(0.5 + t * 0.8);
-        (dust.material as THREE.MeshLambertMaterial).opacity = 0.45 * (1 - t);
-      }
-    }
+    u.carrying = 0;
+    u.carryingKind = null;
   }
 
-  /** Làn cố định suy từ mã thợ, nằm trong ±0,35 — vừa đủ tách người mà không ai ra khỏi phố. */
-  private laneOf(id: string): number {
-    let h = 0;
-    for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) | 0;
-    return (((h % 5) + 5) % 5) * 0.175 - 0.35;
+  /**
+   * Giao việc. Một người được cắt đi thám hiểm khi còn đất chưa vén — nếu không thì màn mây
+   * chẳng bao giờ mở, vì dân chỉ chạy tới những mỏ mà họ đã nhìn thấy.
+   */
+  private dispatch(u: Unit): void {
+    const villagers = this.economy.villagers();
+    const scoutIndex = villagers.length >= 2 ? villagers.length - 1 : -1;
+    if (villagers.indexOf(u) === scoutIndex) {
+      const spot = this.scoutTarget(u.position);
+      if (spot) {
+        u.targetId = 'scout';
+        u.targetPos = spot;
+        u.state = 'moving';
+        return;
+      }
+    }
+
+    const kind = this.pickKind();
+    if (!kind) return;
+    const node = this.nearestNode(u.position, kind);
+    if (!node) return;
+    u.targetId = node.id;
+    u.targetPos = node.position;
+    u.state = 'moving';
+  }
+
+  /** Tự cân: kho nào vơi nhất. Thủ công: hạn ngạch nào còn thiếu người. */
+  private pickKind(): ResourceKind | null {
+    const alloc = this.economy.state.allocation;
+    const open = RESOURCE_KINDS.filter((k) =>
+      !this.economy.isFull(k) && this.map.nodes.some((n) =>
+        n.kind === k && this.fog.isRevealed(n.position[0], n.position[2])));
+    if (open.length === 0) return null;
+
+    if (alloc.isAuto) {
+      return open.reduce((min, k) => this.economy.fillRatio(k) < this.economy.fillRatio(min) ? k : min);
+    }
+    const counts: Record<string, number> = {};
+    for (const v of this.economy.villagers()) {
+      const n = v.targetId ? this.map.nodeById(v.targetId) : undefined;
+      if (n) counts[n.kind] = (counts[n.kind] ?? 0) + 1;
+    }
+    let best: ResourceKind | null = null;
+    let deficit = 0;
+    for (const k of open) {
+      const d = (alloc[k] ?? 0) - (counts[k] ?? 0);
+      if (d > deficit) { deficit = d; best = k; }
+    }
+    return best ?? open[0];
+  }
+
+  /**
+   * Chon mo theo TRON VONG, khong theo khoang cach toi nguoi.
+   *
+   * Lay mo gan nguoi nhat nghe thi hop ly nhung do ra la sai: tho sinh ra o thu phu, luon
+   * thay may mo quanh do la gan nhat, va cu quanh quan o giua mai - tram trung chuyen dung
+   * khong mot ngay nao, vi mo khong bao gio can kiet de buoc ho di xa.
+   *
+   * Cham diem bang quang duong ca vong - toi mo, roi tu mo ve diem giao gan nhat - thi mot mo
+   * xa ma canh tram se THANG mot mo gan ma phai cong bo ve tan thu phu. Dung cai ma tram cai
+   * thien that su, va tu nhien sinh ra chuyen tho toa ra bon vung.
+   */
+  private nearestNode(from: Vec3, kind: ResourceKind) {
+    let best = null;
+    let bestScore = Infinity;
+    for (const n of this.map.nodes) {
+      if (n.kind !== kind) continue;
+      if (!this.fog.isRevealed(n.position[0], n.position[2])) continue;
+      const toNode = Math.hypot(n.position[0] - from[0], n.position[2] - from[2]);
+      const drop = this.dropPoint(n.position);
+      const back = Math.hypot(drop.position[0] - n.position[0], drop.position[2] - n.position[2]);
+      const score = toNode + back * 2;   // chang ve lap lai moi chuyen nen nang gap doi
+      if (score < bestScore) { bestScore = score; best = n; }
+    }
+    return best;
+  }
+
+  /** Ô sương gần nhất mà lại giáp với vùng đã vén — nên người đi thám hiểm không nhảy cóc. */
+  private scoutTarget(from: Vec3): Vec3 | null {
+    let best: Vec3 | null = null;
+    let bestDist = Infinity;
+    for (const c of this.fog.chunks) {
+      if (c.revealed) continue;
+      const [cx, cz] = c.center;
+      const touchesKnown = this.fog.chunks.some((o) =>
+        o.revealed && Math.hypot(o.center[0] - cx, o.center[1] - cz) <= 14.2);
+      if (!touchesKnown) continue;
+      const d = Math.hypot(cx - from[0], cz - from[2]);
+      if (d < bestDist) { bestDist = d; best = [cx, 0, cz]; }
+    }
+    return best;
+  }
+
+  /**
+   * Nhích một đơn vị về đích. Trả về true khi tới nơi.
+   *
+   * Xe thồ bám trục đường: trước hết tạt về trục gần nhất rồi mới chạy dọc trục về thủ phủ.
+   * Dân làng đi thẳng — họ cắt qua đồng cỏ, và ở một thế giới mở thì đó mới là dáng tự nhiên.
+   */
+  private step(u: Unit, dt: number): boolean {
+    if (!u.targetPos) return true;
+    let [tx, , tz] = u.targetPos;
+
+    if (u.kind === 'cart') {
+      const [px, , pz] = u.position;
+      // Còn xa trục thì nhắm vào trục trước; đã bám trục rồi thì chạy thẳng về giữa.
+      if (Math.abs(px) > 1.2 && Math.abs(pz) > 1.2) {
+        if (Math.abs(px) < Math.abs(pz)) { tx = 0; tz = pz; } else { tx = px; tz = 0; }
+      }
+    }
+
+    const dx = tx - u.position[0];
+    const dz = tz - u.position[2];
+    const dist = Math.hypot(dx, dz);
+    if (dist > 0.001) u.facing = Math.atan2(dx, dz);
+
+    const budget = u.speed * dt;
+    if (dist <= budget + ARRIVE) {
+      u.position[0] = tx;
+      u.position[2] = tz;
+      // Tạt vào trục xong thì chưa phải tới nơi; khung sau tính tiếp chặng dọc trục.
+      const real = u.targetPos;
+      return Math.hypot(real[0] - u.position[0], real[2] - u.position[2]) <= ARRIVE + 0.01;
+    }
+    u.position[0] += (dx / dist) * budget;
+    u.position[2] += (dz / dist) * budget;
+    return false;
+  }
+
+  // ------------------------------------------------------------------- vẽ
+
+  private draw(): void {
+    const units = this.economy.state.units;
+    let vi = 0;
+    let ci = 0;
+
+    for (const u of units) {
+      if (u.kind === 'cart') {
+        if (ci < this.carts.count) {
+          this.v.set(u.position[0], 0, u.position[2]);
+          this.q.setFromAxisAngle(this.axis, u.facing + Math.PI / 2);
+          this.s.set(1, 1, 1);
+          this.carts.setMatrixAt(ci, this.m.compose(this.v, this.q, this.s));
+          this.carts.setColorAt(ci, this.color.setHex(
+            u.carryingKind ? RESOURCES[u.carryingKind].color : 0xa9763f));
+          ci += 1;
+        }
+        continue;
+      }
+      if (vi >= MAX_UNITS) break;
+
+      // Nhịp đi nướng thẳng vào ma trận: lệch pha theo chỉ số nên cả đoàn không bước răm rắp.
+      const walking = u.state === 'moving' || u.state === 'delivering';
+      const phase = this.elapsed * 12 + vi * 1.7;
+      const lift = walking ? Math.abs(Math.sin(phase)) * 0.1 : 0;
+      const tilt = walking ? Math.sin(phase) * 0.15 : 0;
+      const chop = u.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7)) * 0.5 : 0;
+
+      this.v.set(u.position[0], lift, u.position[2]);
+      this.q.setFromEuler(new THREE.Euler(chop, u.facing, tilt, 'YXZ'));
+      this.s.set(1, 1, 1);
+      this.bodies.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
+
+      if (u.carrying > 0 && u.carryingKind) {
+        this.v.set(
+          u.position[0] - Math.sin(u.facing) * 0.33,
+          0.52 + lift,
+          u.position[2] - Math.cos(u.facing) * 0.33);
+        this.cargo.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
+        this.cargo.setColorAt(vi, this.color.setHex(RESOURCES[u.carryingKind].color));
+      } else {
+        this.cargo.setMatrixAt(vi, this.hidden);
+      }
+      this.bodies.setColorAt(vi, this.color.setHex(PALETTE.villager));
+      vi += 1;
+    }
+
+    for (let i = vi; i < MAX_UNITS; i += 1) {
+      this.bodies.setMatrixAt(i, this.hidden);
+      this.cargo.setMatrixAt(i, this.hidden);
+    }
+    for (let i = ci; i < this.carts.count; i += 1) this.carts.setMatrixAt(i, this.hidden);
+
+    this.bodies.instanceMatrix.needsUpdate = true;
+    this.cargo.instanceMatrix.needsUpdate = true;
+    this.carts.instanceMatrix.needsUpdate = true;
+    if (this.bodies.instanceColor) this.bodies.instanceColor.needsUpdate = true;
+    if (this.cargo.instanceColor) this.cargo.instanceColor.needsUpdate = true;
+    if (this.carts.instanceColor) this.carts.instanceColor.needsUpdate = true;
   }
 
   dispose(): void {
-    for (const group of this.meshes.values()) this.scene.remove(group);
-    this.meshes.clear();
-    for (const g of Object.values(this.geo)) g.dispose();
-    for (const m of Object.values(this.mat)) m.dispose();
-    for (const m of this.cargoMats.values()) m.dispose();
+    for (const mesh of [this.bodies, this.cargo, this.carts]) {
+      mesh.geometry.dispose();
+      (mesh.material as THREE.Material).dispose();
+    }
   }
 }

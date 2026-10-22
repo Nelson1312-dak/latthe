@@ -1,19 +1,20 @@
 /**
- * Lớp 2D đè trên canvas. Chỉ đọc trạng thái và gọi Economy — không tự tính luật chơi ở đây.
+ * Lớp 2D đè trên canvas: thanh tài nguyên, bảng dân, bảng nền đất, và minimap.
  *
- * Thanh trên tự làm mới theo nhịp riêng (không bám vào vòng render) để số liệu vẫn nhảy đều
- * kể cả khi game đang tạm dừng, và để lúc tab chạy nền thì nó cũng bị trình duyệt bóp theo,
- * đúng như mong muốn.
+ * Minimap vẽ bằng canvas 2D chứ không phải một cảnh Three thứ hai. Một cảnh thứ hai nghĩa là
+ * một lượt render nữa mỗi khung hình cho thứ chỉ to bằng bao diêm; canvas 2D vẽ năm lần mỗi
+ * giây là quá đủ mượt cho mắt và gần như không tốn gì.
  */
 import {
-  BUILDABLE, BUILDINGS, RESOURCES, tierSpec,
+  BIOMES, BUILDINGS, BUILD_COST, HALF, PALETTE, PLOTS, RESOURCES, WORLD, biomeAt,
 } from './config';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
-import type { Cost, OfflineReport, RawKind, ResourceKind, Slot } from './types';
-import { ALL_KINDS } from './types';
+import type { BuildingType, Cost, OfflineReport, ResourceKind } from './types';
+import { RESOURCE_KINDS } from './types';
 
-const STAT_REFRESH_MS = 200;
+const STAT_MS = 200;
+const MAP_MS = 200;
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -22,84 +23,64 @@ function $<T extends HTMLElement>(id: string): T {
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K, className?: string, text?: string,
+  tag: K, cls?: string, text?: string,
 ): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
 }
 
-/** 1 234 -> "1,2N". Giữ ngắn để thanh trên không bị giãn khi số lớn dần. */
-export function formatNumber(n: number): string {
+export function fmt(n: number): string {
   const v = Math.floor(n);
   if (v < 1000) return String(v);
   if (v < 1e6) return `${(v / 1e3).toFixed(1).replace('.0', '')}N`;
-  if (v < 1e9) return `${(v / 1e6).toFixed(1).replace('.0', '')}Tr`;
-  return `${(v / 1e9).toFixed(1).replace('.0', '')}T`;
+  return `${(v / 1e6).toFixed(1).replace('.0', '')}Tr`;
 }
 
-function formatDuration(seconds: number): string {
+function dur(seconds: number): string {
   const s = Math.floor(seconds);
   if (s < 60) return `${s} giây`;
   const m = Math.floor(s / 60);
   if (m < 60) return `${m} phút`;
   const h = Math.floor(m / 60);
-  const rem = m % 60;
-  return rem ? `${h} giờ ${rem} phút` : `${h} giờ`;
+  const r = m % 60;
+  return r ? `${h} giờ ${r} phút` : `${h} giờ`;
 }
 
 export class UI {
   private readonly economy: Economy;
   private readonly game: Game;
-  private selected: Slot | null = null;
-  private statTimer: number | null = null;
-  private readonly bottom = document.querySelector('.bar-bottom') as HTMLElement;
-  /** Thu gọn bảng dưới còn một dòng. Ở cửa sổ nhỏ thì bật sẵn. */
-  private compact = false;
-  /** Người chơi đã tự bấm thu gọn chưa — bấm rồi thì đừng tự ý đổi lại khi họ chỉnh cửa sổ. */
-  private compactByUser = false;
-
-  /**
-   * Người chơi có TỰ BẤM tạm dừng hay không. Khác hẳn với việc game bị dừng vì tab chạy nền:
-   * lúc quay lại tab, chỉ ý muốn này mới quyết định có chạy tiếp hay không.
-   */
+  private selected: string | null = null;
+  private timers: number[] = [];
+  private toastTimer = 0;
   manualPaused = false;
 
+  private compact = false;
+  private compactByUser = false;
+  private readonly bottom = document.querySelector('.bar-bottom') as HTMLElement;
+
   private readonly el = {
-    resbar: $('resbar'),
-    level: $('level'),
-    expand: $<HTMLButtonElement>('expand'),
-    expandLabel: $('expand-label'),
-    afkcap: $('afkcap'),
-    mute: $<HTMLButtonElement>('mute'),
-    pause: $<HTMLButtonElement>('pause'),
-    crew: $('crew'),
-    panel: $('panel'),
-    welcome: $('welcome'),
-    awayTime: $('away-time'),
-    awayCoins: $('away-coins'),
-    awayCapped: $('away-capped'),
-    awayOk: $<HTMLButtonElement>('away-ok'),
-    paused: $('paused'),
-    resume: $<HTMLButtonElement>('resume'),
+    resbar: $('resbar'), level: $('level'), afkcap: $('afkcap'),
+    mute: $<HTMLButtonElement>('mute'), pause: $<HTMLButtonElement>('pause'),
+    crew: $('crew'), panel: $('panel'),
+    minimap: $<HTMLCanvasElement>('minimap'), mapbox: $('mapbox'),
+    welcome: $('welcome'), awayTime: $('away-time'), awayLoot: $('away-loot'),
+    awayCapped: $('away-capped'), awayOk: $<HTMLButtonElement>('away-ok'),
+    paused: $('paused'), resume: $<HTMLButtonElement>('resume'), toast: $('toast'),
   };
 
   constructor(economy: Economy, game: Game) {
     this.economy = economy;
     this.game = game;
 
-    game.onSelect = (slot) => {
-      this.selected = slot;
-      this.renderPanel();
+    game.onSelect = (id) => { this.selected = id; this.renderPanel(); };
+    game.onReveal = () => {
+      const b = BIOMES[biomeAt(game.target.x, game.target.z)];
+      this.toast(`Đã vén được vùng mới · ${b.label}`);
     };
     economy.onChange = () => {
-      game.rebuildWorld();
-      game.syncWorkers();
-      if (this.selected) {
-        this.selected = economy.state.slots.find((s) => s.id === this.selected?.id) ?? null;
-        game.select(this.selected?.id ?? null);
-      }
+      game.rebuildPlots();
       this.renderAll();
     };
 
@@ -107,155 +88,136 @@ export class UI {
     this.el.pause.addEventListener('click', () => this.setPaused(!game.isPaused));
     this.el.resume.addEventListener('click', () => this.setPaused(false));
     this.el.awayOk.addEventListener('click', () => { this.el.welcome.hidden = true; });
-    this.el.expand.addEventListener('click', () => { this.economy.expandTerritory(); });
+    this.el.minimap.addEventListener('pointerdown', (e) => this.mapClick(e));
 
     this.applyMute();
     this.autoCompact();
     window.addEventListener('resize', () => this.autoCompact());
     this.renderAll();
-    this.statTimer = window.setInterval(() => this.refreshStats(), STAT_REFRESH_MS);
-  }
-
-  /**
-   * Cửa sổ nhỏ thì bảng dưới tự thu lại. Đo trước khi làm: ở 700×460, bảng Đội thợ mở hết
-   * cùng dòng gợi ý chiếm 232 điểm ảnh trên tổng 460, tức HUD nuốt 63% màn hình và nửa dưới
-   * hòn đảo nằm khuất, không bấm được.
-   */
-  private autoCompact(): void {
-    if (this.compactByUser) return;
-    const want = window.innerWidth < 860 || window.innerHeight < 640;
-    if (want === this.compact) return;
-    this.compact = want;
-    this.applyCompact();
-  }
-
-  private applyCompact(): void {
-    this.bottom.classList.toggle('compact', this.compact);
+    this.timers.push(window.setInterval(() => this.refresh(), STAT_MS));
+    this.timers.push(window.setInterval(() => this.drawMap(), MAP_MS));
   }
 
   private renderAll(): void {
     this.renderResourceBar();
     this.renderCrew();
     this.renderPanel();
-    this.refreshStats();
+    this.refresh();
   }
 
   // ----------------------------------------------------------- thanh trên
 
-  /**
-   * Thanh tài nguyên dựng lại khi SỐ LOẠI đổi, còn con số thì cập nhật tại chỗ mỗi 200ms.
-   * Dựng lại cả thanh bốn lần mỗi giây sẽ làm mất con trỏ chuột đang rê và nháy chữ.
-   */
   private renderResourceBar(): void {
     this.el.resbar.innerHTML = '';
-    for (const kind of this.visibleKinds()) {
-      const meta = RESOURCES[kind];
+    for (const kind of RESOURCE_KINDS) {
       const chip = el('div', 'chip');
       chip.dataset.kind = kind;
-      chip.append(el('span', 'ico', meta.icon));
+      chip.append(el('span', 'ico', RESOURCES[kind].icon));
       const col = el('span', 'col');
       col.append(el('strong', 'amt', '0'), el('small', 'rate', ''));
       chip.append(col);
       this.el.resbar.append(chip);
     }
-    const coin = el('div', 'chip coin');
-    coin.dataset.kind = 'coins';
-    coin.append(el('span', 'ico', '🪙'));
-    const col = el('span', 'col');
-    col.append(el('strong', 'amt', '0'), el('small', 'rate', ''));
-    coin.append(col);
-    this.el.resbar.append(coin);
   }
 
-  /** Loại nào đáng hiện: thô đã mở, cộng hàng chế biến khi đã có xưởng tương ứng. */
-  private visibleKinds(): ResourceKind[] {
-    const kinds: ResourceKind[] = [...this.economy.unlockedRaw()];
-    if (this.economy.sumLevels('sawmill') > 0) kinds.push('planks');
-    if (this.economy.sumLevels('masonry') > 0) kinds.push('bricks');
-    return kinds;
-  }
-
-  refreshStats(): void {
+  refresh(): void {
     const s = this.economy.state;
-    const limit = s.storageLimit;
-
     for (const chip of Array.from(this.el.resbar.children) as HTMLElement[]) {
-      const kind = chip.dataset.kind as ResourceKind | 'coins';
-      const amt = chip.querySelector('.amt') as HTMLElement;
-      const rate = chip.querySelector('.rate') as HTMLElement;
-      if (kind === 'coins') {
-        amt.textContent = formatNumber(s.coins);
-        rate.textContent = `+${this.economy.coinRate.toFixed(1)}/s`;
-        chip.title = `Xu — thu ${this.economy.coinRate.toFixed(2)} mỗi giây`;
-        continue;
-      }
-      const have = s[kind];
-      amt.textContent = `${formatNumber(have)}`;
+      const kind = chip.dataset.kind as ResourceKind;
+      (chip.querySelector('.amt') as HTMLElement).textContent = fmt(s.inv[kind]);
       const r = this.economy.rates[kind];
-      rate.textContent = `+${r.toFixed(1)}/s`;
+      (chip.querySelector('.rate') as HTMLElement).textContent = `+${r.toFixed(1)}/s`;
       const full = this.economy.isFull(kind);
       chip.classList.toggle('full', full);
-      chip.title = `${RESOURCES[kind].label}: ${Math.floor(have)}/${limit}`
+      chip.title = `${RESOURCES[kind].label}: ${Math.floor(s.inv[kind])}/${s.storageLimit}`
         + ` — thu ${r.toFixed(2)} mỗi giây${full ? ' · KHO ĐẦY' : ''}`;
     }
-
     this.el.level.textContent = String(s.level);
-    this.el.afkcap.textContent = formatDuration(this.economy.afkCapSeconds());
-    this.refreshExpandButton();
+    this.el.afkcap.textContent = '2 giờ';
   }
 
-  private refreshExpandButton(): void {
-    const next = this.economy.nextTier();
-    if (!next) {
-      this.el.expand.disabled = true;
-      this.el.expandLabel.textContent = 'Đảo đã mở hết';
-      this.el.expand.title = 'Không còn bậc lãnh thổ nào.';
-      return;
-    }
-    const blockers = this.economy.expandBlockers();
-    const ok = blockers.level === null && blockers.missing.length === 0;
-    this.el.expand.disabled = !ok;
-    this.el.expand.classList.toggle('ready', ok);
-    this.el.expandLabel.textContent = `Mở rộng đất · ${next.label}`;
-
-    const parts = [`Bậc ${next.tier} — ${next.label}`, `Cần cấp căn cứ ${next.requiresLevel}`];
-    for (const kind of ALL_KINDS) {
-      const need = next.cost[kind as keyof Cost] as number | undefined;
-      if (need) parts.push(`${RESOURCES[kind].icon} ${Math.floor(this.economy.state[kind])}/${need}`);
-    }
-    if (blockers.level !== null) parts.push(`Còn thiếu cấp ${blockers.level}`);
-    if (blockers.needStorage !== null) {
-      parts.push(`Kho chỉ chứa ${this.economy.state.storageLimit} mỗi loại,`
-        + ` cần ít nhất ${blockers.needStorage} — xây thêm Kho trước.`);
-    }
-    this.el.expand.title = parts.join('\n');
-  }
-
-  // ------------------------------------------------------------ đội thợ
+  // ------------------------------------------------------------- minimap
 
   /**
-   * Bảng phân bổ thợ. Ba hàng (-/+), một công tắc Tự cân, và con số thợ rảnh.
-   *
-   * "Rảnh" ở đây không phải đứng chơi: thợ ngoài hạn ngạch sẽ đi CHỞ HÀNG từ xưởng về chợ.
-   * Nói rõ ra trong chính nhãn, vì nếu không thì người chơi sẽ dồn hết thợ vào hạn ngạch và
-   * tự bóp chết chuỗi chế biến của mình.
+   * Vẽ cả thế giới vào một ô vuông: nền theo biến sinh thái, ô chưa vén phủ mây, chấm cho mỏ
+   * và cho dân. Khung trắng là vùng camera đang nhìn.
    */
+  private drawMap(): void {
+    const c = this.el.minimap;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    const px = c.width / WORLD;
+    const to = (v: number) => (v + HALF) * px;
+
+    ctx.clearRect(0, 0, c.width, c.height);
+    // Nền bốn vùng: vẽ thô theo ô 2 đơn vị, đủ mịn ở cỡ này.
+    for (let x = -HALF; x < HALF; x += 2) {
+      for (let z = -HALF; z < HALF; z += 2) {
+        const soft = Math.max(Math.abs(x), Math.abs(z)) * 0.68 + Math.hypot(x, z) * 0.32;
+        if (soft > HALF) continue;
+        ctx.fillStyle = BIOMES[biomeAt(x, z)].minimap;
+        ctx.fillRect(to(x), to(z), 2 * px + 1, 2 * px + 1);
+      }
+    }
+    // Mây phủ phần chưa khám phá.
+    ctx.fillStyle = 'rgba(236,243,250,0.92)';
+    for (const chunk of this.game.fog.chunks) {
+      if (chunk.revealed) continue;
+      ctx.fillRect(to(chunk.center[0] - 5), to(chunk.center[1] - 5), 10 * px, 10 * px);
+    }
+    // Mỏ đã lộ.
+    for (const n of this.game.map.nodes) {
+      if (!this.game.fog.isRevealed(n.position[0], n.position[2])) continue;
+      ctx.fillStyle = `#${RESOURCES[n.kind].color.toString(16).padStart(6, '0')}`;
+      ctx.fillRect(to(n.position[0]) - 1, to(n.position[2]) - 1, 2.5, 2.5);
+    }
+    // Công trình.
+    for (const b of this.economy.state.buildings) {
+      ctx.fillStyle = b.type === 'townhall' ? '#d94e34' : '#ffffff';
+      ctx.fillRect(to(b.position[0]) - 2, to(b.position[2]) - 2, 4, 4);
+    }
+    // Dân: nhấp nháy để phân biệt với mỏ đứng yên.
+    const blink = (Date.now() % 1000) < 550;
+    if (blink) {
+      ctx.fillStyle = '#fff6d8';
+      for (const u of this.economy.state.units) {
+        ctx.beginPath();
+        ctx.arc(to(u.position[0]), to(u.position[2]), u.kind === 'cart' ? 2.6 : 1.8, 0, 7);
+        ctx.fill();
+      }
+    }
+    // Khung nhìn.
+    const z = this.game.zoomLevel;
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(
+      to(this.game.target.x - z * 0.85), to(this.game.target.z - z * 0.55),
+      z * 1.7 * px, z * 1.1 * px);
+  }
+
+  private mapClick(e: PointerEvent): void {
+    const r = this.el.minimap.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * WORLD - HALF;
+    const z = ((e.clientY - r.top) / r.height) * WORLD - HALF;
+    this.game.panTo(x, z);
+  }
+
+  // ------------------------------------------------------------- đội dân
+
   private renderCrew(): void {
     const box = this.el.crew;
     box.innerHTML = '';
     const a = this.economy.state.allocation;
-    const total = this.economy.state.workers.length;
-    const assigned = a.isAuto ? 0 : a.wood + a.stone + a.gold;
+    const total = this.economy.villagers().length;
+    const assigned = a.isAuto ? 0 : RESOURCE_KINDS.reduce((s, k) => s + (a[k] ?? 0), 0);
 
     const head = el('div', 'crew-head');
-    head.append(el('h3', undefined, 'Đội thợ'));
-    const free = el('span', 'free',
-      a.isAuto ? `Tự cân · ${total} thợ` : `Chở hàng: ${total - assigned} / Tổng: ${total}`);
-    head.append(free);
+    head.append(el('h3', undefined, 'Đội dân'));
+    head.append(el('span', 'free',
+      a.isAuto ? `Tự cân · ${total} dân` : `Rảnh: ${total - assigned} / Tổng: ${total}`));
 
     const fold = el('button', 'fold', this.compact ? '▴' : '▾') as HTMLButtonElement;
-    fold.title = this.compact ? 'Mở bảng đội thợ' : 'Thu gọn bảng đội thợ';
-    fold.setAttribute('aria-expanded', String(!this.compact));
+    fold.title = this.compact ? 'Mở bảng' : 'Thu gọn bảng';
     fold.addEventListener('click', () => {
       this.compact = !this.compact;
       this.compactByUser = true;
@@ -264,69 +226,65 @@ export class UI {
     });
 
     const toggle = el('label', 'toggle');
-    const box2 = el('input') as HTMLInputElement;
-    box2.type = 'checkbox';
-    box2.checked = a.isAuto;
-    box2.addEventListener('change', () => {
-      this.game.workers.setAllocation({ isAuto: box2.checked });
+    const cb = el('input') as HTMLInputElement;
+    cb.type = 'checkbox';
+    cb.checked = a.isAuto;
+    cb.addEventListener('change', () => {
+      a.isAuto = cb.checked;
+      this.economy.save();
       this.renderCrew();
     });
-    toggle.append(box2, el('span', undefined, 'Tự cân'));
+    toggle.append(cb, el('span', undefined, 'Tự cân'));
     head.append(toggle, fold);
     box.append(head);
 
     const rows = el('div', 'crew-rows');
-    for (const kind of ['wood', 'stone', 'gold'] as RawKind[]) {
-      const unlocked = this.economy.unlockedRaw().includes(kind);
-      const row = el('div', 'crew-row' + (unlocked ? '' : ' off'));
+    for (const kind of RESOURCE_KINDS) {
+      const seen = this.game.map.nodes.some((n) =>
+        n.kind === kind && this.game.fog.isRevealed(n.position[0], n.position[2]));
+      const row = el('div', 'crew-row' + (seen ? '' : ' off'));
       row.append(el('span', 'ico', RESOURCES[kind].icon));
-      row.append(el('span', 'nm', RESOURCES[kind].label));
-
       const minus = el('button', 'step', '−') as HTMLButtonElement;
-      const value = el('span', 'val', String(a[kind]));
+      const val = el('span', 'val', String(a[kind] ?? 0));
       const plus = el('button', 'step', '+') as HTMLButtonElement;
-      const locked = a.isAuto || !unlocked;
-      minus.disabled = locked || a[kind] <= 0;
+      const locked = a.isAuto || !seen;
+      minus.disabled = locked || (a[kind] ?? 0) <= 0;
       plus.disabled = locked || assigned >= total;
-      minus.addEventListener('click', () => {
-        this.game.workers.setAllocation({ [kind]: a[kind] - 1 });
-        this.renderCrew();
-      });
-      plus.addEventListener('click', () => {
-        this.game.workers.setAllocation({ [kind]: a[kind] + 1 });
-        this.renderCrew();
-      });
-      row.append(minus, value, plus);
-      if (!unlocked) row.title = 'Chưa mở — cần lên cấp căn cứ.';
+      minus.addEventListener('click', () => { a[kind] = (a[kind] ?? 0) - 1; this.economy.save(); this.renderCrew(); });
+      plus.addEventListener('click', () => { a[kind] = (a[kind] ?? 0) + 1; this.economy.save(); this.renderCrew(); });
+      row.append(minus, val, plus);
+      if (!seen) row.title = 'Chưa tìm thấy mỏ loại này — đi thám hiểm thêm.';
       rows.append(row);
     }
     box.append(rows);
 
     const actions = el('div', 'actions');
-    const hire = this.costButton('Thuê thợ', this.economy.hireCost(), () => this.economy.hire());
+    const hire = this.costButton('Thuê dân', this.economy.hireCost(),
+      () => this.economy.hire((home) => this.game.workers.spawnVillager(home)));
     if (!this.economy.canHire()) {
       hire.disabled = true;
       hire.classList.remove('buy');
       hire.title = 'Hết chỗ ở. Xây hoặc nâng Nhà ở trước.';
     }
     actions.append(hire);
-    actions.append(this.costButton(`👟 Giày ${this.economy.state.workerSpeedLevel}`,
-      this.economy.speedCost(), () => this.economy.trainSpeed()));
-    actions.append(this.costButton(`🎒 Balo ${this.economy.state.workerCapacityLevel}`,
-      this.economy.capacityCost(), () => this.economy.trainCapacity()));
+    actions.append(this.costButton(`👟 Giày ${this.economy.state.speedLevel}`,
+      this.economy.trainSpeedCost(), () => this.economy.trainSpeed()));
+    actions.append(this.costButton(`🎒 Balo ${this.economy.state.capacityLevel}`,
+      this.economy.trainCapacityCost(), () => this.economy.trainCapacity()));
     box.append(actions);
   }
 
-  // ------------------------------------------------------------ bảng ô đất
+  // ------------------------------------------------------------ nền đất
 
   private renderPanel(): void {
     const panel = this.el.panel;
     panel.innerHTML = '';
-    const slot = this.selected;
+    const id = this.selected;
+    const plot = id ? PLOTS.find((p) => p.id === id) : null;
 
-    if (!slot) {
+    if (!plot) {
       panel.classList.add('panel-empty');
-      panel.append(el('p', 'hint', this.nextGoalHint()));
+      panel.append(el('p', 'hint', this.hint()));
       return;
     }
     panel.classList.remove('panel-empty');
@@ -337,103 +295,92 @@ export class UI {
     who.append(title, meta);
     const actions = el('div', 'actions');
 
-    if (slot.state === 'LOCKED') {
-      title.textContent = 'Ô đất khoá';
-      meta.textContent = `Bậc ${slot.tier} · mở ra để xây thêm công trình.`;
-      actions.append(this.costButton('Mở ô', slot.unlockCost, () => this.economy.unlock(slot)));
-    } else if (slot.state === 'UNLOCKED_EMPTY') {
-      title.textContent = 'Đất trống';
-      meta.textContent = 'Chọn thứ muốn xây.';
-      for (const type of BUILDABLE) {
-        actions.append(this.costButton(
-          `${BUILDINGS[type].icon} ${BUILDINGS[type].label}`,
-          this.economy.costForBuild(type),
-          () => this.economy.build(slot, type)));
+    const b = this.economy.buildingAt(plot.id);
+    if (b) {
+      title.textContent = `${BUILDINGS[b.type].icon} ${BUILDINGS[b.type].label} · cấp ${b.level}`;
+      let note = BUILDINGS[b.type].describe(b.level);
+      if (b.type === 'outpost') {
+        const tot = Object.values(b.stock).reduce<number>((s, v) => s + (v ?? 0), 0);
+        note += ` · đang gom ${Math.floor(tot)}`;
       }
+      meta.textContent = note;
+      if (b.level >= BUILDINGS[b.type].maxLevel) actions.append(el('p', 'meta', 'Đã kịch cấp.'));
+      else actions.append(this.costButton('Nâng cấp', this.economy.costFor(b.type, b.level),
+        () => this.economy.upgrade(b)));
     } else {
-      const spec = BUILDINGS[slot.type as Exclude<typeof slot.type, 'none'>];
-      title.textContent = `${spec.icon} ${spec.label} · cấp ${slot.level}`;
-      meta.textContent = spec.describe(slot.level)
-        + (slot.buffer >= 1 ? ` · ${Math.floor(slot.buffer)} đơn chờ chở` : '');
-      const cost = this.economy.upgradeCost(slot);
-      if (cost === null) actions.append(el('p', 'meta', 'Đã kịch cấp.'));
-      else {
-        actions.append(this.costButton('Nâng cấp', cost, () => {
-          const ok = this.economy.upgrade(slot);
-          // Game nang cap tuc thi nen khong co giai doan "dang xay"; bat gian giao mot nhip
-          // ngay sau khi xong de nguoi choi thay ro vua co gi doi o day.
-          if (ok) this.game.markUpgraded(slot.id);
-          return ok;
-        }));
+      const biome = BIOMES[biomeAt(plot.pos[0], plot.pos[1])];
+      title.textContent = plot.kind === 'outpost' ? 'Nền trạm trung chuyển' : 'Nền đất trống';
+      meta.textContent = biome.label;
+      const types: BuildingType[] = plot.kind === 'outpost' ? ['outpost'] : ['house', 'granary'];
+      for (const t of types) {
+        actions.append(this.costButton(`${BUILDINGS[t].icon} ${BUILDINGS[t].label}`,
+          BUILD_COST[t], () => this.economy.build(plot.id, t)));
       }
     }
     panel.append(who, actions);
   }
 
-  /**
-   * Nút có bảng giá nhiều loại. Thứ nào thiếu thì tô đỏ — người chơi biết ngay phải đi kiếm
-   * gì, thay vì chỉ thấy nút xám và không hiểu vì sao.
-   */
   private costButton(label: string, cost: Cost, run: () => boolean): HTMLButtonElement {
     const b = el('button', 'act') as HTMLButtonElement;
     const missing = new Set(this.economy.missing(cost).map((m) => m.kind));
-    const affordable = missing.size === 0;
-    if (affordable) b.classList.add('buy');
-    b.disabled = !affordable;
-
+    const ok = missing.size === 0;
+    if (ok) b.classList.add('buy');
+    b.disabled = !ok;
     b.append(el('span', 'nm', label));
     const price = el('span', 'cost');
-    if (cost.coins > 0) {
-      price.append(el('span', 'bit' + (missing.has('coins') ? ' lack' : ''),
-        `🪙${formatNumber(cost.coins)}`));
-    }
-    for (const kind of ALL_KINDS) {
-      const need = cost[kind as keyof Cost] as number | undefined;
+    for (const k of RESOURCE_KINDS) {
+      const need = cost[k];
       if (!need) continue;
-      price.append(el('span', 'bit' + (missing.has(kind) ? ' lack' : ''),
-        `${RESOURCES[kind].icon}${formatNumber(need)}`));
+      price.append(el('span', 'bit' + (missing.has(k) ? ' lack' : ''),
+        `${RESOURCES[k].icon}${fmt(need)}`));
     }
     b.append(price);
     b.addEventListener('click', () => { run(); });
     return b;
   }
 
-  /** Gợi ý việc tiếp theo — để người chơi mới không bơ vơ. */
-  private nextGoalHint(): string {
+  private hint(): string {
     const e = this.economy;
-    if (!e.canHire()) return 'Hết chỗ ở. Xây hoặc nâng Nhà ở để thuê thêm thợ.';
-    if (e.sumLevels('sawmill') === 0) {
-      return 'Xây Xưởng cưa: hai gỗ thành một ván, mà ván đáng gấp bốn lần gỗ.';
+    if (!e.canHire()) return 'Hết chỗ ở. Bấm một nền đất trống rồi xây Nhà ở.';
+    const unseen = this.game.fog.chunks.filter((c) => !c.revealed).length;
+    if (unseen > 0 && e.villagers().length < 2) {
+      return 'Thuê người thứ hai: một người sẽ đi thám hiểm vén màn mây, người kia ở lại đào.';
     }
-    const stuck = e.processors().find((s) => s.buffer >= 10);
-    if (stuck) return 'Hàng đang ùn ở xưởng. Bớt thợ đào lại để có người chở hàng về chợ.';
+    if (e.outposts().length === 0 && unseen < 24) {
+      return 'Vùng xa đi lại quá lâu. Xây Trạm trung chuyển ở đó để dân đổ hàng tại chỗ, xe thồ lo phần còn lại.';
+    }
     const full = [...e.fullKinds];
     if (full.length) {
-      return `Kho đầy ${full.map((k) => RESOURCES[k].label.toLowerCase()).join(', ')}. Xây thêm Kho hoặc nâng Chợ để bán nhanh hơn.`;
+      return `Kho đầy ${full.map((k) => RESOURCES[k].label.toLowerCase()).join(', ')}. Xây thêm Kho lẫm.`;
     }
-    const next = e.nextTier();
-    if (next) {
-      const b = e.expandBlockers();
-      if (b.needStorage !== null) {
-        return `Mở ${next.label} cần ${b.needStorage} một loại, mà kho chỉ chứa ${e.state.storageLimit}. Xây thêm Kho trước.`;
-      }
-      if (e.state.level >= next.requiresLevel) return `Đủ cấp để mở ${next.label}. Gom nguyên liệu rồi bấm Mở rộng đất.`;
-    }
-    return 'Bấm vào một ô đất để xây hoặc nâng cấp.';
+    if (unseen > 0) return `Còn ${unseen} vùng chưa khám phá. Kéo bản đồ hoặc bấm minimap để xem.`;
+    return 'Bấm một nền đất để xây hoặc nâng cấp.';
   }
 
   // ------------------------------------------------------------- lớp phủ
 
-  showOffline(report: OfflineReport): void {
-    if (report.coins <= 0) return;
-    this.el.awayTime.textContent =
-      `Bạn đi ${formatDuration(report.elapsedSeconds)}, được tính ${formatDuration(report.creditedSeconds)}.`;
-    this.el.awayCoins.textContent = formatNumber(report.coins);
+  private toast(text: string): void {
+    this.el.toast.textContent = text;
+    this.el.toast.hidden = false;
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => { this.el.toast.hidden = true; }, 2600);
+  }
 
+  showOffline(r: OfflineReport): void {
+    const kinds = RESOURCE_KINDS.filter((k) => (r.gained[k] ?? 0) > 0);
+    if (kinds.length === 0) return;
+    this.el.awayTime.textContent =
+      `Bạn đi ${dur(r.elapsedSeconds)}, được tính ${dur(r.creditedSeconds)}.`;
+    this.el.awayLoot.innerHTML = '';
+    for (const k of kinds) {
+      const li = el('li');
+      li.append(el('span', 'ico', RESOURCES[k].icon), el('strong', undefined, fmt(r.gained[k] ?? 0)));
+      this.el.awayLoot.append(li);
+    }
     const notes: string[] = [];
-    if (report.capped) notes.push('Đã chạm trần tích luỹ 2 giờ.');
-    if (report.full.length) {
-      notes.push(`Kho đầy ${report.full.map((k) => RESOURCES[k].label.toLowerCase()).join(', ')} nên thợ phải dừng — xây thêm Kho.`);
+    if (r.capped) notes.push('Đã chạm trần tích luỹ 2 giờ.');
+    if (r.full.length) {
+      notes.push(`Kho đầy ${r.full.map((k) => RESOURCES[k].label.toLowerCase()).join(', ')} nên dân phải dừng — xây thêm Kho lẫm.`);
     }
     this.el.awayCapped.textContent = notes.join(' ');
     this.el.awayCapped.hidden = notes.length === 0;
@@ -441,11 +388,24 @@ export class UI {
     this.renderAll();
   }
 
-  setPaused(paused: boolean): void {
-    this.manualPaused = paused;
-    this.game.setPaused(paused);
-    this.el.paused.hidden = !paused;
-    this.el.pause.textContent = paused ? '▶' : '⏸';
+  setPaused(p: boolean): void {
+    this.manualPaused = p;
+    this.game.setPaused(p);
+    this.el.paused.hidden = !p;
+    this.el.pause.textContent = p ? '▶' : '⏸';
+  }
+
+  private autoCompact(): void {
+    if (this.compactByUser) return;
+    const want = window.innerWidth < 860 || window.innerHeight < 640;
+    if (want === this.compact) return;
+    this.compact = want;
+    this.applyCompact();
+    this.renderCrew();
+  }
+
+  private applyCompact(): void {
+    this.bottom.classList.toggle('compact', this.compact);
   }
 
   private toggleMute(): void {
@@ -455,17 +415,14 @@ export class UI {
   }
 
   private applyMute(): void {
-    // Game chưa có âm thanh; nút vẫn có thật và trạng thái vẫn được lưu, nên lúc thêm tiếng
-    // chỉ cần đọc cờ này chứ không phải sửa gì ở lớp UI.
     this.el.mute.textContent = this.economy.state.muted ? '🔇' : '🔊';
     this.el.mute.setAttribute('aria-pressed', String(this.economy.state.muted));
   }
 
   dispose(): void {
-    if (this.statTimer !== null) window.clearInterval(this.statTimer);
-    this.statTimer = null;
+    for (const t of this.timers) window.clearInterval(t);
+    this.timers = [];
   }
 }
 
-/** Nhãn bậc lãnh thổ hiện tại, dùng khi cần nói gọn trong một dòng. */
-export const tierLabel = (tier: number): string => tierSpec(tier).label;
+export const PALETTE_REF = PALETTE;
