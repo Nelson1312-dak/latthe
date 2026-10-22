@@ -13,7 +13,7 @@
  * nên không có gì khác đáng lưu.
  */
 import * as THREE from 'three';
-import { FOG_CHUNK, HALF, PALETTE, REVEAL_RADIUS } from './config';
+import { FOG_CHUNK, HALF, PALETTE, REVEAL_RADIUS, SURVEY_SECONDS } from './config';
 import type { FogChunk, Unit } from './types';
 
 /** Số khối mây trên một ô. Nhiều thì dày đẹp, nhưng đây là thứ nhân với 36 ô. */
@@ -27,6 +27,8 @@ interface Slot {
   count: number;
   /** Giây đã trôi của hoạt cảnh tan; null nghĩa là chưa bắt đầu. */
   fading: number | null;
+  /** Giây đã khảo sát. Đủ SURVEY_SECONDS thì mây mới bắt đầu tan. */
+  survey: number;
 }
 
 export class FogOfWar {
@@ -63,7 +65,7 @@ export class FogOfWar {
         const id = `c${i}_${j}`;
         const chunk: FogChunk = { id, center: [cx, cz], revealed: revealed.includes(id) };
         this.chunks.push(chunk);
-        const slot: Slot = { chunk, from: index, count: PUFFS, fading: null };
+        const slot: Slot = { chunk, from: index, count: PUFFS, fading: null, survey: 0 };
 
         for (let k = 0; k < PUFFS; k += 1) {
           const a = (k / PUFFS) * Math.PI * 2 + i * 0.7 + j * 0.3;
@@ -104,6 +106,7 @@ export class FogOfWar {
       const want = revealed.includes(slot.chunk.id);
       slot.chunk.revealed = want;
       slot.fading = null;
+      slot.survey = 0;
       for (let i = 0; i < slot.count; i += 1) {
         this.mesh.setMatrixAt(slot.from + i, want ? this.hidden : this.base[slot.from + i]);
       }
@@ -143,7 +146,25 @@ export class FogOfWar {
           const dz = Math.max(0, Math.abs(u.position[2] - cz) - FOG_CHUNK / 2);
           return Math.hypot(dx, dz) <= REVEAL_RADIUS;
         });
-        if (!near) continue;
+        if (!near) {
+          // Rời đi giữa chừng thì công khảo sát nguội dần, nhưng không mất sạch.
+          if (slot.survey > 0) { slot.survey = Math.max(0, slot.survey - dt * 0.5); dirty = true; }
+          continue;
+        }
+        slot.survey += dt;
+        if (slot.survey < SURVEY_SECONDS) {
+          // Mây mỏng dần trong lúc khảo sát: người chơi thấy việc đang tiến triển.
+          const k = slot.survey / SURVEY_SECONDS;
+          for (let i = 0; i < slot.count; i += 1) {
+            const idx = slot.from + i;
+            this.tmp.copy(this.base[idx]);
+            const s = 1 - k * 0.35;
+            this.tmp.scale(new THREE.Vector3(s, s, s));
+            this.mesh.setMatrixAt(idx, this.tmp);
+          }
+          dirty = true;
+          continue;
+        }
         slot.fading = 0;
         slot.chunk.revealed = true;
         this.onReveal?.(slot.chunk);

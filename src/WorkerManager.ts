@@ -18,6 +18,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, GATHER_SECONDS, OUTPOST_RANGE, PALETTE, RESOURCES,
+  SCOUT_MIN_VILLAGERS,
 } from './config';
 import type { Economy } from './Economy';
 import type { FogOfWar } from './FogOfWar';
@@ -264,7 +265,7 @@ export class WorkerManager {
    */
   private dispatch(u: Unit): void {
     const villagers = this.economy.villagers();
-    const scoutIndex = villagers.length >= 2 ? villagers.length - 1 : -1;
+    const scoutIndex = villagers.length >= SCOUT_MIN_VILLAGERS ? villagers.length - 1 : -1;
     if (villagers.indexOf(u) === scoutIndex) {
       const spot = this.scoutTarget(u.position);
       if (spot) {

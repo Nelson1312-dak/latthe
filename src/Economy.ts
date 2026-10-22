@@ -10,7 +10,8 @@
 import {
   AFK_CAP_SECONDS, AFK_EFFICIENCY, AFK_MIN_SECONDS, AUTOSAVE_INTERVAL_MS, BASE_CAPACITY,
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
-  HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE, PLOTS, SAVE_KEY, SPEED_PER_LEVEL, STARTING,
+  BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
+  PLOTS, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_THRESHOLD, SAVE_KEY, SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH, biomeAt,
 } from './config';
 import type {
@@ -18,7 +19,14 @@ import type {
 } from './types';
 import { RESOURCE_KINDS } from './types';
 
-const RATE_TAU = 3;
+/**
+ * Hang so lam muot con so "moi giay" tren HUD.
+ *
+ * De 3 thi so nhay loan va rat hay doc ra +0,0: hang ve kho theo tung chuyen chu khong deu
+ * dan, nen giua hai chuyen gia tri tut ve khong. Tam giay la du dai de bat trung mot vai
+ * chuyen, ma van phan ung kip khi nguoi choi thue them dan.
+ */
+const RATE_TAU = 8;
 
 function emptyInv(): Inventory {
   return { food: 0, wood: 0, gold: 0, stone: 0, relics: 0 };
@@ -298,6 +306,7 @@ export class Economy {
     if (!plot || this.buildingAt(plotId)) return false;
     if (type === 'outpost' && plot.kind !== 'outpost') return false;
     if (type !== 'outpost' && plot.kind === 'outpost') return false;
+    if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) return false;
     if (!this.pay(this.costFor(type, 0))) return false;
 
     this.state.buildings.push({
@@ -351,8 +360,30 @@ export class Economy {
 
   // -------------------------------------------------------------- mỗi khung
 
+  /**
+   * Thủ phủ bán phần dư ra vàng. Chỉ bán thứ chất quá ngưỡng, nên không bao giờ moi mất số
+   * nguyên liệu người chơi đang gom cho một công trình.
+   */
+  private sellSurplus(dt: number): void {
+    const hall = this.state.buildings.find((b) => b.type === 'townhall');
+    if (!hall) return;
+    let left = SURPLUS_RATE_PER_LEVEL * hall.level * dt;
+    const keep = this.state.storageLimit * SURPLUS_THRESHOLD;
+    // Bán thứ đáng tiền trước, và không bao giờ bán chính vàng.
+    for (const kind of ['relics', 'stone', 'food', 'wood'] as ResourceKind[]) {
+      if (left <= 0) break;
+      const take = Math.min(left, this.state.inv[kind] - keep);
+      if (take <= 0) continue;
+      this.state.inv[kind] -= take;
+      this.deposit('gold', take * RESOURCES[kind].value);
+      left -= take;
+      this.fullKinds.delete(kind);
+    }
+  }
+
   tick(dt: number): void {
     this.checkDemand();
+    this.sellSurplus(dt);
     const k = Math.min(1, dt / RATE_TAU);
     for (const kind of RESOURCE_KINDS) {
       this.rates[kind] += (this.gained[kind] / Math.max(dt, 1e-6) - this.rates[kind]) * k;

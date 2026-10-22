@@ -25,9 +25,24 @@ export const BASE_CAPACITY = 10;
 export const CAPACITY_PER_LEVEL = 0.25;
 export const GATHER_SECONDS = 2.0;
 
-export const BASE_STORAGE = 200;
-export const STORAGE_PER_GRANARY = 220;
+/**
+ * Trần kho. Để 200 thì mọi loại chạm trần trong vài phút và dân đứng chơi; nhưng kho lẫm
+ * cộng 220 mỗi cấp lại vọt quá nhanh ở cuối. Nới nền, giảm bước.
+ */
+export const BASE_STORAGE = 400;
+export const STORAGE_PER_GRANARY = 260;
 export const HOUSING_PER_HOUSE = 2;
+
+/**
+ * Thủ phủ bán phần DƯ ra vàng.
+ *
+ * Đây là chỗ vá cái "khoảng chết" đo được: từ phút 14 tới phút 26 người chơi không mua nổi
+ * thứ gì, vì vàng là tiền thuê dân mà vàng chỉ có ở sa mạc, trong khi tự cân lại dàn thợ ra
+ * cả năm loại. Giờ mọi thứ chất quá ngưỡng đều chảy thành vàng — vừa cho thu nhập một cái
+ * sàn, vừa biến phần tràn vốn đang bị vứt đi thành có ích, vừa làm kho lẫm đáng xây hơn.
+ */
+export const SURPLUS_THRESHOLD = 0.7;
+export const SURPLUS_RATE_PER_LEVEL = 1.4;
 /**
  * Thu phu tu no chua duoc may nguoi. Khong co dong nay thi vua mo game da thay 1/0 - mot dan
  * dang lam viec trong khi cho o bang khong - nhin nhu loi chu khong nhu luat choi.
@@ -45,8 +60,27 @@ export const CART_INTERVAL_SECONDS = 26;
  */
 export const OUTPOST_RANGE = 22;
 
-/** Bán kính một thợ vén được màn mây. */
-export const REVEAL_RADIUS = 5;
+/**
+ * Bán kính vén mây quanh một người.
+ *
+ * Để 5 thì đo được: 36 ô sương sạch bong trước phút thứ 10, tức cả cơ chế khám phá biến mất
+ * đúng lúc người chơi mới bắt đầu. Hạ xuống 1,5 nghĩa là phải thực sự ĐI VÀO vùng đó, nên
+ * mở bản đồ trở thành việc tốn thời gian thật chứ không phải hiệu ứng trang trí.
+ */
+export const REVEAL_RADIUS = 1.5;
+
+/** Dưới ngần này dân thì không ai được cắt đi thám hiểm — còn phải lo cái ăn đã. */
+export const SCOUT_MIN_VILLAGERS = 3;
+
+/**
+ * Giây phải ĐỨNG LẠI khảo sát trước khi một ô sương tan.
+ *
+ * Chỉ cần đi ngang qua là vén thì đo được: cả 36 ô sạch bong trong chưa tới ba phút kể từ
+ * lúc có người thám hiểm đầu tiên — khám phá xong trước khi người chơi kịp nhận ra có thứ
+ * để khám phá. Hai mươi giây mỗi ô kéo việc mở bản đồ ra khoảng mười lăm phút, đủ để nó
+ * thành một mạch chơi chứ không phải một hiệu ứng thoáng qua.
+ */
+export const SURVEY_SECONDS = 20;
 /** Cạnh một ô sương. 60 chia 10 là lưới 6×6, tức 36 ô. */
 export const FOG_CHUNK = 10;
 
@@ -61,8 +95,8 @@ export const RESOURCES: Record<ResourceKind, {
   food: { label: 'Lương thực', icon: '🌾', color: 0xe3b23c, value: 1 },
   wood: { label: 'Gỗ', icon: '🪵', color: 0x4e9a55, value: 1 },
   gold: { label: 'Vàng', icon: '🪙', color: 0xffb703, value: 1 },
-  stone: { label: 'Đá', icon: '🪨', color: 0x9aa3ad, value: 1 },
-  relics: { label: 'Mảnh cổ vật', icon: '🔮', color: 0x9d7bd8, value: 1 },
+  stone: { label: 'Đá', icon: '🪨', color: 0x9aa3ad, value: 2 },
+  relics: { label: 'Mảnh cổ vật', icon: '🔮', color: 0x9d7bd8, value: 7 },
 };
 
 // ------------------------------------------------------------- biến sinh thái
@@ -130,11 +164,24 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   townhall: { gold: 150, wood: 80, stone: 60 },
   house: { gold: 60, wood: 30 },
   granary: { gold: 90, wood: 40, stone: 20 },
-  outpost: { wood: 80, stone: 50 },
+  // Tram chi ton go va da thi dau game da xay het tam cai trong bay phut - do duoc. No phai
+  // la buoc ngoat hau can giua van, nen doi ca vang va cap can cu.
+  outpost: { gold: 300, wood: 150, stone: 100 },
 };
 
-/** Giá tăng theo cấp số nhân: mỗi cấp đắt thêm 55%. */
+/**
+ * Giá tăng theo cấp số nhân: mỗi cấp đắt thêm 55%.
+ *
+ * Đã thử 1,7 để ghìm đà nửa giờ cuối: đo ra 79 lượt mua so với 75, tức gần như không đổi.
+ * Đà đó đến từ thu nhập cộng dồn (thêm dân, thêm trạm, thủ phủ bán thừa) chứ không từ giá
+ * công trình, nên giữ 1,55 — đắt hơn mà không được gì thì chỉ làm khổ phần giữa.
+ */
 export const COST_GROWTH = 1.55;
+
+/** Cấp căn cứ tối thiểu để xây từng loại. Trống nghĩa là không chặn. */
+export const BUILD_MIN_LEVEL: Partial<Record<keyof typeof BUILDINGS, number>> = {
+  outpost: 4,
+};
 
 export const HIRE_COST: Cost = { gold: 80, food: 25 };
 export const HIRE_GROWTH = 1.25;
