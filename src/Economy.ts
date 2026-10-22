@@ -37,7 +37,7 @@ const RATE_TAU = 3;
 function freshState(): GameState {
   return {
     coins: STARTING_COINS,
-    wood: 0, stone: 0, crystal: 0, planks: 0, bricks: 0,
+    wood: 0, stone: 0, gold: 0, planks: 0, bricks: 0,
     storageLimit: BASE_STORAGE,
     level: 1,
     slots: makeSlots(),
@@ -47,7 +47,7 @@ function freshState(): GameState {
     totalEarned: 0,
     workerSpeedLevel: 1,
     workerCapacityLevel: 1,
-    allocation: { wood: 1, stone: 0, crystal: 0, isAuto: true },
+    allocation: { wood: 1, stone: 0, gold: 0, isAuto: true },
     tier: 1,
   };
 }
@@ -60,13 +60,13 @@ export class Economy {
 
   /** Con số "mỗi giây" cho HUD, làm mượt. Không lưu: dựng lại trong vài giây là đúng. */
   readonly rates: Record<ResourceKind, number> =
-    { wood: 0, stone: 0, crystal: 0, planks: 0, bricks: 0 };
+    { wood: 0, stone: 0, gold: 0, planks: 0, bricks: 0 };
   coinRate = 0;
   /** Loại nào vừa chạm trần kho — để cảnh báo người chơi. */
   readonly fullKinds = new Set<ResourceKind>();
 
   private gained: Record<ResourceKind, number> =
-    { wood: 0, stone: 0, crystal: 0, planks: 0, bricks: 0 };
+    { wood: 0, stone: 0, gold: 0, planks: 0, bricks: 0 };
   private coinsGained = 0;
 
   constructor(state: GameState) {
@@ -209,9 +209,9 @@ export class Economy {
   }
 
   /** Loại thô nào đã mở — quyết định hàng nào hiện trên bảng phân bổ thợ. */
-  unlockedRaw(): ('wood' | 'stone' | 'crystal')[] {
+  unlockedRaw(): ('wood' | 'stone' | 'gold')[] {
     const seen = new Set(this.unlockedNodes().map((n) => n.kind));
-    return (['wood', 'stone', 'crystal'] as const).filter((k) => seen.has(k));
+    return (['wood', 'stone', 'gold'] as const).filter((k) => seen.has(k));
   }
 
   // -------------------------------------------------------------- mỗi khung

@@ -245,7 +245,7 @@ export class UI {
     box.innerHTML = '';
     const a = this.economy.state.allocation;
     const total = this.economy.state.workers.length;
-    const assigned = a.isAuto ? 0 : a.wood + a.stone + a.crystal;
+    const assigned = a.isAuto ? 0 : a.wood + a.stone + a.gold;
 
     const head = el('div', 'crew-head');
     head.append(el('h3', undefined, 'Đội thợ'));
@@ -276,7 +276,7 @@ export class UI {
     box.append(head);
 
     const rows = el('div', 'crew-rows');
-    for (const kind of ['wood', 'stone', 'crystal'] as RawKind[]) {
+    for (const kind of ['wood', 'stone', 'gold'] as RawKind[]) {
       const unlocked = this.economy.unlockedRaw().includes(kind);
       const row = el('div', 'crew-row' + (unlocked ? '' : ' off'));
       row.append(el('span', 'ico', RESOURCES[kind].icon));
@@ -357,7 +357,15 @@ export class UI {
         + (slot.buffer >= 1 ? ` · ${Math.floor(slot.buffer)} đơn chờ chở` : '');
       const cost = this.economy.upgradeCost(slot);
       if (cost === null) actions.append(el('p', 'meta', 'Đã kịch cấp.'));
-      else actions.append(this.costButton('Nâng cấp', cost, () => this.economy.upgrade(slot)));
+      else {
+        actions.append(this.costButton('Nâng cấp', cost, () => {
+          const ok = this.economy.upgrade(slot);
+          // Game nang cap tuc thi nen khong co giai doan "dang xay"; bat gian giao mot nhip
+          // ngay sau khi xong de nguoi choi thay ro vua co gi doi o day.
+          if (ok) this.game.markUpgraded(slot.id);
+          return ok;
+        }));
+      }
     }
     panel.append(who, actions);
   }

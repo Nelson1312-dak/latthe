@@ -12,7 +12,7 @@ export type Vec3 = [number, number, number];
 // ---------------------------------------------------------------- tài nguyên
 
 /** Bậc 1: đào trực tiếp từ bản đồ. */
-export type RawKind = 'wood' | 'stone' | 'crystal';
+export type RawKind = 'wood' | 'stone' | 'gold';
 /** Bậc 2: do công trình chế ra từ bậc 1. */
 export type RefinedKind = 'planks' | 'bricks';
 export type ResourceKind = RawKind | RefinedKind;
@@ -22,7 +22,7 @@ export type ResourceKind = RawKind | RefinedKind;
  * Nghe thì vụn vặt, nhưng một bảng ánh xạ giữa 'plank' và 'planks' là đúng loại lỗi âm thầm
  * mà trình biên dịch không bắt được và chỉ lòi ra khi người chơi mất đồ.
  */
-export const RAW_KINDS: RawKind[] = ['wood', 'stone', 'crystal'];
+export const RAW_KINDS: RawKind[] = ['wood', 'stone', 'gold'];
 export const REFINED_KINDS: RefinedKind[] = ['planks', 'bricks'];
 export const ALL_KINDS: ResourceKind[] = [...RAW_KINDS, ...REFINED_KINDS];
 
@@ -31,7 +31,7 @@ export interface Cost {
   coins: number;
   wood?: number;
   stone?: number;
-  crystal?: number;
+  gold?: number;
   planks?: number;
   bricks?: number;
 }
@@ -80,7 +80,7 @@ export type WorkerRole = 'forester' | 'miner' | 'carrier';
 export interface WorkerAllocation {
   wood: number;
   stone: number;
-  crystal: number;
+  gold: number;
   isAuto: boolean;
 }
 export type WorkerState = 'idle' | 'moving' | 'gathering' | 'delivering';
@@ -116,7 +116,7 @@ export interface GameState {
   // Kho hàng. Mỗi loại bị chặn riêng ở storageLimit; đầy thì thợ thôi đào loại đó.
   wood: number;
   stone: number;
-  crystal: number;
+  gold: number;
   planks: number;
   bricks: number;
   /** Trần chứa, áp cho TỪNG loại. Nâng bằng công trình Kho. */

@@ -48,13 +48,22 @@ export class WorkerManager {
   private readonly scene: THREE.Scene;
   private readonly economy: Economy;
   private readonly meshes = new Map<string, THREE.Group>();
-  private readonly geometry: {
-    body: THREE.CapsuleGeometry; head: THREE.SphereGeometry; pack: THREE.BoxGeometry;
+  private readonly geo: {
+    body: THREE.CylinderGeometry; head: THREE.SphereGeometry; hatCone: THREE.ConeGeometry;
+    hatBrim: THREE.CylinderGeometry; log: THREE.CylinderGeometry; cube: THREE.BoxGeometry;
+    gem: THREE.OctahedronGeometry; dust: THREE.IcosahedronGeometry;
   };
-  private readonly bodyMat: THREE.MeshLambertMaterial;
-  private readonly packMats = new Map<ResourceKind, THREE.MeshLambertMaterial>();
+  private readonly mat: {
+    body: THREE.MeshLambertMaterial; hat: THREE.MeshLambertMaterial;
+    gem: THREE.MeshStandardMaterial; dust: THREE.MeshLambertMaterial;
+  };
+  private readonly cargoMats = new Map<ResourceKind, THREE.MeshLambertMaterial>();
   private elapsed = 0;
 
+  /**
+   * Tra mo theo ma. Dung lai moi lan hoi vi vi tri mo DOI khi mo rong dao - giu mot bang
+   * tinh o day la dung kieu loi chi lo ra sau khi nguoi choi da mo bac 3.
+   */
   private nodeById(): Map<string, ResourceNode> {
     return new Map(this.economy.unlockedNodes().map((n) => [n.id, n]));
   }
@@ -63,17 +72,31 @@ export class WorkerManager {
     this.scene = scene;
     this.economy = economy;
 
-    // Cỡ thợ chọn theo MÀN HÌNH chứ không theo tỉ lệ thật: bản đồ rộng 40 đơn vị nằm gọn
-    // trong khoảng 700 điểm ảnh, nên thợ cao 0,3 đơn vị sẽ chỉ là năm sáu điểm ảnh. Mà ngắm
-    // mấy người bé đi lại lại chính là thứ đáng xem nhất trong thể loại này.
-    this.geometry = {
-      body: new THREE.CapsuleGeometry(0.26, 0.42, 3, 8),
-      head: new THREE.SphereGeometry(0.22, 8, 6),
-      pack: new THREE.BoxGeometry(0.34, 0.34, 0.26),
+    // Cỡ dân làng chọn theo MÀN HÌNH chứ không theo tỉ lệ thật: bản đồ rộng 50 đơn vị nằm
+    // gọn trong khoảng 700 điểm ảnh, nên một người cao 0,3 đơn vị chỉ còn bốn năm điểm ảnh.
+    // Mà ngắm mấy người bé chạy đi chạy lại lại chính là thứ đáng xem nhất ở thể loại này.
+    // Tỉ lệ chibi: thân trụ lùn, đầu tròn to, nón rơm — nhận ra ngay dù chỉ hai chục điểm ảnh.
+    this.geo = {
+      body: new THREE.CylinderGeometry(0.26, 0.3, 0.5, 7),
+      head: new THREE.SphereGeometry(0.28, 9, 7),
+      hatCone: new THREE.ConeGeometry(0.34, 0.26, 8),
+      hatBrim: new THREE.CylinderGeometry(0.42, 0.42, 0.045, 8),
+      log: new THREE.CylinderGeometry(0.1, 0.1, 0.52, 5),
+      cube: new THREE.BoxGeometry(0.34, 0.34, 0.34),
+      gem: new THREE.OctahedronGeometry(0.21, 0),
+      dust: new THREE.IcosahedronGeometry(0.16, 0),
     };
-    this.bodyMat = new THREE.MeshLambertMaterial({ color: PALETTE.worker });
+    this.mat = {
+      body: new THREE.MeshLambertMaterial({ color: PALETTE.villager }),
+      hat: new THREE.MeshLambertMaterial({ color: PALETTE.hat, flatShading: true }),
+      gem: new THREE.MeshStandardMaterial({
+        color: RESOURCES.gold.color, roughness: 0.2, metalness: 0.15,
+        emissive: RESOURCES.gold.color, emissiveIntensity: 0.5,
+      }),
+      dust: new THREE.MeshLambertMaterial({ color: 0xe8dcc0, transparent: true, opacity: 0.5 }),
+    };
     for (const kind of Object.keys(RESOURCES) as ResourceKind[]) {
-      this.packMats.set(kind, new THREE.MeshLambertMaterial({ color: RESOURCES[kind].color }));
+      this.cargoMats.set(kind, new THREE.MeshLambertMaterial({ color: RESOURCES[kind].color }));
     }
     this.sync();
   }
@@ -88,12 +111,12 @@ export class WorkerManager {
   setAllocation(next: Partial<WorkerAllocation>): void {
     const merged = { ...this.allocation, ...next };
     const total = this.economy.state.workers.length;
-    for (const k of ['wood', 'stone', 'crystal'] as const) {
+    for (const k of ['wood', 'stone', 'gold'] as const) {
       merged[k] = Math.max(0, Math.floor(merged[k] || 0));
     }
     // Không cho đặt nhiều hơn số thợ đang có: cắt từ loại được sửa sau cùng trở về trước.
     let budget = total;
-    for (const k of ['wood', 'stone', 'crystal'] as const) {
+    for (const k of ['wood', 'stone', 'gold'] as const) {
       merged[k] = Math.min(merged[k], Math.max(0, budget));
       budget -= merged[k];
     }
@@ -114,7 +137,7 @@ export class WorkerManager {
 
   /** Số thợ đang nhắm từng loại thô. Dùng để biết hạn ngạch nào còn thiếu người. */
   private counts(): Record<RawKind, number> {
-    const out: Record<RawKind, number> = { wood: 0, stone: 0, crystal: 0 };
+    const out: Record<RawKind, number> = { wood: 0, stone: 0, gold: 0 };
     for (const w of this.economy.state.workers) {
       const node = w.targetId ? this.nodeById().get(w.targetId) : undefined;
       if (node) out[node.kind] += 1;
@@ -191,23 +214,66 @@ export class WorkerManager {
     }
   }
 
+  /**
+   * Một dân làng. Hàng vác dựng sẵn cả ba kiểu rồi ẩn đi, chỉ bật kiểu đúng với thứ đang
+   * cầm — đổi vật liệu thì rẻ, nhưng dựng rồi huỷ mesh mỗi chuyến thì không.
+   */
   private createMesh(w: Worker): THREE.Group {
     const group = new THREE.Group();
+    const lean = new THREE.Group();          // chỉ phần này lắc lư; bụi đất đứng yên tại chỗ
+    lean.name = 'lean';
+    group.add(lean);
 
-    const body = new THREE.Mesh(this.geometry.body, this.bodyMat);
-    body.position.y = 0.45;
-    group.add(body);
+    const body = new THREE.Mesh(this.geo.body, this.mat.body);
+    body.position.y = 0.25;
+    body.castShadow = true;
+    lean.add(body);
 
-    const head = new THREE.Mesh(this.geometry.head, this.bodyMat);
-    head.position.y = 0.92;
-    group.add(head);
+    const head = new THREE.Mesh(this.geo.head, this.mat.body);
+    head.position.y = 0.66;
+    head.castShadow = true;
+    lean.add(head);
 
-    // Thùng hàng trên lưng. Đổi màu theo thứ đang vác, nên nhìn một cái là biết ai chở gì.
-    const pack = new THREE.Mesh(this.geometry.pack, this.bodyMat);
-    pack.position.set(0, 0.5, -0.26);
-    pack.visible = false;
-    pack.name = 'pack';
-    group.add(pack);
+    const brim = new THREE.Mesh(this.geo.hatBrim, this.mat.hat);
+    brim.position.y = 0.84;
+    lean.add(brim);
+    const cone = new THREE.Mesh(this.geo.hatCone, this.mat.hat);
+    cone.position.y = 0.97;
+    cone.castShadow = true;
+    lean.add(cone);
+
+    // Hàng vác: hai khúc gỗ sau lưng, một khối vuông, một viên vàng lơ lửng.
+    const logs = new THREE.Group();
+    logs.name = 'cargo-logs';
+    for (const dx of [-0.11, 0.11]) {
+      const log = new THREE.Mesh(this.geo.log, this.mat.body);
+      log.position.set(dx, 0.46, -0.3);
+      log.rotation.z = Math.PI / 2;
+      log.castShadow = true;
+      logs.add(log);
+    }
+    logs.visible = false;
+    lean.add(logs);
+
+    const block = new THREE.Mesh(this.geo.cube, this.mat.body);
+    block.name = 'cargo-block';
+    block.position.set(0, 0.52, -0.32);
+    block.castShadow = true;
+    block.visible = false;
+    lean.add(block);
+
+    const gem = new THREE.Mesh(this.geo.gem, this.mat.gem);
+    gem.name = 'cargo-gem';
+    gem.position.set(0, 0.62, -0.42);
+    gem.visible = false;
+    lean.add(gem);
+
+    // Bụi bốc lên khi đang đào. Gắn vào người chứ không vào mỏ, nên hai thợ cùng đào một mỏ
+    // vẫn ra hai đám bụi riêng.
+    const dust = new THREE.Mesh(this.geo.dust, this.mat.dust.clone());
+    dust.name = 'dust';
+    dust.visible = false;
+    group.add(dust);
 
     group.position.set(w.position[0], 0, w.position[2]);
     this.scene.add(group);
@@ -411,23 +477,51 @@ export class WorkerManager {
     const group = this.meshes.get(w.id);
     if (!group) return;
 
-    // Lệch làn. Thợ cùng chỗ đào xuất phát cùng lúc và đi cùng tốc độ nên toạ độ TRÙNG KHÍT;
-    // đẩy mỗi thợ sang ngang một chút là đủ tách thành hàng nối đuôi. Thuần tuý chuyện nhìn:
+    // Lệch làn. Thợ cùng mỏ xuất phát cùng lúc và đi cùng tốc độ nên toạ độ TRÙNG KHÍT; đẩy
+    // mỗi người sang ngang một chút là đủ tách thành hàng nối đuôi. Thuần tuý chuyện nhìn:
     // không đụng vào w.position nên không ảnh hưởng quãng đường hay thu nhập.
     const lane = this.laneOf(w.id);
     const rot = group.rotation.y;
     group.position.x = w.position[0] + Math.cos(rot) * lane;
     group.position.z = w.position[2] - Math.sin(rot) * lane;
 
+    const lean = group.getObjectByName('lean');
     const walking = w.state === 'moving' || w.state === 'delivering';
-    const phase = w.id.charCodeAt(w.id.length - 1);
-    group.position.y = walking ? Math.abs(Math.sin(this.elapsed * 7 + phase)) * 0.07 : 0;
+    const phase = this.elapsed * 12 + w.id.charCodeAt(w.id.length - 1);
 
-    const pack = group.getObjectByName('pack') as THREE.Mesh | undefined;
-    if (pack) {
-      pack.visible = w.carrying > 0 && w.carryingKind !== null;
-      if (pack.visible && w.carryingKind) {
-        pack.material = this.packMats.get(w.carryingKind) ?? this.bodyMat;
+    if (lean) {
+      // Nhịp đi: nghiêng người qua lại và nhún lên xuống cùng tần số. Lệch pha theo mã người
+      // để cả đoàn không bước răm rắp như duyệt binh.
+      lean.rotation.z = walking ? Math.sin(phase) * 0.15 : 0;
+      lean.position.y = walking ? Math.abs(Math.sin(phase)) * 0.1 : 0;
+      // Đang đào thì bổ nhát một: chúi tới trước rồi bật lại.
+      lean.rotation.x = w.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7)) * 0.5 : 0;
+    }
+
+    const logs = group.getObjectByName('cargo-logs');
+    const block = group.getObjectByName('cargo-block') as THREE.Mesh | undefined;
+    const gem = group.getObjectByName('cargo-gem');
+    const carrying = w.carrying > 0 && w.carryingKind !== null;
+    const kind = w.carryingKind;
+    if (logs) logs.visible = !!(carrying && kind === 'wood');
+    if (gem) gem.visible = !!(carrying && kind === 'gold');
+    if (block) {
+      block.visible = !!(carrying && kind !== 'wood' && kind !== 'gold');
+      if (block.visible && kind) block.material = this.cargoMats.get(kind) ?? this.mat.body;
+    }
+    if (gem && gem.visible) {
+      gem.rotation.y = this.elapsed * 2.5;
+      gem.position.y = 0.62 + Math.sin(this.elapsed * 3) * 0.06;
+    }
+
+    const dust = group.getObjectByName('dust') as THREE.Mesh | undefined;
+    if (dust) {
+      dust.visible = w.state === 'gathering';
+      if (dust.visible) {
+        const t = (this.elapsed * 1.6) % 1;
+        dust.position.set(0.34, 0.12 + t * 0.5, 0.34);
+        dust.scale.setScalar(0.5 + t * 0.8);
+        (dust.material as THREE.MeshLambertMaterial).opacity = 0.45 * (1 - t);
       }
     }
   }
@@ -442,10 +536,8 @@ export class WorkerManager {
   dispose(): void {
     for (const group of this.meshes.values()) this.scene.remove(group);
     this.meshes.clear();
-    this.geometry.body.dispose();
-    this.geometry.head.dispose();
-    this.geometry.pack.dispose();
-    this.bodyMat.dispose();
-    for (const m of this.packMats.values()) m.dispose();
+    for (const g of Object.values(this.geo)) g.dispose();
+    for (const m of Object.values(this.mat)) m.dispose();
+    for (const m of this.cargoMats.values()) m.dispose();
   }
 }

@@ -58,7 +58,7 @@ export interface ResourceMeta {
 export const RESOURCES: Record<ResourceKind, ResourceMeta> = {
   wood: { label: 'Gỗ', icon: '🪵', value: 1, color: 0x8fc08a },
   stone: { label: 'Đá', icon: '🪨', value: 3, color: 0xa9b2bd },
-  crystal: { label: 'Pha lê', icon: '🔮', value: 9, color: 0xb79ad8 },
+  gold: { label: 'Vàng', icon: '💰', value: 9, color: 0xffb703 },
   planks: { label: 'Ván', icon: '🟫', value: 8, color: 0xc89b63 },
   bricks: { label: 'Gạch', icon: '🧱', value: 20, color: 0xc2724f },
 };
@@ -78,7 +78,7 @@ export const RESOURCES: Record<ResourceKind, ResourceMeta> = {
  * Hệ quả cho nhịp chơi, và là chủ ý: chưa có Xưởng cưa thì gần như không có xu. Xưởng cưa
  * đầu tiên (50 xu + 15 gỗ, trả được ngay bằng tiền khởi đầu) chính là bước ngoặt của ván.
  */
-export const SELL_ORDER: ResourceKind[] = ['bricks', 'planks', 'crystal'];
+export const SELL_ORDER: ResourceKind[] = ['bricks', 'planks', 'gold'];
 
 /**
  * Giữ lại ngần này mỗi loại, phần dư mới đem bán. Để nhỏ thôi: mức giữ lại chỉ cốt sao người
@@ -88,7 +88,7 @@ export const SELL_ORDER: ResourceKind[] = ['bricks', 'planks', 'crystal'];
 export const SELL_RESERVE: Partial<Record<ResourceKind, number>> = {
   planks: 10,
   bricks: 10,
-  crystal: 20,
+  gold: 20,
 };
 
 /**
@@ -221,7 +221,7 @@ export interface TierSpec {
 export const TIERS: TierSpec[] = [
   { tier: 1, requiresLevel: 1, cost: { coins: 0 }, groundSize: 38, label: 'Khu trung tâm' },
   { tier: 2, requiresLevel: 2, cost: { coins: 0, wood: 100, stone: 50 }, groundSize: 43, label: 'Vành trong' },
-  { tier: 3, requiresLevel: 3, cost: { coins: 0, wood: 250, stone: 150, crystal: 50 }, groundSize: 50, label: 'Bốn góc đảo' },
+  { tier: 3, requiresLevel: 3, cost: { coins: 0, wood: 250, stone: 150, gold: 50 }, groundSize: 50, label: 'Bốn góc đảo' },
 ];
 
 export const MAX_TIER = TIERS.length;
@@ -387,28 +387,53 @@ export function resourceNodes(tier: number): ResourceNode[] {
     { id: 'stone_sw', kind: 'stone', position: [-14, 0, edge], unlockLevel: 2, waypoint: junctionId(-14, 14) },
     { id: 'stone_s', kind: 'stone', position: [0, 0, edge], unlockLevel: 3, waypoint: junctionId(0, 14) },
     { id: 'stone_se', kind: 'stone', position: [14, 0, edge], unlockLevel: 2, waypoint: junctionId(14, 14) },
-    { id: 'crystal_w', kind: 'crystal', position: [-side, 0, 0], unlockLevel: 3, waypoint: junctionId(-14, 0) },
-    { id: 'crystal_e', kind: 'crystal', position: [side, 0, 0], unlockLevel: 3, waypoint: junctionId(14, 0) },
+    { id: 'gold_w', kind: 'gold', position: [-side, 0, 0], unlockLevel: 3, waypoint: junctionId(-14, 0) },
+    { id: 'gold_e', kind: 'gold', position: [side, 0, 0], unlockLevel: 3, waypoint: junctionId(14, 0) },
   ];
 }
 
 // ------------------------------------------------------------------ màu sắc
 
-/** Bảng màu pastel ấm, phẳng. Giữ chung một chỗ để cả canvas lẫn HUD dùng đúng một màu. */
+/**
+ * Bảng màu. Chuyển từ tông be phẳng sang kiểu diorama đa giác thấp: cỏ xanh mướt trên mặt,
+ * vách đá nâu sẫm xếp bậc bên dưới, nước ngọc lam quanh chân đảo.
+ *
+ * Hai sắc cỏ là cố ý. Một sắc duy nhất trên vài trăm ô lục giác trông như tấm thảm nhựa;
+ * trộn hai sắc theo nhiễu là mặt đất có hơi thở mà không tốn thêm một lệnh vẽ nào, vì cả
+ * cánh đồng vẫn là một InstancedMesh.
+ */
 export const PALETTE = {
-  ground: 0xe8d9b5,
-  groundEdge: 0xd8c49a,
-  path: 0xdcc9a0,
-  market: 0xf0a868,
-  hut: 0xe8846b,
-  sawmill: 0xc89b63,
-  masonry: 0xb5705a,
-  warehouse: 0x7fa6c9,
-  slotLocked: 0xbfae8e,
-  slotEmpty: 0xd3c3a0,
-  woodTrunk: 0xa8785a,
-  worker: 0xf5f0e6,
-  sky: 0xf6efe2,
+  grassA: 0x529342,
+  grassB: 0x62aa4e,
+  cliffTop: 0x4a3728,
+  cliffMid: 0x3a2b1f,
+  cliffLow: 0x2e2118,
+  goldVein: 0xffb703,
+  water: 0x48cae4,
+  path: 0xb79a6a,
+
+  market: 0xd94e34,
+  marketWall: 0x8d5b4c,
+  hut: 0xc96f4a,
+  sawmill: 0xa9763f,
+  masonry: 0x9a5b4a,
+  warehouse: 0x5b8fae,
+
+  socketFence: 0x8d6b4c,
+  socketDirt: 0x6f5a3c,
+  slotLocked: 0x5a4a34,
+
+  pineA: 0x2f6b3a,
+  pineB: 0x3d8248,
+  pineC: 0x4e9a55,
+  trunk: 0x6b4a32,
+  granite: 0x9aa3ad,
+  graniteDark: 0x76808a,
+
+  villager: 0xf2e4cf,
+  hat: 0xe0b14f,
+  sky: 0xade8f4,
+  skyFog: 0xc9eef7,
 } as const;
 
 export const BUILDING_COLOR: Record<Exclude<BuildingType, 'none'>, number> = {
