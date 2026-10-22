@@ -124,7 +124,10 @@ export const BUILDINGS = {
 
 /** Giá xây mới. Nâng cấp dùng cùng bảng này nhân theo cấp, xem Economy.costFor. */
 export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
-  townhall: { gold: 0 },
+  // Thu phu khong xay moi duoc, nhung NANG CAP thi phai co gia. De { gold: 0 } tu thoi no
+  // chi la cho giu cho, hau qua la bam vao thu phu thay dong gia trong va nut NANG CAP bam
+  // bao nhieu lan cung duoc - mot nguon cap mien phi giua long game.
+  townhall: { gold: 150, wood: 80, stone: 60 },
   house: { gold: 60, wood: 30 },
   granary: { gold: 90, wood: 40, stone: 20 },
   outpost: { wood: 80, stone: 50 },

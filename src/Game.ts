@@ -18,8 +18,18 @@ import { MapManager } from './MapManager';
 import type { Building } from './types';
 import { WorkerManager } from './WorkerManager';
 
-const MIN_ZOOM = 15;
+const MIN_ZOOM = 10;
 const MAX_ZOOM = 55;
+/**
+ * Mức phóng khi người chơi chọn một nền đất.
+ *
+ * Phải sâu hơn cảm giác cần thiết, vì khung nhìn tự nới ra theo chiều cao HUD: thẻ kiểm tra
+ * trượt lên chiếm chỗ dọc, phần bù đó nhân khung nhìn lên khoảng 1,5 lần. Đo lần đầu với 17
+ * thì sau khi bù ra đúng 26 — tức là bấm chọn mà màn hình không nhúc nhích.
+ */
+const FOCUS_ZOOM = 12;
+/** Mức phóng mặc định lúc mở game và sau khi bỏ chọn. */
+const REST_ZOOM = 26;
 /** Hệ số trượt: càng lớn càng bám sát, càng nhỏ càng trôi. */
 const GLIDE = 9;
 
@@ -46,8 +56,8 @@ export class Game {
   /** Tâm ngắm hiện tại và tâm ngắm đích — khoảng cách giữa hai cái tạo ra độ trượt. */
   readonly target = new THREE.Vector3(0, 0, 0);
   private wanted = new THREE.Vector3(0, 0, 0);
-  private zoom = 28;
-  private wantedZoom = 28;
+  private zoom = REST_ZOOM;
+  private wantedZoom = REST_ZOOM;
 
   private dragging = false;
   private dragged = 0;
@@ -66,6 +76,18 @@ export class Game {
 
   private readonly ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private readonly hitPoint = new THREE.Vector3();
+
+  /**
+   * Hai vòng đánh dấu dưới chân công trình: một cho ô đang chọn, một cho ô con trỏ đang rê.
+   *
+   * Thiếu chúng là thiếu hẳn phản hồi: bấm vào nhà mà cảnh không nhúc nhích thì người chơi
+   * không biết mình vừa chọn cái nào, và thẻ hiện lên bên dưới trông như rơi từ đâu xuống.
+   * Vòng đặt sát mặt đất nên không che nhà, và nó NẰM TRONG CẢNH chứ không phải một khung
+   * HTML — thế mới dính theo công trình khi camera trôi.
+   */
+  private selectRing!: THREE.Mesh;
+  private hoverRing!: THREE.Mesh;
+  private hoveredId: string | null = null;
 
   constructor(canvas: HTMLCanvasElement, economy: Economy) {
     this.economy = economy;
@@ -113,6 +135,7 @@ export class Game {
     };
 
     this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup);
+    this.buildMarkers();
     this.rebuildPlots();
 
     this.resize();
@@ -124,6 +147,39 @@ export class Game {
     canvas.addEventListener('pointermove', this.onPointerMove);
     canvas.addEventListener('pointerup', this.onPointerUp);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
+  }
+
+  // ------------------------------------------------------------ đánh dấu
+
+  private buildMarkers(): void {
+    const ring = (color: number, opacity: number, r: number) => {
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(r, r + 0.3, 44),
+        new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false,
+        }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.y = 0.22;
+      m.visible = false;
+      m.renderOrder = 2;
+      this.scene.add(m);
+      return m;
+    };
+    // Ban kinh phai RONG hon chan cong trinh. De sat qua (2,1 so voi chan 2,0) thi nhin
+    // cheo tu tren xuong, chinh toa nha che mat nua vong phia sau - do duoc bang mat ngay
+    // lan thu dau.
+    this.selectRing = ring(0xffc766, 0.95, 2.7);
+    this.hoverRing = ring(0xffffff, 0.55, 2.55);
+  }
+
+  private updateMarkers(): void {
+    const place = (mesh: THREE.Mesh, id: string | null) => {
+      const plot = id ? PLOTS.find((p) => p.id === id) : null;
+      mesh.visible = !!plot;
+      if (plot) mesh.position.set(plot.pos[0], 0.22, plot.pos[1]);
+    };
+    place(this.selectRing, this.selectedId);
+    place(this.hoverRing, this.hoveredId === this.selectedId ? null : this.hoveredId);
   }
 
   // ------------------------------------------------------------ công trình
@@ -141,6 +197,7 @@ export class Game {
       const building = this.economy.buildingAt(plot.id);
       const g = new THREE.Group();
       g.position.set(plot.pos[0], 0, plot.pos[1]);
+      g.userData.plotId = plot.id;
       if (building) this.buildStructure(g, building, plot.id);
       else this.buildEmptyPlot(g, plot.id);
       this.plotGroup.add(g);
@@ -228,7 +285,16 @@ export class Game {
   };
 
   private onPointerMove = (e: PointerEvent): void => {
-    if (!this.dragging) return;
+    if (!this.dragging) {
+      // Rê tới đâu sáng tới đó. Con trỏ đổi hình là tín hiệu rẻ nhất cho biết "bấm được".
+      const id = this.pickPlot(e);
+      if (id !== this.hoveredId) {
+        this.hoveredId = id;
+        this.renderer.domElement.style.cursor = id ? 'pointer' : 'grab';
+        this.updateMarkers();
+      }
+      return;
+    }
     const dx = e.clientX - this.last.x;
     const dy = e.clientY - this.last.y;
     this.last.set(e.clientX, e.clientY);
@@ -247,9 +313,11 @@ export class Game {
     // Đã kéo thì đừng coi là bấm chọn — ngưỡng nhỏ để bấm nhanh vẫn ăn.
     if (this.dragged > 6) return;
 
-    const hit = this.pick(e);
-    if (hit) {
-      this.selectedId = hit.userData.plotId as string;
+    const plotId = this.pickPlot(e);
+    if (plotId) {
+      this.selectedId = plotId;
+      this.focusOnPlot(plotId);
+      this.updateMarkers();
       this.onSelect?.(this.selectedId);
       return;
     }
@@ -268,8 +336,25 @@ export class Game {
       return;
     }
     this.selectedId = null;
+    this.updateMarkers();
+    // Bỏ chọn thì lùi lại cho thấy toàn cảnh, nhưng giữ nguyên chỗ đang đứng.
+    this.wantedZoom = Math.max(this.wantedZoom, REST_ZOOM);
     this.onSelect?.(null);
   };
+
+  /**
+   * Đưa ô vừa chọn vào giữa màn và phóng gần lại.
+   *
+   * Trên bản đồ 60×60 nhìn từ mức mặc định, một căn nhà chỉ cao chừng ba chục điểm ảnh — bấm
+   * trúng rồi vẫn không đọc nổi nó là nhà gì. Bay tới là cách duy nhất khiến thao tác chọn
+   * có nghĩa, và vì camera vốn đã trượt mượt nên không cần thêm hoạt cảnh nào.
+   */
+  private focusOnPlot(id: string): void {
+    const plot = PLOTS.find((p) => p.id === id);
+    if (!plot) return;
+    this.panTo(plot.pos[0], plot.pos[1]);
+    if (this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
+  }
 
   /** Mỏ nằm dưới con trỏ, trong bán kính chấp nhận được. */
   private nodeUnder(e: PointerEvent): { id: string } | null {
@@ -279,7 +364,8 @@ export class Game {
     this.raycaster.setFromCamera(this.pointer, this.camera);
     if (!this.raycaster.ray.intersectPlane(this.ground, this.hitPoint)) return null;
     let best = null;
-    let bestDist = 3.4;
+    // Hep hon ban kinh bat nen dat, nen khi hai thu ke nhau thi NEN DAT luon thang.
+    let bestDist = 2.4;
     for (const n of this.map.nodes) {
       if (!this.fog.isRevealed(n.position[0], n.position[2])) continue;
       const d = Math.hypot(n.position[0] - this.hitPoint.x, n.position[2] - this.hitPoint.z);
@@ -288,13 +374,31 @@ export class Game {
     return best;
   }
 
-  private pick(e: PointerEvent): THREE.Object3D | null {
+  /**
+   * Nền đất dưới con trỏ.
+   *
+   * Bắt tia vào mesh trước; trượt thì lấy điểm chạm mặt đất rồi tìm nền gần nhất trong bán
+   * kính rộng rãi. Chỉ bắt tia vào mesh là không đủ: nhà cao 2 đơn vị trên bản đồ 60 đơn vị
+   * nên bấm lệch một chút là trượt, và cú bấm đó rơi xuống cụm tài nguyên bên cạnh — người
+   * chơi tưởng mình chọn nhà nhưng lại vừa ghim một mỏ đá. Lỗi này quan sát được ngay lần
+   * bấm thật đầu tiên.
+   */
+  private pickPlot(e: PointerEvent): string | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const hits = this.raycaster.intersectObjects(this.pickable, false);
-    return hits.length ? hits[0].object : null;
+    if (hits.length) return hits[0].object.userData.plotId as string;
+
+    if (!this.raycaster.ray.intersectPlane(this.ground, this.hitPoint)) return null;
+    let best: string | null = null;
+    let bestDist = 2.6;
+    for (const p of PLOTS) {
+      const d = Math.hypot(p.pos[0] - this.hitPoint.x, p.pos[1] - this.hitPoint.z);
+      if (d < bestDist) { bestDist = d; best = p.id; }
+    }
+    return best;
   }
 
   private clampTarget(): void {
@@ -310,7 +414,10 @@ export class Game {
   }
 
   get zoomLevel(): number { return this.zoom; }
-  select(id: string | null): void { this.selectedId = id; }
+  select(id: string | null): void {
+    this.selectedId = id;
+    this.updateMarkers();
+  }
   get selected(): string | null { return this.selectedId; }
 
   // ------------------------------------------------------------ vòng render
@@ -380,6 +487,11 @@ export class Game {
       this.fog.update(sim, this.economy.state.units);
       this.economy.tick(sim);
       this.map.update(sim, this.target);
+      // Vòng chọn thở nhẹ để mắt bắt được ngay giữa một bản đồ dày đặc.
+      if (this.selectRing.visible) {
+        const k = 1 + Math.sin(this.elapsed * 3.4) * 0.05;
+        this.selectRing.scale.set(k, k, 1);
+      }
       const water = this.map.group.getObjectByName('water');
       if (water) water.position.y = -8 + Math.sin(this.elapsed * 0.9) * 0.18;
     }

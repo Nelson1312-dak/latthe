@@ -247,6 +247,15 @@ export class UIManager {
 
     const b = this.economy.buildingAt(plot.id);
     const head = el('div', 'insp-head');
+    // Nut dong ro rang. Bam ra cho trong cung dong duoc, nhung khong ai doan ra dieu do neu
+    // khong co gi noi.
+    const close = el('button', 'insp-close', '×') as HTMLButtonElement;
+    close.title = 'Dong';
+    close.addEventListener('click', () => {
+      this.selected = null;
+      this.game.select(null);
+      this.renderInspector();
+    });
     const body = el('div', 'insp-body');
 
     if (b) {
@@ -286,6 +295,7 @@ export class UIManager {
         body.append(row);
       }
     }
+    head.append(close);
     box.append(head, body);
   }
 
