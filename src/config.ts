@@ -4,10 +4,11 @@
  * Thế giới rộng 60×60 nên toạ độ chạy từ -30 tới 30, thủ phủ ở gốc. Bốn biến sinh thái toả
  * ra bốn phía; vùng giữa luôn là đồng cỏ để người chơi có chỗ đứng chân ngay từ đầu.
  */
-import type { Biome, BiomeId, Cost, ResourceKind, Vec2 } from './types';
+import type { Biome, BiomeId, Cost, ResourceKind } from './types';
 
-export const WORLD = 60;
-export const HALF = WORLD / 2;
+// Kich thuoc the gioi khong con y nghia: ban do la vo han, sinh theo khoi trong world.ts.
+// Chi giu lai mot con so cho minimap biet ve rong bao nhieu quanh nguoi choi.
+export const MINIMAP_SPAN = 220;
 
 export const SAVE_KEY = 'latbai-archipelago/v1';
 export const AUTOSAVE_INTERVAL_MS = 5000;
@@ -124,16 +125,6 @@ export const BIOMES: Record<BiomeId, Biome> = {
   },
 };
 
-/**
- * Biến sinh thái tại một điểm. Vùng giữa luôn là đồng cỏ; ngoài ra chia theo trục trội hơn,
- * nên ranh giới là hai đường chéo và bốn vùng toả đều quanh thủ phủ.
- */
-export function biomeAt(x: number, z: number): BiomeId {
-  if (Math.hypot(x, z) < 13) return 'meadow';
-  if (Math.abs(z) >= Math.abs(x)) return z < 0 ? 'highlands' : 'meadow';
-  return x < 0 ? 'crags' : 'desert';
-}
-
 // ------------------------------------------------------------------ công trình
 
 export const BUILDINGS = {
@@ -187,29 +178,6 @@ export const HIRE_COST: Cost = { gold: 80, food: 25 };
 export const HIRE_GROWTH = 1.25;
 export const TRAIN_COST: Cost = { gold: 120 };
 export const TRAIN_GROWTH = 1.3;
-
-/**
- * Chỗ đặt công trình. KHÔNG cho đặt tự do: mỗi biến sinh thái có sẵn mấy nền đất, nên bản đồ
- * luôn đọc được và thợ luôn có đường đi hợp lý. Thủ phủ ở gốc, nhà cửa quanh đó, trạm trung
- * chuyển nằm sâu trong từng vùng.
- */
-export const PLOTS: { id: string; pos: Vec2; kind: 'core' | 'town' | 'outpost' }[] = [
-  { id: 'core', pos: [0, 0], kind: 'core' },
-  { id: 't1', pos: [-6, -5], kind: 'town' },
-  { id: 't2', pos: [6, -5], kind: 'town' },
-  { id: 't3', pos: [-6, 5], kind: 'town' },
-  { id: 't4', pos: [6, 5], kind: 'town' },
-  { id: 't5', pos: [-11, 0], kind: 'town' },
-  { id: 't6', pos: [11, 0], kind: 'town' },
-  { id: 'o_crags', pos: [-21, -3], kind: 'outpost' },
-  { id: 'o_crags2', pos: [-24, 9], kind: 'outpost' },
-  { id: 'o_desert', pos: [21, 3], kind: 'outpost' },
-  { id: 'o_desert2', pos: [24, -9], kind: 'outpost' },
-  { id: 'o_high', pos: [-4, -22], kind: 'outpost' },
-  { id: 'o_high2', pos: [9, -25], kind: 'outpost' },
-  { id: 'o_meadow', pos: [3, 22], kind: 'outpost' },
-  { id: 'o_meadow2', pos: [-10, 24], kind: 'outpost' },
-];
 
 // ------------------------------------------------------------------ màu sắc
 

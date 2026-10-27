@@ -11,15 +11,20 @@
  * trải trên diện tích gấp mười, bóng vỡ răng cưa ngay mà chẳng thêm được gì.
  */
 import * as THREE from 'three';
-import { BUILDINGS, MAX_FRAME_DELTA, PALETTE, PLOTS } from './config';
+import { BUILDINGS, MAX_FRAME_DELTA, PALETTE } from './config';
 import type { Economy } from './Economy';
 import { FogOfWar, chime } from './FogOfWar';
 import { MapManager } from './MapManager';
-import type { Building } from './types';
+import type { Building, Plot } from './types';
 import { WorkerManager } from './WorkerManager';
 
 const MIN_ZOOM = 10;
-const MAX_ZOOM = 55;
+/**
+ * Keo xa toi dau. Khong duoc vuot qua vung dang nap: luoi 9x9 khoi la 180 don vi, ma o muc
+ * phong Z thi khung nhin rong chung 2*Z*ti_le - nen qua 45 la nguoi choi nhin thay khoang
+ * trong ngoai ria vung nap.
+ */
+const MAX_ZOOM = 45;
 /**
  * Mức phóng khi người chơi chọn một nền đất.
  *
@@ -119,10 +124,10 @@ export class Game {
 
     this.map = new MapManager();
     this.fog = new FogOfWar(economy.state.revealed);
-    this.fog.onReveal = (chunk) => {
-      economy.state.revealed = this.fog.revealedIds();
+    this.fog.onReveal = (key) => {
+      economy.state.revealed = this.fog.revealedKeys();
       chime(economy.state.muted);
-      this.onReveal?.(chunk.id);
+      this.onReveal?.(key);
       economy.save();
     };
     this.workers = new WorkerManager(economy, this.map, this.fog);
@@ -174,9 +179,9 @@ export class Game {
 
   private updateMarkers(): void {
     const place = (mesh: THREE.Mesh, id: string | null) => {
-      const plot = id ? PLOTS.find((p) => p.id === id) : null;
+      const plot = id ? this.map.plotById(id) : null;
       mesh.visible = !!plot;
-      if (plot) mesh.position.set(plot.pos[0], 0.22, plot.pos[1]);
+      if (plot) mesh.position.set(plot.position[0], 0.22, plot.position[2]);
     };
     place(this.selectRing, this.selectedId);
     place(this.hoverRing, this.hoveredId === this.selectedId ? null : this.hoveredId);
@@ -193,10 +198,10 @@ export class Game {
     this.plotGroup.clear();
     this.pickable.length = 0;
 
-    for (const plot of PLOTS) {
+    for (const plot of this.map.plots) {
       const building = this.economy.buildingAt(plot.id);
       const g = new THREE.Group();
-      g.position.set(plot.pos[0], 0, plot.pos[1]);
+      g.position.set(plot.position[0], 0, plot.position[2]);
       g.userData.plotId = plot.id;
       if (building) this.buildStructure(g, building, plot.id);
       else this.buildEmptyPlot(g, plot.id);
@@ -350,9 +355,9 @@ export class Game {
    * có nghĩa, và vì camera vốn đã trượt mượt nên không cần thêm hoạt cảnh nào.
    */
   private focusOnPlot(id: string): void {
-    const plot = PLOTS.find((p) => p.id === id);
+    const plot = this.map.plotById(id);
     if (!plot) return;
-    this.panTo(plot.pos[0], plot.pos[1]);
+    this.panTo(plot.position[0], plot.position[2]);
     if (this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
   }
 
@@ -394,17 +399,19 @@ export class Game {
     if (!this.raycaster.ray.intersectPlane(this.ground, this.hitPoint)) return null;
     let best: string | null = null;
     let bestDist = 2.6;
-    for (const p of PLOTS) {
-      const d = Math.hypot(p.pos[0] - this.hitPoint.x, p.pos[1] - this.hitPoint.z);
+    for (const p of this.map.plots) {
+      const d = Math.hypot(p.position[0] - this.hitPoint.x, p.position[2] - this.hitPoint.z);
       if (d < bestDist) { bestDist = d; best = p.id; }
     }
     return best;
   }
 
+  /**
+   * Bản đồ không có rìa nên không chặn gì cả. Giữ hàm lại để chỗ gọi khỏi rải rác điều kiện,
+   * và để sau này muốn giới hạn thì chỉ phải sửa một nơi.
+   */
   private clampTarget(): void {
-    const lim = 32;
-    this.wanted.x = THREE.MathUtils.clamp(this.wanted.x, -lim, lim);
-    this.wanted.z = THREE.MathUtils.clamp(this.wanted.z, -lim, lim);
+    /* vô hạn — không chặn */
   }
 
   /** Bấm vào minimap thì camera trôi tới đó. */
@@ -478,22 +485,26 @@ export class Game {
     this.lastTime = now;
 
     this.moveCamera(dt);
+    // Nạp khối chạy cả khi tạm dừng: người chơi vẫn kéo bản đồ đi xem được, và đất mới phải
+    // hiện ra theo.
+    const before = this.map.version;
+    this.map.update(this.target);
+    if (this.map.version !== before) this.rebuildPlots();
+
     if (!this.paused) {
       // Nut 1x/2x chi nhan cho MO PHONG, khong nhan cho camera - keo tha ma nhanh gap doi
       // thi tay khong theo kip.
       const sim = dt * (this.economy.state.speedMult === 2 ? 2 : 1);
       this.elapsed += sim;
       this.workers.update(sim);
-      this.fog.update(sim, this.economy.state.units);
+      this.fog.update(sim, this.economy.state.units, this.target);
       this.economy.tick(sim);
-      this.map.update(sim, this.target);
+      this.map.animate(sim);
       // Vòng chọn thở nhẹ để mắt bắt được ngay giữa một bản đồ dày đặc.
       if (this.selectRing.visible) {
         const k = 1 + Math.sin(this.elapsed * 3.4) * 0.05;
         this.selectRing.scale.set(k, k, 1);
       }
-      const water = this.map.group.getObjectByName('water');
-      if (water) water.position.y = -8 + Math.sin(this.elapsed * 0.9) * 0.18;
     }
     this.renderer.render(this.scene, this.camera);
   };
@@ -523,6 +534,10 @@ export class Game {
     this.sun.position.set(this.target.x + 18, 28, this.target.z + 14);
     this.sun.target.position.copy(this.target);
     this.sun.target.updateMatrixWorld();
+  }
+
+  plotById(id: string): Plot | undefined {
+    return this.map.plotById(id);
   }
 
   describe(b: Building): string {

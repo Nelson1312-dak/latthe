@@ -11,11 +11,11 @@ import {
   AFK_CAP_SECONDS, AFK_EFFICIENCY, AFK_MIN_SECONDS, AUTOSAVE_INTERVAL_MS, BASE_CAPACITY,
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
-  PLOTS, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_THRESHOLD, SAVE_KEY, SPEED_PER_LEVEL, STARTING,
-  STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH, biomeAt,
+  RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_THRESHOLD, SAVE_KEY, SPEED_PER_LEVEL, STARTING,
+  STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
 import type {
-  Building, BuildingType, Cost, GameState, Inventory, OfflineReport, ResourceKind, Unit,
+  Building, BuildingType, Cost, GameState, Inventory, OfflineReport, Plot, ResourceKind, Unit,
 } from './types';
 import { RESOURCE_KINDS } from './types';
 
@@ -33,19 +33,19 @@ function emptyInv(): Inventory {
 }
 
 function freshState(): GameState {
-  const core = PLOTS.find((p) => p.kind === 'core')!;
   return {
     inv: { ...STARTING },
     storageLimit: BASE_STORAGE,
     level: 1,
     buildings: [{
       id: 'core', type: 'townhall', level: 1,
-      position: [core.pos[0], 0, core.pos[1]], biome: 'meadow',
+      position: [0, 0, 0], biome: 'meadow',
       stock: {}, cartTimer: 0,
     }],
     units: [],
     // Bốn ô giữa mở sẵn, đủ để nhìn thấy thủ phủ và vài mỏ quanh đó; phần còn lại là mây.
-    revealed: ['c2_2', 'c3_2', 'c2_3', 'c3_3'],
+    // Bốn khối quanh gốc mở sẵn, đủ thấy thủ phủ và vài mỏ; phần còn lại là mây.
+    revealed: ['0,0', '-1,0', '0,-1', '-1,-1'],
     lastSavedTimestamp: Date.now(),
     muted: false,
     totalGold: 0,
@@ -235,6 +235,22 @@ export class Economy {
     return this.scale(BUILD_COST[type], COST_GROWTH, level);
   }
 
+  countOf(type: BuildingType): number {
+    return this.state.buildings.filter((b) => b.type === type).length;
+  }
+
+  /**
+   * Gia XAY MOI, tinh theo so cai da co cua loai do.
+   *
+   * Tren ban do co dinh thi dung gia nen cung duoc, vi chi co 15 nen dat. Ban do vo han thi
+   * khong: do duoc 46 tram trung chuyen o phut 60, boi cai thu bon muoi sau re y het cai dau
+   * tien. Cho gia tang theo so luong thi mo rong ra thanh mot khoan dau tu that, va cang di
+   * xa cang phai can nhac - dung cai ma "vo han" can de khong nham chan.
+   */
+  buildCostFor(type: BuildingType): Cost {
+    return this.scale(BUILD_COST[type], COST_GROWTH, this.countOf(type));
+  }
+
   hireCost(): Cost {
     return this.scale(HIRE_COST, HIRE_GROWTH, this.villagers().length);
   }
@@ -301,18 +317,20 @@ export class Economy {
     if (this.state.demand && this.demandKinds().length === 0) this.clearDemand();
   }
 
-  build(plotId: string, type: BuildingType): boolean {
-    const plot = PLOTS.find((p) => p.id === plotId);
-    if (!plot || this.buildingAt(plotId)) return false;
-    if (type === 'outpost' && plot.kind !== 'outpost') return false;
-    if (type !== 'outpost' && plot.kind === 'outpost') return false;
+  /**
+   * Nền đất giờ là đối tượng sinh ra theo khối chứ không phải một dòng trong bảng cố định,
+   * nên hàm nhận thẳng cái nền thay vì đi tra mã. Trên bản đồ vô hạn thì không có bảng nào
+   * để mà tra.
+   */
+  build(plot: Plot, type: BuildingType): boolean {
+    if (plot.core || this.buildingAt(plot.id)) return false;
     if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) return false;
-    if (!this.pay(this.costFor(type, 0))) return false;
+    if (!this.pay(this.buildCostFor(type))) return false;
 
     this.state.buildings.push({
-      id: plotId, type, level: 1,
-      position: [plot.pos[0], 0, plot.pos[1]],
-      biome: biomeAt(plot.pos[0], plot.pos[1]),
+      id: plot.id, type, level: 1,
+      position: [plot.position[0], 0, plot.position[2]],
+      biome: plot.biome,
       stock: {}, cartTimer: 0,
     });
     this.state.demand = null;

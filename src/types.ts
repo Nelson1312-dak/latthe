@@ -136,6 +136,18 @@ export interface GameState {
   speedMult: number;
 }
 
+/**
+ * Nen dat. KHONG con la mot mang co dinh trong config nua: nen sinh ra theo tung khoi khi
+ * nguoi choi di toi, nen so nen dat la vo han. Ma nen suy duoc tu toa do khoi.
+ */
+export interface Plot {
+  id: string;
+  position: Vec3;
+  biome: BiomeId;
+  /** Chi o goc toa do moi la core; con lai xay gi cung duoc. */
+  core: boolean;
+}
+
 /** Kết quả tính lúc quay lại sau khi vắng mặt. */
 export interface OfflineReport {
   elapsedSeconds: number;

@@ -1,200 +1,215 @@
 /**
- * Màn mây che vùng chưa khám phá, và cơ chế vén mây khi có người tới gần.
+ * Màn mây trên một lưới VÔ HẠN.
  *
- * Thế giới chia thành lưới 6×6 ô sương, mỗi ô 10×10 đơn vị. Ô nào chưa vén thì phủ một cụm
- * mây đa giác thấp lơ lửng ở cao độ 3.
+ * Không còn 36 ô cố định. Ô sương trùng với khối bản đồ, nên số ô là vô hạn — nhưng chỉ
+ * những ô đang nạp mới có mây thật trong cảnh, và bản lưu chỉ nhớ DANH SÁCH Ô ĐÃ VÉN.
+ * Danh sách đó lớn dần theo đúng công sức người chơi bỏ ra, chứ không theo kích thước thế
+ * giới — đó là lý do một bản đồ vô hạn vẫn lưu được vào localStorage.
  *
- * Toàn bộ mây của CẢ bản đồ là MỘT InstancedMesh. Mỗi ô giữ một dải chỉ số trong đó, nên vén
- * một ô chỉ là ghi lại mấy ma trận chứ không phải thêm bớt đối tượng khỏi cảnh — thêm bớt
- * giữa chừng buộc three dựng lại danh sách vẽ, và đó đúng là thứ gây khựng ngay lúc người
- * chơi đang nhìn hoạt cảnh vén mây.
- *
- * Bản lưu chỉ cần nhớ DANH SÁCH MÃ ô đã vén. Hình dạng thế giới sinh lại được từ hạt giống,
- * nên không có gì khác đáng lưu.
+ * Vén một ô cần ĐỨNG LẠI khảo sát, không phải đi ngang qua. Đo ở bản cũ: chỉ cần lướt qua
+ * thì cả bản đồ sạch bong trong chưa tới ba phút, và khám phá xong trước khi người chơi kịp
+ * nhận ra có thứ để khám phá.
  */
 import * as THREE from 'three';
-import { FOG_CHUNK, HALF, PALETTE, REVEAL_RADIUS, SURVEY_SECONDS } from './config';
-import type { FogChunk, Unit } from './types';
+import { PALETTE, REVEAL_RADIUS, SURVEY_SECONDS } from './config';
+import type { Unit } from './types';
+import { CHUNK, KEEP_RADIUS, chunkKey, chunkOf } from './world';
 
-/** Số khối mây trên một ô. Nhiều thì dày đẹp, nhưng đây là thứ nhân với 36 ô. */
+/** Số khối mây trên một ô. */
 const PUFFS = 7;
-/** Giây cho hoạt cảnh mây tan. */
 const PUFF_SECONDS = 0.85;
+/** Đủ cho (2·KEEP+1)² ô, dư một ít. */
+const CAP = 1100;
 
 interface Slot {
-  chunk: FogChunk;
+  key: string;
+  cx: number;
+  cz: number;
   from: number;
-  count: number;
-  /** Giây đã trôi của hoạt cảnh tan; null nghĩa là chưa bắt đầu. */
-  fading: number | null;
-  /** Giây đã khảo sát. Đủ SURVEY_SECONDS thì mây mới bắt đầu tan. */
+  /** Giây đã khảo sát. */
   survey: number;
+  /** Giây đã trôi của hoạt cảnh tan; null nghĩa là chưa tan. */
+  fading: number | null;
 }
 
 export class FogOfWar {
   readonly group = new THREE.Group();
-  readonly chunks: FogChunk[] = [];
-  private readonly slots: Slot[] = [];
   private readonly mesh: THREE.InstancedMesh;
-  private readonly base: THREE.Matrix4[] = [];
-  private readonly tmp = new THREE.Matrix4();
+  private readonly revealed: Set<string>;
+  private readonly slots = new Map<string, Slot>();
   private readonly hidden = new THREE.Matrix4().makeScale(0, 0, 0);
+  private readonly m = new THREE.Matrix4();
+  private readonly v = new THREE.Vector3();
+  private readonly q = new THREE.Quaternion();
+  private readonly s = new THREE.Vector3();
+  private lastCenter = '';
 
-  /** Gọi khi một ô vừa được vén — để phát tiếng và báo UI. */
-  onReveal: ((chunk: FogChunk) => void) | null = null;
+  onReveal: ((key: string) => void) | null = null;
 
   constructor(revealed: string[]) {
-    const n = Math.ceil(HALF * 2 / FOG_CHUNK);
-    const start = -HALF + FOG_CHUNK / 2;
-    let index = 0;
-
-    const geo = new THREE.DodecahedronGeometry(1, 0);
-    const mat = new THREE.MeshLambertMaterial({
-      color: PALETTE.cloud, transparent: true, opacity: 0.95, flatShading: true,
-    });
-    const total = n * n * PUFFS;
-    this.mesh = new THREE.InstancedMesh(geo, mat, total);
-    this.mesh.castShadow = false;
-    this.mesh.receiveShadow = false;
+    this.revealed = new Set(revealed);
+    this.mesh = new THREE.InstancedMesh(
+      new THREE.DodecahedronGeometry(1, 0),
+      new THREE.MeshLambertMaterial({
+        color: PALETTE.cloud, transparent: true, opacity: 0.95, flatShading: true,
+      }), CAP);
     this.mesh.frustumCulled = false;
-
-    for (let i = 0; i < n; i += 1) {
-      for (let j = 0; j < n; j += 1) {
-        const cx = start + i * FOG_CHUNK;
-        const cz = start + j * FOG_CHUNK;
-        const id = `c${i}_${j}`;
-        const chunk: FogChunk = { id, center: [cx, cz], revealed: revealed.includes(id) };
-        this.chunks.push(chunk);
-        const slot: Slot = { chunk, from: index, count: PUFFS, fading: null, survey: 0 };
-
-        for (let k = 0; k < PUFFS; k += 1) {
-          const a = (k / PUFFS) * Math.PI * 2 + i * 0.7 + j * 0.3;
-          const d = k === 0 ? 0 : FOG_CHUNK * 0.3;
-          const s = k === 0 ? 3.4 : 2.0 + ((i + j + k) % 3) * 0.5;
-          const m = new THREE.Matrix4().compose(
-            new THREE.Vector3(cx + Math.cos(a) * d, 3 + ((i + k) % 3) * 0.5, cz + Math.sin(a) * d),
-            new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a),
-            new THREE.Vector3(s, s * 0.72, s));
-          this.base.push(m);
-          this.mesh.setMatrixAt(index, chunk.revealed ? this.hidden : m);
-          index += 1;
-        }
-        this.slots.push(slot);
-      }
-    }
-    this.mesh.instanceMatrix.needsUpdate = true;
+    for (let i = 0; i < CAP; i += 1) this.mesh.setMatrixAt(i, this.hidden);
     this.group.add(this.mesh);
   }
 
-  /** Ô sương tại một điểm, hoặc undefined nếu ngoài bản đồ. */
-  chunkAt(x: number, z: number): FogChunk | undefined {
-    return this.chunks.find((c) =>
-      Math.abs(c.center[0] - x) <= FOG_CHUNK / 2 && Math.abs(c.center[1] - z) <= FOG_CHUNK / 2);
+  /** Ma trận gốc của khối mây thứ k trong một ô. Suy từ toạ độ nên không phải lưu. */
+  private puff(cx: number, cz: number, k: number): THREE.Matrix4 {
+    const a = (k / PUFFS) * Math.PI * 2 + cx * 0.7 + cz * 0.3;
+    const d = k === 0 ? 0 : CHUNK * 0.28;
+    const scale = k === 0 ? 5.2 : 3.0 + ((cx + cz + k) % 3) * 0.8;
+    this.v.set(
+      cx * CHUNK + CHUNK / 2 + Math.cos(a) * d,
+      3.4 + ((cx + k) % 3) * 0.6,
+      cz * CHUNK + CHUNK / 2 + Math.sin(a) * d);
+    this.q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), a);
+    this.s.set(scale, scale * 0.7, scale);
+    return this.m.clone().compose(this.v, this.q, this.s);
   }
 
-  isRevealed(x: number, z: number): boolean {
-    return this.chunkAt(x, z)?.revealed ?? true;
-  }
+  /** Dựng lại tập ô có mây quanh tâm ngắm. Chỉ chạy khi bước sang khối mới. */
+  private restream(center: THREE.Vector3): void {
+    const cx = chunkOf(center.x);
+    const cz = chunkOf(center.z);
+    const key = chunkKey(cx, cz);
+    if (key === this.lastCenter) return;
+    this.lastCenter = key;
 
-  /**
-   * Phủ mây lại đúng theo một danh sách. Gọi khi làm lại từ đầu: đối tượng màn mây sống lâu
-   * hơn trạng thái game, nên reset mà không đồng bộ lại thì cả bản đồ vẫn hiện nguyên như
-   * ván trước — đúng lỗi đã đo được.
-   */
-  resync(revealed: string[]): void {
-    for (const slot of this.slots) {
-      const want = revealed.includes(slot.chunk.id);
-      slot.chunk.revealed = want;
-      slot.fading = null;
-      slot.survey = 0;
-      for (let i = 0; i < slot.count; i += 1) {
-        this.mesh.setMatrixAt(slot.from + i, want ? this.hidden : this.base[slot.from + i]);
+    const keep = new Map<string, Slot>();
+    let index = 0;
+    for (let dx = -KEEP_RADIUS; dx <= KEEP_RADIUS; dx += 1) {
+      for (let dz = -KEEP_RADIUS; dz <= KEEP_RADIUS; dz += 1) {
+        const k = chunkKey(cx + dx, cz + dz);
+        if (this.revealed.has(k)) continue;
+        if (index + PUFFS > CAP) continue;
+        const old = this.slots.get(k);
+        keep.set(k, {
+          key: k, cx: cx + dx, cz: cz + dz, from: index,
+          survey: old?.survey ?? 0, fading: old?.fading ?? null,
+        });
+        index += PUFFS;
+      }
+    }
+    this.slots.clear();
+    for (const [k, s] of keep) this.slots.set(k, s);
+
+    for (let i = 0; i < CAP; i += 1) this.mesh.setMatrixAt(i, this.hidden);
+    for (const slot of this.slots.values()) {
+      for (let i = 0; i < PUFFS; i += 1) {
+        this.mesh.setMatrixAt(slot.from + i, this.puff(slot.cx, slot.cz, i));
       }
     }
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
-  /** Vén ngay, không hoạt cảnh. Dùng lúc dựng lại từ bản lưu. */
-  revealNow(id: string): void {
-    const slot = this.slots.find((s) => s.chunk.id === id);
-    if (!slot || slot.chunk.revealed) return;
-    slot.chunk.revealed = true;
-    for (let i = 0; i < slot.count; i += 1) this.mesh.setMatrixAt(slot.from + i, this.hidden);
+  /** Đặt lại danh sách ô đã vén. Dùng khi làm lại từ đầu. */
+  resync(revealed: string[]): void {
+    this.revealed.clear();
+    for (const k of revealed) this.revealed.add(k);
+    this.slots.clear();
+    this.lastCenter = '';
+    for (let i = 0; i < CAP; i += 1) this.mesh.setMatrixAt(i, this.hidden);
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
+  isRevealed(x: number, z: number): boolean {
+    return this.revealed.has(chunkKey(chunkOf(x), chunkOf(z)));
+  }
+
+  revealedKeys(): string[] {
+    return [...this.revealed];
+  }
+
+  get revealedCount(): number {
+    return this.revealed.size;
+  }
+
+  /** Ô đang được khảo sát và tiến độ, để UI nói cho người chơi biết. */
+  surveying(): { key: string; progress: number } | null {
+    let best: Slot | null = null;
+    for (const s of this.slots.values()) if (s.survey > 0 && (!best || s.survey > best.survey)) best = s;
+    return best ? { key: best.key, progress: best.survey / SURVEY_SECONDS } : null;
+  }
+
   /**
-   * Ai đó tới đủ gần thì mây tan. Kiểm theo TÂM ô chứ không theo từng khối mây: người chơi
-   * cảm nhận theo vùng, và kiểm 36 tâm rẻ hơn hẳn kiểm 252 khối mỗi khung hình.
+   * Ô chưa vén gần nhất trong vùng đang nạp, để cắt người đi thám hiểm.
+   *
+   * Chỉ xét những ô ĐANG CÓ MÂY THẬT trong cảnh. Trên một bản đồ vô hạn, "ô chưa vén gần
+   * nhất" nếu tính cả vùng chưa nạp thì có vô số đáp án bằng nhau và người thám hiểm sẽ đi
+   * mãi về một hướng.
    */
-  update(dt: number, units: Unit[]): void {
+  nearestUnrevealed(from: [number, number, number]): [number, number, number] | null {
+    let best: [number, number, number] | null = null;
+    let bestDist = Infinity;
+    for (const s of this.slots.values()) {
+      const cx = s.cx * CHUNK + CHUNK / 2;
+      const cz = s.cz * CHUNK + CHUNK / 2;
+      const d = Math.hypot(cx - from[0], cz - from[2]);
+      if (d < bestDist) { bestDist = d; best = [cx, 0, cz]; }
+    }
+    return best;
+  }
+
+  update(dt: number, units: Unit[], center: THREE.Vector3): void {
+    this.restream(center);
     let dirty = false;
 
-    for (const slot of this.slots) {
-      if (slot.chunk.revealed && slot.fading === null) continue;
+    for (const slot of [...this.slots.values()]) {
+      const cx = slot.cx * CHUNK + CHUNK / 2;
+      const cz = slot.cz * CHUNK + CHUNK / 2;
 
       if (slot.fading === null) {
-        const [cx, cz] = slot.chunk.center;
-        // Khoang cach toi CANH o, khong phai toi tam.
-        //
-        // Ban dau lay tam roi cong ca nua o lan ban kinh, tuc 5+5=10 - ma cac tam o cung
-        // cach nhau dung 10. Hau qua do duoc: dung o tam mot o la ven luon moi o ke, va mot
-        // nguoi di bo ngang ban do ven sach 36 vung trong 120 giay. Ca co che kham pha bien
-        // mat. Do toi canh thi dung nhu dac ta: phai toi trong vong 5 don vi cua o.
+        // Khoảng cách tới CẠNH ô, không phải tới tâm.
         const near = units.some((u) => {
-          const dx = Math.max(0, Math.abs(u.position[0] - cx) - FOG_CHUNK / 2);
-          const dz = Math.max(0, Math.abs(u.position[2] - cz) - FOG_CHUNK / 2);
+          const dx = Math.max(0, Math.abs(u.position[0] - cx) - CHUNK / 2);
+          const dz = Math.max(0, Math.abs(u.position[2] - cz) - CHUNK / 2);
           return Math.hypot(dx, dz) <= REVEAL_RADIUS;
         });
         if (!near) {
-          // Rời đi giữa chừng thì công khảo sát nguội dần, nhưng không mất sạch.
           if (slot.survey > 0) { slot.survey = Math.max(0, slot.survey - dt * 0.5); dirty = true; }
           continue;
         }
         slot.survey += dt;
         if (slot.survey < SURVEY_SECONDS) {
-          // Mây mỏng dần trong lúc khảo sát: người chơi thấy việc đang tiến triển.
           const k = slot.survey / SURVEY_SECONDS;
-          for (let i = 0; i < slot.count; i += 1) {
-            const idx = slot.from + i;
-            this.tmp.copy(this.base[idx]);
-            const s = 1 - k * 0.35;
-            this.tmp.scale(new THREE.Vector3(s, s, s));
-            this.mesh.setMatrixAt(idx, this.tmp);
+          for (let i = 0; i < PUFFS; i += 1) {
+            const base = this.puff(slot.cx, slot.cz, i);
+            base.scale(new THREE.Vector3(1 - k * 0.35, 1 - k * 0.35, 1 - k * 0.35));
+            this.mesh.setMatrixAt(slot.from + i, base);
           }
           dirty = true;
           continue;
         }
         slot.fading = 0;
-        slot.chunk.revealed = true;
-        this.onReveal?.(slot.chunk);
+        this.revealed.add(slot.key);
+        this.onReveal?.(slot.key);
       }
 
       slot.fading += dt;
       const k = Math.min(1, slot.fading / PUFF_SECONDS);
       // Phồng lên một nhịp rồi xẹp hẳn: mây bung ra chứ không teo lại như bị hút.
       const scale = k < 0.3 ? 1 + k * 0.8 : Math.max(0, 1.24 * (1 - (k - 0.3) / 0.7));
-      for (let i = 0; i < slot.count; i += 1) {
+      for (let i = 0; i < PUFFS; i += 1) {
         const idx = slot.from + i;
         if (scale <= 0.001) {
           this.mesh.setMatrixAt(idx, this.hidden);
         } else {
-          this.tmp.copy(this.base[idx]);
-          this.tmp.scale(new THREE.Vector3(scale, scale, scale));
-          // Mây bốc lên trong lúc tan.
-          this.tmp.elements[13] += k * 2.2;
-          this.mesh.setMatrixAt(idx, this.tmp);
+          const base = this.puff(slot.cx, slot.cz, i);
+          base.scale(new THREE.Vector3(scale, scale, scale));
+          base.elements[13] += k * 2.4;
+          this.mesh.setMatrixAt(idx, base);
         }
       }
       dirty = true;
-      if (k >= 1) slot.fading = null;
+      if (k >= 1) this.slots.delete(slot.key);
     }
 
     if (dirty) this.mesh.instanceMatrix.needsUpdate = true;
-  }
-
-  revealedIds(): string[] {
-    return this.chunks.filter((c) => c.revealed).map((c) => c.id);
   }
 
   dispose(): void {
@@ -204,11 +219,8 @@ export class FogOfWar {
 }
 
 /**
- * Tiếng chuông khi vén được vùng mới.
- *
- * Dựng bằng WebAudio chứ không tải tệp: một tiếng chuông ngắn không đáng để thêm một yêu cầu
- * mạng và một tệp nhị phân vào gói. Bối cảnh âm thanh chỉ được tạo sau cử chỉ đầu tiên của
- * người dùng, nên hàm này tự chịu lỗi im lặng khi trình duyệt chưa cho phát.
+ * Tiếng chuông khi vén được vùng mới. Dựng bằng WebAudio chứ không tải tệp: một tiếng chuông
+ * ngắn không đáng để thêm một yêu cầu mạng vào gói.
  */
 let audio: AudioContext | null = null;
 

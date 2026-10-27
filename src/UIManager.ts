@@ -9,10 +9,11 @@
  * hình như thanh cũ, nên hai bên vẫn nhìn thấy bản đồ — thứ mà cái khung rỗng bên phải của
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
-import { BIOMES, BUILDINGS, BUILD_COST, HALF, PLOTS, RESOURCES, WORLD, biomeAt } from './config';
+import { BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES } from './config';
+import { CHUNK, biomeAt, chunkOf } from './world';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
-import type { BuildingType, Cost, OfflineReport, ResourceKind } from './types';
+import type { BiomeId, BuildingType, Cost, OfflineReport, ResourceKind } from './types';
 import { RESOURCE_KINDS } from './types';
 
 const STAT_MS = 200;
@@ -80,8 +81,9 @@ export class UIManager {
       this.toast(n ? `⭐ Ưu tiên ${RESOURCES[n.kind].label}` : 'Đã bỏ ghim mỏ');
       this.renderDock();
     };
-    game.onReveal = () => {
-      const b = BIOMES[biomeAt(game.target.x, game.target.z)];
+    game.onReveal = (key) => {
+      const [cx, cz] = key.split(',').map(Number);
+      const b = BIOMES[biomeAt(cx * CHUNK + CHUNK / 2, cz * CHUNK + CHUNK / 2) as BiomeId];
       this.toast(`Đã vén được vùng mới · ${b.label}`);
     };
     economy.onChange = () => {
@@ -236,7 +238,7 @@ export class UIManager {
    */
   private renderInspector(): void {
     const box = this.el.inspector;
-    const plot = this.selected ? PLOTS.find((p) => p.id === this.selected) : null;
+    const plot = this.selected ? this.game.plotById(this.selected) : null;
     if (!plot) {
       box.hidden = true;
       box.innerHTML = '';
@@ -274,16 +276,19 @@ export class UIManager {
           () => this.economy.upgrade(b)));
       }
     } else {
-      const biome = BIOMES[biomeAt(plot.pos[0], plot.pos[1])];
-      head.append(el('span', 'insp-ico', plot.kind === 'outpost' ? '🛖' : '🧱'));
+      const biome = BIOMES[plot.biome];
+      const far = Math.round(Math.hypot(plot.position[0], plot.position[2]));
+      head.append(el('span', 'insp-ico', '🧱'));
       const t = el('div', 'insp-title');
-      t.append(el('strong', undefined, plot.kind === 'outpost' ? 'Nền trạm trung chuyển' : 'Nền đất trống'),
-        el('small', undefined, biome.label));
+      t.append(el('strong', undefined, 'Nền đất trống'),
+        el('small', undefined, `${biome.label} · cách thủ phủ ${far}`));
       head.append(t);
 
-      const types: BuildingType[] = plot.kind === 'outpost' ? ['outpost'] : ['house', 'granary'];
+      // Tren ban do vo han, nen nao cung xay duoc moi thu. Tram trung chuyen van doi cap 4,
+      // va chi dang xay khi o xa - nen de no cuoi danh sach.
+      const types: BuildingType[] = ['house', 'granary', 'outpost'];
       for (const type of types) {
-        const cost = BUILD_COST[type];
+        const cost = this.economy.buildCostFor(type);
         const row = el('div', 'insp-choice');
         row.append(el('span', 'insp-ico small', BUILDINGS[type].icon));
         const col = el('div', 'insp-title');
@@ -291,7 +296,7 @@ export class UIManager {
         col.append(this.costRow(cost));
         row.append(col);
         row.append(this.bigButton('XÂY', cost, BUILDINGS[type].label,
-          () => this.economy.build(plot.id, type)));
+          () => this.economy.build(plot, type)));
         body.append(row);
       }
     }
@@ -327,51 +332,61 @@ export class UIManager {
 
   // ------------------------------------------------------------- minimap
 
+  /**
+   * Minimap trên bản đồ vô hạn: vẽ một CỬA SỔ quanh người chơi chứ không vẽ cả thế giới —
+   * cả thế giới thì không có kích thước để mà vẽ. Khung trắng là vùng camera đang nhìn, chấm
+   * giữa là thủ phủ nếu nó còn trong tầm.
+   */
   private drawMap(): void {
     const c = this.el.minimap;
     const ctx = c.getContext('2d');
     if (!ctx) return;
-    const px = c.width / WORLD;
-    const to = (v: number) => (v + HALF) * px;
+    const span = MINIMAP_SPAN;
+    const px = c.width / span;
+    const ox = this.game.target.x - span / 2;
+    const oz = this.game.target.z - span / 2;
+    const tx = (v: number) => (v - ox) * px;
+    const tz = (v: number) => (v - oz) * px;
 
     ctx.clearRect(0, 0, c.width, c.height);
-    for (let x = -HALF; x < HALF; x += 2) {
-      for (let z = -HALF; z < HALF; z += 2) {
-        const soft = Math.max(Math.abs(x), Math.abs(z)) * 0.68 + Math.hypot(x, z) * 0.32;
-        if (soft > HALF) continue;
+    const step = 4;
+    for (let x = ox; x < ox + span; x += step) {
+      for (let z = oz; z < oz + span; z += step) {
         ctx.fillStyle = BIOMES[biomeAt(x, z)].minimap;
-        ctx.fillRect(to(x), to(z), 2 * px + 1, 2 * px + 1);
+        ctx.fillRect(tx(x), tz(z), step * px + 1, step * px + 1);
       }
     }
+    // Mây phủ những khối chưa vén.
     ctx.fillStyle = 'rgba(236,243,250,0.92)';
-    for (const chunk of this.game.fog.chunks) {
-      if (chunk.revealed) continue;
-      ctx.fillRect(to(chunk.center[0] - 5), to(chunk.center[1] - 5), 10 * px, 10 * px);
+    for (let cx = chunkOf(ox); cx <= chunkOf(ox + span); cx += 1) {
+      for (let cz = chunkOf(oz); cz <= chunkOf(oz + span); cz += 1) {
+        if (this.game.fog.isRevealed(cx * CHUNK + 1, cz * CHUNK + 1)) continue;
+        ctx.fillRect(tx(cx * CHUNK), tz(cz * CHUNK), CHUNK * px, CHUNK * px);
+      }
     }
     for (const n of this.game.map.nodes) {
       if (!this.game.fog.isRevealed(n.position[0], n.position[2])) continue;
       ctx.fillStyle = `#${RESOURCES[n.kind].color.toString(16).padStart(6, '0')}`;
-      ctx.fillRect(to(n.position[0]) - 1, to(n.position[2]) - 1, 2.5, 2.5);
+      ctx.fillRect(tx(n.position[0]) - 1, tz(n.position[2]) - 1, 2.5, 2.5);
     }
-    // Mỏ được ghim: vòng sáng cho dễ tìm lại trên bản đồ lớn.
     const pin = this.economy.state.focusNodeId
       ? this.game.map.nodeById(this.economy.state.focusNodeId) : null;
     if (pin) {
       ctx.strokeStyle = '#ffd166';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(to(pin.position[0]), to(pin.position[2]), 5, 0, 7);
+      ctx.arc(tx(pin.position[0]), tz(pin.position[2]), 5, 0, 7);
       ctx.stroke();
     }
     for (const b of this.economy.state.buildings) {
       ctx.fillStyle = b.type === 'townhall' ? '#d94e34' : '#ffffff';
-      ctx.fillRect(to(b.position[0]) - 2, to(b.position[2]) - 2, 4, 4);
+      ctx.fillRect(tx(b.position[0]) - 2, tz(b.position[2]) - 2, 4, 4);
     }
     if ((Date.now() % 1000) < 550) {
       ctx.fillStyle = '#fff6d8';
       for (const u of this.economy.state.units) {
         ctx.beginPath();
-        ctx.arc(to(u.position[0]), to(u.position[2]), u.kind === 'cart' ? 2.6 : 1.8, 0, 7);
+        ctx.arc(tx(u.position[0]), tz(u.position[2]), u.kind === 'cart' ? 2.6 : 1.8, 0, 7);
         ctx.fill();
       }
     }
@@ -379,15 +394,15 @@ export class UIManager {
     ctx.strokeStyle = 'rgba(255,255,255,0.95)';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(
-      to(this.game.target.x - z * 0.85), to(this.game.target.z - z * 0.55),
+      tx(this.game.target.x - z * 0.85), tz(this.game.target.z - z * 0.55),
       z * 1.7 * px, z * 1.1 * px);
   }
 
   private mapClick(e: PointerEvent): void {
     const r = this.el.minimap.getBoundingClientRect();
     this.game.panTo(
-      ((e.clientX - r.left) / r.width) * WORLD - HALF,
-      ((e.clientY - r.top) / r.height) * WORLD - HALF);
+      this.game.target.x + (((e.clientX - r.left) / r.width) - 0.5) * MINIMAP_SPAN,
+      this.game.target.z + (((e.clientY - r.top) / r.height) - 0.5) * MINIMAP_SPAN);
   }
 
   // ------------------------------------------------------------- lớp phủ

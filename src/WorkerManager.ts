@@ -340,20 +340,9 @@ export class WorkerManager {
     return best;
   }
 
-  /** Ô sương gần nhất mà lại giáp với vùng đã vén — nên người đi thám hiểm không nhảy cóc. */
+  /** Ô chưa vén gần nhất — màn mây tự biết ô nào đang có mây thật trong cảnh. */
   private scoutTarget(from: Vec3): Vec3 | null {
-    let best: Vec3 | null = null;
-    let bestDist = Infinity;
-    for (const c of this.fog.chunks) {
-      if (c.revealed) continue;
-      const [cx, cz] = c.center;
-      const touchesKnown = this.fog.chunks.some((o) =>
-        o.revealed && Math.hypot(o.center[0] - cx, o.center[1] - cz) <= 14.2);
-      if (!touchesKnown) continue;
-      const d = Math.hypot(cx - from[0], cz - from[2]);
-      if (d < bestDist) { bestDist = d; best = [cx, 0, cz]; }
-    }
-    return best;
+    return this.fog.nearestUnrevealed(from);
   }
 
   /**
