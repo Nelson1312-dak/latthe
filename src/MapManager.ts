@@ -11,6 +11,7 @@
  * một, và con số đó không đổi dù người chơi đi xa tới đâu.
  */
 import * as THREE from 'three';
+import { gem, matte, metal } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BIOMES, PALETTE, RESOURCES } from './config';
 import type { Patch, Plot, Vec3 } from './types';
@@ -67,7 +68,7 @@ export class MapManager {
   version = 0;
 
   constructor() {
-    const lambert = (flat: boolean) => new THREE.MeshLambertMaterial({ flatShading: flat });
+    const lambert = (flat: boolean) => matte(undefined, flat);
     const make = (key: PropKey, geo: THREE.BufferGeometry, material: THREE.Material, shadow: boolean) => {
       const mesh = new THREE.InstancedMesh(geo, material, CAP[key]);
       mesh.castShadow = shadow;
@@ -79,7 +80,7 @@ export class MapManager {
       this.group.add(mesh);
     };
 
-    make('tile', new THREE.CylinderGeometry(HEX_R, HEX_R, 2.6, 6), new THREE.MeshLambertMaterial(), false);
+    make('tile', new THREE.CylinderGeometry(HEX_R, HEX_R, 2.6, 6), matte(), false);
 
     // Nền bãi và viền bãi: hai vòng tròn dẹt nằm sát mặt đất. Đây là thứ khiến một bãi đọc
     // được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
@@ -94,18 +95,16 @@ export class MapManager {
       transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide,
     }), false);
 
-    make('road', new THREE.BoxGeometry(CHUNK, 0.12, 2.6), new THREE.MeshLambertMaterial(), false);
+    make('road', new THREE.BoxGeometry(CHUNK, 0.12, 2.6), matte(), false);
     make('pine', this.pineGeometry(), lambert(true), true);
     make('wheat', this.wheatGeometry(), lambert(true), true);
     make('rock', new THREE.DodecahedronGeometry(1, 0), lambert(true), true);
-    make('ore', new THREE.OctahedronGeometry(0.75, 0), new THREE.MeshStandardMaterial({
-      roughness: 0.25, metalness: 0.15, emissive: PALETTE.goldOre, emissiveIntensity: 0.4,
-    }), true);
-    make('spire', this.spireGeometry(), new THREE.MeshStandardMaterial({
-      roughness: 0.2, metalness: 0.1, emissive: PALETTE.crystal, emissiveIntensity: 0.5,
-    }), true);
+    // Quặng vàng là phần kim loại duy nhất của thế giới, nên cũng là ngoại lệ duy nhất
+    // của trần kim loại 0,2.
+    make('ore', new THREE.OctahedronGeometry(0.75, 0), metal(PALETTE.goldOre, PALETTE.goldOre), true);
+    make('spire', this.spireGeometry(), gem(PALETTE.crystal, PALETTE.crystalGlow), true);
     make('palm', this.palmGeometry(), lambert(true), true);
-    make('tuft', new THREE.ConeGeometry(0.22, 0.5, 4), new THREE.MeshLambertMaterial(), false);
+    make('tuft', new THREE.ConeGeometry(0.22, 0.5, 4), matte(), false);
   }
 
   // ------------------------------------------------------------ nạp và huỷ
@@ -218,8 +217,8 @@ export class MapManager {
        */
       const soNen = r() < 0.3 ? 3 : r() < 0.7 ? 2 : 1;
       for (let k = 0; k < soNen; k += 1) {
-        const x = ox + 5 + r() * (CHUNK - 10);
-        const z = oz + 5 + r() * (CHUNK - 10);
+        const x = Math.round(ox + 5 + r() * (CHUNK - 10));
+        const z = Math.round(oz + 5 + r() * (CHUNK - 10));
         if (onRoad(x, z)) continue;
         if (chunk.patches.some((p) =>
           Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 4)) continue;

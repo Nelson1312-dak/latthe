@@ -59,6 +59,19 @@ export const HOUSING_PER_HOUSE = 2;
  * Economy.reserveFor(): để trơ một số cố định thì tới người thứ mười hai — giá 290 lương
  * thực — thủ phủ vẫn bán sạch xuống 150, và người chơi vĩnh viễn không thuê nổi ai nữa.
  */
+/**
+ * ĐƠN VỊ LƯỚI. Mọi thực thể có mặt bằng đều là bội số nguyên của nó.
+ *
+ * Nền đất 3×3, thân công trình 2×2, thủ phủ 4×4 nền và 3×3 thân, props 1×1. Trước đây các
+ * số này là 2,9 và 2,4 và 1,85 — mỗi cái lệch một ít, nên đặt cạnh nhau thì mái nhà và bệ
+ * không bao giờ thẳng hàng, và mắt đọc ra là cẩu thả chứ không ra phong cách. Giữ mọi thứ
+ * trên cùng một lưới thì cảnh vật gọn lại mà không phải thêm chi tiết nào.
+ *
+ * Nền đất vẫn là lục giác: đó là nhận dạng hình ảnh của game, và lưới nói ở đây là lưới
+ * KÍCH THƯỚC của vật thể, không phải cách lát mặt đất.
+ */
+export const GRID = 1;
+
 export const SURPLUS_RESERVE = 150;
 /*
  * Số món thủ phủ bán được mỗi giây, mỗi cấp.
@@ -128,39 +141,141 @@ export const FOG_CHUNK = 10;
 export const STARTING: Record<ResourceKind, number> =
   { food: 40, wood: 40, gold: 120, stone: 20, relics: 0 };
 
+// ------------------------------------------------------------- bảng màu
+
+/**
+ * NĂM HỆ MÀU, KHÔNG HƠN.
+ *
+ * Bản trước có 31 màu rời nhau — mỗi lần cần một thứ mới lại thêm một hex, và kết quả là
+ * cây xanh lá, cỏ xanh khác, xương rồng xanh khác nữa, ba màu không có họ hàng gì với nhau.
+ * Nhìn ra là chắp vá chứ không ra một thế giới.
+ *
+ * Giờ mọi bề mặt đều rút từ năm hệ bù nhau, mỗi hệ ba bậc sáng tối:
+ *
+ *   XANH RÊU   đồng cỏ, rừng, cây cối
+ *   ĐẤT NUNG   sa mạc, đường, gỗ, tường và mái
+ *   XÁM LAM    vách đá, đá, nước, trời
+ *   TÍM NHẠT   cao nguyên, pha lê
+ *   KEM        người dân, mây, điểm sáng
+ *
+ * Cộng đúng MỘT màu nhấn — vàng — vì vàng là tiền, thứ duy nhất đáng được phép rực lên giữa
+ * một bảng màu trầm. Thiếu nó thì quặng vàng chìm nghỉm vào nền sa mạc.
+ *
+ * Thêm màu mới thì thêm một BẬC của hệ sẵn có, đừng thêm hệ thứ sáu.
+ */
+
+/*
+ * Mỗi hệ BỐN bậc, và bậc nào dùng cho nền thì vật thể đứng trên nó phải lấy bậc khác.
+ *
+ * Bốn bậc nghe như thừa cho tới khi thử ba: đồng cỏ và cây thông cùng lấy bậc "tối" thì cả
+ * khu rừng chìm nghỉm vào bãi cỏ, nhìn ra một mảng xanh phẳng không đọc được gì. Nền lấy
+ * bậc sáng, vật thể đứng trên lấy bậc tối — hoặc ngược lại ở vách đá, nơi nền tối còn tảng
+ * đá sáng. Tách bậc chính là thứ giữ cho một bảng màu hẹp vẫn đọc được.
+ */
+// ---- năm hệ, mỗi hệ bốn bậc ------------------------------------------------
+const REU_RAT_TOI = 0x47603f;
+const REU_TOI = 0x5f7d5f;
+const REU = 0x83a383;
+const REU_SANG = 0x9cb795;
+
+const DAT_RAT_TOI = 0x6b4a34;
+const DAT_TOI = 0x835b40;
+const DAT = 0xa9794f;
+const DAT_SANG = 0xd3ab7c;
+
+const LAM_RAT_TOI = 0x4a5a66;
+const LAM_TOI = 0x5d6e7a;
+const LAM = 0x8599a6;
+const LAM_SANG = 0xb6c6d1;
+
+const TIM_RAT_TOI = 0x3f3660;
+const TIM_TOI = 0x55497a;
+const TIM = 0x8a7bab;
+const TIM_SANG = 0xc3b8da;
+
+const KEM_TOI = 0xd8c9a8;
+const KEM = 0xeee3cc;
+const KEM_SANG = 0xf7f1e4;
+
+/** Màu nhấn duy nhất: vàng. */
+const VANG = 0xd9a441;
+
+export const PALETTE = {
+  sky: LAM_SANG,
+  cliffTop: DAT,
+  cliffMid: DAT_TOI,
+  cliffLow: DAT_RAT_TOI,
+  water: 0x7fa0b5,
+  road: DAT_SANG,
+
+  trunk: DAT_RAT_TOI,
+  // Cây lấy ba bậc TỐI của hệ rêu, vì nền đồng cỏ đã chiếm hai bậc sáng.
+  pine: [REU_RAT_TOI, 0x55714b, REU_TOI],
+  wheat: 0xdcc389,
+  berry: 0xb5705a,
+  granite: LAM,
+  graniteDark: LAM_TOI,
+  iron: DAT,
+  sand: DAT_SANG,
+  palm: REU_TOI,
+  cactus: REU_RAT_TOI,
+  goldOre: VANG,
+  moss: TIM_RAT_TOI,
+  crystal: TIM,
+  // Anh phat ra tu pha le sang hon chinh khoi pha le, nen no doc ra la phat sang chu khong
+  // phai mot khoi tim nhat.
+  crystalGlow: TIM_SANG,
+
+  wall: KEM_TOI,
+  // Bốn mái, bốn hệ khác nhau: nhìn mái là biết công trình gì, không phải đọc chữ.
+  roofCore: 0x9c5f45,
+  roofHouse: DAT,
+  roofGranary: LAM,
+  roofOutpost: REU_RAT_TOI,
+  plotDirt: DAT_TOI,
+  fence: DAT,
+
+  villager: KEM_SANG,
+  hat: VANG,
+  cloud: KEM,
+} as const;
+
 // ------------------------------------------------------------- tài nguyên
 
 export const RESOURCES: Record<ResourceKind, {
   label: string; icon: string; color: number; value: number;
 }> = {
-  food: { label: 'Lương thực', icon: '🌾', color: 0xe3b23c, value: 1 },
-  wood: { label: 'Gỗ', icon: '🪵', color: 0x4e9a55, value: 1 },
-  gold: { label: 'Vàng', icon: '🪙', color: 0xffb703, value: 1 },
-  stone: { label: 'Đá', icon: '🪨', color: 0x9aa3ad, value: 2 },
-  relics: { label: 'Mảnh cổ vật', icon: '🔮', color: 0x9d7bd8, value: 7 },
+  food: { label: 'Lương thực', icon: '🌾', color: PALETTE.wheat, value: 1 },
+  wood: { label: 'Gỗ', icon: '🪵', color: PALETTE.pine[1], value: 1 },
+  gold: { label: 'Vàng', icon: '🪙', color: PALETTE.goldOre, value: 1 },
+  stone: { label: 'Đá', icon: '🪨', color: PALETTE.granite, value: 2 },
+  relics: { label: 'Mảnh cổ vật', icon: '🔮', color: PALETTE.crystal, value: 7 },
 };
 
 // ------------------------------------------------------------- biến sinh thái
 
+
 export const BIOMES: Record<BiomeId, Biome> = {
   meadow: {
     id: 'meadow', label: 'Đồng Cỏ Khởi Đầu',
-    ground: [0x529342, 0x62aa4e], minimap: '#529342',
+    // Nền lấy hai bậc SÁNG, cây lấy ba bậc tối — nên rừng nổi hẳn trên cỏ.
+    ground: [REU, REU_SANG], minimap: '#83a383',
     yields: ['wood', 'food'],
   },
   crags: {
     id: 'crags', label: 'Vách Đá Granit',
-    ground: [0x7f8c8d, 0x6c7a7b], minimap: '#7f8c8d',
+    // Vách đá ngược lại: nền tối, tảng đá sáng.
+    ground: [LAM_TOI, LAM_RAT_TOI], minimap: '#5d6e7a',
     yields: ['stone'],
   },
   desert: {
     id: 'desert', label: 'Sa Mạc Chìm',
-    ground: [0xe9c46a, 0xd9b45c], minimap: '#e9c46a',
+    ground: [0xcfa877, 0xbe9868], minimap: '#cfa877',
     yields: ['gold'],
   },
   highlands: {
     id: 'highlands', label: 'Cao Nguyên Huyền Bí',
-    ground: [0x3d348b, 0x342c77], minimap: '#3d348b',
+    ground: [TIM_RAT_TOI, TIM_TOI], minimap: '#3f3660',
     yields: ['relics'],
   },
 };
@@ -229,37 +344,4 @@ export const TRAIN_GROWTH = 1.3;
 
 // ------------------------------------------------------------------ màu sắc
 
-export const PALETTE = {
-  sky: 0xbfe6f0,
-  cliffTop: 0x4a3728,
-  cliffMid: 0x3a2b1f,
-  cliffLow: 0x2e2118,
-  water: 0x48cae4,
-  road: 0xc2a878,
 
-  trunk: 0x6b4a32,
-  pine: [0x2f6b3a, 0x3d8248, 0x4e9a55],
-  wheat: 0xe3b23c,
-  berry: 0xc3423f,
-  granite: 0x9aa3ad,
-  graniteDark: 0x6c7a7b,
-  iron: 0xb08968,
-  sand: 0xe9c46a,
-  palm: 0x52b788,
-  cactus: 0x40916c,
-  goldOre: 0xffb703,
-  moss: 0x3d348b,
-  crystal: 0x9d7bd8,
-
-  wall: 0x8d5b4c,
-  roofCore: 0xd94e34,
-  roofHouse: 0xc96f4a,
-  roofGranary: 0x5b8fae,
-  roofOutpost: 0xa9763f,
-  plotDirt: 0x6f5a3c,
-  fence: 0x8d6b4c,
-
-  villager: 0xf2e4cf,
-  hat: 0xe0b14f,
-  cloud: 0xf4f7fb,
-} as const;

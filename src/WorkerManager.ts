@@ -15,6 +15,7 @@
  * Xe thồ chạy riêng: rời trạm theo chu kỳ, ôm hàng đã gom, bám trục đường về thủ phủ.
  */
 import * as THREE from 'three';
+import { matte } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, GATHER_SECONDS, OUTPOST_RANGE, PALETTE, RESOURCES,
@@ -57,13 +58,13 @@ export class WorkerManager {
 
     this.bodies = new THREE.InstancedMesh(
       this.villagerGeometry(),
-      new THREE.MeshLambertMaterial({ flatShading: true }), MAX_UNITS);
+      matte(undefined, true), MAX_UNITS);
     this.cargo = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.38, 0.38, 0.3),
-      new THREE.MeshLambertMaterial(), MAX_UNITS);
+      matte(), MAX_UNITS);
     this.carts = new THREE.InstancedMesh(
       this.cartGeometry(),
-      new THREE.MeshLambertMaterial({ flatShading: true }), 24);
+      matte(undefined, true), 24);
 
     for (const mesh of [this.bodies, this.cargo, this.carts]) {
       mesh.castShadow = true;

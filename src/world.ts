@@ -165,8 +165,9 @@ export function patchesOf(cx: number, cz: number): Patch[] {
   for (let k = 0; k < dem; k += 1) {
     const off = dem === 1 ? nua / 2 + r() * nua : k * nua;
     const lech = 6 + r() * (nua - 12);
-    const x = ox + (doc ? off + lech : 6 + r() * (CHUNK - 12));
-    const z = oz + (doc ? 6 + r() * (CHUNK - 12) : off + lech);
+    // Tâm bãi nằm đúng trên lưới một đơn vị, như mọi thực thể khác.
+    const x = Math.round(ox + (doc ? off + lech : 6 + r() * (CHUNK - 12)));
+    const z = Math.round(oz + (doc ? 6 + r() * (CHUNK - 12) : off + lech));
     if (Math.hypot(x, z) < 16) continue;             // chừa quảng trường thủ phủ
     out.push(makePatch(cx, cz, k, x, z, r));
   }

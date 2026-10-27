@@ -11,6 +11,7 @@
  * nhận ra có thứ để khám phá.
  */
 import * as THREE from 'three';
+import { matte } from './materials';
 import { PALETTE, REVEAL_RADIUS, SURVEY_SECONDS } from './config';
 import type { Unit } from './types';
 import { CHUNK, KEEP_RADIUS, chunkKey, chunkOf } from './world';
@@ -50,9 +51,7 @@ export class FogOfWar {
     this.revealed = new Set(revealed);
     this.mesh = new THREE.InstancedMesh(
       new THREE.DodecahedronGeometry(1, 0),
-      new THREE.MeshLambertMaterial({
-        color: PALETTE.cloud, transparent: true, opacity: 0.95, flatShading: true,
-      }), CAP);
+      Object.assign(matte(PALETTE.cloud, true), { transparent: true, opacity: 0.95 }), CAP);
     this.mesh.frustumCulled = false;
     for (let i = 0; i < CAP; i += 1) this.mesh.setMatrixAt(i, this.hidden);
     this.group.add(this.mesh);

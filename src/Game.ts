@@ -11,8 +11,9 @@
  * trải trên diện tích gấp mười, bóng vỡ răng cưa ngay mà chẳng thêm được gì.
  */
 import * as THREE from 'three';
+import { matte } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS, MAX_FRAME_DELTA, PALETTE } from './config';
+import { BUILDINGS, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
 import type { Economy } from './Economy';
 import { FogOfWar, chime } from './FogOfWar';
 import { MapManager } from './MapManager';
@@ -107,6 +108,15 @@ export class Game {
   private unitRing!: THREE.Mesh;
   private patchRing!: THREE.Mesh;
   private hoveredId: string | null = null;
+  /*
+   * Ba con số nội suy cho phản hồi tức thì. Giữ riêng chứ không gắn thẳng vào mesh: tween
+   * phải chạy theo KHUNG HÌNH, nên nó thuộc về vòng render, còn mấy hàm xử lý chuột chỉ đặt
+   * đích rồi thôi. Trộn hai thứ lại là sinh ra giật khi chuột gửi nhiều sự kiện trong một
+   * khung — mà chuột thì luôn làm thế.
+   */
+  private hoverK = 0;
+  private selectK = 0;
+  private punch = 0;
   private selectedUnitId: string | null = null;
   private selectedPatchId: string | null = null;
   /** Đang bám theo ai. Khác với "đang chọn ai": chọn rồi vẫn có thể không bám. */
@@ -256,14 +266,15 @@ export class Game {
       c.translate(sx * 1.4, 0.38, sz * 1.4);
       posts.push(c);
     }
-    const pad = new THREE.BoxGeometry(3.0, 0.18, 3.0);
+    // 3×3 đơn vị lưới.
+    const pad = new THREE.BoxGeometry(GRID * 3, 0.18, GRID * 3);
     pad.translate(0, 0.09, 0);
 
     this.emptyPads = new THREE.InstancedMesh(
-      pad, new THREE.MeshLambertMaterial({ color: PALETTE.plotDirt }), EMPTY_CAP);
+      pad, matte(PALETTE.plotDirt), EMPTY_CAP);
     this.emptyPosts = new THREE.InstancedMesh(
       mergeGeometries(posts, false)!,
-      new THREE.MeshLambertMaterial({ color: PALETTE.fence }), EMPTY_CAP);
+      matte(PALETTE.fence), EMPTY_CAP);
     for (const m of [this.emptyPads, this.emptyPosts]) {
       m.receiveShadow = true;
       m.castShadow = true;
@@ -316,16 +327,19 @@ export class Game {
     const core = b.type === 'townhall';
     const h = (core ? 1.6 : 1.15) + b.level * 0.12;
 
+    // Thủ phủ 4×4, công trình thường 3×3 — cùng cỡ nền đất mà nó thay thế.
     const base = new THREE.Mesh(
-      core ? new THREE.CylinderGeometry(1.9, 2.0, 0.4, 6) : new THREE.BoxGeometry(2.9, 0.18, 2.9),
-      new THREE.MeshLambertMaterial({ color: core ? PALETTE.graniteDark : PALETTE.plotDirt }));
+      core
+        ? new THREE.CylinderGeometry(GRID * 2, GRID * 2, 0.4, 6)
+        : new THREE.BoxGeometry(GRID * 3, 0.18, GRID * 3),
+      matte(core ? PALETTE.graniteDark : PALETTE.plotDirt));
     base.position.y = core ? 0.2 : 0.09;
     base.receiveShadow = true;
     g.add(base);
 
     const body = new THREE.Mesh(
-      new THREE.BoxGeometry(core ? 2.4 : 2.0, h, core ? 2.4 : 2.0),
-      new THREE.MeshLambertMaterial({ color: PALETTE.wall, flatShading: true }));
+      new THREE.BoxGeometry(core ? GRID * 3 : GRID * 2, h, core ? GRID * 3 : GRID * 2),
+      matte(PALETTE.wall, true));
     body.position.y = (core ? 0.4 : 0.18) + h / 2;
     body.castShadow = true;
     body.receiveShadow = true;
@@ -333,9 +347,11 @@ export class Game {
     g.add(body);
     this.pickable.push(body);
 
+    // Mái phủ đúng đường chéo của thân, nên hai cái khớp nhau thay vì xê xích vài phần mười.
     const roof = new THREE.Mesh(
-      new THREE.ConeGeometry(core ? 2.3 : 1.85, core ? 1.6 : 1.1, 4),
-      new THREE.MeshLambertMaterial({ color: ROOF[b.type], flatShading: true }));
+      new THREE.ConeGeometry(
+        (core ? GRID * 3 : GRID * 2) * Math.SQRT1_2 + 0.22, core ? 1.6 : 1.1, 4),
+      matte(ROOF[b.type], true));
     roof.position.y = (core ? 0.4 : 0.18) + h + (core ? 0.8 : 0.55);
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
@@ -345,7 +361,7 @@ export class Game {
     if (b.type === 'outpost') {
       const total = Object.values(b.stock).reduce<number>((a, v) => a + (v ?? 0), 0);
       const crates = Math.min(5, Math.ceil(total / 20));
-      const crateMat = new THREE.MeshLambertMaterial({ color: PALETTE.roofOutpost });
+      const crateMat = matte(PALETTE.roofOutpost);
       for (let i = 0; i < crates; i += 1) {
         const c = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), crateMat);
         c.position.set(-1.0 + (i % 3) * 0.46, 0.38 + Math.floor(i / 3) * 0.42, 1.25);
@@ -409,6 +425,10 @@ export class Game {
     const hit = this.pickMesh(e);
     if (hit) {
       this.chooseUnit(null);
+      // Bam thang vao hinh khoi cung phai bo chon bai: khong thi the bai van che mat the
+      // cong trinh, vi renderInspector() xet bai truoc nen dat.
+      this.pickPatch(null);
+      this.punch = 1;
       this.selectedId = hit.userData.plotId as string;
       this.focusOnPlot(this.selectedId);
       this.updateMarkers();
@@ -458,6 +478,7 @@ export class Game {
     if (bestKind === 'plot' && bestId) {
       this.chooseUnit(null);
       this.pickPatch(null);
+      this.punch = 1;
       this.selectedId = bestId;
       this.focusOnPlot(bestId);
       this.updateMarkers();
@@ -708,9 +729,52 @@ export class Game {
         const k = 1 + Math.sin(this.elapsed * 3.4) * 0.05;
         this.selectRing.scale.set(k, k, 1);
       }
+      this.tweenFeedback(dt);
     }
     this.renderer.render(this.scene, this.camera);
   };
+
+  /**
+   * Phản hồi tức thì khi rê và khi bấm, bằng nội suy chứ không bật tắt.
+   *
+   * Bật tắt thẳng thì cái vòng nhảy ra nhảy vào và người chơi không chắc mình vừa trỏ trúng
+   * cái gì — nhất là trên một bản đồ dày, nơi con trỏ quét qua chục thứ mỗi giây. Nội suy
+   * cho mắt một hướng chuyển động để bám theo, và đó mới là thứ đọc ra thành "tôi đang chỉ
+   * vào cái này".
+   *
+   * Ba thành phần: vòng rê nở ra từ nhỏ, công trình dưới con trỏ nhấc lên một chút, và cú
+   * bấm tạo một nhịp phình rồi tắt. Tất cả đều dùng hệ số mũ theo dt nên tốc độ cảm nhận
+   * giống nhau ở mọi tần số khung hình.
+   */
+  private tweenFeedback(dt: number): void {
+    const toi = (nay: number, dich: number, toc: number) =>
+      nay + (dich - nay) * (1 - Math.exp(-toc * dt));
+
+    this.hoverK = toi(this.hoverK, this.hoveredId ? 1 : 0, 16);
+    this.selectK = toi(this.selectK, this.selectedId ? 1 : 0, 14);
+    this.punch = toi(this.punch, 0, 7);
+
+    // Vòng rê nở từ 0,72 tới 1. Dưới 0,06 thì tắt hẳn, khỏi tốn một lệnh vẽ cho thứ vô hình.
+    if (this.hoverK > 0.06) {
+      this.hoverRing.visible = true;
+      const k = 0.72 + this.hoverK * 0.28;
+      this.hoverRing.scale.set(k, k, 1);
+    } else {
+      this.hoverRing.visible = false;
+    }
+
+    // Công trình dưới con trỏ nhấc lên; công trình vừa bấm phình một nhịp rồi về.
+    for (const g of this.plotGroup.children) {
+      const id = g.userData.plotId as string | undefined;
+      if (!id) continue;
+      const re = id === this.hoveredId;
+      const chon = id === this.selectedId;
+      if (!re && !chon && g.position.y === 0 && g.scale.x === 1) continue;
+      g.position.y = toi(g.position.y, re ? 0.22 : 0, 16);
+      const phong = (chon ? 1 + this.punch * 0.1 : 1) * (re ? 1.04 : 1);
+      g.scale.setScalar(toi(g.scale.x, phong, 18));
+    }
+  }
 
   private moveCamera(dt: number): void {
     if (this.keys.size) {
