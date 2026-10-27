@@ -43,15 +43,24 @@ export interface Biome {
 
 // -------------------------------------------------------------------- mỏ
 
-export type NodeShape = 'pine' | 'wheat' | 'quarry' | 'iron' | 'dune_gold' | 'spire';
-
-export interface ResourceNode {
+/**
+ * Bai tai nguyen: mot KHU co vung dat rieng, khong phai mot cham nho.
+ *
+ * Doi tu "mo le" sang "bai" vi hai ly do, va ca hai deu la thu nguoi choi noi ra: nhin vao
+ * ban do phai biet ngay dau la rung, dau la mo da; va phai co mot thu du to de ma chi vao
+ * roi bao "cho ba nguoi toi day".
+ */
+export interface Patch {
   id: string;
   kind: ResourceKind;
-  shape: NodeShape;
-  position: Vec3;
+  /** Ten hien thi: Rung, Ruong, Mo da, Bai vang, Rung pha le. */
+  label: string;
+  center: Vec3;
+  /** Ban kinh vung dat cua bai. Dung cho ca hinh anh lan vung bam chon. */
+  radius: number;
+  /** Cho dung dao. Nhieu cho de dan khong chong len nhau. */
+  spots: Vec3[];
   biome: BiomeId;
-  /** Mỗi chuyến đào ra bao nhiêu phần so với sức mang. Mỏ quý thì nhỏ hơn 1. */
   richness: number;
 }
 
@@ -130,8 +139,16 @@ export interface GameState {
    * tay: người chơi nói MUỐN GÌ, không phải điều ai đi đâu.
    */
   demand: { cost: Cost; label: string } | null;
-  /** Mỏ đang được ghim. 70% nhân lực dồn về đó. */
-  focusNodeId: string | null;
+  /**
+   * Han ngach dan cho tung bai: ma bai -> so nguoi muon dieu toi.
+   *
+   * Chi luu nhung bai CO han ngach, nen bang nay nho du ban do vo han. Bai bi huy khoi bo
+   * nho (di xa) van giu han ngach, va nguoi choi quay lai thi dan lai keo toi - dung nhu ho
+   * da dan.
+   */
+  assignments: Record<string, number>;
+  /** Bat thi phan dan khong co han ngach se tu can theo kho nao voi nhat. */
+  autoFarm: boolean;
   /** Hệ số tốc độ game: 1 hoặc 2. */
   speedMult: number;
   /**

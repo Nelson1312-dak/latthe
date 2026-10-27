@@ -14,7 +14,7 @@ import { CHUNK, biomeAt, chunkOf } from './world';
 import { rewardText } from './milestones';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
-import type { BiomeId, BuildingType, Cost, OfflineReport, ResourceKind, Unit } from './types';
+import type { BiomeId, BuildingType, Cost, OfflineReport, Patch, ResourceKind, Unit } from './types';
 import { RESOURCE_KINDS } from './types';
 
 const STAT_MS = 200;
@@ -58,6 +58,9 @@ export class UIManager {
   private readonly game: Game;
   private selected: string | null = null;
   private selectedUnit: string | null = null;
+  private selectedPatch: string | null = null;
+  /** Dòng chữ sống trên thẻ bãi. Giữ riêng để khỏi vẽ lại cả thẻ mỗi 200ms. */
+  private patchLive: HTMLElement | null = null;
   private timers: number[] = [];
   private toastTimer = 0;
   manualPaused = false;
@@ -67,6 +70,7 @@ export class UIManager {
     reach: $('reach'), reachVal: $('reach-val'),
     mute: $<HTMLButtonElement>('mute'), pause: $<HTMLButtonElement>('pause'),
     crewpill: $('crewpill'), tiles: $('tiles'), speed: $<HTMLButtonElement>('speed'),
+    farm: $<HTMLButtonElement>('farm'),
     inspector: $('inspector'), dock: $('dock'),
     minimap: $<HTMLCanvasElement>('minimap'),
     welcome: $('welcome'), awayTime: $('away-time'), awayLoot: $('away-loot'),
@@ -87,11 +91,7 @@ export class UIManager {
       window.setTimeout(() => this.el.reach.classList.remove('pop'), 900);
       this.renderDock();
     };
-    game.onFocusNode = (nodeId) => {
-      const n = nodeId ? game.map.nodeById(nodeId) : null;
-      this.toast(n ? `⭐ Ưu tiên ${RESOURCES[n.kind].label}` : 'Đã bỏ ghim mỏ');
-      this.renderDock();
-    };
+    game.onSelectPatch = (id) => { this.selectedPatch = id; this.renderInspector(); };
     game.onReveal = (key) => {
       const [cx, cz] = key.split(',').map(Number);
       const b = BIOMES[biomeAt(cx * CHUNK + CHUNK / 2, cz * CHUNK + CHUNK / 2) as BiomeId];
@@ -107,6 +107,7 @@ export class UIManager {
     this.el.resume.addEventListener('click', () => this.setPaused(false));
     this.el.awayOk.addEventListener('click', () => { this.el.welcome.hidden = true; });
     this.el.speed.addEventListener('click', () => this.toggleSpeed());
+    this.el.farm.addEventListener('click', () => this.toggleFarm());
     this.el.minimap.addEventListener('pointerdown', (e) => this.mapClick(e));
 
     this.applyMute();
@@ -167,6 +168,13 @@ export class UIManager {
     // Nguoi dan di chuyen va doi viec lien tuc, nen the cua ho phai song theo. Ghep vao
     // nhip lam moi san co thay vi dung mot bo dem rieng.
     if (this.selectedUnit) this.renderInspector();
+    // Thẻ bãi thì CHỈ thay dòng chữ sống, không vẽ lại cả thẻ. Vẽ lại toàn bộ mỗi 200ms sẽ
+    // thay các nút +/− ngay giữa lần bấm: chuột xuống trên nút cũ, chuột lên trên nút mới,
+    // và trình duyệt không tính đó là một cú bấm nào cả.
+    if (this.patchLive && this.selectedPatch) {
+      const b = this.game.map.patchById(this.selectedPatch);
+      if (b) this.patchLive.textContent = this.patchLine(b);
+    }
 
     this.updateCrewPill();
   }
@@ -194,6 +202,34 @@ export class UIManager {
 
     this.el.speed.textContent = `${this.economy.state.speedMult}×`;
     this.el.speed.classList.toggle('on', this.economy.state.speedMult === 2);
+
+    const tu = this.economy.state.autoFarm;
+    this.el.farm.textContent = tu ? '🤖' : '✋';
+    this.el.farm.classList.toggle('on', tu);
+    this.el.farm.title = tu
+      ? 'Đang TỰ FARM: ai rảnh thì đi lấy thứ trong kho đang vơi nhất. Bấm để tắt.'
+      : 'Đang TỰ ĐIỀU: dân chỉ tới bãi bạn đã giao. Bấm để bật tự farm lại.';
+  }
+
+  /**
+   * Bat/tat tu farm.
+   *
+   * Tat di thi dan CHI lam viec ban giao - khong giao ai thi ho dung choi, va do la dung:
+   * nguoi choi vua noi ho muon tu dieu. Nhung neu de ho dung im ma khong noi gi thi trong
+   * nhu game hong, nen bao thang mot cau.
+   */
+  private toggleFarm(): void {
+    const e = this.economy;
+    e.state.autoFarm = !e.state.autoFarm;
+    e.save();
+    const giao = Object.values(e.state.assignments).reduce((s, v) => s + v, 0);
+    this.toast(e.state.autoFarm
+      ? '🤖 Tự farm: dân tự chọn bãi theo kho nào đang vơi'
+      : giao > 0
+        ? `✋ Tự điều: dân chỉ tới ${giao} chỗ bạn đã giao`
+        : '✋ Tự điều: bấm vào một bãi rồi giao người, chưa giao thì dân đứng chờ');
+    this.renderDock();
+    this.renderInspector();
   }
 
   /** Ô vuông trong dock: biểu tượng, tên, giá. */
@@ -234,9 +270,10 @@ export class UIManager {
     if (d && this.economy.demandKinds().length > 0) {
       status = `Ưu tiên xây dựng · ${d.label}`;
       mood = 'busy';
-    } else if (e.state.focusNodeId) {
-      const n = this.game.map.nodeById(e.state.focusNodeId);
-      if (n) { status = `⭐ Dồn về ${RESOURCES[n.kind].label}`; mood = 'focus'; }
+    } else if (!e.state.autoFarm) {
+      const n = Object.values(e.state.assignments).reduce((s, v) => s + v, 0);
+      status = n > 0 ? `✋ Bạn đang điều ${n} người` : '✋ Tự điều · chưa giao ai việc gì';
+      mood = n > 0 ? 'focus' : 'busy';
     } else if (e.villagers().length === 0) {
       status = 'Chưa có ai làm việc';
       mood = 'busy';
@@ -272,13 +309,13 @@ export class UIManager {
         return 'Đang chờ việc';
       case 'moving': {
         if (u.targetId === 'scout') return 'Đang đi thám hiểm vùng chưa vén';
-        const n = u.targetId ? this.game.map.nodeById(u.targetId) : null;
-        return n ? `Đang tới mỏ ${RESOURCES[n.kind].label.toLowerCase()}` : 'Đang trên đường';
+        const n = u.targetId ? this.game.map.patchById(u.targetId) : null;
+        return n ? `Đang tới ${n.label.toLowerCase()}` : 'Đang trên đường';
       }
       case 'gathering': {
-        const n = u.targetId ? this.game.map.nodeById(u.targetId) : null;
+        const n = u.targetId ? this.game.map.patchById(u.targetId) : null;
         const con = Math.max(0, u.gatherTimer).toFixed(1);
-        return `Đang khai thác ${n ? RESOURCES[n.kind].label.toLowerCase() : ''} · còn ${con}s`;
+        return `Đang làm ở ${n ? n.label.toLowerCase() : 'bãi'} · còn ${con}s`;
       }
       case 'delivering': {
         const b = this.economy.state.buildings.find((x) => x.id === u.targetId);
@@ -292,7 +329,7 @@ export class UIManager {
     if (u.kind === 'cart') return 'cart';
     if (u.targetId && this.economy.state.buildings.some((b) => b.id === u.targetId)) return 'carrier';
     const kind = u.carryingKind
-      ?? (u.targetId ? this.game.map.nodeById(u.targetId)?.kind : undefined);
+      ?? (u.targetId ? this.game.map.patchById(u.targetId)?.kind : undefined);
     if (!kind) return 'idle';
     return kind === 'wood' || kind === 'food' ? 'forester' : 'miner';
   }
@@ -361,20 +398,154 @@ export class UIManager {
     });
     acts.append(follow);
 
-    const node = u.targetId ? this.game.map.nodeById(u.targetId) : null;
-    if (node) {
-      const pinned = this.economy.state.focusNodeId === node.id;
-      const pin = el('button', 'insp-go' + (pinned ? '' : ' want')) as HTMLButtonElement;
-      pin.textContent = pinned ? '★ BỎ GHIM MỎ' : '☆ GHIM MỎ NÀY';
-      pin.addEventListener('click', () => {
-        this.economy.state.focusNodeId = pinned ? null : node.id;
-        this.economy.save();
+    // Tu nguoi dan nhay sang BAI ho dang lam. Day la duong di tu nhien: thay mot nguoi
+    // dang vac go ve thi cai muon biet tiep theo la ho lay o dau, va o do co may nguoi.
+    const patch = u.targetId ? this.game.map.patchById(u.targetId) : null;
+    if (patch) {
+      const go = el('button', 'insp-go want') as HTMLButtonElement;
+      go.textContent = `📍 XEM ${patch.label.toUpperCase()}`;
+      go.addEventListener('click', () => {
+        this.selectedUnit = null;
+        this.game.select(null);
+        this.game.pickPatch(patch.id);
+        this.game.focusOnPatch(patch.id);
+      });
+      acts.append(go);
+    }
+    body.append(acts);
+    box.append(head, body);
+  }
+
+  /** Bãi này đang có bao nhiêu người, và họ đang làm gì. Một dòng, làm mới liên tục. */
+  private patchLine(b: Patch): string {
+    const toi = this.economy.villagers().filter((v) => v.targetId === b.id);
+    const dao = toi.filter((v) => v.state === 'gathering').length;
+    if (toi.length === 0) {
+      return this.economy.isFull(b.kind)
+        ? 'Kho loại này đã đầy · chưa ai tới'
+        : 'Chưa có ai làm ở đây';
+    }
+    return `${toi.length} người ở đây · ${dao} đang khai thác`;
+  }
+
+  /**
+   * Thẻ bãi: chỗ người chơi ĐIỀU DÂN.
+   *
+   * Bãi là đơn vị duy nhất để ra lệnh. Nút +/− không phải là "phân bổ lao động" kiểu bảng
+   * tính — nó là một câu ngắn: "cho từng này người tới chỗ này". Máy vẫn tự lo phần còn
+   * lại, trừ khi người chơi tắt tự farm.
+   *
+   * Con số ghi lại là SỐ MUỐN, không phải số đang có. Dân đang đổ hàng hay đang trên đường
+   * về thì chưa đổi chỗ được ngay, nên nếu ghi số đang có thì con số sẽ tự nhảy quanh và
+   * người chơi tưởng mình bấm hỏng.
+   */
+  private renderPatchCard(b: Patch): void {
+    const box = this.el.inspector;
+    const e = this.economy;
+    box.hidden = false;
+    box.innerHTML = '';
+    const res = RESOURCES[b.kind];
+
+    const head = el('div', 'insp-head');
+    head.append(el('span', 'insp-ico', res.icon));
+    const t = el('div', 'insp-title');
+    const live = el('small', 'live', this.patchLine(b));
+    this.patchLive = live;
+    t.append(el('strong', undefined, b.label), live);
+    head.append(t);
+    const close = el('button', 'insp-close', '×') as HTMLButtonElement;
+    close.title = 'Đóng';
+    close.addEventListener('click', () => this.game.pickPatch(null));
+    head.append(close);
+
+    const body = el('div', 'insp-body');
+    const row = el('div', 'insp-cost');
+    const bit = (ico: string, text: string, cls = '') => {
+      const s = el('span', 'bit' + (cls ? ' ' + cls : ''));
+      s.append(el('span', 'ico', ico), el('span', undefined, text));
+      return s;
+    };
+    row.append(bit(res.icon, res.label));
+    // Hệ số giàu là lý do DUY NHẤT để đi xa, nên nó phải nằm ngay trên thẻ chứ không ẩn
+    // trong một công thức nào đó.
+    row.append(bit('💎', `giàu ×${b.richness.toFixed(2)}`));
+    const xa = Math.round(Math.hypot(b.center[0], b.center[2]));
+    row.append(bit('🧭', `cách thủ phủ ${xa}`));
+    if (e.isFull(b.kind)) row.append(bit('🧺', 'kho đã đầy', 'lack'));
+    body.append(row);
+
+    const giao = e.state.assignments[b.id] ?? 0;
+    const tong = e.villagers().length;
+    const tongGiao = () => Object.values(e.state.assignments).reduce((s, v) => s + v, 0);
+
+    const crew = el('div', 'insp-crew');
+    const lab = el('div', 'lab');
+    const note = el('small', undefined, '');
+    const sayLeft = () => {
+      const ranh = Math.max(0, tong - tongGiao());
+      note.textContent = tong === 0 ? 'Chưa thuê ai cả'
+        : ranh > 0 ? `Còn ${ranh} người chưa được giao chỗ nào`
+        : 'Đã giao hết người cho các bãi';
+    };
+    sayLeft();
+    lab.append(el('strong', undefined, 'Điều dân tới đây'), note);
+    crew.append(lab);
+
+    const step = el('div', 'insp-step');
+    const num = el('span', 'num', String(giao));
+    const minus = el('button', undefined, '−') as HTMLButtonElement;
+    const plus = el('button', undefined, '+') as HTMLButtonElement;
+    const set = (v: number) => {
+      const w = Math.max(0, Math.min(tong, v));
+      if (w === 0) delete e.state.assignments[b.id];
+      else e.state.assignments[b.id] = w;
+      e.save();
+      num.textContent = String(w);
+      minus.disabled = w === 0;
+      plus.disabled = w >= tong;
+      sayLeft();
+      this.updateCrewPill();
+    };
+    minus.disabled = giao === 0;
+    plus.disabled = giao >= tong;
+    minus.addEventListener('click', () => set((e.state.assignments[b.id] ?? 0) - 1));
+    plus.addEventListener('click', () => set((e.state.assignments[b.id] ?? 0) + 1));
+    step.append(minus, num, plus);
+    crew.append(step);
+    body.append(crew);
+
+    const acts = el('div', 'insp-choice');
+    const all = el('button', 'insp-go want') as HTMLButtonElement;
+    all.textContent = '👥 DỒN CẢ LÀNG';
+    all.title = 'Giao hết người cho riêng bãi này, bỏ mọi chỗ đã giao trước đó';
+    all.addEventListener('click', () => {
+      e.state.assignments = tong > 0 ? { [b.id]: tong } : {};
+      e.save();
+      this.renderInspector();
+      this.renderDock();
+    });
+    acts.append(all);
+
+    if (tongGiao() > 0) {
+      const clear = el('button', 'insp-go want') as HTMLButtonElement;
+      clear.textContent = '🧹 BỎ HẾT';
+      clear.title = 'Xoá mọi chỗ đã giao, trả dân về cho máy tự lo';
+      clear.addEventListener('click', () => {
+        e.state.assignments = {};
+        e.save();
         this.renderInspector();
         this.renderDock();
       });
-      acts.append(pin);
+      acts.append(clear);
     }
     body.append(acts);
+
+    // Giao người mà để tự farm bật thì vẫn chạy, chỉ là phần còn lại do máy lo. Tắt đi mới
+    // là "chỉ làm đúng những gì tôi bảo" — nói thẳng ra, vì đó là chỗ dễ hiểu nhầm nhất.
+    body.append(el('p', 'insp-note', e.state.autoFarm
+      ? 'Tự farm đang BẬT: số bạn giao được ưu tiên trước, ai thừa ra thì máy tự xếp việc.'
+      : 'Tự farm đang TẮT: dân chỉ tới những bãi bạn đã giao.'));
+
     box.append(head, body);
   }
 
@@ -386,6 +557,13 @@ export class UIManager {
       if (u) { this.renderUnitCard(u); return; }
       this.selectedUnit = null;      // xe giao xong la bien mat
     }
+    if (this.selectedPatch) {
+      const b = this.game.map.patchById(this.selectedPatch);
+      if (b) { this.renderPatchCard(b); return; }
+      this.selectedPatch = null;          // bãi trôi ra ngoài vùng nạp
+    }
+    this.patchLive = null;
+
     const plot = this.selected ? this.game.plotById(this.selected) : null;
     if (!plot) {
       box.hidden = true;
@@ -512,19 +690,23 @@ export class UIManager {
         ctx.fillRect(tx(cx * CHUNK), tz(cz * CHUNK), CHUNK * px, CHUNK * px);
       }
     }
-    for (const n of this.game.map.nodes) {
-      if (!this.game.fog.isRevealed(n.position[0], n.position[2])) continue;
-      ctx.fillStyle = `#${RESOURCES[n.kind].color.toString(16).padStart(6, '0')}`;
-      ctx.fillRect(tx(n.position[0]) - 1, tz(n.position[2]) - 1, 2.5, 2.5);
-    }
-    const pin = this.economy.state.focusNodeId
-      ? this.game.map.nodeById(this.economy.state.focusNodeId) : null;
-    if (pin) {
-      ctx.strokeStyle = '#ffd166';
-      ctx.lineWidth = 2;
+    // Bãi vẽ bằng ĐÚNG cỡ thật của nó, không phải một chấm. Minimap là cách duy nhất để
+    // nhìn ra bố cục khu vực, nên một chấm 2 điểm ảnh thì nói được rất ít; một vòng tròn
+    // đúng cỡ cho biết ngay chỗ nào đáng kéo camera tới.
+    for (const b of this.game.map.patches) {
+      if (!this.game.fog.isRevealed(b.center[0], b.center[2])) continue;
+      const mau = `#${RESOURCES[b.kind].color.toString(16).padStart(6, '0')}`;
+      const r = Math.max(2.5, b.radius * px);
       ctx.beginPath();
-      ctx.arc(tx(pin.position[0]), tz(pin.position[2]), 5, 0, 7);
-      ctx.stroke();
+      ctx.arc(tx(b.center[0]), tz(b.center[2]), r, 0, 7);
+      ctx.fillStyle = mau + 'bb';
+      ctx.fill();
+      // Bãi đã giao người thì viền vàng: nhìn minimap là biết mình đang rải dân ở đâu.
+      if (this.economy.state.assignments[b.id]) {
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
     for (const b of this.economy.state.buildings) {
       ctx.fillStyle = b.type === 'townhall' ? '#d94e34' : '#ffffff';

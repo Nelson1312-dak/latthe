@@ -1,33 +1,41 @@
 /**
- * Thế giới vô hạn, nạp theo khối.
+ * Thế giới vô hạn, nạp theo khối, với BÃI tài nguyên thay cho mỏ lẻ.
  *
- * Bản đồ không có rìa. Khối nào nằm trong bán kính quanh tâm ngắm thì được sinh ra; đi xa
- * thì khối sau lưng bị huỷ. Mọi thứ trong một khối đều suy được từ toạ độ của nó (xem
- * world.ts), nên huỷ rồi quay lại vẫn thấy đúng cảnh cũ mà không lưu một byte nào.
+ * Mỗi khối chứa một hoặc hai bãi: mỗi bãi là một khu có nền đất riêng tô màu theo loại tài
+ * nguyên, một viền bao quanh, và props dày đặc bên trong. Bản trước rải hai tới bốn mỏ nhỏ
+ * mỗi khối và kết quả là một tấm thảm chấm — nhìn không ra đâu là khu gì, nên cũng chẳng có
+ * gì để mà chỉ vào rồi bảo "cho ba người tới đây".
  *
- * ĐIỂM QUAN TRỌNG NHẤT VỀ HIỆU NĂNG: mỗi kiểu hình chỉ có ĐÚNG MỘT InstancedMesh cho toàn
- * thế giới, không phải một bộ cho mỗi khối. Bốn chín khối × bảy kiểu hình sẽ là ba trăm bốn
- * ba lệnh vẽ; gom lại còn bảy, và con số đó KHÔNG ĐỔI dù người chơi đi xa tới đâu. Lúc tập
- * khối đang nạp thay đổi thì chỉ việc ghi lại các ma trận trong bộ đệm sẵn có.
+ * HIỆU NĂNG: mỗi KIỂU hình đúng MỘT InstancedMesh cho toàn thế giới, không phải một bộ cho
+ * mỗi khối. 121 khối × 11 kiểu hình sẽ là hơn một nghìn ba trăm lệnh vẽ; gom lại còn mười
+ * một, và con số đó không đổi dù người chơi đi xa tới đâu.
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BIOMES, PALETTE } from './config';
-import type { BiomeId, Plot, ResourceNode, Vec3 } from './types';
+import { BIOMES, PALETTE, RESOURCES } from './config';
+import type { Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, KEEP_RADIUS, LOAD_RADIUS, biomeAt, chunkKey, chunkOf, chunkRng, hash2, heightAt,
-  onRoad, richnessAt,
+  onRoad, patchesOf,
 } from './world';
 
-/** Bán kính một ô cỏ lục giác. */
-const HEX_R = 1.75;
-
 /**
- * Sức chứa mỗi bộ đệm. Đặt dư so với lượng thật của 7×7 khối; đầy thì phần thừa bị bỏ, và
- * đó là cách hỏng nhẹ nhàng nhất — mất vài bụi cỏ chứ không vỡ cả khung hình.
+ * Bán kính một ô cỏ. To hơn bản trước (1,75 → 2,4) vì tầm nhìn rộng gấp đôi: giữ nguyên cỡ
+ * cũ thì số ô tăng gấp ba mà mắt không nhìn ra khác biệt ở mức phóng xa.
+ */
+const HEX_R = 2.4;
+
+/*
+ * Tran so ban cho tung kieu hinh. Do bang cach dem that tren sau vung khac nhau roi cong
+ * 30% du dia, vi so props doi theo bien sinh thai.
+ *
+ * Vuot tran thi refill() LANG LE bo qua, khong bao gi het. Dung con so cu (8000 o co, 160
+ * vong bai) thi vung nap can 8.712 o va 172 bai: nen dat thung mot mang o ria, va 12 bai
+ * khong co vong bao nao - dung cai dieu kien "bai phai nhin ra ngay" ma ca ban nay dua vao.
  */
 const CAP = {
-  road: 400, tile: 4200, pine: 1400, wheat: 700, rock: 1800, ore: 700, spire: 500, palm: 600, tuft: 3200,
+  tile: 11400, disc: 300, ring: 300, road: 400,
+  pine: 1100, wheat: 900, rock: 1400, ore: 800, spire: 500, palm: 300, tuft: 2300,
 } as const;
 
 type PropKey = keyof typeof CAP;
@@ -35,8 +43,7 @@ type PropKey = keyof typeof CAP;
 interface Chunk {
   cx: number;
   cz: number;
-  biome: BiomeId;
-  nodes: ResourceNode[];
+  patches: Patch[];
   plots: Plot[];
   tiles: { pos: Vec3; color: number }[];
   props: { key: PropKey; pos: Vec3; scale: number; rot: number; color: number }[];
@@ -54,46 +61,55 @@ export class MapManager {
   private readonly axis = new THREE.Vector3(0, 1, 0);
   private readonly color = new THREE.Color();
   private lastCenter = '';
-  private spireIndexStart = 0;
+  private spireCount = 0;
 
   /** Đổi mỗi khi tập khối thay đổi — Game dựa vào đây để dựng lại nền đất. */
   version = 0;
 
   constructor() {
-    const mat = (flat: boolean) => new THREE.MeshLambertMaterial({ flatShading: flat });
+    const lambert = (flat: boolean) => new THREE.MeshLambertMaterial({ flatShading: flat });
     const make = (key: PropKey, geo: THREE.BufferGeometry, material: THREE.Material, shadow: boolean) => {
       const mesh = new THREE.InstancedMesh(geo, material, CAP[key]);
       mesh.castShadow = shadow;
       mesh.receiveShadow = key === 'tile';
       mesh.frustumCulled = false;
+      mesh.renderOrder = key === 'disc' || key === 'ring' ? 1 : 0;
       for (let i = 0; i < CAP[key]; i += 1) mesh.setMatrixAt(i, this.hidden);
       this.meshes[key] = mesh;
       this.group.add(mesh);
     };
 
-    make('tile', new THREE.CylinderGeometry(HEX_R, HEX_R, 2.4, 6), new THREE.MeshLambertMaterial(), false);
-    // Duong la mot luoi thua cu CHUNK don vi mot truc, nen no cung vo han ma khong phai luu
-    // gi - va xe tho luon tim duoc truc gan nhat de bam ve thu phu.
-    make('road', new THREE.BoxGeometry(CHUNK, 0.12, 2.2), new THREE.MeshLambertMaterial(), false);
-    make('pine', this.pineGeometry(), mat(true), true);
-    make('wheat', this.wheatGeometry(), mat(true), true);
-    make('rock', new THREE.DodecahedronGeometry(1, 0), mat(true), true);
+    make('tile', new THREE.CylinderGeometry(HEX_R, HEX_R, 2.6, 6), new THREE.MeshLambertMaterial(), false);
+
+    // Nền bãi và viền bãi: hai vòng tròn dẹt nằm sát mặt đất. Đây là thứ khiến một bãi đọc
+    // được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
+    const disc = new THREE.CircleGeometry(1, 28);
+    disc.rotateX(-Math.PI / 2);
+    make('disc', disc, new THREE.MeshBasicMaterial({
+      transparent: true, opacity: 0.3, depthWrite: false,
+    }), false);
+    const ring = new THREE.RingGeometry(0.93, 1, 40);
+    ring.rotateX(-Math.PI / 2);
+    make('ring', ring, new THREE.MeshBasicMaterial({
+      transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide,
+    }), false);
+
+    make('road', new THREE.BoxGeometry(CHUNK, 0.12, 2.6), new THREE.MeshLambertMaterial(), false);
+    make('pine', this.pineGeometry(), lambert(true), true);
+    make('wheat', this.wheatGeometry(), lambert(true), true);
+    make('rock', new THREE.DodecahedronGeometry(1, 0), lambert(true), true);
     make('ore', new THREE.OctahedronGeometry(0.75, 0), new THREE.MeshStandardMaterial({
       roughness: 0.25, metalness: 0.15, emissive: PALETTE.goldOre, emissiveIntensity: 0.4,
     }), true);
     make('spire', this.spireGeometry(), new THREE.MeshStandardMaterial({
       roughness: 0.2, metalness: 0.1, emissive: PALETTE.crystal, emissiveIntensity: 0.5,
     }), true);
-    make('palm', this.palmGeometry(), mat(true), true);
+    make('palm', this.palmGeometry(), lambert(true), true);
     make('tuft', new THREE.ConeGeometry(0.22, 0.5, 4), new THREE.MeshLambertMaterial(), false);
   }
 
   // ------------------------------------------------------------ nạp và huỷ
 
-  /**
-   * Giữ cho tập khối quanh tâm ngắm luôn đúng. Chỉ làm việc thật khi người chơi bước sang
-   * một khối mới — còn lại thoát ngay, nên gọi mỗi khung hình cũng không sao.
-   */
   update(center: THREE.Vector3): void {
     const cx = chunkOf(center.x);
     const cz = chunkOf(center.z);
@@ -114,29 +130,36 @@ export class MapManager {
     this.version += 1;
   }
 
-  /** Đổ toàn bộ khối đang nạp vào các bộ đệm dùng chung. */
   private refill(): void {
     const used: Record<string, number> = {};
     for (const k of Object.keys(CAP)) used[k] = 0;
 
+    const put = (key: PropKey, mat: THREE.Matrix4, color: number) => {
+      const i = used[key];
+      if (i >= CAP[key]) return;
+      this.meshes[key].setMatrixAt(i, mat);
+      this.meshes[key].setColorAt(i, this.color.setHex(color));
+      used[key] = i + 1;
+    };
+
     for (const chunk of this.chunks.values()) {
       for (const t of chunk.tiles) {
-        const i = used.tile;
-        if (i >= CAP.tile) break;
-        this.m.makeTranslation(t.pos[0], t.pos[1], t.pos[2]);
-        this.meshes.tile.setMatrixAt(i, this.m);
-        this.meshes.tile.setColorAt(i, this.color.setHex(t.color));
-        used.tile = i + 1;
+        put('tile', this.m.makeTranslation(t.pos[0], t.pos[1], t.pos[2]), t.color);
       }
-      for (const p of chunk.props) {
-        const i = used[p.key];
-        if (i >= CAP[p.key]) continue;
-        this.v.set(p.pos[0], p.pos[1], p.pos[2]);
-        this.q.setFromAxisAngle(this.axis, p.rot);
-        this.s.setScalar(p.scale);
-        this.meshes[p.key].setMatrixAt(i, this.m.compose(this.v, this.q, this.s));
-        this.meshes[p.key].setColorAt(i, this.color.setHex(p.color));
-        used[p.key] = i + 1;
+      for (const p of chunk.patches) {
+        const tint = RESOURCES[p.kind].color;
+        this.v.set(p.center[0], 0.14, p.center[2]);
+        this.q.identity();
+        this.s.set(p.radius, 1, p.radius);
+        put('disc', this.m.compose(this.v, this.q, this.s), tint);
+        this.v.y = 0.16;
+        put('ring', this.m.compose(this.v, this.q, this.s), tint);
+      }
+      for (const pr of chunk.props) {
+        this.v.set(pr.pos[0], pr.pos[1], pr.pos[2]);
+        this.q.setFromAxisAngle(this.axis, pr.rot);
+        this.s.setScalar(pr.scale);
+        put(pr.key, this.m.compose(this.v, this.q, this.s), pr.color);
       }
     }
 
@@ -146,7 +169,7 @@ export class MapManager {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
-    this.spireIndexStart = used.spire;
+    this.spireCount = used.spire;
   }
 
   // ------------------------------------------------------------ sinh khối
@@ -154,8 +177,7 @@ export class MapManager {
   private makeChunk(cx: number, cz: number): Chunk {
     const ox = cx * CHUNK;
     const oz = cz * CHUNK;
-    const biome = biomeAt(ox + CHUNK / 2, oz + CHUNK / 2);
-    const chunk: Chunk = { cx, cz, biome, nodes: [], plots: [], tiles: [], props: [] };
+    const chunk: Chunk = { cx, cz, patches: patchesOf(cx, cz), plots: [], tiles: [], props: [] };
     const r = chunkRng(cx, cz);
 
     // --- thảm cỏ ---
@@ -166,136 +188,107 @@ export class MapManager {
         const x = ox + i * stepX;
         const z = oz + j * stepZ + (i % 2 ? stepZ / 2 : 0);
         const b = biomeAt(x, z);
-        const mix = hash2(Math.round(x * 3), Math.round(z * 3), 11) > 0.5 ? 0 : 1;
-        chunk.tiles.push({
-          pos: [x, -1.2 + heightAt(x, z, b), z],
-          color: BIOMES[b].ground[mix],
-        });
+        const mix = hash2(Math.round(x * 2), Math.round(z * 2), 11) > 0.5 ? 0 : 1;
+        chunk.tiles.push({ pos: [x, -1.3 + heightAt(x, z, b), z], color: BIOMES[b].ground[mix] });
       }
     }
 
     // --- đường ---
-    for (const [ax, az, rot] of [[ox + CHUNK / 2, oz, 0], [ox, oz + CHUNK / 2, Math.PI / 2]] as const) {
-      chunk.props.push({ key: 'road', pos: [ax, 0.06, az], scale: 1, rot, color: PALETTE.road });
-    }
+    chunk.props.push({ key: 'road', pos: [ox + CHUNK / 2, 0.06, oz], scale: 1, rot: 0, color: PALETTE.road });
+    chunk.props.push({ key: 'road', pos: [ox, 0.06, oz + CHUNK / 2], scale: 1, rot: Math.PI / 2, color: PALETTE.road });
 
-    // --- mỏ ---
-    const wanted = 2 + Math.floor(r() * 2);
-    for (let n = 0; n < wanted; n += 1) {
-      const x = ox + 2 + r() * (CHUNK - 4);
-      const z = oz + 2 + r() * (CHUNK - 4);
-      if (onRoad(x, z)) continue;
-      if (Math.hypot(x, z) < 9) continue;                 // chừa quảng trường thủ phủ
-      const b = biomeAt(x, z);
-      const pick = r();
-      let kind: ResourceNode['kind'] = 'wood';
-      let shape: ResourceNode['shape'] = 'pine';
-      if (b === 'meadow') {
-        if (pick < 0.58) { kind = 'wood'; shape = 'pine'; } else { kind = 'food'; shape = 'wheat'; }
-      } else if (b === 'crags') {
-        kind = 'stone'; shape = pick < 0.7 ? 'quarry' : 'iron';
-      } else if (b === 'desert') {
-        kind = 'gold'; shape = 'dune_gold';
-      } else {
-        kind = 'relics'; shape = 'spire';
-      }
-      // Mỏ quý vốn hiếm hơn, nhưng độ giàu theo khoảng cách bù lại khi đi xa.
-      const base = kind === 'gold' ? 0.5 : kind === 'relics' ? 0.28 : kind === 'stone' ? 0.9 : 1;
-      chunk.nodes.push({
-        id: `n_${cx}_${cz}_${n}`, kind, shape, biome: b,
-        position: [x, 0, z],
-        richness: base * richnessAt(x, z),
-      });
-      this.decorateNode(chunk, kind, shape, x, z, r);
-    }
+    // --- bãi tài nguyên ---
+    for (const p of chunk.patches) this.dressPatch(chunk, p, r);
 
     // --- nền đất ---
     if (cx === 0 && cz === 0) {
       chunk.plots.push({ id: 'core', position: [0, 0, 0], biome: 'meadow', core: true });
-      for (const [px, pz] of [[-7, -6], [7, -6], [-7, 6], [7, 6]] as const) {
+      for (const [px, pz] of [[-9, -8], [9, -8], [-9, 8], [9, 8]] as const) {
         chunk.plots.push({ id: `p_0_0_${px}_${pz}`, position: [px, 0, pz], biome: biomeAt(px, pz), core: false });
       }
-    } else if (r() < 0.75) {
-      const count = 1 + (r() < 0.45 ? 1 : 0);
-      for (let k = 0; k < count; k += 1) {
-        const x = ox + 4 + r() * (CHUNK - 8);
-        const z = oz + 4 + r() * (CHUNK - 8);
+    } else {
+      /*
+       * Một tới ba nền mỗi khối.
+       *
+       * Bản trước chỉ 32% số khối có nền, và nền ấy còn bị loại nếu rơi trúng đường hay
+       * trúng bãi — đo ra 26 nền trên 121 khối đang nạp. Chơi một giờ là hết chỗ xây, kho
+       * đầy cả bốn loại mà không tiêu được vào đâu: đúng cái bế tắc "chơi một lúc là chán".
+       * Nền đất giờ chỉ còn tốn hai lệnh vẽ cho TOÀN BẢN ĐỒ, nên không còn lý do phải hà
+       * tiện nữa.
+       */
+      const soNen = r() < 0.3 ? 3 : r() < 0.7 ? 2 : 1;
+      for (let k = 0; k < soNen; k += 1) {
+        const x = ox + 5 + r() * (CHUNK - 10);
+        const z = oz + 5 + r() * (CHUNK - 10);
         if (onRoad(x, z)) continue;
-        if (chunk.nodes.some((n) => Math.hypot(n.position[0] - x, n.position[2] - z) < 5)) continue;
+        if (chunk.patches.some((p) =>
+          Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 4)) continue;
+        // Hai nền chồng lên nhau thì bấm vào không biết trúng cái nào.
+        if (chunk.plots.some((q) => Math.hypot(q.position[0] - x, q.position[2] - z) < 7)) continue;
         chunk.plots.push({
           id: `p_${cx}_${cz}_${k}`, position: [x, 0, z], biome: biomeAt(x, z), core: false,
         });
       }
     }
 
-    // --- trang trí ---
-    const tufts = biome === 'meadow' ? 26 : biome === 'highlands' ? 14 : biome === 'desert' ? 6 : 8;
-    for (let i = 0; i < tufts; i += 1) {
+    // --- trang trí thưa ngoài bãi ---
+    const biome = biomeAt(ox + CHUNK / 2, oz + CHUNK / 2);
+    for (let i = 0; i < 14; i += 1) {
       const x = ox + r() * CHUNK;
       const z = oz + r() * CHUNK;
       if (onRoad(x, z)) continue;
+      if (chunk.patches.some((p) =>
+        Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 2)) continue;
       const b = biomeAt(x, z);
       if (b === 'desert') {
-        chunk.props.push({ key: 'palm', pos: [x, 0, z], scale: 0.8 + r() * 0.5, rot: r() * 6,
-          color: r() < 0.5 ? PALETTE.palm : PALETTE.cactus });
+        if (r() < 0.3) chunk.props.push({ key: 'palm', pos: [x, 0, z], scale: 0.8 + r() * 0.5, rot: r() * 6, color: r() < 0.5 ? PALETTE.palm : PALETTE.cactus });
       } else if (b === 'crags') {
-        chunk.props.push({ key: 'rock', pos: [x, 0.15, z], scale: 0.18 + r() * 0.18, rot: r() * 6,
-          color: PALETTE.graniteDark });
+        if (r() < 0.5) chunk.props.push({ key: 'rock', pos: [x, 0.15, z], scale: 0.18 + r() * 0.2, rot: r() * 6, color: PALETTE.graniteDark });
       } else {
-        chunk.props.push({ key: 'tuft', pos: [x, 0.1, z], scale: 0.55 + r() * 0.7, rot: r() * 6,
-          color: b === 'highlands' ? 0x6f5fd0 : 0x62aa4e });
+        chunk.props.push({ key: 'tuft', pos: [x, 0.1, z], scale: 0.55 + r() * 0.7, rot: r() * 6, color: biome === 'highlands' ? 0x6f5fd0 : 0x62aa4e });
       }
     }
     return chunk;
   }
 
-  private decorateNode(
-    chunk: Chunk, kind: ResourceNode['kind'], shape: ResourceNode['shape'],
-    x: number, z: number, r: () => number,
-  ): void {
-    const push = (key: PropKey, dx: number, dy: number, dz: number, scale: number, color: number) => {
+  /** Props bên trong một bãi: dày, cao, và bám sát vùng đất của nó. */
+  private dressPatch(chunk: Chunk, p: Patch, r: () => number): void {
+    const [x, , z] = p.center;
+    const put = (key: PropKey, dx: number, dy: number, dz: number, scale: number, color: number) => {
       chunk.props.push({ key, pos: [x + dx, dy, z + dz], scale, rot: r() * 6, color });
     };
-    if (shape === 'pine') {
-      for (let i = 0; i < 4 + Math.floor(r() * 3); i += 1) {
-        const a = r() * Math.PI * 2;
-        const d = r() * 2.1;
-        push('pine', Math.cos(a) * d, 0, Math.sin(a) * d, 0.8 + r() * 0.5,
-          PALETTE.pine[Math.floor(r() * 3)]);
-      }
-    } else if (shape === 'wheat') {
-      for (let i = 0; i < 5; i += 1) {
-        const a = (i / 5) * Math.PI * 2;
-        push('wheat', Math.cos(a) * 1.5, 0, Math.sin(a) * 1.5, 0.85 + r() * 0.35,
-          r() < 0.3 ? PALETTE.berry : PALETTE.wheat);
-      }
-    } else if (shape === 'quarry' || shape === 'iron') {
-      for (let i = 0; i < 4; i += 1) {
-        const a = r() * Math.PI * 2;
-        const d = r() * 1.7;
-        push('rock', Math.cos(a) * d, 0.35 + r() * 0.3, Math.sin(a) * d, 0.45 + r() * 0.55,
-          shape === 'iron' ? PALETTE.iron : (r() < 0.5 ? PALETTE.granite : PALETTE.graniteDark));
-      }
-    } else if (shape === 'dune_gold') {
-      for (let i = 0; i < 3; i += 1) {
-        push('rock', (r() - 0.5) * 2.2, 0.3, (r() - 0.5) * 2.2, 0.4 + r() * 0.3, PALETTE.sand);
-      }
-      for (let i = 0; i < 3; i += 1) {
-        push('ore', (r() - 0.5) * 1.6, 0.75 + r() * 0.5, (r() - 0.5) * 1.6, 0.4 + r() * 0.3, PALETTE.goldOre);
-      }
-    } else {
-      for (let i = 0; i < 3; i += 1) {
-        push('spire', (r() - 0.5) * 2.2, 0, (r() - 0.5) * 2.2, 0.7 + r() * 0.8, PALETTE.crystal);
-      }
+    const rai = (n: number, fn: (a: number, d: number) => void) => {
+      for (let i = 0; i < n; i += 1) fn(r() * Math.PI * 2, Math.sqrt(r()) * p.radius * 0.88);
+    };
+
+    switch (p.kind) {
+      case 'wood':
+        rai(16, (a, d) => put('pine', Math.cos(a) * d, 0, Math.sin(a) * d,
+          0.85 + r() * 0.6, PALETTE.pine[Math.floor(r() * 3)]));
+        break;
+      case 'food':
+        rai(14, (a, d) => put('wheat', Math.cos(a) * d, 0, Math.sin(a) * d,
+          0.85 + r() * 0.4, r() < 0.25 ? PALETTE.berry : PALETTE.wheat));
+        break;
+      case 'stone':
+        rai(13, (a, d) => put('rock', Math.cos(a) * d, 0.3 + r() * 0.4, Math.sin(a) * d,
+          0.4 + r() * 0.75, r() < 0.3 ? PALETTE.iron : (r() < 0.5 ? PALETTE.granite : PALETTE.graniteDark)));
+        break;
+      case 'gold':
+        rai(7, (a, d) => put('rock', Math.cos(a) * d, 0.3, Math.sin(a) * d, 0.4 + r() * 0.4, PALETTE.sand));
+        rai(8, (a, d) => put('ore', Math.cos(a) * d, 0.7 + r() * 0.6, Math.sin(a) * d, 0.35 + r() * 0.35, PALETTE.goldOre));
+        break;
+      case 'relics':
+        rai(9, (a, d) => put('spire', Math.cos(a) * d, 0, Math.sin(a) * d, 0.7 + r() * 0.9, PALETTE.crystal));
+        break;
     }
-    void kind;
   }
 
   // ------------------------------------------------------------------ tra cứu
 
-  get nodes(): ResourceNode[] {
-    const out: ResourceNode[] = [];
-    for (const c of this.chunks.values()) out.push(...c.nodes);
+  get patches(): Patch[] {
+    const out: Patch[] = [];
+    for (const c of this.chunks.values()) out.push(...c.patches);
     return out;
   }
 
@@ -305,10 +298,9 @@ export class MapManager {
     return out;
   }
 
-  nodeById(id: string): ResourceNode | undefined {
+  patchById(id: string): Patch | undefined {
     for (const c of this.chunks.values()) {
-      const n = c.nodes.find((x) => x.id === id);
-      if (n) return n;
+      for (const p of c.patches) if (p.id === id) return p;
     }
     return undefined;
   }
@@ -321,18 +313,13 @@ export class MapManager {
     return undefined;
   }
 
-  /** Trụ pha lê xoay nhẹ. Bỏ qua khi quanh đây không có cái nào. */
   animate(dt: number): void {
-    if (this.spireIndexStart > 0) this.meshes.spire.rotation.y += dt * 0.12;
+    if (this.spireCount > 0) this.meshes.spire.rotation.y += dt * 0.12;
   }
 
   // -------------------------------------------------- hình học đã hàn sẵn
 
-  /**
-   * Cây thông: thân cộng ba tán, HÀN thành một hình học.
-   *
-   * Không hàn thì một cây là bốn lệnh vẽ và cả việc gom instancing mất ý nghĩa.
-   */
+  /** Thân cộng ba tán, HÀN thành một hình học — không hàn thì một cây là bốn lệnh vẽ. */
   private pineGeometry(): THREE.BufferGeometry {
     const parts: THREE.BufferGeometry[] = [];
     const trunk = new THREE.CylinderGeometry(0.14, 0.2, 0.9, 5);

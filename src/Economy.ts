@@ -11,7 +11,8 @@ import {
   AFK_CAP_SECONDS, AFK_EFFICIENCY, AFK_MIN_SECONDS, AUTOSAVE_INTERVAL_MS, BASE_CAPACITY,
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
-  RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_THRESHOLD, SAVE_KEY, SPEED_PER_LEVEL, STARTING,
+  RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
+  SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
 import type {
@@ -53,7 +54,8 @@ function freshState(): GameState {
     speedLevel: 1,
     capacityLevel: 1,
     demand: null,
-    focusNodeId: null,
+    assignments: {},
+    autoFarm: true,
     speedMult: 1,
     maxReach: 0,
   };
@@ -100,7 +102,8 @@ export class Economy {
           // Mấy trường thêm về sau có thể thiếu hẳn trong bản lưu cũ.
           state.speedMult = parsed.speedMult === 2 ? 2 : 1;
           state.demand = parsed.demand ?? null;
-          state.focusNodeId = parsed.focusNodeId ?? null;
+          state.assignments = parsed.assignments ?? {};
+          state.autoFarm = parsed.autoFarm !== false;
           state.maxReach = Number(parsed.maxReach) || 0;
           state.storageLimit = Number(parsed.storageLimit) || base.storageLimit;
           state.totalGold = Number(parsed.totalGold) || 0;
@@ -175,12 +178,38 @@ export class Economy {
     return { label: milestoneAt(after - 1).label };
   }
 
+  /**
+   * Mức thủ phủ phải GIỮ LẠI mỗi loại, thay vì bán đi.
+   *
+   * Luôn trùm được món đắt nhất đang bày bán — thuê người, xây mới, nâng cấp — vì nếu
+   * không thì người chơi nhìn thấy nút giá 290 trong khi thủ phủ lặng lẽ bán sạch xuống
+   * 150, và cái nút ấy không bao giờ sáng. Lỗi kiểu đó không ai đoán ra được, chỉ thấy
+   * game tự dưng dừng.
+   */
+  private readonly reserve: Inventory = emptyInv();
+
+  private recomputeReserve(): void {
+    const gia: Cost[] = [this.hireCost(), this.trainSpeedCost(), this.trainCapacityCost()];
+    for (const t of Object.keys(BUILDINGS) as BuildingType[]) {
+      if (t !== 'townhall') gia.push(this.buildCostFor(t));
+    }
+    for (const b of this.state.buildings) {
+      if (b.level < BUILDINGS[b.type].maxLevel) gia.push(this.costFor(b.type, b.level));
+    }
+    for (const k of RESOURCE_KINDS) {
+      let max = 0;
+      for (const c of gia) max = Math.max(max, c[k] ?? 0);
+      this.reserve[k] = Math.max(SURPLUS_RESERVE, max * RESERVE_HEADROOM);
+    }
+  }
+
   recompute(): void {
     this.state.storageLimit = Math.floor(
       (BASE_STORAGE + this.sumLevels('granary') * STORAGE_PER_GRANARY) * (1 + this.bonus.storage));
     let total = 0;
     for (const b of this.state.buildings) total += b.level;
     this.state.level = 1 + Math.floor(total / 3);
+    this.recomputeReserve();
     const cap = this.capacity();
     const spd = this.speed();
     for (const u of this.state.units) {
@@ -420,11 +449,10 @@ export class Economy {
     const hall = this.state.buildings.find((b) => b.type === 'townhall');
     if (!hall) return;
     let left = SURPLUS_RATE_PER_LEVEL * hall.level * dt;
-    const keep = this.state.storageLimit * SURPLUS_THRESHOLD;
     // Bán thứ đáng tiền trước, và không bao giờ bán chính vàng.
     for (const kind of ['relics', 'stone', 'food', 'wood'] as ResourceKind[]) {
       if (left <= 0) break;
-      const take = Math.min(left, this.state.inv[kind] - keep);
+      const take = Math.min(left, this.state.inv[kind] - this.reserve[kind]);
       if (take <= 0) continue;
       this.state.inv[kind] -= take;
       this.deposit('gold', take * RESOURCES[kind].value);

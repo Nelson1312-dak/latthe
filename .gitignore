@@ -16,3 +16,4 @@ watchdog-proxy.beat
 
 # San pham dung, Vercel tu build
 dist/
+.claude/

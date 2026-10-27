@@ -143,12 +143,23 @@ export class FogOfWar {
    * nhất" nếu tính cả vùng chưa nạp thì có vô số đáp án bằng nhau và người thám hiểm sẽ đi
    * mãi về một hướng.
    */
-  nearestUnrevealed(from: [number, number, number]): [number, number, number] | null {
+  /**
+   * Ô chưa vén gần nhất, nhưng chỉ trong tầm `banKinh` TÍNH TỪ THỦ PHỦ.
+   *
+   * Thiếu cái tầm ấy thì người đi thám hiểm không bao giờ quay về: ô chưa vén gần nhất luôn
+   * nằm ngay cạnh chỗ họ vừa tới, nên họ cứ thế đi thẳng ra mép thế giới. Đo được: sau một
+   * giờ, người thám hiểm đứng cách nhà 330 đơn vị và không còn đóng góp gì cho làng nữa.
+   * Buộc tầm theo thủ phủ thì chân trời nở ra cùng với làng, chứ không chạy trước nó.
+   */
+  nearestUnrevealed(
+    from: [number, number, number], banKinh = Infinity,
+  ): [number, number, number] | null {
     let best: [number, number, number] | null = null;
     let bestDist = Infinity;
     for (const s of this.slots.values()) {
       const cx = s.cx * CHUNK + CHUNK / 2;
       const cz = s.cz * CHUNK + CHUNK / 2;
+      if (Math.hypot(cx, cz) > banKinh) continue;
       const d = Math.hypot(cx - from[0], cz - from[2]);
       if (d < bestDist) { bestDist = d; best = [cx, 0, cz]; }
     }

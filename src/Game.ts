@@ -11,6 +11,7 @@
  * trải trên diện tích gấp mười, bóng vỡ răng cưa ngay mà chẳng thêm được gì.
  */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, MAX_FRAME_DELTA, PALETTE } from './config';
 import type { Economy } from './Economy';
 import { FogOfWar, chime } from './FogOfWar';
@@ -21,11 +22,12 @@ import { CHUNK } from './world';
 
 const MIN_ZOOM = 10;
 /**
- * Keo xa toi dau. Khong duoc vuot qua vung dang nap: luoi 9x9 khoi la 180 don vi, ma o muc
- * phong Z thi khung nhin rong chung 2*Z*ti_le - nen qua 45 la nguoi choi nhin thay khoang
- * trong ngoai ria vung nap.
+ * Keo xa toi dau. Khong duoc vuot qua vung dang nap: luoi 11x11 khoi co 30 la 330 don vi.
+ * Do bang mat: o muc 72 mat dat con phu kin khung hinh, o 78 thi bon goc da lo ra mau troi
+ * - tuc nguoi choi nhin thay ria the gioi, dung cai ma ban do vo han khong duoc phep co.
+ * Goc khung hinh la cho lo ra truoc, nen 62 de lai bien an toan cho man hinh rong.
  */
-const MAX_ZOOM = 45;
+const MAX_ZOOM = 62;
 /**
  * Mức phóng khi người chơi chọn một nền đất.
  *
@@ -38,6 +40,8 @@ const FOCUS_ZOOM = 12;
 const REST_ZOOM = 26;
 /** Hệ số trượt: càng lớn càng bám sát, càng nhỏ càng trôi. */
 const GLIDE = 9;
+/** Tran so nen trong ve mot luc. Vung nap 11x11 khoi hiem khi qua 300. */
+const EMPTY_CAP = 520;
 
 const ROOF: Record<string, number> = {
   townhall: PALETTE.roofCore, house: PALETTE.roofHouse,
@@ -56,6 +60,10 @@ export class Game {
 
   private readonly plotGroup = new THREE.Group();
   private readonly pickable: THREE.Mesh[] = [];
+  /** Nền trống vẽ bằng lưới nhân bản, nên bao nhiêu nền cũng chỉ là hai lệnh vẽ. */
+  private emptyPads!: THREE.InstancedMesh;
+  private emptyPosts!: THREE.InstancedMesh;
+  private readonly mtx = new THREE.Matrix4();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -78,7 +86,7 @@ export class Game {
 
   onSelect: ((plotId: string | null) => void) | null = null;
   onReveal: ((chunkId: string) => void) | null = null;
-  onFocusNode: ((nodeId: string | null) => void) | null = null;
+  onSelectPatch: ((patchId: string | null) => void) | null = null;
   onMilestone: ((label: string) => void) | null = null;
   onSelectUnit: ((unitId: string | null) => void) | null = null;
 
@@ -97,8 +105,10 @@ export class Game {
   private hoverRing!: THREE.Mesh;
   /** Vòng nhỏ bám theo người dân đang chọn. Phải bám từng khung vì họ di chuyển. */
   private unitRing!: THREE.Mesh;
+  private patchRing!: THREE.Mesh;
   private hoveredId: string | null = null;
   private selectedUnitId: string | null = null;
+  private selectedPatchId: string | null = null;
   /** Đang bám theo ai. Khác với "đang chọn ai": chọn rồi vẫn có thể không bám. */
   private followId: string | null = null;
 
@@ -155,6 +165,7 @@ export class Game {
 
     this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup);
     this.buildMarkers();
+    this.buildEmptyMeshes();
     this.rebuildPlots();
 
     this.resize();
@@ -190,6 +201,21 @@ export class Game {
     this.selectRing = ring(0xffc766, 0.95, 2.7);
     this.hoverRing = ring(0xffffff, 0.55, 2.55);
     this.unitRing = ring(0x7fd8ff, 0.95, 0.72);
+
+    // Vong bai dung ban kinh 1 roi nhan len bang chinh co bai, nen no OM TRON khu dat chu
+    // khong phai mot cai cham ben duoi. Vanh mong (1 -> 1,035) vi khi nhan len gap bay lan
+    // thi mot vanh day binh thuong se thanh mot cai dia.
+    this.patchRing = new THREE.Mesh(
+      new THREE.RingGeometry(1, 1.035, 72),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.95,
+        side: THREE.DoubleSide, depthWrite: false,
+      }));
+    this.patchRing.rotation.x = -Math.PI / 2;
+    this.patchRing.position.y = 0.26;
+    this.patchRing.visible = false;
+    this.patchRing.renderOrder = 3;
+    this.scene.add(this.patchRing);
   }
 
   private updateMarkers(): void {
@@ -200,9 +226,52 @@ export class Game {
     };
     place(this.selectRing, this.selectedId);
     place(this.hoverRing, this.hoveredId === this.selectedId ? null : this.hoveredId);
+
+    const b = this.selectedPatchId ? this.map.patchById(this.selectedPatchId) : null;
+    this.patchRing.visible = !!b;
+    if (b) {
+      this.patchRing.position.set(b.center[0], 0.26, b.center[2]);
+      this.patchRing.scale.set(b.radius + 0.6, b.radius + 0.6, 1);
+    }
   }
 
   // ------------------------------------------------------------ công trình
+
+  /**
+   * Nền trống: hai lưới nhân bản cho cả bản đồ.
+   *
+   * Mỗi nền trống vốn là một bệ cộng bốn cọc rào — năm lệnh vẽ. Nhân với số nền của một bản
+   * đồ mở thì riêng mấy ô đất trống đã tốn nhiều lệnh vẽ hơn toàn bộ phần còn lại của thế
+   * giới cộng lại, và đó chính là thứ buộc bản trước phải rải nền thật thưa. Gộp bốn cọc
+   * thành một hình học rồi nhân bản cả hai, thì con số tụt xuống hai — cố định, không phụ
+   * thuộc số nền.
+   *
+   * Không đưa vào danh sách bắt tia: pickPlot() vốn đã có đường lùi bắt theo khoảng cách
+   * trên mặt đất, và đường ấy còn khớp với cách chấm điểm lúc chọn hơn là bắt trúng hình.
+   */
+  private buildEmptyMeshes(): void {
+    const posts: THREE.BufferGeometry[] = [];
+    for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) {
+      const c = new THREE.CylinderGeometry(0.1, 0.12, 0.6, 5);
+      c.translate(sx * 1.4, 0.38, sz * 1.4);
+      posts.push(c);
+    }
+    const pad = new THREE.BoxGeometry(3.0, 0.18, 3.0);
+    pad.translate(0, 0.09, 0);
+
+    this.emptyPads = new THREE.InstancedMesh(
+      pad, new THREE.MeshLambertMaterial({ color: PALETTE.plotDirt }), EMPTY_CAP);
+    this.emptyPosts = new THREE.InstancedMesh(
+      mergeGeometries(posts, false)!,
+      new THREE.MeshLambertMaterial({ color: PALETTE.fence }), EMPTY_CAP);
+    for (const m of [this.emptyPads, this.emptyPosts]) {
+      m.receiveShadow = true;
+      m.castShadow = true;
+      m.frustumCulled = false;
+      m.count = 0;
+      this.scene.add(m);
+    }
+  }
 
   rebuildPlots(): void {
     this.plotGroup.traverse((o) => {
@@ -213,34 +282,34 @@ export class Game {
     this.plotGroup.clear();
     this.pickable.length = 0;
 
+    /*
+     * Chi dung NEN DAT GAN tam ngam, cong moi thu da xay du o dau.
+     *
+     * Tam nhin gio rong 330 don vi nen vung nap co hon tram nen dat, moi nen vai khoi - cong
+     * lai nhieu lenh ve hon ca phan con lai cua the gioi. Nen trong o xa thi nguoi choi cung
+     * khong voi toi ma bam, nen khong dang ve.
+     */
+    let trong = 0;
     for (const plot of this.map.plots) {
       const building = this.economy.buildingAt(plot.id);
+      if (!building) {
+        if (trong >= EMPTY_CAP) continue;
+        this.mtx.makeTranslation(plot.position[0], 0, plot.position[2]);
+        this.emptyPads.setMatrixAt(trong, this.mtx);
+        this.emptyPosts.setMatrixAt(trong, this.mtx);
+        trong += 1;
+        continue;
+      }
       const g = new THREE.Group();
       g.position.set(plot.position[0], 0, plot.position[2]);
       g.userData.plotId = plot.id;
-      if (building) this.buildStructure(g, building, plot.id);
-      else this.buildEmptyPlot(g, plot.id);
+      this.buildStructure(g, building, plot.id);
       this.plotGroup.add(g);
     }
-  }
-
-  private buildEmptyPlot(g: THREE.Group, id: string): void {
-    const pad = new THREE.Mesh(
-      new THREE.BoxGeometry(3.0, 0.18, 3.0),
-      new THREE.MeshLambertMaterial({ color: PALETTE.plotDirt }));
-    pad.position.y = 0.09;
-    pad.receiveShadow = true;
-    pad.userData.plotId = id;
-    g.add(pad);
-    this.pickable.push(pad);
-
-    const postMat = new THREE.MeshLambertMaterial({ color: PALETTE.fence });
-    for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.6, 5), postMat);
-      post.position.set(sx * 1.4, 0.38, sz * 1.4);
-      post.castShadow = true;
-      g.add(post);
-    }
+    this.emptyPads.count = trong;
+    this.emptyPosts.count = trong;
+    this.emptyPads.instanceMatrix.needsUpdate = true;
+    this.emptyPosts.instanceMatrix.needsUpdate = true;
   }
 
   private buildStructure(g: THREE.Group, b: Building, id: string): void {
@@ -370,13 +439,17 @@ export class Game {
     for (const plot of this.map.plots) {
       consider('plot', plot.id, Math.hypot(plot.position[0] - px, plot.position[2] - pz), 2.6);
     }
-    for (const n of this.map.nodes) {
-      if (!this.fog.isRevealed(n.position[0], n.position[2])) continue;
-      consider('node', n.id, Math.hypot(n.position[0] - px, n.position[2] - pz), 2.4);
+    // Bai lay CHINH ban kinh cua no lam vung bam: bai la mot khu dat, nen bam dau trong khu
+    // cung phai trung. Day la dieu kien de "chi vao roi dieu dan toi" thanh mot thao tac tu
+    // nhien, chu khong phai tro ngam ban vao mot cai cay.
+    for (const b of this.map.patches) {
+      if (!this.fog.isRevealed(b.center[0], b.center[2])) continue;
+      consider('node', b.id, Math.hypot(b.center[0] - px, b.center[2] - pz), b.radius);
     }
 
     if (bestKind === 'unit' && bestId) {
       this.selectedId = null;
+      this.pickPatch(null);
       this.updateMarkers();
       this.onSelect?.(null);
       this.chooseUnit(bestId);
@@ -384,6 +457,7 @@ export class Game {
     }
     if (bestKind === 'plot' && bestId) {
       this.chooseUnit(null);
+      this.pickPatch(null);
       this.selectedId = bestId;
       this.focusOnPlot(bestId);
       this.updateMarkers();
@@ -392,10 +466,10 @@ export class Game {
     }
     if (bestKind === 'node' && bestId) {
       this.chooseUnit(null);
-      const cur = this.economy.state.focusNodeId;
-      this.economy.state.focusNodeId = cur === bestId ? null : bestId;
-      this.economy.save();
-      this.onFocusNode?.(this.economy.state.focusNodeId);
+      this.selectedId = null;
+      this.updateMarkers();
+      this.onSelect?.(null);
+      this.pickPatch(bestId);
       return;
     }
     this.clearSelection();
@@ -404,6 +478,7 @@ export class Game {
   private clearSelection(): void {
     this.followId = null;
     this.chooseUnit(null);
+    this.pickPatch(null);
     this.selectedId = null;
     this.updateMarkers();
     this.wantedZoom = Math.max(this.wantedZoom, REST_ZOOM);
@@ -420,6 +495,22 @@ export class Game {
 
   get selectedUnit(): string | null {
     return this.selectedUnitId;
+  }
+
+  get selectedPatch(): string | null {
+    return this.selectedPatchId;
+  }
+
+  /**
+   * Chon bai, hoac bo chon khi truyen null. Bao ra ngoai luon, nen moi cho bo chon - bam
+   * sang nen dat, bam sang nguoi dan, bam ra cho trong - deu dong the bai lai ma khong cho
+   * nao phai nho tu goi.
+   */
+  pickPatch(id: string | null): void {
+    if (this.selectedPatchId === id) return;
+    this.selectedPatchId = id;
+    this.updateMarkers();
+    this.onSelectPatch?.(id);
   }
 
   get following(): string | null {
@@ -508,6 +599,20 @@ export class Game {
   panTo(x: number, z: number): void {
     this.wanted.set(x, 0, z);
     this.clampTarget();
+  }
+
+  /**
+   * Dua mot bai vao giua man, va chi keo lai gan KHI dang qua xa.
+   *
+   * Khac voi nen dat: bai to va doc duoc tu xa, nen keo gan moi lan bam la giat man hinh
+   * vo co - nhat la luc nguoi choi dang di giao nguoi cho ba bon bai lien tiep. Chi can
+   * thiep khi bai dang nho qua de nhin thay nguoi dan trong do.
+   */
+  focusOnPatch(id: string): void {
+    const b = this.map.patchById(id);
+    if (!b) return;
+    this.panTo(b.center[0], b.center[2]);
+    if (this.wantedZoom > 30) this.wantedZoom = 30;
   }
 
   get zoomLevel(): number { return this.zoom; }

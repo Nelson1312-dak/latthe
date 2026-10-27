@@ -18,15 +18,17 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, GATHER_SECONDS, OUTPOST_RANGE, PALETTE, RESOURCES,
-  SCOUT_MIN_VILLAGERS,
+  SCOUT_MIN_VILLAGERS, SCOUT_RANGE_BASE, SCOUT_RANGE_PER_VILLAGER,
 } from './config';
 import type { Economy } from './Economy';
 import type { FogOfWar } from './FogOfWar';
 import type { MapManager } from './MapManager';
-import type { Building, ResourceKind, Unit, Vec3 } from './types';
+import type { Building, Patch, ResourceKind, Unit, Vec3 } from './types';
 import { RESOURCE_KINDS } from './types';
 
 const ARRIVE = 0.35;
+/** Duoi ngan nay don thi chua bo mot chuyen cho hang. */
+const CARRY_WORTH_IT = 0.5;
 const MAX_UNITS = 220;
 
 export class WorkerManager {
@@ -211,7 +213,7 @@ export class WorkerManager {
       case 'gathering':
         u.gatherTimer -= dt;
         if (u.gatherTimer <= 0) {
-          const node = u.targetId ? this.map.nodeById(u.targetId) : undefined;
+          const node = u.targetId ? this.map.patchById(u.targetId) : undefined;
           u.carrying = Math.max(1, Math.round(u.capacity * (node?.richness ?? 1)));
           u.carryingKind = node?.kind ?? 'wood';
           const drop = this.dropPoint(u.position);
@@ -265,10 +267,24 @@ export class WorkerManager {
    * chẳng bao giờ mở, vì dân chỉ chạy tới những mỏ mà họ đã nhìn thấy.
    */
   private dispatch(u: Unit): void {
+    const shop = this.neediestProcessor(u);
+    if (shop) {
+      u.targetId = shop.id;
+      u.targetPos = [shop.position[0], 0, shop.position[2]];
+      u.state = 'moving';
+      return;
+    }
+
     const villagers = this.economy.villagers();
     const scoutIndex = villagers.length >= SCOUT_MIN_VILLAGERS ? villagers.length - 1 : -1;
-    if (villagers.indexOf(u) === scoutIndex) {
-      const spot = this.scoutTarget(u.position);
+    // Hạn ngạch là mệnh lệnh trực tiếp của người chơi, nên nó đứng TRÊN việc đi thám hiểm:
+    // giao ba người cho một bãi mà máy vẫn rút một người đi vén mây thì người chơi chỉ thấy
+    // lệnh của mình bị phớt lờ.
+    if (villagers.indexOf(u) === scoutIndex && !this.quotaUnmet()) {
+      // Chân trời nở theo làng: đông dân hơn thì dám đi xa hơn. Để thả lỏng thì người thám
+      // hiểm biến mất khỏi nền kinh tế ngay trong giờ đầu.
+      const spot = this.fog.nearestUnrevealed(u.position, SCOUT_RANGE_BASE
+        + SCOUT_RANGE_PER_VILLAGER * villagers.length);
       if (spot) {
         u.targetId = 'scout';
         u.targetPos = spot;
@@ -277,73 +293,149 @@ export class WorkerManager {
       }
     }
 
-    const kind = this.pickKind(u);
-    if (!kind) return;
-    const pinned = this.economy.state.focusNodeId
-      ? this.map.nodeById(this.economy.state.focusNodeId) : undefined;
-    const node = (pinned && pinned.kind === kind
-      && this.fog.isRevealed(pinned.position[0], pinned.position[2]))
-      ? pinned : this.nearestNode(u.position, kind);
-    if (!node) return;
-    u.targetId = node.id;
-    u.targetPos = node.position;
+    const patch = this.pickPatch(u);
+    if (!patch) { u.targetId = null; return; }
+    // Chia chỗ đứng theo thứ tự người, nên hai dân cùng bãi không chồng lên nhau.
+    const i = Math.max(0, villagers.indexOf(u));
+    u.targetId = patch.id;
+    u.targetPos = patch.spots[i % patch.spots.length];
     u.state = 'moving';
   }
 
   /**
-   * Dân tự nghĩ, theo đúng ba mức ưu tiên.
-   *
-   * 1. ĐƠN HÀNG XÂY DỰNG. Người chơi bấm xây mà thiếu vật liệu thì cả làng quay sang gom đúng
-   *    thứ còn thiếu. Đây là chỗ thay cho mấy nút +/- cũ: người chơi nói muốn GÌ, không phải
-   *    điều ai đi ĐÂU.
-   * 2. MỎ ĐƯỢC GHIM. Bảy phần mười nhân lực dồn về đó; phần còn lại vẫn tự cân, nếu không
-   *    thì ghim một mỏ là mọi kho khác cạn dần mà người chơi không hiểu vì sao.
-   * 3. TỰ CÂN. Kho nào vơi nhất theo tỉ lệ thì đi lấy loại đó. Kho đầy thì bỏ qua hẳn — đào
-   *    thêm vào một kho đầy là ném đi công sức, vì phần thừa không vào được.
+   * Xưởng nào đang cần người chở hàng nhất. Ưu tiên đống to nhất, vì đống đầy là trạm đó
+   * dừng hẳn — tốn hơn nhiều so với việc chở chậm một chuyến.
    */
-  private pickKind(u: Unit): ResourceKind | null {
-    const open = RESOURCE_KINDS.filter((k) =>
-      !this.economy.isFull(k) && this.map.nodes.some((n) =>
-        n.kind === k && this.fog.isRevealed(n.position[0], n.position[2])));
-    if (open.length === 0) return null;
+  private neediestProcessor(worker: Unit): Building | null {
+    const busy = new Set(
+      this.economy.state.units
+        .filter((u) => u !== worker && u.kind === 'villager' && u.targetId)
+        .map((u) => u.targetId as string));
 
-    const need = this.economy.demandKinds().filter((k) => open.includes(k));
-    if (need.length > 0) {
-      // Chia đều giữa những thứ còn thiếu, theo thứ tự người, nên không ai giẫm chân ai.
-      const i = Math.max(0, this.economy.villagers().indexOf(u));
-      return need[i % need.length];
-    }
-
-    const pinned = this.economy.state.focusNodeId
-      ? this.map.nodeById(this.economy.state.focusNodeId) : undefined;
-    if (pinned && open.includes(pinned.kind)) {
-      const list = this.economy.villagers();
-      const i = Math.max(0, list.indexOf(u));
-      if (i < Math.ceil(list.length * 0.7)) return pinned.kind;
-    }
-
-    return open.reduce((min, k) =>
-      this.economy.fillRatio(k) < this.economy.fillRatio(min) ? k : min);
-  }
-
-  private nearestNode(from: Vec3, kind: ResourceKind) {
-    let best = null;
-    let bestScore = Infinity;
-    for (const n of this.map.nodes) {
-      if (n.kind !== kind) continue;
-      if (!this.fog.isRevealed(n.position[0], n.position[2])) continue;
-      const toNode = Math.hypot(n.position[0] - from[0], n.position[2] - from[2]);
-      const drop = this.dropPoint(n.position);
-      const back = Math.hypot(drop.position[0] - n.position[0], drop.position[2] - n.position[2]);
-      const score = toNode + back * 2;   // chang ve lap lai moi chuyen nen nang gap doi
-      if (score < bestScore) { bestScore = score; best = n; }
+    let best: Building | null = null;
+    for (const o of this.economy.outposts()) {
+      const total = RESOURCE_KINDS.reduce((s, k) => s + (o.stock[k] ?? 0), 0);
+      if (total < CARRY_WORTH_IT) continue;
+      if (busy.has(o.id) && total < worker.capacity * 2) continue;
+      if (!best) { best = o; continue; }
+      const bestTotal = RESOURCE_KINDS.reduce((s, k) => s + (best!.stock[k] ?? 0), 0);
+      if (total > bestTotal) best = o;
     }
     return best;
   }
 
-  /** Ô chưa vén gần nhất — màn mây tự biết ô nào đang có mây thật trong cảnh. */
-  private scoutTarget(from: Vec3): Vec3 | null {
-    return this.fog.nearestUnrevealed(from);
+  /** Bãi đang nạp và đã lộ khỏi màn mây. */
+  private visiblePatches(): Patch[] {
+    return this.map.patches.filter((b) => this.fog.isRevealed(b.center[0], b.center[2]));
+  }
+
+  /** Còn bãi nào người chơi đã giao mà chưa đủ người không. */
+  private quotaUnmet(): boolean {
+    const dem = this.headcount();
+    for (const [id, n] of Object.entries(this.economy.state.assignments)) {
+      if (n > (dem.get(id) ?? 0)) return true;
+    }
+    return false;
+  }
+
+  /** Số dân đang nhắm từng bãi — để biết hạn ngạch nào còn thiếu người. */
+  private headcount(): Map<string, number> {
+    const out = new Map<string, number>();
+    for (const u of this.economy.villagers()) {
+      if (!u.targetId) continue;
+      out.set(u.targetId, (out.get(u.targetId) ?? 0) + 1);
+    }
+    return out;
+  }
+
+  /**
+   * Dân nhận việc, theo bốn mức ưu tiên.
+   *
+   * 1. CHỞ HÀNG. Đống hàng đầy ở trạm là trạm đó dừng hẳn, tốn hơn mọi thứ khác.
+   * 2. ĐƠN HÀNG XÂY DỰNG. Người chơi bấm xây mà thiếu vật liệu thì cả làng quay sang gom.
+   * 3. HẠN NGẠCH BÃI. Người chơi tự điều bao nhiêu người tới bãi nào thì đúng bấy nhiêu.
+   *    Đây là mệnh lệnh trực tiếp, nên nó đứng trên mọi suy đoán của máy.
+   * 4. TỰ CÂN (nếu bật). Kho nào vơi nhất thì đi lấy loại đó. Kho đầy thì bỏ qua hẳn — đào
+   *    thêm vào kho đầy là ném đi công sức.
+   *
+   * Tắt tự cân mà không đặt hạn ngạch nào thì dân đứng chơi, và đó là điều đúng: người chơi
+   * đã nói họ muốn tự điều.
+   */
+  private pickPatch(u: Unit): Patch | null {
+    const seen = this.visiblePatches();
+    if (seen.length === 0) return null;
+    const con = (b: Patch) => !this.economy.isFull(b.kind);
+
+    const need = this.economy.demandKinds();
+    if (need.length > 0) {
+      const hop = seen.filter((b) => need.includes(b.kind) && con(b));
+      if (hop.length > 0) return this.nearest(u, hop);
+    }
+
+    // Hạn ngạch: bãi nào còn thiếu người so với số người chơi đã đặt.
+    const dem = this.headcount();
+    const thieu = seen
+      .filter((b) => con(b))
+      .map((b) => ({ b, d: (this.economy.state.assignments[b.id] ?? 0) - (dem.get(b.id) ?? 0) }))
+      .filter((x) => x.d > 0)
+      .sort((a, z) => z.d - a.d);
+    if (thieu.length > 0) return thieu[0].b;
+
+    if (!this.economy.state.autoFarm) return null;
+
+    /*
+     * Tự cân: chấm điểm MỌI bãi một lượt, bằng thu nhập mỗi giây nhân với mức vơi của kho.
+     *
+     * Bản trước chọn hai bước — lấy loại có kho vơi nhất, rồi lấy bãi gần nhất trong loại
+     * ấy. Nghe hợp lý nhưng đo ra thì hỏng: pha lê hiếm nên kho pha lê LUÔN vơi nhất, nên
+     * cả làng bị kéo đi bộ hai trăm đơn vị tới rừng pha lê trong khi có cả rừng gỗ cách nhà
+     * ba chục bước. Gộp hai bước thành một phép nhân thì cái gần vẫn thắng khi nó đáng.
+     */
+    let best: Patch | null = null;
+    let bestScore = -1;
+    for (const b of seen) {
+      if (!con(b)) continue;
+      // Kho gần đầy vẫn còn chút giá trị, nên cộng một sàn nhỏ thay vì cho về không.
+      const diem = this.rateOf(u, b) * (0.18 + (1 - this.economy.fillRatio(b.kind)));
+      if (diem > bestScore) { bestScore = diem; best = b; }
+    }
+    return best;
+  }
+
+  /**
+   * Bãi lợi nhất theo TRỌN VÒNG, không theo khoảng cách tới người.
+   *
+   * Lấy bãi gần người nhất nghe hợp lý nhưng sai: dân sinh ra ở thủ phủ nên cứ quanh quẩn ở
+   * giữa, và vì bãi không cạn kiệt nên không bao giờ phải đi xa — trạm trung chuyển đứng
+   * không một ngày nào. Chấm điểm cả vòng thì một bãi xa mà cạnh trạm sẽ thắng một bãi gần
+   * phải cõng bộ về thủ phủ, và dân tự toả ra bản đồ.
+   */
+  /**
+   * Một chuyến tới bãi này đáng bao nhiêu MỖI GIÂY.
+   *
+   * Đây là thước đo duy nhất để so hai bãi với nhau, và nó phải tính cả quãng về: đo bản
+   * trước thấy dân đứng cách nhà 280 đơn vị mà vẫn cõng bộ từng chuyến về thủ phủ — mỗi
+   * vòng bốn phút cho 19 món hàng, tức nền kinh tế đứng im. Quãng từ chỗ đang đứng tới bãi
+   * chỉ trả MỘT lần rồi người ấy ở lại chạy vòng, nên nó chia cho số chuyến ước chừng;
+   * quãng bãi–kho thì trả lại mỗi chuyến, nên tính đủ hai chiều.
+   */
+  private rateOf(u: Unit, b: Patch): number {
+    const drop = this.dropPoint(b.center);
+    const ve = Math.hypot(drop.position[0] - b.center[0], drop.position[2] - b.center[2]);
+    const toi = Math.hypot(b.center[0] - u.position[0], b.center[2] - u.position[2]);
+    const hang = u.capacity * b.richness * RESOURCES[b.kind].value;
+    const giay = (ve * 2 + toi / 4) / Math.max(0.5, u.speed) + GATHER_SECONDS;
+    return hang / giay;
+  }
+
+  private nearest(u: Unit, list: Patch[]): Patch | null {
+    let best: Patch | null = null;
+    let bestRate = -1;
+    for (const b of list) {
+      const rate = this.rateOf(u, b);
+      if (rate > bestRate) { bestRate = rate; best = b; }
+    }
+    return best;
   }
 
   /**

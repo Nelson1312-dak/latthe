@@ -267,6 +267,35 @@ html, body {
 /* Đủ vật liệu thì nút thở nhẹ; thiếu thì nó đổi thành lời mời gom hàng, không phải nút chết. */
 .insp-go.pulse { animation: breathe 1.8s ease-in-out infinite; }
 .insp-go.want { background: #fdf3e2; color: var(--amber); box-shadow: inset 0 0 0 1.5px var(--amber); }
+
+/* ------------------------------------------------- điều dân tới một bãi */
+.insp-crew {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 10px 10px 14px; border-radius: 13px;
+  background: #fff; border: 1px solid var(--line);
+}
+.insp-crew .lab { display: flex; flex-direction: column; line-height: 1.25; flex: 1; min-width: 0; }
+.insp-crew .lab strong { font-size: 15px; font-weight: 650; }
+.insp-crew .lab small { font-size: 11.5px; color: var(--ink-soft); }
+.insp-step { display: flex; align-items: center; gap: 4px; flex: none; }
+.insp-step button {
+  width: 40px; height: 40px; border-radius: 12px;
+  border: 1px solid var(--line); background: #fffaf0;
+  font: inherit; font-size: 20px; font-weight: 700; line-height: 1;
+  color: var(--accent); cursor: pointer;
+}
+.insp-step button:hover:not(:disabled) {
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+}
+.insp-step button:active:not(:disabled) { transform: translateY(1px); }
+.insp-step button:disabled { opacity: .3; cursor: not-allowed; }
+.insp-step .num {
+  min-width: 48px; text-align: center;
+  font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+.tile.farm { justify-content: center; min-width: 48px; font-size: 19px; }
+.tile.farm.on { background: #e8f3e4; border-color: #7fb069; }
 @keyframes breathe {
   0%, 100% { box-shadow: 0 0 0 0 rgba(194, 114, 79, 0.45); }
   50% { box-shadow: 0 0 0 7px rgba(194, 114, 79, 0); }
@@ -347,6 +376,28 @@ button.primary:active { transform: translateY(1px); }
   .tile { padding: 5px 9px 5px 7px; }
   .tile .tname { font-size: 12px; }
   .toast { top: 60px; font-size: 12.5px; padding: 6px 14px; }
+
+  /*
+   * Thẻ kiểm tra phải NÉN LẠI trong cửa sổ thấp.
+   *
+   * Cỡ đầy đủ cao chừng 310 điểm ảnh. Trong một cửa sổ cao 450 thì nó nuốt gần trọn tầm
+   * nhìn, mà khung nhìn lại tự nới ra theo chiều cao HUD nên bấm chọn một bãi là cả bản đồ
+   * giật ra xa — đúng cái ngược với việc "chọn để nhìn cho rõ".
+   */
+  .inspector { padding: 12px 14px; border-radius: 14px; }
+  .insp-head { gap: 10px; margin-bottom: 10px; }
+  .insp-ico { font-size: 22px; width: 40px; height: 40px; border-radius: 11px; }
+  .insp-title strong { font-size: 15px; }
+  .insp-title small { font-size: 11.5px; }
+  .insp-body { gap: 8px; }
+  .insp-cost .bit { font-size: 12.5px; padding: 3px 8px; }
+  .insp-cost { gap: 7px; }
+  .insp-crew { padding: 7px 7px 7px 11px; gap: 10px; }
+  .insp-step button { width: 34px; height: 34px; font-size: 17px; border-radius: 10px; }
+  .insp-step .num { min-width: 38px; font-size: 19px; }
+  .insp-go { padding: 10px 16px; font-size: 13.5px; }
+  .insp-choice { padding: 7px; gap: 8px; }
+  .insp-note { font-size: 11.5px; }
 }
 @media (max-width: 620px) {
   .crewpill small { display: none; }

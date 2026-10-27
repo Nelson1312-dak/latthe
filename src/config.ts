@@ -42,7 +42,26 @@ export const HOUSING_PER_HOUSE = 2;
  * cả năm loại. Giờ mọi thứ chất quá ngưỡng đều chảy thành vàng — vừa cho thu nhập một cái
  * sàn, vừa biến phần tràn vốn đang bị vứt đi thành có ích, vừa làm kho lẫm đáng xây hơn.
  */
-export const SURPLUS_THRESHOLD = 0.7;
+/*
+ * NGƯỠNG BÁN LÀ MỘT CON SỐ CỐ ĐỊNH, KHÔNG PHẢI MỘT TỈ LỆ CỦA SỨC CHỨA.
+ *
+ * Bản trước lấy 70% sức chứa. Đo một giờ thì thấy hai hậu quả, cả hai đều nặng:
+ *
+ *   — Kho cứ đứng lì ngay DƯỚI ngưỡng (623 trên 924, tức 67%), nên vòi vàng gần như đóng
+ *     suốt ván: cả giờ chỉ kiếm được 1.178 vàng, không đủ thuê tới người thứ tư.
+ *   — Xây thêm vựa lại ĐẨY ngưỡng lên, tức là xây kho xong thì nghèo đi. Một công trình mà
+ *     hậu quả ngược hẳn với điều người chơi tưởng là luật chơi phản bội người chơi.
+ *
+ * Số cố định thì vựa quay về đúng việc của nó — chỗ đệm để đi xa lâu hơn mà không tràn —
+ * còn mọi thứ chất trên mức dự trữ đều đặn chảy thành vàng.
+ *
+ * Đây chỉ là SÀN. Mức giữ thật còn phải trùm được món đắt nhất đang bày bán, xem
+ * Economy.reserveFor(): để trơ một số cố định thì tới người thứ mười hai — giá 290 lương
+ * thực — thủ phủ vẫn bán sạch xuống 150, và người chơi vĩnh viễn không thuê nổi ai nữa.
+ */
+export const SURPLUS_RESERVE = 150;
+/** Giữ dư hơn món đắt nhất chừng này lần, để còn mua được mà không phải canh từng giây. */
+export const RESERVE_HEADROOM = 1.35;
 export const SURPLUS_RATE_PER_LEVEL = 1.4;
 /**
  * Thu phu tu no chua duoc may nguoi. Khong co dong nay thi vua mo game da thay 1/0 - mot dan
@@ -72,6 +91,9 @@ export const REVEAL_RADIUS = 1.5;
 
 /** Dưới ngần này dân thì không ai được cắt đi thám hiểm — còn phải lo cái ăn đã. */
 export const SCOUT_MIN_VILLAGERS = 3;
+/** Người thám hiểm chỉ đi xa thủ phủ tới chừng này, và chân trời nở ra theo số dân. */
+export const SCOUT_RANGE_BASE = 80;
+export const SCOUT_RANGE_PER_VILLAGER = 22;
 
 /**
  * Giây phải ĐỨNG LẠI khảo sát trước khi một ô sương tan.
