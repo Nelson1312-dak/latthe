@@ -68,6 +68,29 @@ html, body {
   border-radius: 10px;
 }
 .chip + .chip { border-left: 1px solid var(--line); }
+/*
+ * ICON PHẲNG MỘT NÉT.
+ *
+ * Mọi icon là một <svg> trong thẻ bọc, vẽ bằng `currentColor` — nên đổi màu chữ của thẻ bọc
+ * là đổi màu icon, và icon mờ đi cùng với chữ bên cạnh nó. Emoji không làm được điều đó:
+ * chúng mang màu riêng, mỗi hệ điều hành vẽ một kiểu, và trên thanh tài nguyên thì tranh
+ * mất chú ý với chính con số — mà con số mới là thứ người chơi đọc.
+ */
+.ico svg, .tico svg, .pico svg, .insp-ico svg, .bico svg,
+.icon svg, .tile.farm svg {
+  width: 1em; height: 1em; display: block;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
+.ico, .tico, .pico, .bico { display: inline-flex; align-items: center; justify-content: center; }
+.insp-ico svg { width: 58%; height: 58%; stroke-width: 1.5; }
+.icon svg, .tile.farm svg { width: 18px; height: 18px; margin: 0 auto; stroke-width: 1.8; }
+.bico { font-size: 17px; flex: none; }
+.insp-go .bico { margin-right: 7px; }
+.insp-warn .bico { float: left; margin: 1px 8px 0 0; color: var(--amber); font-size: 19px; }
+.toast .bico { margin-right: 6px; }
+.toast { display: inline-flex; align-items: center; }
+
 .chip .ico { font-size: 15px; line-height: 1; }
 .chip .col { display: flex; flex-direction: column; line-height: 1.15; }
 .chip .amt { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -262,6 +285,7 @@ html, body {
 }
 
 .insp-go {
+  display: inline-flex; align-items: center; justify-content: center;
   border: none; border-radius: 13px;
   padding: 14px 24px;
   font: inherit; font-size: 15px; font-weight: 700; letter-spacing: 0.03em;
@@ -302,7 +326,7 @@ html, body {
   font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 
-.tile.farm { justify-content: center; min-width: 48px; font-size: 19px; }
+.tile.farm { justify-content: center; min-width: 48px; }
 .tile.farm.on { background: #e8f3e4; border-color: #7fb069; }
 @keyframes breathe {
   0%, 100% { box-shadow: 0 0 0 0 rgba(194, 114, 79, 0.45); }

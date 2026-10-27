@@ -12,6 +12,8 @@
 import { BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES } from './config';
 import { CHUNK, biomeAt, chunkOf } from './world';
 import { rewardText } from './milestones';
+import { ico, iconSvg } from './icons';
+import type { IconName } from './icons';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
 import type { BiomeId, BuildingType, Cost, OfflineReport, Patch, ResourceKind, Unit } from './types';
@@ -86,7 +88,7 @@ export class UIManager {
     game.onSelectUnit = (id) => { this.selectedUnit = id; this.renderInspector(); };
     game.onMilestone = (label) => {
       const { next } = this.economy.milestoneInfo();
-      this.toast(`🏅 ${label} · mốc sau ở ${Math.round(next.at)}`);
+      this.toast(`${label} · mốc sau ở ${Math.round(next.at)}`, 'medal');
       this.el.reach.classList.add('pop');
       window.setTimeout(() => this.el.reach.classList.remove('pop'), 900);
       this.renderDock();
@@ -130,7 +132,7 @@ export class UIManager {
     for (const kind of RESOURCE_KINDS) {
       const chip = el('div', 'chip');
       chip.dataset.kind = kind;
-      chip.append(el('span', 'ico', RESOURCES[kind].icon));
+      chip.append(ico(RESOURCES[kind].icon, 'ico', RESOURCES[kind].color));
       const col = el('span', 'col');
       col.append(el('strong', 'amt', '0'), el('small', 'rate', ''));
       chip.append(col);
@@ -151,7 +153,9 @@ export class UIManager {
       chip.classList.toggle('full', full);
       // Ùn: còn chỗ chứa nhưng chợ bán không kịp. Khác hẳn kho đầy, và cách chữa cũng khác
       // — một bên xây thêm kho lẫm, một bên nâng cấp thủ phủ.
-      chip.classList.toggle('jam', !full && this.economy.marketBusy
+      // Vang khong bao gio un: cho KHONG ban vang, vang la thu cho tra ve. Danh dau no la
+      // noi mot dieu sai va day nguoi choi di nang thu phu vi mot ly do khong co that.
+      chip.classList.toggle('jam', kind !== 'gold' && !full && this.economy.marketBusy
         && s.inv[kind] > this.economy.reserveOf(kind) * 1.5);
       // Thứ đang cần cho công trình được đánh dấu, nên nhìn thanh là biết dân đang chạy vì gì.
       chip.classList.toggle('need', need.has(kind));
@@ -190,7 +194,7 @@ export class UIManager {
     const tiles = this.el.tiles;
     tiles.innerHTML = '';
 
-    const hire = this.tile('👷', 'Thuê thợ', this.economy.hireCost(),
+    const hire = this.tile('villager', 'Thuê thợ', this.economy.hireCost(),
       () => this.economy.hire((h) => this.game.workers.spawnVillager(h)));
     if (!this.economy.canHire()) {
       hire.disabled = true;
@@ -199,16 +203,16 @@ export class UIManager {
     }
     tiles.append(hire);
 
-    tiles.append(this.tile('👟', `Giày Lv.${this.economy.state.speedLevel}`,
+    tiles.append(this.tile('boot', `Giày Lv.${this.economy.state.speedLevel}`,
       this.economy.trainSpeedCost(), () => this.economy.trainSpeed(), '+10% tốc độ'));
-    tiles.append(this.tile('🎒', `Balo Lv.${this.economy.state.capacityLevel}`,
+    tiles.append(this.tile('pack', `Balo Lv.${this.economy.state.capacityLevel}`,
       this.economy.trainCapacityCost(), () => this.economy.trainCapacity(), '+25% sức mang'));
 
     this.el.speed.textContent = `${this.economy.state.speedMult}×`;
     this.el.speed.classList.toggle('on', this.economy.state.speedMult === 2);
 
     const tu = this.economy.state.autoFarm;
-    this.el.farm.textContent = tu ? '🤖' : '✋';
+    this.el.farm.innerHTML = iconSvg(tu ? 'robot' : 'hand');
     this.el.farm.classList.toggle('on', tu);
     this.el.farm.title = tu
       ? 'Đang TỰ FARM: ai rảnh thì đi lấy thứ trong kho đang vơi nhất. Bấm để tắt.'
@@ -228,30 +232,31 @@ export class UIManager {
     e.save();
     const giao = Object.values(e.state.assignments).reduce((s, v) => s + v, 0);
     this.toast(e.state.autoFarm
-      ? '🤖 Tự farm: dân tự chọn bãi theo kho nào đang vơi'
+      ? 'Tự farm: dân tự chọn bãi theo kho nào đang vơi'
       : giao > 0
-        ? `✋ Tự điều: dân chỉ tới ${giao} chỗ bạn đã giao`
-        : '✋ Tự điều: bấm vào một bãi rồi giao người, chưa giao thì dân đứng chờ');
+        ? `Tự điều: dân chỉ tới ${giao} chỗ bạn đã giao`
+        : 'Tự điều: bấm vào một bãi rồi giao người, chưa giao thì dân đứng chờ');
     this.renderDock();
     this.renderInspector();
   }
 
   /** Ô vuông trong dock: biểu tượng, tên, giá. */
-  private tile(icon: string, label: string, cost: Cost, run: () => boolean, note?: string): HTMLButtonElement {
+  private tile(icon: IconName, label: string, cost: Cost, run: () => boolean, note?: string): HTMLButtonElement {
     const b = el('button', 'tile') as HTMLButtonElement;
     const missing = new Set(this.economy.missing(cost).map((m) => m.kind));
     if (missing.size === 0) b.classList.add('ready');
     else b.disabled = true;
 
-    b.append(el('span', 'tico', icon));
+    b.append(ico(icon, 'tico'));
     const col = el('span', 'tcol');
     col.append(el('span', 'tname', label));
     const price = el('span', 'tcost');
     for (const k of RESOURCE_KINDS) {
       const v = cost[k];
       if (!v) continue;
-      price.append(el('span', 'bit' + (missing.has(k) ? ' lack' : ''),
-        `${RESOURCES[k].icon}${fmt(v)}`));
+      const bit = el('span', 'bit' + (missing.has(k) ? ' lack' : ''));
+      bit.append(ico(RESOURCES[k].icon, 'ico'), el('span', undefined, fmt(v)));
+      price.append(bit);
     }
     col.append(price);
     b.append(col);
@@ -264,7 +269,7 @@ export class UIManager {
     const e = this.economy;
     const pill = this.el.crewpill;
     pill.innerHTML = '';
-    pill.append(el('span', 'pico', '👷'));
+    pill.append(ico('crew', 'pico'));
     const col = el('span', 'pcol');
     col.append(el('strong', undefined, `${e.villagers().length}/${Math.floor(e.housing())}`));
 
@@ -276,7 +281,7 @@ export class UIManager {
       mood = 'busy';
     } else if (!e.state.autoFarm) {
       const n = Object.values(e.state.assignments).reduce((s, v) => s + v, 0);
-      status = n > 0 ? `✋ Bạn đang điều ${n} người` : '✋ Tự điều · chưa giao ai việc gì';
+      status = n > 0 ? `Bạn đang điều ${n} người` : 'Tự điều · chưa giao ai việc gì';
       mood = n > 0 ? 'focus' : 'busy';
     } else if (e.villagers().length === 0) {
       status = 'Chưa có ai làm việc';
@@ -346,12 +351,13 @@ export class UIManager {
     // Vai suy tu viec dang lam, khong luu thanh mot truong rieng: mot truong nhu the phai
     // duoc cap nhat o moi cho doi viec, va chi can quen mot cho la the hien sai nghe.
     const vai = this.roleOf(u);
-    const icon = { cart: '🛻', miner: '⛏️', carrier: '📦', forester: '🪓', idle: '🧍' }[vai];
+    const icon: IconName = { cart: 'cart', miner: 'pick', carrier: 'box',
+      forester: 'axe', idle: 'villager' }[vai] as IconName;
     const name = { cart: 'Xe thồ', miner: 'Thợ mỏ', carrier: 'Thợ chở hàng',
       forester: 'Thợ rừng', idle: 'Dân làng' }[vai];
 
     const head = el('div', 'insp-head');
-    head.append(el('span', 'insp-ico', icon));
+    head.append(ico(icon, 'insp-ico'));
     const t = el('div', 'insp-title');
     const trangThai = this.statusOf(u)
       + (this.game.following === u.id ? ' · camera đang bám' : '');
@@ -368,9 +374,9 @@ export class UIManager {
 
     const body = el('div', 'insp-body');
     const row = el('div', 'insp-cost');
-    const bit = (ico: string, text: string) => {
+    const bit = (ten: IconName, text: string) => {
       const b = el('span', 'bit');
-      b.append(el('span', 'ico', ico), el('span', undefined, text));
+      b.append(ico(ten), el('span', undefined, text));
       return b;
     };
     if (u.carrying > 0 && u.carryingKind) {
@@ -379,12 +385,12 @@ export class UIManager {
       // ma "13/10" thi doc nhu mot con so hong.
       row.append(bit(RESOURCES[u.carryingKind].icon, fmt(u.carrying)));
     } else {
-      row.append(bit('🧺', 'tay không'));
+      row.append(bit('basket', 'tay không'));
     }
-    row.append(bit('👟', u.speed.toFixed(1)));
-    row.append(bit('🎒', String(Math.floor(u.capacity))));
+    row.append(bit('boot', u.speed.toFixed(1)));
+    row.append(bit('pack', String(Math.floor(u.capacity))));
     const xa = Math.round(Math.hypot(u.position[0], u.position[2]));
-    row.append(bit('🧭', `cách thủ phủ ${xa}`));
+    row.append(bit('compass', `cách thủ phủ ${xa}`));
     body.append(row);
 
     // Bam theo nguoi nay, va ghim cho ho dang dao — hai viec nguoi choi muon lam ngay sau
@@ -392,7 +398,8 @@ export class UIManager {
     const acts = el('div', 'insp-choice');
     const dangBam = this.game.following === u.id;
     const follow = el('button', 'insp-go' + (dangBam ? '' : ' want')) as HTMLButtonElement;
-    follow.textContent = dangBam ? '◉ ĐANG BÁM THEO' : '◎ BÁM THEO';
+    follow.append(ico(dangBam ? 'ringOn' : 'ring', 'bico'),
+      el('span', undefined, dangBam ? 'ĐANG BÁM THEO' : 'BÁM THEO'));
     follow.title = dangBam
       ? 'Bấm để thôi bám. Kéo bản đồ hoặc gõ WASD cũng thôi bám.'
       : 'Camera đi theo người này cho tới khi bạn tự kéo bản đồ';
@@ -407,7 +414,7 @@ export class UIManager {
     const patch = u.targetId ? this.game.map.patchById(u.targetId) : null;
     if (patch) {
       const go = el('button', 'insp-go want') as HTMLButtonElement;
-      go.textContent = `📍 XEM ${patch.label.toUpperCase()}`;
+      go.append(ico('pin', 'bico'), el('span', undefined, `XEM ${patch.label.toUpperCase()}`));
       go.addEventListener('click', () => {
         this.selectedUnit = null;
         this.game.select(null);
@@ -451,7 +458,7 @@ export class UIManager {
     const res = RESOURCES[b.kind];
 
     const head = el('div', 'insp-head');
-    head.append(el('span', 'insp-ico', res.icon));
+    head.append(ico(res.icon, 'insp-ico', res.color));
     const t = el('div', 'insp-title');
     const live = el('small', 'live', this.patchLine(b));
     this.patchLive = live;
@@ -464,9 +471,9 @@ export class UIManager {
 
     const body = el('div', 'insp-body');
     const row = el('div', 'insp-cost');
-    const bit = (ico: string, text: string, cls = '') => {
+    const bit = (ten: IconName, text: string, cls = '') => {
       const s = el('span', 'bit' + (cls ? ' ' + cls : ''));
-      s.append(el('span', 'ico', ico), el('span', undefined, text));
+      s.append(ico(ten), el('span', undefined, text));
       return s;
     };
     row.append(bit(res.icon, res.label));
@@ -481,14 +488,14 @@ export class UIManager {
      */
     const moiChuyen = Math.floor(
       Math.max(1, e.capacity() * b.richness) * RESOURCES[b.kind].value);
-    const chuyen = bit('🪙', `${fmt(moiChuyen)} mỗi chuyến`);
+    const chuyen = bit('gold', `${fmt(moiChuyen)} mỗi chuyến`);
     chuyen.title = `Mỗi chuyến mang về chừng ${Math.floor(e.capacity() * b.richness)}`
       + ` ${res.label.toLowerCase()} (giàu ×${b.richness.toFixed(2)}),`
       + ` bán ở thủ phủ được chừng ${fmt(moiChuyen)} vàng`;
     row.append(chuyen);
     const xa = Math.round(Math.hypot(b.center[0], b.center[2]));
-    row.append(bit('🧭', `cách thủ phủ ${xa}`));
-    if (e.isFull(b.kind)) row.append(bit('🧺', 'kho đã đầy', 'lack'));
+    row.append(bit('compass', `cách thủ phủ ${xa}`));
+    if (e.isFull(b.kind)) row.append(bit('basket', 'kho đã đầy', 'lack'));
     body.append(row);
 
     const giao = e.state.assignments[b.id] ?? 0;
@@ -533,7 +540,7 @@ export class UIManager {
 
     const acts = el('div', 'insp-choice');
     const all = el('button', 'insp-go want') as HTMLButtonElement;
-    all.textContent = '👥 DỒN CẢ LÀNG';
+    all.append(ico('crew', 'bico'), el('span', undefined, 'DỒN CẢ LÀNG'));
     all.title = 'Giao hết người cho riêng bãi này, bỏ mọi chỗ đã giao trước đó';
     all.addEventListener('click', () => {
       e.state.assignments = tong > 0 ? { [b.id]: tong } : {};
@@ -545,7 +552,7 @@ export class UIManager {
 
     if (tongGiao() > 0) {
       const clear = el('button', 'insp-go want') as HTMLButtonElement;
-      clear.textContent = '🧹 BỎ HẾT';
+      clear.append(ico('broom', 'bico'), el('span', undefined, 'BỎ HẾT'));
       clear.title = 'Xoá mọi chỗ đã giao, trả dân về cho máy tự lo';
       clear.addEventListener('click', () => {
         e.state.assignments = {};
@@ -604,7 +611,7 @@ export class UIManager {
     const body = el('div', 'insp-body');
 
     if (b) {
-      head.append(el('span', 'insp-ico', BUILDINGS[b.type].icon));
+      head.append(ico(BUILDINGS[b.type].icon, 'insp-ico'));
       const t = el('div', 'insp-title');
       t.append(el('strong', undefined, BUILDINGS[b.type].label),
         el('small', undefined, `Cấp ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
@@ -617,7 +624,7 @@ export class UIManager {
        */
       if (b.type === 'townhall' && this.economy.marketBusy) {
         const canh = el('p', 'insp-warn');
-        canh.append(el('span', undefined, '⚠️ '), el('strong', undefined, 'Chợ đang quá tải'),
+        canh.append(ico('warn', 'bico'), el('strong', undefined, 'Chợ đang quá tải'),
           el('span', undefined, ' — hàng về nhanh hơn mức bán được, nên phần thừa'
             + ' nằm chết trong kho. Nâng cấp thủ phủ để bán nhanh gấp đôi.'));
         body.append(canh);
@@ -634,7 +641,7 @@ export class UIManager {
     } else {
       const biome = BIOMES[plot.biome];
       const far = Math.round(Math.hypot(plot.position[0], plot.position[2]));
-      head.append(el('span', 'insp-ico', '🧱'));
+      head.append(ico('box', 'insp-ico'));
       const t = el('div', 'insp-title');
       t.append(el('strong', undefined, 'Nền đất trống'),
         el('small', undefined, `${biome.label} · cách thủ phủ ${far}`));
@@ -646,7 +653,7 @@ export class UIManager {
       for (const type of types) {
         const cost = this.economy.buildCostFor(type);
         const row = el('div', 'insp-choice');
-        row.append(el('span', 'insp-ico small', BUILDINGS[type].icon));
+        row.append(ico(BUILDINGS[type].icon, 'insp-ico small'));
         const col = el('div', 'insp-title');
         col.append(el('strong', undefined, BUILDINGS[type].label));
         col.append(this.costRow(cost));
@@ -667,7 +674,7 @@ export class UIManager {
       if (!need) continue;
       const have = Math.floor(this.economy.state.inv[k]);
       const bit = el('span', 'bit' + (have < need ? ' lack' : ''));
-      bit.append(el('span', 'ico', RESOURCES[k].icon),
+      bit.append(ico(RESOURCES[k].icon, 'ico', RESOURCES[k].color),
         el('span', undefined, `${fmt(Math.min(have, need))}/${fmt(need)}`));
       row.append(bit);
     }
@@ -767,8 +774,10 @@ export class UIManager {
 
   // ------------------------------------------------------------- lớp phủ
 
-  private toast(text: string): void {
-    this.el.toast.textContent = text;
+  private toast(text: string, bieu?: IconName): void {
+    this.el.toast.innerHTML = '';
+    if (bieu) this.el.toast.append(ico(bieu, 'bico'));
+    this.el.toast.append(document.createTextNode(text));
     this.el.toast.hidden = false;
     window.clearTimeout(this.toastTimer);
     this.toastTimer = window.setTimeout(() => { this.el.toast.hidden = true; }, 2600);
@@ -782,7 +791,8 @@ export class UIManager {
     this.el.awayLoot.innerHTML = '';
     for (const k of kinds) {
       const li = el('li');
-      li.append(el('span', 'ico', RESOURCES[k].icon), el('strong', undefined, fmt(r.gained[k] ?? 0)));
+      li.append(ico(RESOURCES[k].icon, 'ico', RESOURCES[k].color),
+        el('strong', undefined, fmt(r.gained[k] ?? 0)));
       this.el.awayLoot.append(li);
     }
     const notes: string[] = [];
@@ -800,7 +810,7 @@ export class UIManager {
     this.manualPaused = p;
     this.game.setPaused(p);
     this.el.paused.hidden = !p;
-    this.el.pause.textContent = p ? '▶' : '⏸';
+    this.el.pause.innerHTML = iconSvg(p ? 'play' : 'pause');
   }
 
   private toggleMute(): void {
@@ -810,7 +820,7 @@ export class UIManager {
   }
 
   private applyMute(): void {
-    this.el.mute.textContent = this.economy.state.muted ? '🔇' : '🔊';
+    this.el.mute.innerHTML = iconSvg(this.economy.state.muted ? 'mute' : 'sound');
     this.el.mute.setAttribute('aria-pressed', String(this.economy.state.muted));
   }
 

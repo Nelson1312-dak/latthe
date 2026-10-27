@@ -146,8 +146,10 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
       `cấp ${hang(s.level, 2)}`,
       `${hang(economy.villagers().length, 2)} dân`,
       `vàng ${hang(s.totalGold, 6)}`,
+      // RESOURCES[k].icon gio la TEN icon ('food', 'wood'...) chu khong con la emoji, nen
+      // lay ba chu dau cua nhan de bang van doc duoc.
       ...RESOURCE_KINDS.filter((k) => k !== 'gold')
-        .map((k) => `${RESOURCES[k].icon}${hang(s.inv[k], 4)}`),
+        .map((k) => `${RESOURCES[k].label.slice(0, 3)}${hang(s.inv[k], 5)}`),
       `xa ${hang(s.maxReach, 4)}`,
       `vén ${hang(fog.revealedCount, 3)}`,
       Object.entries(nha).map(([k, v]) => `${k}×${v}`).join(' '),

@@ -5,6 +5,7 @@
  * ra bốn phía; vùng giữa luôn là đồng cỏ để người chơi có chỗ đứng chân ngay từ đầu.
  */
 import type { Biome, BiomeId, Cost, ResourceKind } from './types';
+import type { IconName } from './icons';
 
 // Kich thuoc the gioi khong con y nghia: ban do la vo han, sinh theo khoi trong world.ts.
 // Chi giu lai mot con so cho minimap biet ve rong bao nhieu quanh nguoi choi.
@@ -243,13 +244,13 @@ export const PALETTE = {
 // ------------------------------------------------------------- tài nguyên
 
 export const RESOURCES: Record<ResourceKind, {
-  label: string; icon: string; color: number; value: number;
+  label: string; icon: IconName; color: number; value: number;
 }> = {
-  food: { label: 'Lương thực', icon: '🌾', color: PALETTE.wheat, value: 1 },
-  wood: { label: 'Gỗ', icon: '🪵', color: PALETTE.pine[1], value: 1 },
-  gold: { label: 'Vàng', icon: '🪙', color: PALETTE.goldOre, value: 1 },
-  stone: { label: 'Đá', icon: '🪨', color: PALETTE.granite, value: 2 },
-  relics: { label: 'Mảnh cổ vật', icon: '🔮', color: PALETTE.crystal, value: 7 },
+  food: { label: 'Lương thực', icon: 'food', color: PALETTE.wheat, value: 1 },
+  wood: { label: 'Gỗ', icon: 'wood', color: PALETTE.pine[1], value: 1 },
+  gold: { label: 'Vàng', icon: 'gold', color: PALETTE.goldOre, value: 1 },
+  stone: { label: 'Đá', icon: 'stone', color: PALETTE.granite, value: 2 },
+  relics: { label: 'Mảnh cổ vật', icon: 'relics', color: PALETTE.crystal, value: 7 },
 };
 
 // ------------------------------------------------------------- biến sinh thái
@@ -291,20 +292,20 @@ export const BUILDINGS = {
    * nằm chết trong kho. Nâng cấp quan trọng nhất của game lại là cái duy nhất không ai hiểu.
    */
   townhall: {
-    label: 'Thủ phủ', icon: '🏛️', maxLevel: 10,
+    label: 'Thủ phủ', icon: 'townhall', maxLevel: 10,
     describe: (l: number) => `Chợ bán ${(SURPLUS_RATE_PER_LEVEL * l).toFixed(1)} món mỗi giây`
       + ` · chỗ ở cho ${l * HOUSING_FROM_TOWNHALL} dân`,
   },
   house: {
-    label: 'Nhà ở', icon: '🏠', maxLevel: 10,
+    label: 'Nhà ở', icon: 'house', maxLevel: 10,
     describe: (l: number) => `Chỗ ở cho ${l * HOUSING_PER_HOUSE} dân`,
   },
   granary: {
-    label: 'Kho lẫm', icon: '📦', maxLevel: 10,
+    label: 'Kho lẫm', icon: 'granary', maxLevel: 10,
     describe: (l: number) => `Chứa thêm ${l * STORAGE_PER_GRANARY} mỗi loại`,
   },
   outpost: {
-    label: 'Trạm trung chuyển', icon: '🛖', maxLevel: 5,
+    label: 'Trạm trung chuyển', icon: 'outpost', maxLevel: 5,
     describe: (l: number) =>
       `Gom hàng trong vùng, ${CART_INTERVAL_SECONDS}s một chuyến xe · sức chở ×${CART_CAPACITY_MULT * l}`,
   },
