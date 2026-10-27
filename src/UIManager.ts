@@ -466,9 +466,22 @@ export class UIManager {
       return s;
     };
     row.append(bit(res.icon, res.label));
-    // Hệ số giàu là lý do DUY NHẤT để đi xa, nên nó phải nằm ngay trên thẻ chứ không ẩn
-    // trong một công thức nào đó.
-    row.append(bit('💎', `giàu ×${b.richness.toFixed(2)}`));
+    /*
+     * MỘT CHUYẾN ĐÁNG BAO NHIÊU VÀNG — chứ không phải hệ số giàu.
+     *
+     * Thẻ cũ ghi "giàu ×0,78" cho một rừng pha lê và "giàu ×1,40" cho rừng gỗ cạnh nhà, nên
+     * đọc ra là rừng pha lê nghèo hơn. Sai hẳn: mỗi mảnh pha lê đáng bảy khúc gỗ, nên cùng
+     * một chuyến ấy nó cho gấp mấy lần. Người chơi không có cách nào biết điều đó từ con số
+     * kia. Quy hết về vàng thì so sánh được ngay, và câu hỏi "có đáng đi xa không" trả lời
+     * được bằng mắt.
+     */
+    const moiChuyen = Math.floor(
+      Math.max(1, e.capacity() * b.richness) * RESOURCES[b.kind].value);
+    const chuyen = bit('🪙', `${fmt(moiChuyen)} mỗi chuyến`);
+    chuyen.title = `Mỗi chuyến mang về chừng ${Math.floor(e.capacity() * b.richness)}`
+      + ` ${res.label.toLowerCase()} (giàu ×${b.richness.toFixed(2)}),`
+      + ` bán ở thủ phủ được chừng ${fmt(moiChuyen)} vàng`;
+    row.append(chuyen);
     const xa = Math.round(Math.hypot(b.center[0], b.center[2]));
     row.append(bit('🧭', `cách thủ phủ ${xa}`));
     if (e.isFull(b.kind)) row.append(bit('🧺', 'kho đã đầy', 'lack'));

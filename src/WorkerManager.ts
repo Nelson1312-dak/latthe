@@ -384,7 +384,7 @@ export class WorkerManager {
     if (!this.economy.state.autoFarm) return null;
 
     /*
-     * Tự cân: chấm điểm MỌI bãi một lượt, bằng thu nhập mỗi giây nhân với mức vơi của kho.
+     * Tự cân: chấm điểm MỌI bãi một lượt, bằng thu nhập mỗi giây nhân với mức CẦN của loại.
      *
      * Bản trước chọn hai bước — lấy loại có kho vơi nhất, rồi lấy bãi gần nhất trong loại
      * ấy. Nghe hợp lý nhưng đo ra thì hỏng: pha lê hiếm nên kho pha lê LUÔN vơi nhất, nên
@@ -395,8 +395,7 @@ export class WorkerManager {
     let bestScore = -1;
     for (const b of seen) {
       if (!con(b)) continue;
-      // Kho gần đầy vẫn còn chút giá trị, nên cộng một sàn nhỏ thay vì cho về không.
-      const diem = this.rateOf(u, b) * (0.18 + (1 - this.economy.fillRatio(b.kind)));
+      const diem = this.rateOf(u, b) * this.needFor(b.kind);
       if (diem > bestScore) { bestScore = diem; best = b; }
     }
     return best;
@@ -410,6 +409,38 @@ export class WorkerManager {
    * không một ngày nào. Chấm điểm cả vòng thì một bãi xa mà cạnh trạm sẽ thắng một bãi gần
    * phải cõng bộ về thủ phủ, và dân tự toả ra bản đồ.
    */
+  /**
+   * Loại này đang CẦN tới mức nào — hệ số nhân lên thu nhập mỗi giây.
+   *
+   * Không thể chỉ nhìn "kho vơi bao nhiêu phần trăm": vàng mua được mọi thứ, nhưng không
+   * xây nổi căn nhà nào. Pha lê đáng bảy lần khúc gỗ mà chẳng công trình nào cần tới nó —
+   * nên khi chấm điểm thuần theo giá trị, cả làng bỏ sang pha lê, gỗ đá cạn sạch, và ván
+   * game đứng lại ở cấp 5 với kho đầy pha lê không tiêu được vào đâu. Đo được đúng như vậy.
+   *
+   * Thước đúng là MỨC KẸT: thiếu so với món đắt nhất đang muốn mua thì loại ấy quý hơn giá
+   * thị trường của nó rất nhiều; đủ rồi thì nó tụt về đúng giá, rồi nhạt dần khi kho đầy.
+   * Nhờ thế pha lê thành mặt hàng xuất khẩu — thứ đi lấy khi nhà đã đủ ăn — chứ không phải
+   * một cái bẫy ở hai đầu.
+   *
+   * Mức kẹt đo theo GIÁ của món đang muốn mua, không theo mức giữ của thủ phủ. Mức giữ có
+   * một cái sàn cố định, và lấy nó làm thước thì pha lê — thứ chẳng công trình nào cần —
+   * vẫn bị coi là "đang thiếu 150" nên cả làng kéo nhau đi bộ 113 đơn vị từ phút hai mươi,
+   * lúc làng mới có ba người. Đo được: nhịp độ tụt đúng một phần ba.
+   */
+  private needFor(kind: ResourceKind): number {
+    const co = this.economy.state.inv[kind];
+    // Chang cong trinh nao can toi no: hang xuat khau, cham diem thuan theo do day kho.
+    if (this.economy.costPressure(kind) <= 0) {
+      return Math.max(0.15, 1 - this.economy.fillRatio(kind));
+    }
+    // So voi MUC GIU chu khong voi dung gia: muc giu co san du dia 1,35 lan. Do dung gia
+    // thi khi con thieu 2% he so da tut ve 1, nen dan khong buon di lay not - do duoc mot
+    // ngoi lang dung o tam nguoi suot ba tieng chi vi thieu ba can luong thuc.
+    const muc = Math.max(1, this.economy.reserveOf(kind));
+    if (co < muc) return 1 + 3 * (1 - co / muc);
+    return Math.max(0.15, 1 - this.economy.fillRatio(kind));
+  }
+
   /**
    * Một chuyến tới bãi này đáng bao nhiêu MỖI GIÂY.
    *

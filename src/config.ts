@@ -62,6 +62,15 @@ export const HOUSING_PER_HOUSE = 2;
 export const SURPLUS_RESERVE = 150;
 /** Giữ dư hơn món đắt nhất chừng này lần, để còn mua được mà không phải canh từng giây. */
 export const RESERVE_HEADROOM = 1.35;
+/**
+ * Mức giữ cho thứ CHẲNG CÔNG TRÌNH NÀO cần tới — tức pha lê, hàng thuần để bán.
+ *
+ * Giữ nó ngang với mọi loại khác (150) là khoá cứng 150×7 = hơn một nghìn vàng trong kho
+ * mãi mãi, mà chẳng để làm gì: đo được sáu dân đào hai mươi phút ở rừng pha lê xa, mang về
+ * 176 mảnh, và thủ phủ chỉ bán đúng 26 mảnh. Đi xa về rồi mà hàng nằm đó thì cái chuyến đi
+ * ấy coi như chưa trả công. Giữ một ít cho người chơi còn nhìn thấy mình có, rồi bán hết.
+ */
+export const EXPORT_KEEP = 25;
 export const SURPLUS_RATE_PER_LEVEL = 1.4;
 /**
  * Thu phu tu no chua duoc may nguoi. Khong co dong nay thi vua mo game da thay 1/0 - mot dan

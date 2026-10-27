@@ -81,7 +81,12 @@ const PATCH_SPEC: Record<ResourceKind, { label: string; radius: number; spots: n
   food: { label: 'Ruộng', radius: 5.2, spots: 5, base: 1 },
   stone: { label: 'Mỏ đá', radius: 4.8, spots: 5, base: 0.9 },
   gold: { label: 'Bãi vàng', radius: 4.4, spots: 4, base: 0.5 },
-  relics: { label: 'Rừng pha lê', radius: 4.8, spots: 4, base: 0.3 },
+  // Pha lê sản lượng thấp nhưng mỗi mảnh đáng bảy lần một khúc gỗ. Số cũ là 0,3 và đo ra
+  // thì đó là một cái bẫy: rừng pha lê cách nhà 122 đơn vị có hệ số giàu 0,78 — THẤP HƠN
+  // rừng gỗ ngay cạnh nhà (1,40) — nên ai đi xa lấy pha lê đều kiếm ít hơn người ở nhà.
+  // Cả bốn giờ chơi không một mảnh nào vào kho. 0,55 đặt nó cao hơn hàng gần chừng 1,3 lần
+  // sau khi trừ quãng đi: đủ để đi là đáng, chưa đủ để thành lựa chọn duy nhất.
+  relics: { label: 'Rừng pha lê', radius: 4.8, spots: 4, base: 0.55 },
 };
 
 export function patchLabel(kind: ResourceKind): string {
@@ -100,7 +105,9 @@ const BIOME_MIX: Record<BiomeId, [ResourceKind, number][]> = {
   meadow: [['wood', 0.45], ['food', 0.85], ['stone', 1]],
   crags: [['stone', 0.5], ['gold', 0.75], ['wood', 1]],
   desert: [['gold', 0.45], ['stone', 0.7], ['food', 1]],
-  highlands: [['relics', 0.4], ['wood', 0.7], ['stone', 1]],
+  // Cao nguyên là nơi DUY NHẤT có pha lê, nên phần của nó phải đủ lớn: với 0,4 thì cả vùng
+  // nạp chỉ có 5 rừng pha lê so với 63 rừng gỗ, và cái gần nhất nằm cách nhà 122 đơn vị.
+  highlands: [['relics', 0.6], ['wood', 0.8], ['stone', 1]],
 };
 
 function kindFor(biome: BiomeId, roll: number): ResourceKind {

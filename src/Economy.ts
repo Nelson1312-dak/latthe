@@ -11,7 +11,7 @@ import {
   AFK_CAP_SECONDS, AFK_EFFICIENCY, AFK_MIN_SECONDS, AUTOSAVE_INTERVAL_MS, BASE_CAPACITY,
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
-  RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
+  EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
@@ -187,6 +187,8 @@ export class Economy {
    * game tự dưng dừng.
    */
   private readonly reserve: Inventory = emptyInv();
+  /** Món đắt nhất đang bày bán đòi bao nhiêu mỗi loại. 0 nghĩa là chẳng gì cần tới nó. */
+  private readonly maxCost: Inventory = emptyInv();
 
   private recomputeReserve(): void {
     const gia: Cost[] = [this.hireCost(), this.trainSpeedCost(), this.trainCapacityCost()];
@@ -199,8 +201,26 @@ export class Economy {
     for (const k of RESOURCE_KINDS) {
       let max = 0;
       for (const c of gia) max = Math.max(max, c[k] ?? 0);
-      this.reserve[k] = Math.max(SURPLUS_RESERVE, max * RESERVE_HEADROOM);
+      this.maxCost[k] = max;
+      // Thứ không công trình nào cần thì giữ rất ít: nó sinh ra để chảy thành vàng.
+      this.reserve[k] = max > 0
+        ? Math.max(SURPLUS_RESERVE, max * RESERVE_HEADROOM)
+        : EXPORT_KEEP;
     }
+  }
+
+  /** Mức phải giữ lại của một loại, để thủ phủ biết bán từ đâu trở lên. */
+  reserveOf(kind: ResourceKind): number {
+    return this.reserve[kind];
+  }
+
+  /**
+   * Món đắt nhất người chơi đang với tới đòi bao nhiêu loại này. Trả 0 khi CHẲNG CÔNG TRÌNH
+   * NÀO cần tới nó — như pha lê, thứ chỉ để bán. Dân dùng số này để biết lúc nào mình đang
+   * kẹt thật, khác hẳn với "kho còn vơi".
+   */
+  costPressure(kind: ResourceKind): number {
+    return this.maxCost[kind];
   }
 
   recompute(): void {
