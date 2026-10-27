@@ -225,6 +225,9 @@ html, body {
 .insp-title { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; flex: 1; }
 .insp-title strong { font-size: 18px; font-weight: 700; }
 .insp-title small { font-size: 12.5px; color: var(--ink-soft); }
+/* Dong trang thai cua nguoi dan doi lien tuc, nen cho no mau dam hon mot chut de mat bat duoc
+   la cho nay dang song. */
+.insp-title small.live { color: var(--accent); font-weight: 600; }
 
 .insp-close {
   width: 30px; height: 30px; flex: none;
@@ -259,6 +262,7 @@ html, body {
   align-self: stretch;
 }
 .insp-choice .insp-go { align-self: center; padding: 9px 16px; margin-left: auto; }
+.insp-choice .insp-go:first-child { margin-left: 0; }
 .insp-go:active { transform: translateY(1px); }
 /* Đủ vật liệu thì nút thở nhẹ; thiếu thì nó đổi thành lời mời gom hàng, không phải nút chết. */
 .insp-go.pulse { animation: breathe 1.8s ease-in-out infinite; }

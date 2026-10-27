@@ -14,7 +14,7 @@ import { CHUNK, biomeAt, chunkOf } from './world';
 import { rewardText } from './milestones';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
-import type { BiomeId, BuildingType, Cost, OfflineReport, ResourceKind } from './types';
+import type { BiomeId, BuildingType, Cost, OfflineReport, ResourceKind, Unit } from './types';
 import { RESOURCE_KINDS } from './types';
 
 const STAT_MS = 200;
@@ -57,6 +57,7 @@ export class UIManager {
   private readonly economy: Economy;
   private readonly game: Game;
   private selected: string | null = null;
+  private selectedUnit: string | null = null;
   private timers: number[] = [];
   private toastTimer = 0;
   manualPaused = false;
@@ -78,6 +79,7 @@ export class UIManager {
     this.game = game;
 
     game.onSelect = (id) => { this.selected = id; this.renderInspector(); };
+    game.onSelectUnit = (id) => { this.selectedUnit = id; this.renderInspector(); };
     game.onMilestone = (label) => {
       const { next } = this.economy.milestoneInfo();
       this.toast(`🏅 ${label} · mốc sau ở ${Math.round(next.at)}`);
@@ -161,6 +163,10 @@ export class UIManager {
     this.el.reach.title = `Đã đạt ${reached} mốc.\nMốc kế tiếp: ${next.label} ở ${next.at}`
       + ` (còn ${thieu}) — ${rewardText(next)}`;
     this.el.reach.classList.toggle('close', thieu <= 25);
+
+    // Nguoi dan di chuyen va doi viec lien tuc, nen the cua ho phai song theo. Ghep vao
+    // nhip lam moi san co thay vi dung mot bo dem rieng.
+    if (this.selectedUnit) this.renderInspector();
 
     this.updateCrewPill();
   }
@@ -255,8 +261,119 @@ export class UIManager {
    * gom đúng thứ còn thiếu. Nút xám chỉ nói "không được", còn thế này thì nó nói "chưa được,
    * và đây là cách để được".
    */
+  /** Ai dang lam gi, bang mot cau. Day la toan bo ly do cua tinh nang nay. */
+  private statusOf(u: Unit): string {
+    const kindLabel = u.carryingKind ? RESOURCES[u.carryingKind].label.toLowerCase() : '';
+    if (u.kind === 'cart') {
+      return `Đang chở ${fmt(u.carrying)} ${kindLabel} về thủ phủ`;
+    }
+    switch (u.state) {
+      case 'idle':
+        return 'Đang chờ việc';
+      case 'moving': {
+        if (u.targetId === 'scout') return 'Đang đi thám hiểm vùng chưa vén';
+        const n = u.targetId ? this.game.map.nodeById(u.targetId) : null;
+        return n ? `Đang tới mỏ ${RESOURCES[n.kind].label.toLowerCase()}` : 'Đang trên đường';
+      }
+      case 'gathering': {
+        const n = u.targetId ? this.game.map.nodeById(u.targetId) : null;
+        const con = Math.max(0, u.gatherTimer).toFixed(1);
+        return `Đang khai thác ${n ? RESOURCES[n.kind].label.toLowerCase() : ''} · còn ${con}s`;
+      }
+      case 'delivering': {
+        const b = this.economy.state.buildings.find((x) => x.id === u.targetId);
+        const noi = !b ? 'kho' : b.type === 'townhall' ? 'thủ phủ' : 'trạm trung chuyển';
+        return `Đang chở ${fmt(u.carrying)} ${kindLabel} về ${noi}`;
+      }
+    }
+  }
+
+  private roleOf(u: Unit): 'cart' | 'miner' | 'carrier' | 'forester' | 'idle' {
+    if (u.kind === 'cart') return 'cart';
+    if (u.targetId && this.economy.state.buildings.some((b) => b.id === u.targetId)) return 'carrier';
+    const kind = u.carryingKind
+      ?? (u.targetId ? this.game.map.nodeById(u.targetId)?.kind : undefined);
+    if (!kind) return 'idle';
+    return kind === 'wood' || kind === 'food' ? 'forester' : 'miner';
+  }
+
+  private renderUnitCard(u: Unit): void {
+    const box = this.el.inspector;
+    box.hidden = false;
+    box.innerHTML = '';
+
+    // Vai suy tu viec dang lam, khong luu thanh mot truong rieng: mot truong nhu the phai
+    // duoc cap nhat o moi cho doi viec, va chi can quen mot cho la the hien sai nghe.
+    const vai = this.roleOf(u);
+    const icon = { cart: '🛻', miner: '⛏️', carrier: '📦', forester: '🪓', idle: '🧍' }[vai];
+    const name = { cart: 'Xe thồ', miner: 'Thợ mỏ', carrier: 'Thợ chở hàng',
+      forester: 'Thợ rừng', idle: 'Dân làng' }[vai];
+
+    const head = el('div', 'insp-head');
+    head.append(el('span', 'insp-ico', icon));
+    const t = el('div', 'insp-title');
+    t.append(el('strong', undefined, name), el('small', 'live', this.statusOf(u)));
+    head.append(t);
+    const close = el('button', 'insp-close', '×') as HTMLButtonElement;
+    close.title = 'Đóng';
+    close.addEventListener('click', () => {
+      this.selectedUnit = null;
+      this.game.select(null);
+      this.renderInspector();
+    });
+    head.append(close);
+
+    const body = el('div', 'insp-body');
+    const row = el('div', 'insp-cost');
+    const bit = (ico: string, text: string) => {
+      const b = el('span', 'bit');
+      b.append(el('span', 'ico', ico), el('span', undefined, text));
+      return b;
+    };
+    if (u.carrying > 0 && u.carryingKind) {
+      row.append(bit(RESOURCES[u.carryingKind].icon, `${fmt(u.carrying)}/${fmt(u.capacity)}`));
+    } else {
+      row.append(bit('🧺', 'tay không'));
+    }
+    row.append(bit('👟', u.speed.toFixed(1)));
+    row.append(bit('🎒', String(Math.floor(u.capacity))));
+    const xa = Math.round(Math.hypot(u.position[0], u.position[2]));
+    row.append(bit('🧭', `cách thủ phủ ${xa}`));
+    body.append(row);
+
+    // Bam theo nguoi nay, va ghim cho ho dang dao — hai viec nguoi choi muon lam ngay sau
+    // khi nhin thay ho dang o dau.
+    const acts = el('div', 'insp-choice');
+    const follow = el('button', 'insp-go') as HTMLButtonElement;
+    follow.textContent = 'ĐƯA CAMERA TỚI';
+    follow.addEventListener('click', () => this.game.panTo(u.position[0], u.position[2]));
+    acts.append(follow);
+
+    const node = u.targetId ? this.game.map.nodeById(u.targetId) : null;
+    if (node) {
+      const pinned = this.economy.state.focusNodeId === node.id;
+      const pin = el('button', 'insp-go' + (pinned ? '' : ' want')) as HTMLButtonElement;
+      pin.textContent = pinned ? '★ BỎ GHIM MỎ' : '☆ GHIM MỎ NÀY';
+      pin.addEventListener('click', () => {
+        this.economy.state.focusNodeId = pinned ? null : node.id;
+        this.economy.save();
+        this.renderInspector();
+        this.renderDock();
+      });
+      acts.append(pin);
+    }
+    body.append(acts);
+    box.append(head, body);
+  }
+
   private renderInspector(): void {
     const box = this.el.inspector;
+
+    if (this.selectedUnit) {
+      const u = this.economy.state.units.find((x) => x.id === this.selectedUnit);
+      if (u) { this.renderUnitCard(u); return; }
+      this.selectedUnit = null;      // xe giao xong la bien mat
+    }
     const plot = this.selected ? this.game.plotById(this.selected) : null;
     if (!plot) {
       box.hidden = true;

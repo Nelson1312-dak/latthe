@@ -80,6 +80,7 @@ export class Game {
   onReveal: ((chunkId: string) => void) | null = null;
   onFocusNode: ((nodeId: string | null) => void) | null = null;
   onMilestone: ((label: string) => void) | null = null;
+  onSelectUnit: ((unitId: string | null) => void) | null = null;
 
   private readonly ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private readonly hitPoint = new THREE.Vector3();
@@ -94,7 +95,10 @@ export class Game {
    */
   private selectRing!: THREE.Mesh;
   private hoverRing!: THREE.Mesh;
+  /** Vòng nhỏ bám theo người dân đang chọn. Phải bám từng khung vì họ di chuyển. */
+  private unitRing!: THREE.Mesh;
   private hoveredId: string | null = null;
+  private selectedUnitId: string | null = null;
 
   constructor(canvas: HTMLCanvasElement, economy: Economy) {
     this.economy = economy;
@@ -183,6 +187,7 @@ export class Game {
     // lan thu dau.
     this.selectRing = ring(0xffc766, 0.95, 2.7);
     this.hoverRing = ring(0xffffff, 0.55, 2.55);
+    this.unitRing = ring(0x7fd8ff, 0.95, 0.72);
   }
 
   private updateMarkers(): void {
@@ -326,34 +331,98 @@ export class Game {
     // Đã kéo thì đừng coi là bấm chọn — ngưỡng nhỏ để bấm nhanh vẫn ăn.
     if (this.dragged > 6) return;
 
-    const plotId = this.pickPlot(e);
-    if (plotId) {
-      this.selectedId = plotId;
-      this.focusOnPlot(plotId);
+    // Trúng thẳng hình khối của một nền đất thì nền đất thắng, không bàn thêm.
+    const hit = this.pickMesh(e);
+    if (hit) {
+      this.chooseUnit(null);
+      this.selectedId = hit.userData.plotId as string;
+      this.focusOnPlot(this.selectedId);
       this.updateMarkers();
       this.onSelect?.(this.selectedId);
       return;
     }
+    if (!this.groundPoint(e)) { this.clearSelection(); return; }
 
-    // Không trúng nền đất nào: thử xem có bấm vào một cụm tài nguyên không.
-    //
-    // Bắt tia vào MẶT ĐẤT rồi tìm mỏ gần điểm đó, thay vì dựng 67 khối vô hình chỉ để bắt
-    // tia. Cây cối và đá đều nằm trong InstancedMesh, mà bắt tia vào từng thực thể của
-    // InstancedMesh thì vừa chậm vừa trả về chỉ số chứ không phải mỏ.
-    const node = this.nodeUnder(e);
-    if (node) {
+    /*
+     * Ba thứ cùng nằm trên mặt đất và có thể chồng lên nhau: người dân, nền đất, mỏ. So
+     * khoảng cách thô thì người dân luôn thua, vì họ bé và hiếm khi đứng đúng dưới con trỏ.
+     * Nên so TỈ LỆ trên bán kính riêng của từng loại — ai "sát đích của mình" hơn thì thắng.
+     */
+    const px = this.hitPoint.x;
+    const pz = this.hitPoint.z;
+    let bestKind: 'unit' | 'plot' | 'node' | null = null;
+    let bestId: string | null = null;
+    let bestScore = 1;
+
+    const consider = (kind: 'unit' | 'plot' | 'node', id: string, dist: number, radius: number) => {
+      const score = dist / radius;
+      if (score < bestScore) { bestScore = score; bestKind = kind; bestId = id; }
+    };
+
+    for (const u of this.economy.state.units) {
+      consider('unit', u.id, Math.hypot(u.position[0] - px, u.position[2] - pz), 1.7);
+    }
+    for (const plot of this.map.plots) {
+      consider('plot', plot.id, Math.hypot(plot.position[0] - px, plot.position[2] - pz), 2.6);
+    }
+    for (const n of this.map.nodes) {
+      if (!this.fog.isRevealed(n.position[0], n.position[2])) continue;
+      consider('node', n.id, Math.hypot(n.position[0] - px, n.position[2] - pz), 2.4);
+    }
+
+    if (bestKind === 'unit' && bestId) {
+      this.selectedId = null;
+      this.updateMarkers();
+      this.onSelect?.(null);
+      this.chooseUnit(bestId);
+      return;
+    }
+    if (bestKind === 'plot' && bestId) {
+      this.chooseUnit(null);
+      this.selectedId = bestId;
+      this.focusOnPlot(bestId);
+      this.updateMarkers();
+      this.onSelect?.(bestId);
+      return;
+    }
+    if (bestKind === 'node' && bestId) {
+      this.chooseUnit(null);
       const cur = this.economy.state.focusNodeId;
-      this.economy.state.focusNodeId = cur === node.id ? null : node.id;
+      this.economy.state.focusNodeId = cur === bestId ? null : bestId;
       this.economy.save();
       this.onFocusNode?.(this.economy.state.focusNodeId);
       return;
     }
+    this.clearSelection();
+  };
+
+  private clearSelection(): void {
+    this.chooseUnit(null);
     this.selectedId = null;
     this.updateMarkers();
-    // Bỏ chọn thì lùi lại cho thấy toàn cảnh, nhưng giữ nguyên chỗ đang đứng.
     this.wantedZoom = Math.max(this.wantedZoom, REST_ZOOM);
     this.onSelect?.(null);
-  };
+  }
+
+  private chooseUnit(id: string | null): void {
+    if (this.selectedUnitId === id) return;
+    this.selectedUnitId = id;
+    this.unitRing.visible = id !== null;
+    this.onSelectUnit?.(id);
+  }
+
+  get selectedUnit(): string | null {
+    return this.selectedUnitId;
+  }
+
+  /** Điểm trên mặt đất dưới con trỏ. Trả false khi tia không cắt mặt phẳng. */
+  private groundPoint(e: PointerEvent): boolean {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    return this.raycaster.ray.intersectPlane(this.ground, this.hitPoint) !== null;
+  }
 
   /**
    * Đưa ô vừa chọn vào giữa màn và phóng gần lại.
@@ -369,23 +438,6 @@ export class Game {
     if (this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
   }
 
-  /** Mỏ nằm dưới con trỏ, trong bán kính chấp nhận được. */
-  private nodeUnder(e: PointerEvent): { id: string } | null {
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    this.raycaster.setFromCamera(this.pointer, this.camera);
-    if (!this.raycaster.ray.intersectPlane(this.ground, this.hitPoint)) return null;
-    let best = null;
-    // Hep hon ban kinh bat nen dat, nen khi hai thu ke nhau thi NEN DAT luon thang.
-    let bestDist = 2.4;
-    for (const n of this.map.nodes) {
-      if (!this.fog.isRevealed(n.position[0], n.position[2])) continue;
-      const d = Math.hypot(n.position[0] - this.hitPoint.x, n.position[2] - this.hitPoint.z);
-      if (d < bestDist) { bestDist = d; best = n; }
-    }
-    return best;
-  }
 
   /**
    * Nền đất dưới con trỏ.
@@ -396,6 +448,16 @@ export class Game {
    * chơi tưởng mình chọn nhà nhưng lại vừa ghim một mỏ đá. Lỗi này quan sát được ngay lần
    * bấm thật đầu tiên.
    */
+  /** Chi bat tia vao hinh khoi. Trung thang thi khong can doan gi them. */
+  private pickMesh(e: PointerEvent): THREE.Object3D | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const hits = this.raycaster.intersectObjects(this.pickable, false);
+    return hits.length ? hits[0].object : null;
+  }
+
   private pickPlot(e: PointerEvent): string | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -509,6 +571,13 @@ export class Game {
         1 / (1 - this.economy.bonus.survey));
       this.economy.tick(sim);
       this.map.animate(sim);
+      // Vòng của người dân phải bám từng khung: họ đi liên tục, và cái vòng đứng yên thì
+      // tệ hơn là không có vòng nào.
+      if (this.selectedUnitId) {
+        const u = this.economy.state.units.find((x) => x.id === this.selectedUnitId);
+        if (!u) this.chooseUnit(null);           // xe giao xong là biến mất
+        else this.unitRing.position.set(u.position[0], 0.3, u.position[2]);
+      }
       // Vòng chọn thở nhẹ để mắt bắt được ngay giữa một bản đồ dày đặc.
       if (this.selectRing.visible) {
         const k = 1 + Math.sin(this.elapsed * 3.4) * 0.05;
