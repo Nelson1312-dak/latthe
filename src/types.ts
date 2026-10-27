@@ -134,6 +134,13 @@ export interface GameState {
   focusNodeId: string | null;
   /** Hệ số tốc độ game: 1 hoặc 2. */
   speedMult: number;
+  /**
+   * Quãng xa nhất (tính từ thủ phủ) mà người chơi đã vén được.
+   *
+   * Đây là TẤT CẢ những gì cần lưu cho hệ mốc thành tựu: danh sách mốc đã đạt và mọi phần
+   * thưởng đều suy ra được từ con số này. Hai bản ghi về cùng một sự thật sớm muộn cũng lệch.
+   */
+  maxReach: number;
 }
 
 /**

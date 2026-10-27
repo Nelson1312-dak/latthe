@@ -155,7 +155,7 @@ export class FogOfWar {
     return best;
   }
 
-  update(dt: number, units: Unit[], center: THREE.Vector3): void {
+  update(dt: number, units: Unit[], center: THREE.Vector3, surveySpeed = 1): void {
     this.restream(center);
     let dirty = false;
 
@@ -174,7 +174,7 @@ export class FogOfWar {
           if (slot.survey > 0) { slot.survey = Math.max(0, slot.survey - dt * 0.5); dirty = true; }
           continue;
         }
-        slot.survey += dt;
+        slot.survey += dt * surveySpeed;
         if (slot.survey < SURVEY_SECONDS) {
           const k = slot.survey / SURVEY_SECONDS;
           for (let i = 0; i < PUFFS; i += 1) {

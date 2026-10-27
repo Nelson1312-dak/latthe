@@ -11,6 +11,7 @@
  */
 import { BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES } from './config';
 import { CHUNK, biomeAt, chunkOf } from './world';
+import { rewardText } from './milestones';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
 import type { BiomeId, BuildingType, Cost, OfflineReport, ResourceKind } from './types';
@@ -62,6 +63,7 @@ export class UIManager {
 
   private readonly el = {
     resbar: $('resbar'), level: $('level'),
+    reach: $('reach'), reachVal: $('reach-val'),
     mute: $<HTMLButtonElement>('mute'), pause: $<HTMLButtonElement>('pause'),
     crewpill: $('crewpill'), tiles: $('tiles'), speed: $<HTMLButtonElement>('speed'),
     inspector: $('inspector'), dock: $('dock'),
@@ -76,6 +78,13 @@ export class UIManager {
     this.game = game;
 
     game.onSelect = (id) => { this.selected = id; this.renderInspector(); };
+    game.onMilestone = (label) => {
+      const { next } = this.economy.milestoneInfo();
+      this.toast(`🏅 ${label} · mốc sau ở ${Math.round(next.at)}`);
+      this.el.reach.classList.add('pop');
+      window.setTimeout(() => this.el.reach.classList.remove('pop'), 900);
+      this.renderDock();
+    };
     game.onFocusNode = (nodeId) => {
       const n = nodeId ? game.map.nodeById(nodeId) : null;
       this.toast(n ? `⭐ Ưu tiên ${RESOURCES[n.kind].label}` : 'Đã bỏ ghim mỏ');
@@ -143,6 +152,16 @@ export class UIManager {
         + ` — thu ${(Number.isFinite(r) ? r : 0).toFixed(2)} mỗi giây${full ? ' · KHO ĐẦY' : ''}`;
     }
     this.el.level.textContent = String(s.level);
+
+    // Quang duong xa nhat va moc ke tiep. Day la thu bien viec di xa tu mot con so lon hon
+    // thanh mot cai dich ngam.
+    const { reached, next } = this.economy.milestoneInfo();
+    this.el.reachVal.textContent = String(Math.floor(s.maxReach));
+    const thieu = Math.max(0, Math.round(next.at - s.maxReach));
+    this.el.reach.title = `Đã đạt ${reached} mốc.\nMốc kế tiếp: ${next.label} ở ${next.at}`
+      + ` (còn ${thieu}) — ${rewardText(next)}`;
+    this.el.reach.classList.toggle('close', thieu <= 25);
+
     this.updateCrewPill();
   }
 

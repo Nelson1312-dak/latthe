@@ -87,6 +87,17 @@ html, body {
 .stat small { color: var(--ink-soft); font-size: 12px; }
 .stat strong { font-size: 17px; font-weight: 650; }
 
+/* Quang duong xa nhat. Sang len khi sap toi moc, de nguoi choi biet co cai gi dang gan. */
+.stat.reach strong { color: var(--accent); }
+.stat.reach.close { background: #fdf3e2; border-color: var(--amber); }
+.stat.reach.close strong { color: var(--amber); }
+.stat.reach.pop { animation: pop 0.9s ease-out; }
+@keyframes pop {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.14); box-shadow: 0 0 0 0 rgba(224, 140, 56, 0.5); }
+  100% { transform: scale(1); box-shadow: 0 0 0 16px rgba(224, 140, 56, 0); }
+}
+
 .icon {
   height: 38px; min-width: 38px;
   border-radius: 11px; border: 1px solid var(--line);

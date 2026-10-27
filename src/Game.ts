@@ -17,6 +17,7 @@ import { FogOfWar, chime } from './FogOfWar';
 import { MapManager } from './MapManager';
 import type { Building, Plot } from './types';
 import { WorkerManager } from './WorkerManager';
+import { CHUNK } from './world';
 
 const MIN_ZOOM = 10;
 /**
@@ -78,6 +79,7 @@ export class Game {
   onSelect: ((plotId: string | null) => void) | null = null;
   onReveal: ((chunkId: string) => void) | null = null;
   onFocusNode: ((nodeId: string | null) => void) | null = null;
+  onMilestone: ((label: string) => void) | null = null;
 
   private readonly ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private readonly hitPoint = new THREE.Vector3();
@@ -126,8 +128,14 @@ export class Game {
     this.fog = new FogOfWar(economy.state.revealed);
     this.fog.onReveal = (key) => {
       economy.state.revealed = this.fog.revealedKeys();
+      // Quang duong tinh toi TAM o vua ven. Lay goc xa nhat se thuong hoi hao phong, lay
+      // canh gan nhat thi nguoi choi phai di qua han o moi duoc tinh - tam la o giua.
+      const [cx, cz] = key.split(',').map(Number);
+      const dist = Math.round(Math.hypot(cx * CHUNK + CHUNK / 2, cz * CHUNK + CHUNK / 2));
+      const hit = economy.noteReach(dist);
       chime(economy.state.muted);
       this.onReveal?.(key);
+      if (hit) this.onMilestone?.(hit.label);
       economy.save();
     };
     this.workers = new WorkerManager(economy, this.map, this.fog);
@@ -497,7 +505,8 @@ export class Game {
       const sim = dt * (this.economy.state.speedMult === 2 ? 2 : 1);
       this.elapsed += sim;
       this.workers.update(sim);
-      this.fog.update(sim, this.economy.state.units, this.target);
+      this.fog.update(sim, this.economy.state.units, this.target,
+        1 / (1 - this.economy.bonus.survey));
       this.economy.tick(sim);
       this.map.animate(sim);
       // Vòng chọn thở nhẹ để mắt bắt được ngay giữa một bản đồ dày đặc.

@@ -24,7 +24,8 @@ const ui = new UIManager(economy, game);
  */
 const stepWorld = (dt: number): void => {
   game.workers.update(dt);
-  game.fog.update(dt, economy.state.units, game.target);
+  game.fog.update(dt, economy.state.units, game.target,
+    1 / (1 - economy.bonus.survey));
 };
 
 const first = economy.collectOffline(Date.now(), stepWorld);

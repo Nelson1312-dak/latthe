@@ -133,7 +133,8 @@ export class WorkerManager {
 
   /** Suc cho mot chuyen xe. Tran gom tai tram rong gap boi so nay de khong nghen. */
   private cartLoad(o: Building): number {
-    return this.economy.capacity() * CART_CAPACITY_MULT * o.level;
+    return Math.floor(
+      this.economy.capacity() * CART_CAPACITY_MULT * o.level * (1 + this.economy.bonus.cart));
   }
 
   private spawnCart(outpost: Building): void {

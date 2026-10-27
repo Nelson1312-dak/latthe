@@ -18,6 +18,7 @@ import type {
   Building, BuildingType, Cost, GameState, Inventory, OfflineReport, Plot, ResourceKind, Unit,
 } from './types';
 import { RESOURCE_KINDS } from './types';
+import { bonusesFor, milestoneAt, nextMilestone, reachedCount } from './milestones';
 
 /**
  * Hang so lam muot con so "moi giay" tren HUD.
@@ -54,6 +55,7 @@ function freshState(): GameState {
     demand: null,
     focusNodeId: null,
     speedMult: 1,
+    maxReach: 0,
   };
 }
 
@@ -99,6 +101,7 @@ export class Economy {
           state.speedMult = parsed.speedMult === 2 ? 2 : 1;
           state.demand = parsed.demand ?? null;
           state.focusNodeId = parsed.focusNodeId ?? null;
+          state.maxReach = Number(parsed.maxReach) || 0;
           state.storageLimit = Number(parsed.storageLimit) || base.storageLimit;
           state.totalGold = Number(parsed.totalGold) || 0;
         }
@@ -144,8 +147,37 @@ export class Economy {
 
   // ------------------------------------------------------------------- kho
 
+  /** Phần thưởng cộng dồn từ các mốc đã đạt. Hàm thuần của maxReach. */
+  get bonus() {
+    return bonusesFor(this.state.maxReach);
+  }
+
+  /** Số mốc đã đạt và mốc kế tiếp — cho HUD. */
+  milestoneInfo() {
+    return { reached: reachedCount(this.state.maxReach), next: nextMilestone(this.state.maxReach) };
+  }
+
+  /**
+   * Ghi nhận một điểm vừa được vén. Trả về mốc vừa vượt qua, nếu có.
+   *
+   * Chỉ tiến, không lùi: mất một vùng khỏi bộ nhớ (huỷ khối) không được phép lấy lại phần
+   * thưởng đã trao.
+   */
+  noteReach(distance: number): { label: string } | null {
+    if (distance <= this.state.maxReach) return null;
+    const before = reachedCount(this.state.maxReach);
+    this.state.maxReach = distance;
+    const after = reachedCount(distance);
+    if (after <= before) return null;
+    // Moc VUA QUA, khong phai moc ke tiep. Lay nextMilestone() o day la lech mot bac: vuot
+    // "Ria lang" ma bao thanh "Ben kia doi" - quan sat duoc ngay lan chay thu dau tien.
+    // Nhay mot lan qua nhieu moc thi bao cai cao nhat.
+    return { label: milestoneAt(after - 1).label };
+  }
+
   recompute(): void {
-    this.state.storageLimit = BASE_STORAGE + this.sumLevels('granary') * STORAGE_PER_GRANARY;
+    this.state.storageLimit = Math.floor(
+      (BASE_STORAGE + this.sumLevels('granary') * STORAGE_PER_GRANARY) * (1 + this.bonus.storage));
     let total = 0;
     for (const b of this.state.buildings) total += b.level;
     this.state.level = 1 + Math.floor(total / 3);
@@ -201,11 +233,13 @@ export class Economy {
   }
 
   speed(): number {
-    return BASE_SPEED * (1 + (this.state.speedLevel - 1) * SPEED_PER_LEVEL);
+    return BASE_SPEED * (1 + (this.state.speedLevel - 1) * SPEED_PER_LEVEL) * (1 + this.bonus.speed);
   }
 
   capacity(): number {
-    return Math.floor(BASE_CAPACITY * (1 + (this.state.capacityLevel - 1) * CAPACITY_PER_LEVEL));
+    return Math.floor(
+      BASE_CAPACITY * (1 + (this.state.capacityLevel - 1) * CAPACITY_PER_LEVEL)
+      * (1 + this.bonus.capacity));
   }
 
   outposts(): Building[] {
