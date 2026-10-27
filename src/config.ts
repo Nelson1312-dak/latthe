@@ -60,6 +60,15 @@ export const HOUSING_PER_HOUSE = 2;
  * thực — thủ phủ vẫn bán sạch xuống 150, và người chơi vĩnh viễn không thuê nổi ai nữa.
  */
 export const SURPLUS_RESERVE = 150;
+/*
+ * Số món thủ phủ bán được mỗi giây, mỗi cấp.
+ *
+ * 1,4 là quá chậm: đo bốn giờ thì chợ chạy hết công suất 87% thời gian mà vẫn để lại 7.027
+ * khúc gỗ không tiêu được. Mười một người dân mang về nhiều hơn mức một cái chợ cấp ba nuốt
+ * nổi, nên phần thừa chỉ nằm đó — đúng cảm giác "làm mãi mà không ra tiền". 2,2 cho cấp một
+ * một cái sàn dùng được, và vì nó nhân theo cấp nên nâng thủ phủ vẫn là nước đi đáng giá
+ * nhất giữa ván.
+ */
 /** Giữ dư hơn món đắt nhất chừng này lần, để còn mua được mà không phải canh từng giây. */
 export const RESERVE_HEADROOM = 1.35;
 /**
@@ -71,7 +80,7 @@ export const RESERVE_HEADROOM = 1.35;
  * ấy coi như chưa trả công. Giữ một ít cho người chơi còn nhìn thấy mình có, rồi bán hết.
  */
 export const EXPORT_KEEP = 25;
-export const SURPLUS_RATE_PER_LEVEL = 1.4;
+export const SURPLUS_RATE_PER_LEVEL = 2.2;
 /**
  * Thu phu tu no chua duoc may nguoi. Khong co dong nay thi vua mo game da thay 1/0 - mot dan
  * dang lam viec trong khi cho o bang khong - nhin nhu loi chu khong nhu luat choi.
@@ -159,9 +168,17 @@ export const BIOMES: Record<BiomeId, Biome> = {
 // ------------------------------------------------------------------ công trình
 
 export const BUILDINGS = {
+  /*
+   * Mô tả PHẢI nói ra việc thủ phủ làm, vì nó là cái chợ — nơi duy nhất hàng hoá biến thành
+   * vàng, và vàng thì mua mọi thứ còn lại. Dòng cũ chỉ ghi "Trung tâm quần đảo · cấp 3", tức
+   * không một chữ nào về tác dụng, trong khi nhà ở và kho lẫm đều nói rõ. Hậu quả đo được:
+   * sau bốn giờ thủ phủ vẫn ở cấp 3, chợ chạy hết công suất 87% thời gian, và 7.027 khúc gỗ
+   * nằm chết trong kho. Nâng cấp quan trọng nhất của game lại là cái duy nhất không ai hiểu.
+   */
   townhall: {
     label: 'Thủ phủ', icon: '🏛️', maxLevel: 10,
-    describe: (l: number) => `Trung tâm quần đảo · cấp ${l}`,
+    describe: (l: number) => `Chợ bán ${(SURPLUS_RATE_PER_LEVEL * l).toFixed(1)} món mỗi giây`
+      + ` · chỗ ở cho ${l * HOUSING_FROM_TOWNHALL} dân`,
   },
   house: {
     label: 'Nhà ở', icon: '🏠', maxLevel: 10,

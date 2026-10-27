@@ -17,6 +17,7 @@
  * con số là SÀN chứ không phải kỳ vọng — và quan trọng hơn cả là so sánh trước/sau.
  */
 import * as THREE from 'three';
+
 import { CHUNK } from '../src/world';
 
 (globalThis as { localStorage?: unknown }).localStorage = {
@@ -47,6 +48,37 @@ fog.onReveal = (key) => {
   const [cx, cz] = key.split(",").map(Number);
   economy.noteReach(Math.round(Math.hypot(cx * CHUNK + CHUNK / 2, cz * CHUNK + CHUNK / 2)));
 };
+
+/*
+ * Nhòm vào chợ: bọc sellSurplus() để biết mỗi giây thủ phủ bán được gì, và dùng hết bao
+ * nhiêu phần sức bán của nó. Bọc từ ngoài chứ không thêm biến đếm vào Economy — đo đạc
+ * không nên để lại dấu vết trong luật chơi.
+ */
+const daBan: Record<string, number> = {};
+let nhipCo = 0;
+let nhipDay = 0;
+{
+  const tu = economy as unknown as {
+    sellSurplus: (dt: number) => void;
+    state: { inv: Record<string, number> };
+  };
+  const goc = tu.sellSurplus.bind(tu);
+  tu.sellSurplus = (dt: number) => {
+    const truoc = { ...tu.state.inv };
+    goc(dt);
+    let ban = 0;
+    for (const k of RESOURCE_KINDS) {
+      if (k === 'gold') continue;
+      const d = truoc[k] - tu.state.inv[k];
+      if (d > 0) { daBan[k] = (daBan[k] ?? 0) + d; ban += d; }
+    }
+    const tran = economy.marketRate() * dt;
+    if (tran > 0) {
+      nhipCo += 1;
+      if (ban >= tran * 0.98) nhipDay += 1;
+    }
+  };
+}
 
 const XAY: BuildingType[] = ['house', 'granary', 'outpost'];
 const MOC = [300, 600, 1800, 3600, 7200, 14400];
@@ -152,6 +184,18 @@ for (const k of RESOURCE_KINDS) {
     + ` · gần nhất ${hang(gan, 4)}`
     + ` · tốt nhất ở ${hang(Math.hypot(best.center[0], best.center[2]), 4)}`
     + ` (giàu ×${best.richness.toFixed(2)}) → ${bestRate.toFixed(3)}/giây`);
+}
+
+console.log('\n--- chợ của thủ phủ ---');
+const hall = economy.state.buildings.find((b) => b.type === 'townhall');
+console.log(`  thủ phủ cấp ${hall?.level ?? 0} → bán tối đa ${economy.marketRate().toFixed(1)} món/giây`);
+console.log(`  chạy hết công suất ${Math.round((nhipDay / Math.max(1, nhipCo)) * 100)}% thời gian`);
+for (const k of RESOURCE_KINDS) {
+  if (k === 'gold') continue;
+  const b = daBan[k] ?? 0;
+  console.log(`  ${RESOURCES[k].label.padEnd(14)} bán ${hang(b, 7)} món`
+    + ` = ${hang(b * RESOURCES[k].value, 7)} vàng`
+    + ` · còn tồn ${hang(economy.state.inv[k], 6)}`);
 }
 
 console.log('\n--- thế giới ---');

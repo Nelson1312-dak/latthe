@@ -149,6 +149,10 @@ export class UIManager {
         `+${(Number.isFinite(r) ? r : 0).toFixed(1)}/s`;
       const full = this.economy.isFull(kind);
       chip.classList.toggle('full', full);
+      // Ùn: còn chỗ chứa nhưng chợ bán không kịp. Khác hẳn kho đầy, và cách chữa cũng khác
+      // — một bên xây thêm kho lẫm, một bên nâng cấp thủ phủ.
+      chip.classList.toggle('jam', !full && this.economy.marketBusy
+        && s.inv[kind] > this.economy.reserveOf(kind) * 1.5);
       // Thứ đang cần cho công trình được đánh dấu, nên nhìn thanh là biết dân đang chạy vì gì.
       chip.classList.toggle('need', need.has(kind));
       chip.title = `${RESOURCES[kind].label}: ${Math.floor(s.inv[kind])}/${Math.floor(s.storageLimit)}`
@@ -605,6 +609,19 @@ export class UIManager {
       t.append(el('strong', undefined, BUILDINGS[b.type].label),
         el('small', undefined, `Cấp ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
       head.append(t);
+
+      /*
+       * Chợ nghẽn là thứ người chơi KHÔNG nhìn thấy được: kho cứ đầy lên, vàng nhỏ giọt, và
+       * chẳng gì nói cho họ biết nút cần bấm nằm ở đây. Nói thẳng ra, ngay trên cái thẻ có
+       * nút nâng cấp.
+       */
+      if (b.type === 'townhall' && this.economy.marketBusy) {
+        const canh = el('p', 'insp-warn');
+        canh.append(el('span', undefined, '⚠️ '), el('strong', undefined, 'Chợ đang quá tải'),
+          el('span', undefined, ' — hàng về nhanh hơn mức bán được, nên phần thừa'
+            + ' nằm chết trong kho. Nâng cấp thủ phủ để bán nhanh gấp đôi.'));
+        body.append(canh);
+      }
 
       if (b.level >= BUILDINGS[b.type].maxLevel) {
         body.append(el('p', 'insp-note', 'Đã kịch cấp.'));

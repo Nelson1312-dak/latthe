@@ -465,10 +465,25 @@ export class Economy {
    * Thủ phủ bán phần dư ra vàng. Chỉ bán thứ chất quá ngưỡng, nên không bao giờ moi mất số
    * nguyên liệu người chơi đang gom cho một công trình.
    */
+  /** Số món chợ bán được mỗi giây lúc này. 0 khi chưa có thủ phủ. */
+  marketRate(): number {
+    const hall = this.state.buildings.find((b) => b.type === 'townhall');
+    return hall ? SURPLUS_RATE_PER_LEVEL * hall.level : 0;
+  }
+
+  /**
+   * Chợ có đang bán hết công suất không — tức hàng về nhanh hơn mức bán đi.
+   *
+   * Đây là thứ người chơi cần biết mà nhìn màn hình không thấy được: kho cứ đầy lên, vàng
+   * cứ nhỏ giọt, và chẳng có gì nói cho họ biết nút cần bấm là NÂNG CẤP THỦ PHỦ.
+   */
+  marketBusy = false;
+
   private sellSurplus(dt: number): void {
     const hall = this.state.buildings.find((b) => b.type === 'townhall');
     if (!hall) return;
-    let left = SURPLUS_RATE_PER_LEVEL * hall.level * dt;
+    const budget = SURPLUS_RATE_PER_LEVEL * hall.level * dt;
+    let left = budget;
     // Bán thứ đáng tiền trước, và không bao giờ bán chính vàng.
     for (const kind of ['relics', 'stone', 'food', 'wood'] as ResourceKind[]) {
       if (left <= 0) break;
@@ -479,6 +494,7 @@ export class Economy {
       left -= take;
       this.fullKinds.delete(kind);
     }
+    this.marketBusy = budget > 0 && left <= budget * 0.02;
   }
 
   tick(dt: number): void {

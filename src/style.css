@@ -74,6 +74,8 @@ html, body {
 .chip .rate { font-size: 10px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 /* Kho đầy là công sức đang bị ném đi, nên nó phải đập vào mắt chứ không nằm trong tooltip. */
 .chip.full { background: #fbe9e5; }
+.chip.jam { background: #fdf3e2; box-shadow: inset 0 0 0 1.5px var(--amber); }
+.chip.jam .amt { color: var(--amber); }
 .chip.full .amt { color: var(--warn); }
 /* Thứ công trình đang cần: viền hổ phách, khớp với trạng thái trên dock. */
 .chip.need { background: #fdf3e2; box-shadow: inset 0 0 0 1.5px var(--amber); }
@@ -238,6 +240,12 @@ html, body {
 
 .insp-body { display: flex; flex-direction: column; gap: 12px; }
 .insp-note { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.insp-warn {
+  margin: 0; padding: 9px 12px; border-radius: 11px;
+  background: #fdf3e2; border: 1px solid var(--amber);
+  font-size: 12.5px; line-height: 1.4; color: var(--ink);
+}
+.insp-warn strong { color: var(--amber); }
 .insp-cost { display: flex; gap: 12px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
 .insp-cost .bit {
   display: flex; align-items: center; gap: 5px;
