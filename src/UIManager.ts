@@ -542,7 +542,8 @@ export class UIManager {
     body.append(crew);
 
     const acts = el('div', 'insp-choice');
-    const all = el('button', 'insp-go want') as HTMLButtonElement;
+    // Nut chinh cua the bai: ho phach. "BO HET" ben canh la nut phu nen de kieu mo.
+    const all = el('button', 'insp-go') as HTMLButtonElement;
     all.append(ico('crew', 'bico'), el('span', undefined, 'DỒN CẢ LÀNG'));
     all.title = 'Giao hết người cho riêng bãi này, bỏ mọi chỗ đã giao trước đó';
     all.addEventListener('click', () => {

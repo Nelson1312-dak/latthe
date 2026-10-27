@@ -6,6 +6,10 @@
 <title>Quần Đảo Vô Tận</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" href="/favicon.svg" /><text y='13' font-size='13'>🏝️</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" />
 <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -15,10 +19,12 @@
 <header class="bar bar-top">
   <div class="res" id="resbar"></div>
   <div class="spacer"></div>
-  <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
-  <div class="stat reach" id="reach"><small>Xa nhất</small><strong id="reach-val">0</strong></div>
-  <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm"></button>
-  <button class="icon" id="pause" title="Tạm dừng (Esc)" aria-label="Tạm dừng"></button>
+  <div class="group">
+    <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
+    <div class="stat reach" id="reach"><small>Xa nhất</small><strong id="reach-val">0</strong></div>
+    <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm"></button>
+    <button class="icon" id="pause" title="Tạm dừng (Esc)" aria-label="Tạm dừng"></button>
+  </div>
 </header>
 
 <!-- ------------------------------------------------------------------ minimap -->
