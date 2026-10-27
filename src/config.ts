@@ -177,7 +177,8 @@ export const STARTING: Record<ResourceKind, number> =
 const REU_RAT_TOI = 0x47603f;
 const REU_TOI = 0x5f7d5f;
 const REU = 0x83a383;
-const REU_SANG = 0x9cb795;
+const REU_SANG = 0x9ab393;
+const REU_NHAT = 0xa8bfa0;
 
 const DAT_RAT_TOI = 0x6b4a34;
 const DAT_TOI = 0x835b40;
@@ -194,7 +195,7 @@ const TIM_TOI = 0x55497a;
 const TIM = 0x8a7bab;
 const TIM_SANG = 0xc3b8da;
 
-const KEM_TOI = 0xd8c9a8;
+const KEM_TOI = 0xe6dac0;
 const KEM = 0xeee3cc;
 const KEM_SANG = 0xf7f1e4;
 
@@ -218,8 +219,8 @@ export const PALETTE = {
   graniteDark: LAM_TOI,
   iron: DAT,
   sand: DAT_SANG,
-  palm: REU_TOI,
-  cactus: REU_RAT_TOI,
+  palm: REU,
+  cactus: REU_TOI,
   goldOre: VANG,
   moss: TIM_RAT_TOI,
   crystal: TIM,
@@ -228,11 +229,19 @@ export const PALETTE = {
   crystalGlow: TIM_SANG,
 
   wall: KEM_TOI,
-  // Bốn mái, bốn hệ khác nhau: nhìn mái là biết công trình gì, không phải đọc chữ.
-  roofCore: 0x9c5f45,
-  roofHouse: DAT,
-  roofGranary: LAM,
-  roofOutpost: REU_RAT_TOI,
+  /*
+   * MÀU SỐNG NHẤT CỦA CẢ BẢN ĐỒ NẰM Ở ĐÂY, trên bốn cái mái.
+   *
+   * Trước đây mái lấy đúng bậc màu của nền mà nó đứng lên, nên cả làng chìm vào bãi cỏ —
+   * nhìn một khung hình thì thấy một mảng xanh phẳng có vài chấm nâu. Mặt đất là thứ chiếm
+   * chín phần mười màn hình nhưng người chơi không bấm vào nó; công trình thì ngược lại.
+   * Nên nền lùi về gần trung tính, còn màu thì dồn hết lên mái: bốn hệ, mỗi hệ ở bậc đậm
+   * nhất, nên liếc một cái là biết đâu là nhà, đâu là kho, đâu là trạm.
+   */
+  roofCore: 0xc9603f,
+  roofHouse: 0xd08b4e,
+  roofGranary: 0x5d8fa6,
+  roofOutpost: 0x6c8f5a,
   plotDirt: DAT_TOI,
   fence: DAT,
 
@@ -259,8 +268,9 @@ export const RESOURCES: Record<ResourceKind, {
 export const BIOMES: Record<BiomeId, Biome> = {
   meadow: {
     id: 'meadow', label: 'Đồng Cỏ Khởi Đầu',
-    // Nền lấy hai bậc SÁNG, cây lấy ba bậc tối — nên rừng nổi hẳn trên cỏ.
-    ground: [REU, REU_SANG], minimap: '#83a383',
+    // Nền lấy hai bậc SÁNG, cây lấy ba bậc tối — nên rừng nổi hẳn trên cỏ. Và nhạt hơn
+    // chính hệ rêu một chút nữa, để màu còn chỗ cho mái nhà.
+    ground: [REU_SANG, REU_NHAT], minimap: '#9ab393',
     yields: ['wood', 'food'],
   },
   crags: {

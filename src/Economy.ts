@@ -405,6 +405,14 @@ export class Economy {
    * nên hàm nhận thẳng cái nền thay vì đi tra mã. Trên bản đồ vô hạn thì không có bảng nào
    * để mà tra.
    */
+  /**
+   * Nền đất của công trình VỪA được đặt, chưa ai lấy ra xem.
+   *
+   * Game đọc rồi xoá, để biết khối nào đáng cho bật lên. Không lưu vào bản lưu: tải lại
+   * game thì cả làng đã đứng sẵn đó rồi, bật lên lúc ấy là nói dối.
+   */
+  justBuilt: string | null = null;
+
   build(plot: Plot, type: BuildingType): boolean {
     if (plot.core || this.buildingAt(plot.id)) return false;
     if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) return false;
@@ -417,6 +425,7 @@ export class Economy {
       stock: {}, cartTimer: 0,
     });
     this.state.demand = null;
+    this.justBuilt = plot.id;
     this.after();
     return true;
   }

@@ -12,7 +12,12 @@
  */
 import * as THREE from 'three';
 import { matte } from './materials';
+import { roundedBox } from './shapes';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BUILDINGS, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
 import type { Economy } from './Economy';
 import { FogOfWar, chime } from './FogOfWar';
@@ -41,6 +46,8 @@ const FOCUS_ZOOM = 12;
 const REST_ZOOM = 26;
 /** Hệ số trượt: càng lớn càng bám sát, càng nhỏ càng trôi. */
 const GLIDE = 9;
+/** Cú bật của một công trình vừa đặt xong kéo dài bấy nhiêu giây. */
+const POP_SECONDS = 0.42;
 /** Tran so nen trong ve mot luc. Vung nap 11x11 khoi hiem khi qua 300. */
 const EMPTY_CAP = 520;
 
@@ -65,6 +72,8 @@ export class Game {
   private emptyPads!: THREE.InstancedMesh;
   private emptyPosts!: THREE.InstancedMesh;
   private readonly mtx = new THREE.Matrix4();
+  private composer!: EffectComposer;
+  private gtao!: GTAOPass;
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -114,6 +123,8 @@ export class Game {
    * đích rồi thôi. Trộn hai thứ lại là sinh ra giật khi chuột gửi nhiều sự kiện trong một
    * khung — mà chuột thì luôn làm thế.
    */
+  /** Nền đất nào đang bật lên, và đã bật được bao lâu. */
+  private readonly popping = new Map<string, number>();
   private hoverK = 0;
   private selectK = 0;
   private punch = 0;
@@ -129,14 +140,27 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(PALETTE.sky, 1);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
+    this.buildComposer();
 
-    this.scene.add(new THREE.HemisphereLight(0xade8f4, 0x386641, 0.8));
-    this.sun = new THREE.DirectionalLight(0xfff3e0, 2.2);
+    /*
+     * Ánh sáng ngả hẳn về phía TRỜI, không về phía mặt trời.
+     *
+     * Trước đây mặt trời 2,2 còn trời 0,8 — một nguồn chiếu xiên mạnh, cho bóng đổ dài và
+     * tương phản gắt. Đó là ánh sáng của một cảnh ngoài trời thật, không phải của một mô
+     * hình đặt trên bàn. Giờ có ambient occlusion lo phần khối ở các khe, nên mặt trời chỉ
+     * còn việc cho biết hướng; đẩy nó xuống 1,0 và kéo ánh sáng bầu trời lên 1,7 thì vật
+     * thể sáng đều, bóng chỉ còn là một gợi ý, và chiều sâu đến từ chỗ tiếp xúc.
+     *
+     * Đất hắt lên cũng đổi: 0x386641 là xanh lá đậm, nên mặt dưới mọi thứ ám xanh. Lấy màu
+     * kem trung tính thì bóng râm sạch màu, đúng kiểu đất nặn.
+     */
+    this.scene.add(new THREE.HemisphereLight(0xdceef5, 0xbfae95, 1.7));
+    this.sun = new THREE.DirectionalLight(0xfff6e8, 1.0);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const d = 30;
@@ -148,6 +172,8 @@ export class Game {
     this.sun.shadow.camera.far = 160;
     this.sun.shadow.bias = -0.0006;
     this.sun.shadow.normalBias = 0.02;
+    // Bóng nhạt hẳn: nó chỉ còn để nói hướng nắng, còn hình khối thì AO lo.
+    this.sun.shadow.intensity = 0.45;
     this.scene.add(this.sun, this.sun.target);
 
     this.map = new MapManager();
@@ -187,6 +213,49 @@ export class Game {
     canvas.addEventListener('pointermove', this.onPointerMove);
     canvas.addEventListener('pointerup', this.onPointerUp);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
+  }
+
+  /**
+   * Ambient occlusion: bóng tiếp xúc ở mọi khe hở.
+   *
+   * Đây là thứ làm nên hình ảnh của Townscaper, và cũng là thứ duy nhất trong cả bản vẽ mà
+   * đèn không làm thay được. Một mặt trời chiếu xiên cho bóng ĐỔ — cái bóng dài nằm trên
+   * đất cạnh ngôi nhà. Nhưng chỗ chân tường gặp mặt đất, chỗ mái gặp tường, khe giữa hai
+   * khối sát nhau: những chỗ ấy tối đi vì ánh sáng vòng quanh không lọt vào được, và không
+   * có đèn nào tả được điều đó. Thiếu nó thì mọi vật như dán lên nền; có nó thì chúng ngồi
+   * xuống mặt đất, và cả cảnh đọc ra như một mô hình đất nặn.
+   *
+   * Dùng GTAO chứ không dùng SSAO: SSAO lấy mẫu bán cầu thô nên trên một bản đồ toàn cạnh
+   * thẳng nó sinh ra viền bẩn quanh mọi khối. GTAO tính theo chân trời nên bám sát hình
+   * học, đúng kiểu cần cho low-poly.
+   *
+   * ĐI KÈM MỘT RÀNG BUỘC: một khi vẽ qua EffectComposer thì ảnh trung gian nằm ở không gian
+   * tuyến tính, nên PHẢI có OutputPass ở cuối để áp tone mapping và đổi về sRGB. Thiếu nó,
+   * toàn bộ màu nhạt toẹt đi mà không báo lỗi gì — chỉ nhìn mới thấy.
+   */
+  private buildComposer(): void {
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    this.gtao = new GTAOPass(this.scene, this.camera, w, h);
+    // Bán kính nhỏ: cần bóng Ở KHE, không phải một lớp xám phủ lên cả cảnh. Đơn vị là đơn
+    // vị thế giới, mà nhà ở đây rộng 2 — nên 1,2 là đúng tầm chân tường và mép mái.
+    this.gtao.updateGtaoMaterial({
+      radius: 1.2,
+      distanceExponent: 1.0,
+      thickness: 1.0,
+      scale: 1.0,
+      samples: 12,
+      distanceFallOff: 1.0,
+      screenSpaceRadius: false,
+    });
+    // 0,85 thì mỗi đường nối giữa hai ô lục giác đều hằn lên, mặt đất đọc ra như lưới mắt
+    // cáo. 0,7 giữ được bóng ở chỗ tiếp xúc mà không biến nền thành hoa văn.
+    this.gtao.blendIntensity = 0.7;
+    this.composer.addPass(this.gtao);
+    this.composer.addPass(new OutputPass());
   }
 
   // ------------------------------------------------------------ đánh dấu
@@ -266,9 +335,9 @@ export class Game {
       c.translate(sx * 1.4, 0.38, sz * 1.4);
       posts.push(c);
     }
-    // 3×3 đơn vị lưới.
-    const pad = new THREE.BoxGeometry(GRID * 3, 0.18, GRID * 3);
-    pad.translate(0, 0.09, 0);
+    // 3×3 đơn vị lưới, bo góc như mọi khối khác.
+    const pad = roundedBox(GRID * 3, 0.22, GRID * 3, 0.3, 0.05);
+    pad.translate(0, 0.11, 0);
 
     this.emptyPads = new THREE.InstancedMesh(
       pad, matte(PALETTE.plotDirt), EMPTY_CAP);
@@ -300,6 +369,12 @@ export class Game {
      * lai nhieu lenh ve hon ca phan con lai cua the gioi. Nen trong o xa thi nguoi choi cung
      * khong voi toi ma bam, nen khong dang ve.
      */
+    // Công trình vừa đặt xong thì cho bật lên; đọc một lần rồi trả lại null, nên khối
+    // được dựng lại vì lý do khác (nạp thêm khối bản đồ) sẽ không bật theo.
+    const vuaXay = this.economy.justBuilt;
+    this.economy.justBuilt = null;
+    if (vuaXay) this.popping.set(vuaXay, 0);
+
     let trong = 0;
     for (const plot of this.map.plots) {
       const building = this.economy.buildingAt(plot.id);
@@ -331,14 +406,14 @@ export class Game {
     const base = new THREE.Mesh(
       core
         ? new THREE.CylinderGeometry(GRID * 2, GRID * 2, 0.4, 6)
-        : new THREE.BoxGeometry(GRID * 3, 0.18, GRID * 3),
+        : roundedBox(GRID * 3, 0.22, GRID * 3, 0.3, 0.05),
       matte(core ? PALETTE.graniteDark : PALETTE.plotDirt));
-    base.position.y = core ? 0.2 : 0.09;
+    base.position.y = core ? 0.2 : 0.11;
     base.receiveShadow = true;
     g.add(base);
 
     const body = new THREE.Mesh(
-      new THREE.BoxGeometry(core ? GRID * 3 : GRID * 2, h, core ? GRID * 3 : GRID * 2),
+      roundedBox(core ? GRID * 3 : GRID * 2, h, core ? GRID * 3 : GRID * 2, 0.26, 0.1),
       matte(PALETTE.wall, true));
     body.position.y = (core ? 0.4 : 0.18) + h / 2;
     body.castShadow = true;
@@ -665,6 +740,8 @@ export class Game {
     this.camera.right = halfH * aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    this.composer.setSize(w, h);
+    this.gtao.setSize(w, h);
   };
 
   private watchHud(): void {
@@ -731,7 +808,7 @@ export class Game {
       }
       this.tweenFeedback(dt);
     }
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   };
 
   /**
@@ -749,6 +826,14 @@ export class Game {
   private tweenFeedback(dt: number): void {
     const toi = (nay: number, dich: number, toc: number) =>
       nay + (dich - nay) * (1 - Math.exp(-toc * dt));
+
+    // Cú bật: nở quá cỡ một chút rồi lắng về 1. Townscaper làm thế mỗi lần người chơi đặt
+    // một khối, và đó là thứ khiến thao tác đặt có cảm giác đặt chứ không phải vẽ.
+    for (const [id, t] of this.popping) {
+      const s = t + dt;
+      if (s >= POP_SECONDS) this.popping.delete(id);
+      else this.popping.set(id, s);
+    }
 
     this.hoverK = toi(this.hoverK, this.hoveredId ? 1 : 0, 16);
     this.selectK = toi(this.selectK, this.selectedId ? 1 : 0, 14);
@@ -769,10 +854,19 @@ export class Game {
       if (!id) continue;
       const re = id === this.hoveredId;
       const chon = id === this.selectedId;
-      if (!re && !chon && g.position.y === 0 && g.scale.x === 1) continue;
+      const bat = this.popping.get(id);
+      if (!re && !chon && bat === undefined && g.position.y === 0 && g.scale.x === 1) continue;
       g.position.y = toi(g.position.y, re ? 0.22 : 0, 16);
       const phong = (chon ? 1 + this.punch * 0.1 : 1) * (re ? 1.04 : 1);
-      g.scale.setScalar(toi(g.scale.x, phong, 18));
+      if (bat === undefined) {
+        g.scale.setScalar(toi(g.scale.x, phong, 18));
+      } else {
+        // Đường cong nở quá cỡ: tới 1,18 rồi lắng xuống. Không nội suy mượt ở đây, vì mượt
+        // thì nó chỉ là "to dần ra", còn cái nảy mới đọc ra là một vật rơi xuống đúng chỗ.
+        const k = Math.min(1, bat / POP_SECONDS);
+        const nay = 1 + 1.9 * Math.pow(k - 1, 3) + 0.9 * Math.pow(k - 1, 2);
+        g.scale.setScalar(Math.max(0.01, nay) * phong);
+      }
     }
   }
 
