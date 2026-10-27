@@ -331,7 +331,10 @@ export class UIManager {
       return b;
     };
     if (u.carrying > 0 && u.carryingKind) {
-      row.append(bit(RESOURCES[u.carryingKind].icon, `${fmt(u.carrying)}/${fmt(u.capacity)}`));
+      // Chi hien so dang vac, KHONG hien dang phan so tren suc mang. Suc mang khong phai
+      // tran: do giau cua mo nhan len tren no, nen mot nguoi balo 10 vac 13 la binh thuong -
+      // ma "13/10" thi doc nhu mot con so hong.
+      row.append(bit(RESOURCES[u.carryingKind].icon, fmt(u.carrying)));
     } else {
       row.append(bit('🧺', 'tay không'));
     }
