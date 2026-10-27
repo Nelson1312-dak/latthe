@@ -312,7 +312,9 @@ export class UIManager {
     const head = el('div', 'insp-head');
     head.append(el('span', 'insp-ico', icon));
     const t = el('div', 'insp-title');
-    t.append(el('strong', undefined, name), el('small', 'live', this.statusOf(u)));
+    const trangThai = this.statusOf(u)
+      + (this.game.following === u.id ? ' · camera đang bám' : '');
+    t.append(el('strong', undefined, name), el('small', 'live', trangThai));
     head.append(t);
     const close = el('button', 'insp-close', '×') as HTMLButtonElement;
     close.title = 'Đóng';
@@ -347,9 +349,16 @@ export class UIManager {
     // Bam theo nguoi nay, va ghim cho ho dang dao — hai viec nguoi choi muon lam ngay sau
     // khi nhin thay ho dang o dau.
     const acts = el('div', 'insp-choice');
-    const follow = el('button', 'insp-go') as HTMLButtonElement;
-    follow.textContent = 'ĐƯA CAMERA TỚI';
-    follow.addEventListener('click', () => this.game.panTo(u.position[0], u.position[2]));
+    const dangBam = this.game.following === u.id;
+    const follow = el('button', 'insp-go' + (dangBam ? '' : ' want')) as HTMLButtonElement;
+    follow.textContent = dangBam ? '◉ ĐANG BÁM THEO' : '◎ BÁM THEO';
+    follow.title = dangBam
+      ? 'Bấm để thôi bám. Kéo bản đồ hoặc gõ WASD cũng thôi bám.'
+      : 'Camera đi theo người này cho tới khi bạn tự kéo bản đồ';
+    follow.addEventListener('click', () => {
+      this.game.setFollow(dangBam ? null : u.id);
+      this.renderInspector();
+    });
     acts.append(follow);
 
     const node = u.targetId ? this.game.map.nodeById(u.targetId) : null;

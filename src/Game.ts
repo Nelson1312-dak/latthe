@@ -99,6 +99,8 @@ export class Game {
   private unitRing!: THREE.Mesh;
   private hoveredId: string | null = null;
   private selectedUnitId: string | null = null;
+  /** Đang bám theo ai. Khác với "đang chọn ai": chọn rồi vẫn có thể không bám. */
+  private followId: string | null = null;
 
   constructor(canvas: HTMLCanvasElement, economy: Economy) {
     this.economy = economy;
@@ -317,6 +319,9 @@ export class Game {
     const dy = e.clientY - this.last.y;
     this.last.set(e.clientX, e.clientY);
     this.dragged += Math.abs(dx) + Math.abs(dy);
+    // Nguoi choi tu keo ban do thi thoi bam. Y muon cua ho thang, va mot camera giang co
+    // voi tay nguoi la thu kho chiu nhat trong mot game nhin tu tren xuong.
+    if (this.dragged > 6) this.followId = null;
     // Đổi dịch chuyển trên màn thành dịch chuyển trên mặt đất: lấy trục phải và trục tiến của
     // camera rồi dẹt xuống mặt phẳng XZ, nên kéo hướng nào thì đất trôi đúng hướng đó.
     const k = (this.zoom * 2) / window.innerHeight;
@@ -397,6 +402,7 @@ export class Game {
   };
 
   private clearSelection(): void {
+    this.followId = null;
     this.chooseUnit(null);
     this.selectedId = null;
     this.updateMarkers();
@@ -407,12 +413,26 @@ export class Game {
   private chooseUnit(id: string | null): void {
     if (this.selectedUnitId === id) return;
     this.selectedUnitId = id;
+    if (id === null) this.followId = null;
     this.unitRing.visible = id !== null;
     this.onSelectUnit?.(id);
   }
 
   get selectedUnit(): string | null {
     return this.selectedUnitId;
+  }
+
+  get following(): string | null {
+    return this.followId;
+  }
+
+  /**
+   * Bật/tắt bám theo một người. Bám thì kéo luôn mức phóng vào gần, vì bám mà nhìn từ xa
+   * thì chẳng khác gì không bám.
+   */
+  setFollow(id: string | null): void {
+    this.followId = id;
+    if (id && this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
   }
 
   /** Điểm trên mặt đất dưới con trỏ. Trả false khi tia không cắt mặt phẳng. */
@@ -589,6 +609,7 @@ export class Game {
 
   private moveCamera(dt: number): void {
     if (this.keys.size) {
+      this.followId = null;          // go WASD cung la tu dieu camera
       const pan = 26 * dt * (this.zoom / 28);
       const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0).setY(0).normalize();
       const fwd = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), right).normalize();
@@ -597,6 +618,14 @@ export class Game {
       if (this.keys.has('a') || this.keys.has('arrowleft')) this.wanted.addScaledVector(right, -pan);
       if (this.keys.has('d') || this.keys.has('arrowright')) this.wanted.addScaledVector(right, pan);
       this.clampTarget();
+    }
+
+    // Bam theo: dat dich ngam vao nguoi do moi khung. Khong gan thang camera vao vi tri ho,
+    // de con duong truot mem san co lam nem - gan cung thi camera giat theo tung buoc chan.
+    if (this.followId) {
+      const u = this.economy.state.units.find((x) => x.id === this.followId);
+      if (!u) this.followId = null;
+      else this.wanted.set(u.position[0], 0, u.position[2]);
     }
 
     const glide = 1 - Math.exp(-GLIDE * dt);
