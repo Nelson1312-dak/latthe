@@ -208,7 +208,9 @@ export const PALETTE = {
   cliffMid: DAT_TOI,
   cliffLow: DAT_RAT_TOI,
   water: 0x7fa0b5,
-  road: DAT_SANG,
+  // Đậm hơn cát sa mạc (0xcfa877) hẳn một bậc, nếu không thì đường xuyên qua sa mạc biến
+  // mất — hai thứ cùng là đất nên rất dễ trùng tông.
+  road: 0xb08a5e,
 
   trunk: DAT_RAT_TOI,
   // Cây lấy ba bậc TỐI của hệ rêu, vì nền đồng cỏ đã chiếm hai bậc sáng.

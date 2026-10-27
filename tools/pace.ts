@@ -24,6 +24,23 @@ import { CHUNK } from '../src/world';
   getItem: () => null, setItem: () => undefined, removeItem: () => undefined,
 };
 
+/*
+ * MapManager ve mot anh gradient ra canvas de lam quang cho bai. Node khong co DOM, nen
+ * can mot ban gia. Noi dung anh khong anh huong gi toi mo phong - no thuan tuy la hinh
+ * anh - nen mot canvas rong la du; cai can la dung vo cho ba loi goi do.
+ */
+(globalThis as { document?: unknown }).document = {
+  createElement: () => ({
+    width: 0,
+    height: 0,
+    getContext: () => ({
+      createRadialGradient: () => ({ addColorStop: () => undefined }),
+      fillRect: () => undefined,
+      set fillStyle(_v: unknown) { /* khong dung toi */ },
+    }),
+  }),
+};
+
 const { Economy } = await import('../src/Economy');
 const { MapManager } = await import('../src/MapManager');
 const { FogOfWar } = await import('../src/FogOfWar');

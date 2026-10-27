@@ -43,6 +43,36 @@ export function metal(color: number, emissive?: number): THREE.MeshStandardMater
   });
 }
 
+/**
+ * Quầng sáng tròn, mềm dần ra rìa — dùng cho vùng của một bãi và cho vòng chọn.
+ *
+ * Thay cho hai hình phẳng cũ: một đĩa đặc mờ 30% cộng một vành RingGeometry dày 0,07. Cả
+ * hai đều có MÉP CỨNG, mà một mép cứng nằm bẹp trên mặt đất thì đọc ra là một miếng dán,
+ * không ra một vùng ảnh hưởng. Chuyển thành một ảnh gradient: tâm gần như trong suốt, sáng
+ * dần tới đỉnh ở khoảng 92% bán kính, rồi tắt hẳn ở rìa. Không còn mép nào để mắt bám vào.
+ *
+ * Vẽ MỘT LẦN ra canvas rồi dùng chung, nên nó không tốn gì thêm dù có ba trăm bãi. Màu
+ * trắng hết: màu thật tới từ instanceColor của từng bãi nhân lên.
+ */
+export function haloTexture(): THREE.CanvasTexture {
+  const N = 128;
+  const cv = document.createElement('canvas');
+  cv.width = N;
+  cv.height = N;
+  const g = cv.getContext('2d')!;
+  const grad = g.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2);
+  grad.addColorStop(0.00, 'rgba(255,255,255,0.05)');
+  grad.addColorStop(0.55, 'rgba(255,255,255,0.10)');
+  grad.addColorStop(0.84, 'rgba(255,255,255,0.55)');
+  grad.addColorStop(0.93, 'rgba(255,255,255,1.00)');
+  grad.addColorStop(1.00, 'rgba(255,255,255,0.00)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, N, N);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 /** Pha lê: không phải kim loại, nhưng tự phát sáng để đọc được giữa vùng cao nguyên tối. */
 export function gem(color: number, glow = color): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({

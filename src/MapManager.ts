@@ -11,20 +11,19 @@
  * một, và con số đó không đổi dù người chơi đi xa tới đâu.
  */
 import * as THREE from 'three';
-import { gem, matte, metal } from './materials';
+import { gem, matte, metal, haloTexture } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BIOMES, PALETTE, RESOURCES } from './config';
 import type { Patch, Plot, Vec3 } from './types';
 import {
-  CHUNK, KEEP_RADIUS, LOAD_RADIUS, biomeAt, chunkKey, chunkOf, chunkRng, hash2, heightAt,
-  onRoad, patchesOf,
+  CHUNK, HEX_R, HEX_STEP_X, HEX_STEP_Z, KEEP_RADIUS, LOAD_RADIUS,
+  biomeAt, chunkKey, chunkOf, chunkRng, hash2, heightAt, hexIsRoad, onRoad, patchesOf,
 } from './world';
 
 /**
  * Bán kính một ô cỏ. To hơn bản trước (1,75 → 2,4) vì tầm nhìn rộng gấp đôi: giữ nguyên cỡ
  * cũ thì số ô tăng gấp ba mà mắt không nhìn ra khác biệt ở mức phóng xa.
  */
-const HEX_R = 2.4;
 
 /*
  * Tran so ban cho tung kieu hinh. Do bang cach dem that tren sau vung khac nhau roi cong
@@ -35,7 +34,7 @@ const HEX_R = 2.4;
  * khong co vong bao nao - dung cai dieu kien "bai phai nhin ra ngay" ma ca ban nay dua vao.
  */
 const CAP = {
-  tile: 11400, disc: 300, ring: 300, road: 400,
+  tile: 11400, halo: 300,
   pine: 1100, wheat: 900, rock: 1400, ore: 800, spire: 500, palm: 300, tuft: 2300,
 } as const;
 
@@ -74,7 +73,7 @@ export class MapManager {
       mesh.castShadow = shadow;
       mesh.receiveShadow = key === 'tile';
       mesh.frustumCulled = false;
-      mesh.renderOrder = key === 'disc' || key === 'ring' ? 1 : 0;
+      mesh.renderOrder = key === 'halo' ? 1 : 0;
       for (let i = 0; i < CAP[key]; i += 1) mesh.setMatrixAt(i, this.hidden);
       this.meshes[key] = mesh;
       this.group.add(mesh);
@@ -82,20 +81,16 @@ export class MapManager {
 
     make('tile', new THREE.CylinderGeometry(HEX_R, HEX_R, 2.6, 6), matte(), false);
 
-    // Nền bãi và viền bãi: hai vòng tròn dẹt nằm sát mặt đất. Đây là thứ khiến một bãi đọc
-    // được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
-    const disc = new THREE.CircleGeometry(1, 28);
-    disc.rotateX(-Math.PI / 2);
-    make('disc', disc, new THREE.MeshBasicMaterial({
-      transparent: true, opacity: 0.3, depthWrite: false,
-    }), false);
-    const ring = new THREE.RingGeometry(0.93, 1, 40);
-    ring.rotateX(-Math.PI / 2);
-    make('ring', ring, new THREE.MeshBasicMaterial({
-      transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide,
+    // Quầng của bãi: một hình vuông phẳng mang ảnh gradient tròn. Đây là thứ khiến một bãi
+    // đọc được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
+    const halo = new THREE.PlaneGeometry(2, 2);
+    halo.rotateX(-Math.PI / 2);
+    make('halo', halo, new THREE.MeshBasicMaterial({
+      map: haloTexture(),
+      transparent: true, depthWrite: false, opacity: 0.85,
+      blending: THREE.NormalBlending,
     }), false);
 
-    make('road', new THREE.BoxGeometry(CHUNK, 0.12, 2.6), matte(), false);
     make('pine', this.pineGeometry(), lambert(true), true);
     make('wheat', this.wheatGeometry(), lambert(true), true);
     make('rock', new THREE.DodecahedronGeometry(1, 0), lambert(true), true);
@@ -146,13 +141,11 @@ export class MapManager {
         put('tile', this.m.makeTranslation(t.pos[0], t.pos[1], t.pos[2]), t.color);
       }
       for (const p of chunk.patches) {
-        const tint = RESOURCES[p.kind].color;
-        this.v.set(p.center[0], 0.14, p.center[2]);
+        this.v.set(p.center[0], 0.15, p.center[2]);
         this.q.identity();
-        this.s.set(p.radius, 1, p.radius);
-        put('disc', this.m.compose(this.v, this.q, this.s), tint);
-        this.v.y = 0.16;
-        put('ring', this.m.compose(this.v, this.q, this.s), tint);
+        // Quầng rộng hơn bãi một chút, vì phần ngoài cùng của ảnh gradient đã tắt gần hết.
+        this.s.set(p.radius * 1.16, 1, p.radius * 1.16);
+        put('halo', this.m.compose(this.v, this.q, this.s), RESOURCES[p.kind].color);
       }
       for (const pr of chunk.props) {
         this.v.set(pr.pos[0], pr.pos[1], pr.pos[2]);
@@ -179,22 +172,45 @@ export class MapManager {
     const chunk: Chunk = { cx, cz, patches: patchesOf(cx, cz), plots: [], tiles: [], props: [] };
     const r = chunkRng(cx, cz);
 
-    // --- thảm cỏ ---
-    const stepX = HEX_R * 1.5;
-    const stepZ = HEX_R * Math.sqrt(3);
-    for (let i = 0; i * stepX < CHUNK; i += 1) {
-      for (let j = 0; j * stepZ < CHUNK; j += 1) {
-        const x = ox + i * stepX;
-        const z = oz + j * stepZ + (i % 2 ? stepZ / 2 : 0);
+    /*
+     * --- thảm cỏ, VÀ ĐƯỜNG ĐI LÀ MỘT LOẠI Ô TRONG CHÍNH THẢM ẤY ---
+     *
+     * Bản trước vẽ đường bằng hai thanh hộp dài 30×2,6 đặt đè lên mặt đất. Trên một nền lục
+     * giác thì nó sai hiển nhiên: cái dải chữ nhật cắt chéo qua các ô, mép nó chạy giữa
+     * thân ô này sang thân ô kia, và vì nó nổi 0,06 trên mặt đất nên chỗ đất gồ lên thì
+     * đường chìm xuống dưới, chỗ đất lõm thì đường bay lơ lửng.
+     *
+     * Đường bây giờ KHÔNG phải một vật thể. Nó chỉ là những ô lục giác được tô màu đất nện
+     * thay vì màu cỏ. Nhờ thế mép đường luôn khớp lưới, luôn đúng cao độ địa hình, và tốn
+     * đúng không lệnh vẽ nào — hai thanh hộp mỗi khối biến mất khỏi danh sách.
+     *
+     * NHẤP NHÔ NHẸ: mỗi ô lệch thêm 0,05–0,12 theo một hàm băm của toạ độ. Mặt đất lượn
+     * theo heightAt() vốn đã có độ cao, nhưng đó là đường cong TRƠN — các ô cạnh nhau gần
+     * như bằng nhau nên không có mép nào để ánh sáng bắt. Lệch ngẫu nhiên một chút thì mỗi
+     * ô có một bậc nhỏ so với hàng xóm, và ambient occlusion rơi đúng vào các bậc ấy.
+     */
+    // Chỉ số ô tính theo TOÀN THẾ GIỚI, nên lưới liền mạch qua ranh giới khối.
+    const i0 = Math.ceil(ox / HEX_STEP_X);
+    const i1 = Math.floor((ox + CHUNK - 0.001) / HEX_STEP_X);
+    for (let i = i0; i <= i1; i += 1) {
+      const x = i * HEX_STEP_X;
+      // Cột lẻ lệch nửa bước. Phải lấy dư KHÔNG ÂM, vì i âm ở nửa bản đồ bên kia.
+      const lech = (((i % 2) + 2) % 2) ? HEX_STEP_Z / 2 : 0;
+      const j0 = Math.ceil((oz - lech) / HEX_STEP_Z);
+      const j1 = Math.floor((oz + CHUNK - 0.001 - lech) / HEX_STEP_Z);
+      for (let j = j0; j <= j1; j += 1) {
+        const z = j * HEX_STEP_Z + lech;
         const b = biomeAt(x, z);
+        const duong = hexIsRoad(x, z);
         const mix = hash2(Math.round(x * 2), Math.round(z * 2), 11) > 0.5 ? 0 : 1;
-        chunk.tiles.push({ pos: [x, -1.3 + heightAt(x, z, b), z], color: BIOMES[b].ground[mix] });
+        const nhap = 0.05 + hash2(Math.round(x * 3), Math.round(z * 3), 23) * 0.07;
+        chunk.tiles.push({
+          // Ô đường phẳng đều, không nhấp nhô: một lối đi gập ghềnh thì không ra lối đi.
+          pos: [x, -1.3 + heightAt(x, z, b) + (duong ? 0.02 : nhap), z],
+          color: duong ? PALETTE.road : BIOMES[b].ground[mix],
+        });
       }
     }
-
-    // --- đường ---
-    chunk.props.push({ key: 'road', pos: [ox + CHUNK / 2, 0.06, oz], scale: 1, rot: 0, color: PALETTE.road });
-    chunk.props.push({ key: 'road', pos: [ox, 0.06, oz + CHUNK / 2], scale: 1, rot: Math.PI / 2, color: PALETTE.road });
 
     // --- bãi tài nguyên ---
     for (const p of chunk.patches) this.dressPatch(chunk, p, r);
@@ -312,8 +328,15 @@ export class MapManager {
     return undefined;
   }
 
+  private tho = 0;
+
   animate(dt: number): void {
     if (this.spireCount > 0) this.meshes.spire.rotation.y += dt * 0.12;
+    // Quầng bãi thở rất chậm và rất nhẹ. Mạnh hơn nữa thì cả bản đồ nhấp nháy, mà bản đồ
+    // này có tới hai trăm bãi cùng lúc — một nhịp đập đồng loạt sẽ thành thứ gây nhiễu.
+    this.tho += dt;
+    const mat = this.meshes.halo.material as THREE.MeshBasicMaterial;
+    mat.opacity = 0.78 + Math.sin(this.tho * 1.25) * 0.1;
   }
 
   // -------------------------------------------------- hình học đã hàn sẵn

@@ -11,7 +11,7 @@
  * trải trên diện tích gấp mười, bóng vỡ răng cưa ngay mà chẳng thêm được gì.
  */
 import * as THREE from 'three';
-import { matte } from './materials';
+import { matte, haloTexture } from './materials';
 import { roundedBox } from './shapes';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -142,7 +142,14 @@ export class Game {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    /*
+     * PCF có bán kính, KHÔNG phải PCFSoft.
+     *
+     * PCFSoftShadowMap nghe như thứ cho bóng mềm nhất, nhưng nó BỎ QUA `shadow.radius` —
+     * độ mềm của nó cố định theo cỡ bản đồ bóng, không chỉnh được. Với PCFShadowMap thì
+     * radius là số lần lấy mẫu toả ra, nên mềm tới đâu là do mình đặt.
+     */
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
     this.buildComposer();
@@ -170,10 +177,12 @@ export class Game {
     this.sun.shadow.camera.bottom = -d;
     this.sun.shadow.camera.near = 1;
     this.sun.shadow.camera.far = 160;
-    this.sun.shadow.bias = -0.0006;
+    this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.02;
     // Bóng nhạt hẳn: nó chỉ còn để nói hướng nắng, còn hình khối thì AO lo.
     this.sun.shadow.intensity = 0.45;
+    // Mềm tới mức gần như chỉ còn một vệt tối dưới chân vật thể.
+    this.sun.shadow.radius = 5;
     this.scene.add(this.sun, this.sun.target);
 
     this.map = new MapManager();
@@ -281,16 +290,23 @@ export class Game {
     this.hoverRing = ring(0xffffff, 0.55, 2.55);
     this.unitRing = ring(0x7fd8ff, 0.95, 0.72);
 
-    // Vong bai dung ban kinh 1 roi nhan len bang chinh co bai, nen no OM TRON khu dat chu
-    // khong phai mot cai cham ben duoi. Vanh mong (1 -> 1,035) vi khi nhan len gap bay lan
-    // thi mot vanh day binh thuong se thanh mot cai dia.
+    /*
+     * Vòng chọn bãi dùng CHÍNH ảnh quầng của bãi, chỉ sáng hơn.
+     *
+     * Trước là một vành RingGeometry dày 0,035 — mảnh tới mức ở mức phóng xa nó chỉ còn là
+     * một nét răng cưa, mà ở mức phóng gần thì lại là một đường kẻ cứng nằm bẹp trên đất.
+     * Dùng chung ảnh gradient thì nó mềm ở mọi cỡ, và nó cùng một ngôn ngữ hình ảnh với
+     * cái quầng vốn đã ở đó, nên chọn một bãi trông như bãi ấy sáng lên chứ không như bị
+     * khoanh bút.
+     */
+    const haloGeo = new THREE.PlaneGeometry(2, 2);
+    haloGeo.rotateX(-Math.PI / 2);
     this.patchRing = new THREE.Mesh(
-      new THREE.RingGeometry(1, 1.035, 72),
+      haloGeo,
       new THREE.MeshBasicMaterial({
-        color: 0xffffff, transparent: true, opacity: 0.95,
-        side: THREE.DoubleSide, depthWrite: false,
+        map: haloTexture(), color: 0xffffff,
+        transparent: true, opacity: 0.95, depthWrite: false,
       }));
-    this.patchRing.rotation.x = -Math.PI / 2;
     this.patchRing.position.y = 0.26;
     this.patchRing.visible = false;
     this.patchRing.renderOrder = 3;
@@ -310,7 +326,8 @@ export class Game {
     this.patchRing.visible = !!b;
     if (b) {
       this.patchRing.position.set(b.center[0], 0.26, b.center[2]);
-      this.patchRing.scale.set(b.radius + 0.6, b.radius + 0.6, 1);
+      const k = b.radius * 1.2;
+      this.patchRing.scale.set(k, 1, k);
     }
   }
 

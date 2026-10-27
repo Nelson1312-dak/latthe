@@ -14,6 +14,19 @@ export const SEED = 0x1a7ba1;
  * vùng đất riêng, không còn là mấy cái cây rải rác — bãi cần chỗ để đọc ra là một khu.
  */
 export const CHUNK = 30;
+
+/**
+ * Bước của lưới ô lục giác, TÍNH THEO TOÀN THẾ GIỚI chứ không theo từng khối.
+ *
+ * Đây là chỗ đã sai lặng lẽ từ đầu: mỗi khối tự dựng lưới riêng bắt đầu từ góc của nó, mà
+ * 30 không chia hết cho 3,6 — nên ở mỗi đường nối giữa hai khối có hai cột ô cách nhau 1,2
+ * thay vì 3,6, tức là chúng ĐÈ LÊN NHAU. Nhìn kỹ thì thấy một vệt ô chen chúc chạy dọc mọi
+ * ranh giới khối. Đánh số ô theo toạ độ thế giới thì lưới liền một mạch, và khối chỉ còn
+ * là cái khung để biết nạp những ô nào.
+ */
+export const HEX_R = 2.4;
+export const HEX_STEP_X = HEX_R * 1.5;
+export const HEX_STEP_Z = HEX_R * Math.sqrt(3);
 /** Bán kính nạp quanh tâm ngắm, tính bằng khối. 5 nghĩa là lưới 11×11 = 330×330 đơn vị. */
 export const LOAD_RADIUS = 5;
 export const KEEP_RADIUS = 6;
@@ -67,10 +80,53 @@ export function heightAt(x: number, z: number, biome: BiomeId): number {
   return h;
 }
 
-/** Lưới đường thưa, một trục mỗi CHUNK. Vô hạn mà không phải lưu gì. */
+/**
+ * Lưới đường thưa, một trục mỗi CHUNK. Vô hạn mà không phải lưu gì.
+ *
+ * Hàm này chỉ dùng để GẠT những thứ khác ra khỏi lòng đường — nền đất, cây cối. Còn việc ô
+ * nào được tô màu đường thì do MapManager quyết, bằng một phép khác hẳn: mỗi cột ô chọn
+ * đúng một ô gần trục nhất. Hai phép khác nhau là có chủ ý — cái này rộng rãi một chút để
+ * cây cối không mọc sát mép đường, cái kia phải chặt chẽ để con đường rộng đúng một ô.
+ */
+export const ROAD_HALF = 2.6;
+
+/**
+ * Khoảng cách giữa hai con đường.
+ *
+ * Một đường mỗi khối nghe hợp lý cho tới khi đếm: khối rộng 30 mà một ô lục giác rộng 4,16,
+ * nên khối chỉ có bảy ô ngang. Lát đường rộng một ô theo cả hai trục thì 39% mặt đất là
+ * đường — không còn là đường nữa mà là một cái sân. Cách hai khối thì còn chừng 9%, đủ để
+ * ra một mạng đường mà vẫn là đường.
+ */
+export const ROAD_SPACING = CHUNK * 2;
+
+/**
+ * Gần một trục đường tới mức không nên đặt gì ở đó.
+ *
+ * Chỉ dùng để GẠT những thứ khác ra khỏi lòng đường — nền đất, cây cối. Còn ô nào được tô
+ * màu đường thì xem hexIsRoad(): hai phép khác nhau là có chủ ý, cái này rộng rãi một chút
+ * để cây không mọc sát mép, cái kia chặt chẽ để đường rộng đúng một ô.
+ */
 export function onRoad(x: number, z: number): boolean {
-  const near = (v: number) => Math.abs(v - Math.round(v / CHUNK) * CHUNK) < 1.6;
+  const near = (v: number) => Math.abs(v - Math.round(v / ROAD_SPACING) * ROAD_SPACING) < ROAD_HALF;
   return near(x) || near(z);
+}
+
+/**
+ * Ô lục giác ở (x, z) có phải một ô ĐƯỜNG không.
+ *
+ * Mỗi trục đường chỉ lấy ĐÚNG MỘT hàng ô. Lấy theo kiểu "cách trục dưới ngưỡng X" thì sai,
+ * vì ô xếp so le: cột chẵn có một ô nằm đúng trên trục, cột lẻ có hai ô cách trục nửa bước
+ * về hai phía. Ngưỡng nào với tới được cột lẻ cũng sẽ ôm cả hai ô của nó, nên đường chạy
+ * 1 ô rồi 2 ô rồi 1 ô và đọc ra như vệt loang. So trong một cửa sổ nửa mở — một đầu mở,
+ * một đầu đóng — thì hai ô cách đều vẫn chỉ chọn được một.
+ */
+export function hexIsRoad(x: number, z: number): boolean {
+  const trong = (v: number, buoc: number) => {
+    const d = v - Math.round(v / ROAD_SPACING) * ROAD_SPACING;
+    return d > -buoc / 2 && d <= buoc / 2;
+  };
+  return trong(x, HEX_STEP_X) || trong(z, HEX_STEP_Z);
 }
 
 // ---------------------------------------------------------------- bãi
