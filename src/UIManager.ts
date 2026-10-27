@@ -113,6 +113,9 @@ export class UIManager {
     this.el.minimap.addEventListener('pointerdown', (e) => this.mapClick(e));
 
     this.applyMute();
+    // Nut tam dung phai co icon NGAY TU DAU. setPaused() chi chay khi nguoi choi bam, nen
+    // de no tu dat icon thi luc mo game cai nut la mot o trang tron.
+    this.el.pause.innerHTML = iconSvg(this.game.isPaused ? 'play' : 'pause');
     this.renderAll();
     this.timers.push(window.setInterval(() => this.refresh(), STAT_MS));
     this.timers.push(window.setInterval(() => this.drawMap(), MAP_MS));
