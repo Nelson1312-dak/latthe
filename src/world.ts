@@ -129,6 +129,26 @@ export function hexIsRoad(x: number, z: number): boolean {
   return trong(x, HEX_STEP_X) || trong(z, HEX_STEP_Z);
 }
 
+/**
+ * Nhiễu giá trị trơn: nội suy song tuyến giữa các nút lưới cỡ `cell`, mỗi nút một số băm.
+ * Dùng cho màu mặt đất — những mảng sáng tối lớn dần dần, thay cho kiểu ca-rô hai màu.
+ */
+export function valueNoise(x: number, z: number, cell: number, salt: number): number {
+  const gx = x / cell;
+  const gz = z / cell;
+  const ix = Math.floor(gx);
+  const iz = Math.floor(gz);
+  const fx = gx - ix;
+  const fz = gz - iz;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sz = fz * fz * (3 - 2 * fz);
+  const a = hash2(ix, iz, salt);
+  const b = hash2(ix + 1, iz, salt);
+  const c = hash2(ix, iz + 1, salt);
+  const d = hash2(ix + 1, iz + 1, salt);
+  return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz;
+}
+
 // ---------------------------------------------------------------- cao độ
 
 /**

@@ -22,6 +22,54 @@ export const ROUGHNESS = 0.82;
 /** Kim loại tối đa của mọi bề mặt không phải kim loại. */
 export const METALNESS = 0.04;
 
+/**
+ * Thời gian của gió, dùng chung cho mọi tán lá. MapManager tăng nó mỗi khung.
+ */
+export const WIND = { value: 0 };
+
+/**
+ * Cho một vật liệu đung đưa theo gió — chạy trong vertex shader, gần như không tốn gì.
+ *
+ * Kèm một luật màu cho hình CÓ MÀU ĐỈNH: đỉnh trắng nhận màu của bản như thường, đỉnh có màu
+ * giữ nguyên màu của nó. Mặc định three NHÂN hai màu với nhau, mà nâu nhân xanh thì ra gần
+ * như đen — nên trước đây thân cây phải mang luôn màu tán lá. Luật này cho thân nâu và tán
+ * xanh nằm chung một hình, một lệnh vẽ.
+ *
+ * Độ lệch tỉ lệ với BÌNH PHƯƠNG độ cao cục bộ: gốc đứng yên, ngọn lắc nhiều — đó là cách một
+ * thân cây uốn. Pha lấy từ vị trí của từng bản, nên cả khu rừng không lắc răm rắp cùng một
+ * nhịp. Bóng đổ không lắc theo (bóng vẽ bằng vật liệu độ sâu riêng); với gió nhẹ thế này thì
+ * mắt không nhận ra.
+ *
+ * Mọi vật liệu dùng chung một thân hàm onBeforeCompile, nên chung một chương trình shader;
+ * chỉ có độ mạnh `uSway` là riêng của từng vật liệu.
+ */
+export function sway<T extends THREE.Material>(mat: T, amount: number): T {
+  const u = { value: amount };
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = WIND;
+    shader.uniforms.uSway = u;
+    shader.vertexShader = 'uniform float uTime;\nuniform float uSway;\n' + shader.vertexShader
+      .replace('#include <color_vertex>', `#include <color_vertex>
+#if defined( USE_COLOR ) && defined( USE_INSTANCING_COLOR ) && ! defined( USE_COLOR_ALPHA )
+      vColor = color.r + color.g + color.b > 2.99 ? instanceColor.xyz : color.xyz;
+#endif`)
+      .replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+#ifdef USE_INSTANCING
+      vec3 goc = instanceMatrix[3].xyz;
+#else
+      vec3 goc = vec3(0.0);
+#endif
+      float cao = max(transformed.y, 0.0);
+      float gio = sin(uTime * 1.3 + goc.x * 0.35 + goc.z * 0.27) * 0.6
+                + sin(uTime * 2.3 + goc.x * 0.9 - goc.z * 0.5) * 0.25;
+      transformed.x += gio * cao * cao * uSway;
+      transformed.z += gio * 0.55 * cao * cao * uSway;`);
+  };
+  return mat;
+}
+
 /** Bề mặt thường: đất, cây, tường, mái, người. */
 export function matte(color?: number, flat = false): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({

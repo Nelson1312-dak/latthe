@@ -185,13 +185,11 @@ const DAT_TOI = 0x835b40;
 const DAT = 0xa9794f;
 const DAT_SANG = 0xd3ab7c;
 
-const LAM_RAT_TOI = 0x4a5a66;
 const LAM_TOI = 0x5d6e7a;
 const LAM = 0x8599a6;
 const LAM_SANG = 0xb6c6d1;
 
 const TIM_RAT_TOI = 0x3f3660;
-const TIM_TOI = 0x55497a;
 const TIM = 0x8a7bab;
 const TIM_SANG = 0xc3b8da;
 
@@ -229,6 +227,11 @@ export const PALETTE = {
   // Anh phat ra tu pha le sang hon chinh khoi pha le, nen no doc ra la phat sang chu khong
   // phai mot khoi tim nhat.
   crystalGlow: TIM_SANG,
+  /** Cây tán tròn của đồng cỏ: sáng hơn thông một bậc, để rừng hỗn giao có hai tầng màu. */
+  leaf: [REU_TOI, REU, 0x93ae86],
+  bush: [REU_RAT_TOI, REU_TOI],
+  /** Hoa dại: lấy từ bốn hệ đang có, không thêm hệ thứ sáu. */
+  flowers: [0xb5705a, 0xdcc389, KEM_SANG, TIM_SANG],
 
   wall: KEM_TOI,
   /*
@@ -282,8 +285,9 @@ export const BIOMES: Record<BiomeId, Biome> = {
   },
   crags: {
     id: 'crags', label: 'Vách Đá Granit',
-    // Vách đá ngược lại: nền tối, tảng đá sáng.
-    ground: [LAM_TOI, LAM_RAT_TOI], minimap: '#5d6e7a',
+    // Vách đá ngược lại: nền tối, tảng đá sáng. Sáng hơn hệ lam một nửa bậc: với AO phủ lên
+    // thì hai bậc tối nhất gần như thành đen, và cả vùng vách đá đọc ra như một lỗ thủng.
+    ground: [0x728391, 0x63747f], minimap: '#63747f',
     yields: ['stone'],
   },
   desert: {
@@ -293,7 +297,8 @@ export const BIOMES: Record<BiomeId, Biome> = {
   },
   highlands: {
     id: 'highlands', label: 'Cao Nguyên Huyền Bí',
-    ground: [TIM_RAT_TOI, TIM_TOI], minimap: '#3f3660',
+    // Cũng sáng lên nửa bậc vì cùng lý do; pha lê vẫn nổi nhờ tự phát sáng.
+    ground: [0x4a4070, 0x5b4f80], minimap: '#4a4070',
     yields: ['relics'],
   },
 };

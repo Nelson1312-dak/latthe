@@ -16,14 +16,14 @@
  * có vòng lặp: bố cục không cần cao độ, cao độ chỉ cần bố cục.
  */
 import * as THREE from 'three';
-import { gem, matte, metal, haloTexture } from './materials';
+import { gem, matte, metal, haloTexture, sway, WIND } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BIOMES, PALETTE, RESOURCES } from './config';
-import type { Patch, Plot, Vec3 } from './types';
+import type { BiomeId, Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, HEX_R, HEX_STEP_X, HEX_STEP_Z, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
   biomeAt, chunkKey, chunkOf, chunkRng, hash2, hexCenterAt, hexIsRoad, levelAtCenter,
-  naturalTop, onRoad, patchFlatR, patchesOf,
+  naturalTop, onRoad, patchFlatR, patchesOf, valueNoise,
 } from './world';
 
 /*
@@ -37,6 +37,7 @@ import {
 const CAP = {
   tile: 11400, halo: 300,
   pine: 1100, wheat: 900, rock: 1400, ore: 800, spire: 500, palm: 300, tuft: 2300,
+  leaf: 520, bush: 350, flower: 900,
 } as const;
 
 type PropKey = keyof typeof CAP;
@@ -47,6 +48,24 @@ type PropKey = keyof typeof CAP;
  * để lộ một khe nhìn xuyên xuống. Cột cao thêm không tốn thêm tam giác nào.
  */
 const TILE_H = 6;
+
+/**
+ * Mép vát trên của ô: tụt 0,1 trên bề ngang 0,14. Đủ để mỗi ô bắt sáng một viền mảnh và hai
+ * ô kề nhau có một rãnh nhỏ — mặt đất đọc ra là lát bằng từng viên, như Townscaper, thay cho
+ * một tấm phẳng có kẻ màu. Nhỏ hơn nữa thì ở mức phóng xa viền chỉ còn nửa điểm ảnh.
+ */
+const VAT_CAO = 0.1;
+const VAT_RONG = 0.14;
+
+/** Sáu ô kề một ô, theo lưới cột lệch nửa bước của world.ts. */
+const KE: readonly (readonly [number, number])[] = [
+  [0, HEX_STEP_Z], [0, -HEX_STEP_Z],
+  [HEX_STEP_X, HEX_STEP_Z / 2], [HEX_STEP_X, -HEX_STEP_Z / 2],
+  [-HEX_STEP_X, HEX_STEP_Z / 2], [-HEX_STEP_X, -HEX_STEP_Z / 2],
+];
+
+/** Bốn nền quanh thủ phủ. Chúng nằm vắt sang ba khối lân cận, nên trang trí phải tránh riêng. */
+const CORE_PLOTS = [[-9, -8], [9, -8], [-9, 8], [9, 8]] as const;
 
 /** Đất chưa vén pha về màu sương chừng này phần. */
 const FOG_MIX = 0.72;
@@ -89,6 +108,7 @@ export class MapManager {
   private readonly color = new THREE.Color();
   private readonly fogC = new THREE.Color();
   private readonly fogLand = new THREE.Color(PALETTE.fogLand);
+  private readonly mixC = new THREE.Color();
   private lastCenter = '';
   /** Khối nào đã vén — Game nối vào FogOfWar. Mặc định coi như đã vén hết. */
   private lo: (cx: number, cz: number) => boolean = () => true;
@@ -120,7 +140,7 @@ export class MapManager {
      * góc xoay này thì theo một hướng các ô chồng lên nhau, hướng kia hở khe tam giác — mặt
      * đất chưa từng khít, và AO bám vào mấy cái khe đó nên trông như những rãnh tối.
      */
-    make('tile', new THREE.CylinderGeometry(HEX_R, HEX_R, TILE_H, 6, 1, false, Math.PI / 6), matte(), false);
+    make('tile', hexTile(HEX_R, TILE_H, VAT_CAO, VAT_RONG), matte(), false);
 
     // Quầng của bãi: một hình vuông phẳng mang ảnh gradient tròn. Đây là thứ khiến một bãi
     // đọc được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
@@ -132,15 +152,29 @@ export class MapManager {
       blending: THREE.NormalBlending,
     }), false);
 
-    make('pine', this.pineGeometry(), matte(undefined, true), true);
-    make('wheat', this.wheatGeometry(), matte(undefined, true), true);
+    /*
+     * Tán lá lắc theo gió. Độ mạnh tính theo chiều cao CỤC BỘ của từng hình (lệch = độ mạnh ×
+     * cao²): thông cao gần 3 nên chỉ cần 0,014 là ngọn đã lắc chừng 0,1; bó lúa cao 0,85 cần
+     * gấp mười mới thấy. `mau` = hình có màu đỉnh (thân nâu), xem sway().
+     */
+    const la = (amount: number, mau = false): THREE.MeshStandardMaterial => {
+      const m = matte(undefined, true);
+      m.vertexColors = mau;
+      return sway(m, amount);
+    };
+    make('pine', this.pineGeometry(), la(0.014, true), true);
+    make('wheat', this.wheatGeometry(), la(0.12), true);
     make('rock', new THREE.DodecahedronGeometry(1, 0), matte(undefined, true), true);
     // Quặng vàng là phần kim loại duy nhất của thế giới, nên cũng là ngoại lệ duy nhất
     // của trần kim loại 0,2.
     make('ore', new THREE.OctahedronGeometry(0.75, 0), metal(PALETTE.goldOre, PALETTE.goldOre), true);
     make('spire', this.spireGeometry(), gem(PALETTE.crystal, PALETTE.crystalGlow), true);
-    make('palm', this.palmGeometry(), matte(undefined, true), true);
-    make('tuft', new THREE.ConeGeometry(0.22, 0.5, 4), matte(), false);
+    make('palm', this.palmGeometry(), la(0.025, true), true);
+    make('tuft', new THREE.ConeGeometry(0.22, 0.5, 4), sway(matte(), 1.0), false);
+    make('leaf', this.leafGeometry(), la(0.016, true), true);
+    make('bush', this.bushGeometry(), la(0.05), true);
+    // Hoa không đổ bóng: thân mảnh như sợi chỉ, bóng của nó chỉ thành những chấm nhiễu.
+    make('flower', this.flowerGeometry(), la(0.4, true), false);
   }
 
   // ------------------------------------------------------------ nạp và huỷ
@@ -385,15 +419,42 @@ export class MapManager {
       const j1 = Math.floor((oz + CHUNK - 0.001 - lech) / HEX_STEP_Z);
       for (let j = j0; j <= j1; j += 1) {
         const z = j * HEX_STEP_Z + lech;
-        const b = biomeAt(x, z);
-        const mix = hash2(Math.round(x * 2), Math.round(z * 2), 11) > 0.5 ? 0 : 1;
         chunk.tiles.push({
           pos: [x, this.tileTop(x, z) - TILE_H / 2, z],
-          color: hexIsRoad(x, z) ? PALETTE.road : BIOMES[b].ground[mix],
+          color: hexIsRoad(x, z) ? PALETTE.road : this.groundColor(x, z, biomeAt(x, z)),
         });
       }
     }
     return chunk;
+  }
+
+  /**
+   * Màu một ô đất.
+   *
+   * Trước đây mỗi ô bốc thăm một trong hai bậc màu của vùng, nên mặt đất là một bàn ca-rô
+   * lấm tấm đều khắp. Giờ ba phần tư lấy từ NHIỄU TRƠN cỡ 14 đơn vị — những mảng sáng tối
+   * lớn, loang dần như cỏ chỗ dày chỗ thưa — và một phần tư từ hàm băm của riêng ô, để hai ô
+   * cạnh nhau vẫn khác nhau một chút.
+   *
+   * Ô GIÁP RANH pha 25% sang màu của vùng bên kia. Cả hai phía cùng pha nên ranh giới thành
+   * một dải chuyển hai ô (100 → 75 → 25 → 0), không còn là một đường cắt thẳng tắp ở mép
+   * vùng 90×90. Thử 35% thì giữa đồng cỏ và cao nguyên hiện ra một dải xám lam — xanh trộn
+   * tím ra xám — đọc nhầm thành một dải vách đá.
+   */
+  private groundColor(x: number, z: number, b: BiomeId): number {
+    const [c0, c1] = BIOMES[b].ground;
+    const k = valueNoise(x, z, 14, 31) * 0.75 + hash2(Math.round(x * 2), Math.round(z * 2), 11) * 0.25;
+    this.color.setHex(c0).lerp(this.fogC.setHex(c1), k);
+    let n = 0;
+    this.mixC.setRGB(0, 0, 0);
+    for (const [dx, dz] of KE) {
+      const nb = biomeAt(x + dx, z + dz);
+      if (nb === b) continue;
+      this.mixC.add(this.fogC.setHex(BIOMES[nb].ground[0]));
+      n += 1;
+    }
+    if (n > 0) this.color.lerp(this.mixC.multiplyScalar(1 / n), 0.25);
+    return this.color.getHex();
   }
 
   /**
@@ -422,7 +483,7 @@ export class MapManager {
     });
     if (cx === 0 && cz === 0) {
       layout.plots.push(nen('core', 0, 0, true));
-      for (const [px, pz] of [[-9, -8], [9, -8], [-9, 8], [9, 8]] as const) {
+      for (const [px, pz] of CORE_PLOTS) {
         layout.plots.push(nen(`p_0_0_${px}_${pz}`, px, pz, false));
       }
     } else {
@@ -463,8 +524,51 @@ export class MapManager {
       }
     }
 
+    this.decorate(layout, cx, cz);
+
     this.layouts.set(key, layout);
     return layout;
+  }
+
+  /**
+   * Hoa, bụi và vài cây lẻ cho đồng cỏ — thứ làm khoảng trống giữa các bãi bớt trơ.
+   *
+   * Rút từ một chuỗi ngẫu nhiên RIÊNG (muối 17), không đụng chuỗi chính: chuỗi chính quyết
+   * định vị trí và mã nền đất, mà mã nền đất nằm trong bản lưu. Rút thêm một số ở chuỗi chính
+   * là mọi căn nhà đã xây trỏ vào một nền không còn tồn tại. Mỗi lượt rút đủ sáu số TRƯỚC khi
+   * xét điều kiện, nên đổi luật gạt sau này cũng không làm xô lệch các lượt sau.
+   *
+   * Tránh cả bãi của tám khối xung quanh (lòng bãi tràn qua ranh giới khối) và năm nền của thủ
+   * phủ (chúng nằm vắt sang ba khối khác, không có trong bố cục của khối đang xét).
+   */
+  private decorate(layout: Layout, cx: number, cz: number): void {
+    const ox = cx * CHUNK;
+    const oz = cz * CHUNK;
+    const bai: Patch[] = [];
+    for (let dx = -1; dx <= 1; dx += 1) {
+      for (let dz = -1; dz <= 1; dz += 1) bai.push(...(dx || dz ? patchesOf(cx + dx, cz + dz) : layout.patches));
+    }
+    const rr = chunkRng(cx, cz, 17);
+    for (let i = 0; i < 26; i += 1) {
+      const x = ox + rr() * CHUNK;
+      const z = oz + rr() * CHUNK;
+      const loai = rr();
+      const sc = rr();
+      const rot = rr() * 6;
+      const mau = rr();
+      if (biomeAt(x, z) !== 'meadow' || onRoad(x, z)) continue;
+      if (bai.some((p) => Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 1.5)) continue;
+      if (layout.plots.some((q) => Math.hypot(q.position[0] - x, q.position[2] - z) < PLOT_FLAT_R)) continue;
+      if (Math.hypot(x, z) < PLOT_FLAT_R + 1) continue;
+      if (CORE_PLOTS.some(([px, pz]) => Math.hypot(px - x, pz - z) < PLOT_FLAT_R)) continue;
+      if (loai < 0.1) {
+        layout.props.push({ key: 'leaf', pos: [x, 0, z], scale: 0.7 + sc * 0.35, rot, color: PALETTE.leaf[Math.floor(mau * 3)] });
+      } else if (loai < 0.36) {
+        layout.props.push({ key: 'bush', pos: [x, 0, z], scale: 0.8 + sc * 0.6, rot, color: PALETTE.bush[Math.floor(mau * 2)] });
+      } else {
+        layout.props.push({ key: 'flower', pos: [x, 0, z], scale: 1 + sc * 0.5, rot, color: PALETTE.flowers[Math.floor(mau * 4)] });
+      }
+    }
   }
 
   /** Props bên trong một bãi: dày, cao, và bám sát vùng đất của nó. */
@@ -479,8 +583,20 @@ export class MapManager {
 
     switch (p.kind) {
       case 'wood':
-        rai(16, (a, d) => put('pine', Math.cos(a) * d, 0, Math.sin(a) * d,
-          0.85 + r() * 0.6, PALETTE.pine[Math.floor(r() * 3)]));
+        /*
+         * Rừng đồng cỏ là rừng HỖN GIAO: chừng một phần ba là cây tán tròn. Chọn loại bằng hàm
+         * băm theo vị trí chứ không rút thêm số — mỗi cây vẫn rút đúng năm số (góc, khoảng
+         * cách, cỡ, màu, hướng) theo đúng thứ tự cũ, nên nền đất rút sau đó không xê dịch.
+         */
+        rai(16, (a, d) => {
+          const sc = 0.85 + r() * 0.6;
+          const ci = Math.floor(r() * 3);
+          const dx = Math.cos(a) * d;
+          const dz = Math.sin(a) * d;
+          const tron = p.biome === 'meadow'
+            && hash2(Math.round((x + dx) * 7), Math.round((z + dz) * 7), 41) < 0.34;
+          put(tron ? 'leaf' : 'pine', dx, 0, dz, tron ? sc * 0.92 : sc, (tron ? PALETTE.leaf : PALETTE.pine)[ci]);
+        });
         break;
       case 'food':
         rai(14, (a, d) => put('wheat', Math.cos(a) * d, 0, Math.sin(a) * d,
@@ -542,6 +658,7 @@ export class MapManager {
     // Quầng bãi thở rất chậm và rất nhẹ. Mạnh hơn nữa thì cả bản đồ nhấp nháy, mà bản đồ
     // này có tới hai trăm bãi cùng lúc — một nhịp đập đồng loạt sẽ thành thứ gây nhiễu.
     this.tho += dt;
+    WIND.value += dt;
     const mat = this.meshes.halo.material as THREE.MeshBasicMaterial;
     mat.opacity = 0.78 + Math.sin(this.tho * 1.25) * 0.1;
 
@@ -582,16 +699,60 @@ export class MapManager {
 
   /** Thân cộng ba tán, HÀN thành một hình học — không hàn thì một cây là bốn lệnh vẽ. */
   private pineGeometry(): THREE.BufferGeometry {
-    const parts: THREE.BufferGeometry[] = [];
     const trunk = new THREE.CylinderGeometry(0.14, 0.2, 0.9, 5);
     trunk.translate(0, 0.45, 0);
-    parts.push(trunk);
+    const parts = [paint(trunk, PALETTE.trunk)];
     for (const [y, rad, h] of [[1.15, 0.95, 1.2], [1.9, 0.72, 1.0], [2.5, 0.48, 0.8]] as const) {
       const cone = new THREE.ConeGeometry(rad, h, 6);
       cone.translate(0, y, 0);
-      parts.push(cone);
+      parts.push(paint(cone, null));
     }
-    return mergeGeometries(parts, false) ?? trunk;
+    return han(parts);
+  }
+
+  /** Cây tán tròn: thân thấp, hai khối tán lệch nhau cho dáng không đối xứng. */
+  private leafGeometry(): THREE.BufferGeometry {
+    const trunk = new THREE.CylinderGeometry(0.11, 0.17, 1.2, 5).toNonIndexed();
+    trunk.translate(0, 0.6, 0);
+    const tan = new THREE.IcosahedronGeometry(0.88, 0);
+    tan.scale(1, 0.9, 1);
+    tan.translate(0, 1.72, 0);
+    const tan2 = new THREE.IcosahedronGeometry(0.52, 0);
+    tan2.translate(0.5, 1.32, 0.18);
+    return han([paint(trunk, PALETTE.trunk), paint(tan, null), paint(tan2, null)]);
+  }
+
+  /** Bụi: ba khối tròn thấp chụm vào nhau. */
+  private bushGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    for (const [r, x, y, z, dep] of [[0.55, 0, 0.36, 0, 0.78], [0.4, 0.46, 0.26, 0.12, 0.8], [0.34, -0.3, 0.24, 0.36, 1]] as const) {
+      const g = new THREE.IcosahedronGeometry(r, 0);
+      g.scale(1, dep, 1);
+      g.translate(x, y, z);
+      parts.push(g);
+    }
+    return han(parts);
+  }
+
+  /**
+   * Một khóm năm bông: thân xanh cố định, bông trắng để nhận màu của bản.
+   *
+   * Bông TO và DẸT, thân ngắn và nhạt: nhìn từ trên xuống thứ cần đọc ra là một chấm màu.
+   * Bản đầu bông 0,1 trên thân sẫm cao 0,42 — ở mức phóng gần nhất trông như mấy que tăm
+   * cắm xuống cỏ, chẳng ai nhận ra là hoa.
+   */
+  private flowerGeometry(): THREE.BufferGeometry {
+    const parts: THREE.BufferGeometry[] = [];
+    for (const [x, z, h] of [[0, 0, 0.34], [0.24, 0.1, 0.27], [-0.17, 0.22, 0.24], [0.08, -0.26, 0.29], [-0.28, -0.12, 0.21]] as const) {
+      const than = new THREE.CylinderGeometry(0.02, 0.026, h, 3, 1, true).toNonIndexed();
+      than.translate(x, h / 2, z);
+      parts.push(paint(than, PALETTE.leaf[1]));
+      const bong = new THREE.OctahedronGeometry(0.16, 0);
+      bong.scale(1, 0.62, 1);
+      bong.translate(x, h + 0.05, z);
+      parts.push(paint(bong, null));
+    }
+    return han(parts);
   }
 
   private wheatGeometry(): THREE.BufferGeometry {
@@ -616,18 +777,17 @@ export class MapManager {
   }
 
   private palmGeometry(): THREE.BufferGeometry {
-    const parts: THREE.BufferGeometry[] = [];
     const trunk = new THREE.CylinderGeometry(0.1, 0.16, 1.9, 5);
     trunk.translate(0, 0.95, 0);
-    parts.push(trunk);
+    const parts = [paint(trunk, PALETTE.trunk)];
     for (let i = 0; i < 5; i += 1) {
       const frond = new THREE.ConeGeometry(0.22, 1.25, 4);
       frond.rotateZ(Math.PI / 2.4);
       frond.rotateY((i / 5) * Math.PI * 2);
       frond.translate(0, 1.95, 0);
-      parts.push(frond);
+      parts.push(paint(frond, null));
     }
-    return mergeGeometries(parts, false) ?? trunk;
+    return han(parts);
   }
 
   dispose(): void {
@@ -636,4 +796,70 @@ export class MapManager {
       (mesh.material as THREE.Material).dispose();
     }
   }
+}
+
+/**
+ * Ô lục giác vát mép trên, KHÔNG có đáy (đáy chôn sâu dưới các ô kề, không ai nhìn thấy).
+ *
+ * Ghép tay thay cho LatheGeometry: lathe sinh thêm một tam giác suy biến cho mỗi cạnh ở tâm
+ * mặt trên. Ba mươi tam giác mỗi ô — thành, mép vát, mặt — so với hai mươi tư của hình trụ
+ * cũ, mà hình trụ cũ còn phí sáu cho cái đáy.
+ *
+ * Đỉnh ở góc π/6 + kπ/3, cùng quy ước x = r·sinφ, z = r·cosφ với CylinderGeometry, nên cạnh
+ * phẳng quay về ±Z như lưới cần (xem chú thích ở constructor). Mặt nào cũng có pháp tuyến
+ * riêng: mép vát phải bắt sáng thành một viền sắc, không được nội suy loang sang mặt trên.
+ */
+function hexTile(r: number, h: number, vatCao: number, vatRong: number): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const dinh = (rad: number, y: number, k: number): number[] => {
+    const a = Math.PI / 6 + (k * Math.PI) / 3;
+    return [rad * Math.sin(a), y, rad * Math.cos(a)];
+  };
+  const tamGiac = (...p: number[][]): void => { for (const v of p) pos.push(...v); };
+  const day = -h / 2;
+  const vai = h / 2 - vatCao;
+  const mat = h / 2;
+  const trong = r - vatRong;
+  for (let k = 0; k < 6; k += 1) {
+    const a0 = dinh(r, day, k);
+    const a1 = dinh(r, day, k + 1);
+    const b0 = dinh(r, vai, k);
+    const b1 = dinh(r, vai, k + 1);
+    const c0 = dinh(trong, mat, k);
+    const c1 = dinh(trong, mat, k + 1);
+    tamGiac(a0, a1, b0);
+    tamGiac(b1, b0, a1);
+    tamGiac(b0, b1, c0);
+    tamGiac(c1, c0, b1);
+    tamGiac(c0, c1, [0, mat, 0]);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Tô cả một phần hình bằng một màu đỉnh; null là trắng — tức nhận màu của bản (xem sway). */
+function paint(geo: THREE.BufferGeometry, hex: number | null): THREE.BufferGeometry {
+  const c = new THREE.Color(hex ?? 0xffffff);
+  const n = geo.getAttribute('position').count;
+  const a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i += 1) {
+    a[i * 3] = c.r;
+    a[i * 3 + 1] = c.g;
+    a[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  return geo;
+}
+
+/**
+ * Hàn nhiều phần thành một hình. Ném lỗi thay vì lặng lẽ trả về một phần: mergeGeometries trả
+ * null khi các phần lệch thuộc tính (một phần có màu đỉnh, phần kia không; một phần có chỉ
+ * mục, phần kia không), và bản cũ `?? trunk` sẽ biến cả cây thành một cái thân trơ trọi.
+ */
+function han(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const g = mergeGeometries(parts, false);
+  if (!g) throw new Error('han: cac phan lech thuoc tinh');
+  return g;
 }
