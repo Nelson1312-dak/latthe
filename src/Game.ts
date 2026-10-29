@@ -72,6 +72,17 @@ export class Game {
   private emptyPads!: THREE.InstancedMesh;
   private emptyPosts!: THREE.InstancedMesh;
   private readonly mtx = new THREE.Matrix4();
+  /** Công trình đang dựng, theo nền đất — kèm chữ ký để biết khi nào phải dựng lại. */
+  private readonly structures = new Map<string, { g: THREE.Group; sig: string }>();
+  /** Hình học và vật liệu công trình dùng chung: dựng một lần, không huỷ theo từng lần vẽ. */
+  private readonly geoCache = new Map<string, THREE.BufferGeometry>();
+  private readonly matCache = new Map<string, THREE.Material>();
+  private readonly tmpV = new THREE.Vector3();
+  private readonly tmpD = new THREE.Vector3();
+  /** Hướng nắng và hai trục của camera bóng — hằng số, tính một lần. */
+  private readonly sunDir = new THREE.Vector3(18, 28, 14).normalize();
+  private readonly sunRight = new THREE.Vector3();
+  private readonly sunUp = new THREE.Vector3();
   private composer!: EffectComposer;
   private gtao!: GTAOPass;
   private readonly raycaster = new THREE.Raycaster();
@@ -184,6 +195,9 @@ export class Game {
     // Mềm tới mức gần như chỉ còn một vệt tối dưới chân vật thể.
     this.sun.shadow.radius = 5;
     this.scene.add(this.sun, this.sun.target);
+    // Camera bóng nhìn dọc hướng nắng với up = +Y, nên hai trục ngang của nó là hằng số.
+    this.sunRight.crossVectors(new THREE.Vector3(0, 1, 0), this.sunDir).normalize();
+    this.sunUp.crossVectors(this.sunDir, this.sunRight).normalize();
 
     this.map = new MapManager();
     this.fog = new FogOfWar(economy.state.revealed);
@@ -243,7 +257,17 @@ export class Game {
    * toàn bộ màu nhạt toẹt đi mà không báo lỗi gì — chỉ nhìn mới thấy.
    */
   private buildComposer(): void {
-    this.composer = new EffectComposer(this.renderer);
+    /*
+     * Render target ĐA MẪU. Mặc định EffectComposer dựng target 0 mẫu, nên từ khi có AO thì
+     * `antialias: true` của renderer chỉ còn áp lên lớp vẽ cuối — một hình chữ nhật phủ kín
+     * màn hình, chẳng có cạnh nào để khử. Đo được samples = 0 trên cả hai target.
+     *
+     * Truyền target tự dựng thì composer coi pixel ratio là 1, nên phải đặt lại ngay sau.
+     */
+    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+    this.composer = new EffectComposer(this.renderer, rt);
+    this.composer.setPixelRatio(this.renderer.getPixelRatio());
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
     const w = window.innerWidth;
@@ -317,7 +341,7 @@ export class Game {
     const place = (mesh: THREE.Mesh, id: string | null) => {
       const plot = id ? this.map.plotById(id) : null;
       mesh.visible = !!plot;
-      if (plot) mesh.position.set(plot.position[0], 0.22, plot.position[2]);
+      if (plot) mesh.position.set(plot.position[0], plot.position[1] + 0.22, plot.position[2]);
     };
     place(this.selectRing, this.selectedId);
     place(this.hoverRing, this.hoveredId === this.selectedId ? null : this.hoveredId);
@@ -325,7 +349,7 @@ export class Game {
     const b = this.selectedPatchId ? this.map.patchById(this.selectedPatchId) : null;
     this.patchRing.visible = !!b;
     if (b) {
-      this.patchRing.position.set(b.center[0], 0.26, b.center[2]);
+      this.patchRing.position.set(b.center[0], b.center[1] + 0.12, b.center[2]);
       const k = b.radius * 1.2;
       this.patchRing.scale.set(k, 1, k);
     }
@@ -371,20 +395,14 @@ export class Game {
   }
 
   rebuildPlots(): void {
-    this.plotGroup.traverse((o) => {
-      if (!(o instanceof THREE.Mesh)) return;
-      o.geometry.dispose();
-      if (!Array.isArray(o.material)) o.material.dispose();
-    });
-    this.plotGroup.clear();
-    this.pickable.length = 0;
-
     /*
-     * Chi dung NEN DAT GAN tam ngam, cong moi thu da xay du o dau.
+     * CHỈ DỰNG LẠI CÁI ĐÃ ĐỔI.
      *
-     * Tam nhin gio rong 330 don vi nen vung nap co hon tram nen dat, moi nen vai khoi - cong
-     * lai nhieu lenh ve hon ca phan con lai cua the gioi. Nen trong o xa thi nguoi choi cung
-     * khong voi toi ma bam, nen khong dang ve.
+     * Bản trước huỷ rồi dựng lại TOÀN BỘ công trình mỗi lần hàm này chạy — mà nó chạy mỗi
+     * khi bản đồ nạp thêm khối, tức mỗi lần người chơi kéo qua ranh giới khối. Mỗi khối của
+     * mỗi công trình lại mang một vật liệu và một hình học mới tinh. Giờ mỗi công trình có
+     * một chữ ký (loại, cấp, số thùng hàng); chữ ký không đổi thì giữ nguyên nhóm cũ, kể cả
+     * trạng thái tween đang dở.
      */
     // Công trình vừa đặt xong thì cho bật lên; đọc một lần rồi trả lại null, nên khối
     // được dựng lại vì lý do khác (nạp thêm khối bản đồ) sẽ không bật theo.
@@ -392,27 +410,68 @@ export class Game {
     this.economy.justBuilt = null;
     if (vuaXay) this.popping.set(vuaXay, 0);
 
+    const con = new Set<string>();
     let trong = 0;
     for (const plot of this.map.plots) {
       const building = this.economy.buildingAt(plot.id);
       if (!building) {
         if (trong >= EMPTY_CAP) continue;
-        this.mtx.makeTranslation(plot.position[0], 0, plot.position[2]);
+        this.mtx.makeTranslation(plot.position[0], plot.position[1], plot.position[2]);
         this.emptyPads.setMatrixAt(trong, this.mtx);
         this.emptyPosts.setMatrixAt(trong, this.mtx);
         trong += 1;
         continue;
       }
+      con.add(plot.id);
+      const sig = this.signature(building);
+      const cu = this.structures.get(plot.id);
+      if (cu && cu.sig === sig) continue;
+      if (cu) this.plotGroup.remove(cu.g);
       const g = new THREE.Group();
-      g.position.set(plot.position[0], 0, plot.position[2]);
+      g.position.set(plot.position[0], plot.position[1], plot.position[2]);
       g.userData.plotId = plot.id;
+      g.userData.baseY = plot.position[1];
       this.buildStructure(g, building, plot.id);
       this.plotGroup.add(g);
+      this.structures.set(plot.id, { g, sig });
+    }
+    for (const [id, st] of this.structures) {
+      if (!con.has(id)) {
+        this.plotGroup.remove(st.g);
+        this.structures.delete(id);
+      }
+    }
+    this.pickable.length = 0;
+    for (const st of this.structures.values()) {
+      st.g.traverse((o) => {
+        if (o instanceof THREE.Mesh && o.userData.plotId) this.pickable.push(o);
+      });
     }
     this.emptyPads.count = trong;
     this.emptyPosts.count = trong;
     this.emptyPads.instanceMatrix.needsUpdate = true;
     this.emptyPosts.instanceMatrix.needsUpdate = true;
+  }
+
+  /** Chữ ký của một công trình: đổi một trong ba thứ này thì phải dựng lại hình. */
+  private signature(b: Building): string {
+    const crates = b.type === 'outpost'
+      ? Math.min(5, Math.ceil(Object.values(b.stock).reduce<number>((a, v) => a + (v ?? 0), 0) / 20))
+      : 0;
+    return `${b.type}:${b.level}:${crates}`;
+  }
+
+  private geo(key: string, make: () => THREE.BufferGeometry): THREE.BufferGeometry {
+    let g = this.geoCache.get(key);
+    if (!g) { g = make(); this.geoCache.set(key, g); }
+    return g;
+  }
+
+  private mat(color: number, flat = false): THREE.Material {
+    const key = `${color}:${flat}`;
+    let m = this.matCache.get(key);
+    if (!m) { m = matte(color, flat); this.matCache.set(key, m); }
+    return m;
   }
 
   private buildStructure(g: THREE.Group, b: Building, id: string): void {
@@ -422,16 +481,17 @@ export class Game {
     // Thủ phủ 4×4, công trình thường 3×3 — cùng cỡ nền đất mà nó thay thế.
     const base = new THREE.Mesh(
       core
-        ? new THREE.CylinderGeometry(GRID * 2, GRID * 2, 0.4, 6)
-        : roundedBox(GRID * 3, 0.22, GRID * 3, 0.3, 0.05),
-      matte(core ? PALETTE.graniteDark : PALETTE.plotDirt));
+        ? this.geo('base:core', () => new THREE.CylinderGeometry(GRID * 2, GRID * 2, 0.4, 6))
+        : this.geo('base:plot', () => roundedBox(GRID * 3, 0.22, GRID * 3, 0.3, 0.05)),
+      this.mat(core ? PALETTE.graniteDark : PALETTE.plotDirt));
     base.position.y = core ? 0.2 : 0.11;
     base.receiveShadow = true;
     g.add(base);
 
+    const w = core ? GRID * 3 : GRID * 2;
     const body = new THREE.Mesh(
-      roundedBox(core ? GRID * 3 : GRID * 2, h, core ? GRID * 3 : GRID * 2, 0.26, 0.1),
-      matte(PALETTE.wall, true));
+      this.geo(`body:${w}:${h.toFixed(2)}`, () => roundedBox(w, h, w, 0.26, 0.1)),
+      this.mat(PALETTE.wall, true));
     body.position.y = (core ? 0.4 : 0.18) + h / 2;
     body.castShadow = true;
     body.receiveShadow = true;
@@ -441,9 +501,9 @@ export class Game {
 
     // Mái phủ đúng đường chéo của thân, nên hai cái khớp nhau thay vì xê xích vài phần mười.
     const roof = new THREE.Mesh(
-      new THREE.ConeGeometry(
-        (core ? GRID * 3 : GRID * 2) * Math.SQRT1_2 + 0.22, core ? 1.6 : 1.1, 4),
-      matte(ROOF[b.type], true));
+      this.geo(`roof:${core}`, () => new THREE.ConeGeometry(
+        (core ? GRID * 3 : GRID * 2) * Math.SQRT1_2 + 0.22, core ? 1.6 : 1.1, 4)),
+      this.mat(ROOF[b.type], true));
     roof.position.y = (core ? 0.4 : 0.18) + h + (core ? 0.8 : 0.55);
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
@@ -453,9 +513,10 @@ export class Game {
     if (b.type === 'outpost') {
       const total = Object.values(b.stock).reduce<number>((a, v) => a + (v ?? 0), 0);
       const crates = Math.min(5, Math.ceil(total / 20));
-      const crateMat = matte(PALETTE.roofOutpost);
+      const crateMat = this.mat(PALETTE.roofOutpost);
+      const crateGeo = this.geo('crate', () => new THREE.BoxGeometry(0.4, 0.4, 0.4));
       for (let i = 0; i < crates; i += 1) {
-        const c = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), crateMat);
+        const c = new THREE.Mesh(crateGeo, crateMat);
         c.position.set(-1.0 + (i % 3) * 0.46, 0.38 + Math.floor(i / 3) * 0.42, 1.25);
         c.castShadow = true;
         g.add(c);
@@ -639,13 +700,36 @@ export class Game {
     if (id && this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
   }
 
-  /** Điểm trên mặt đất dưới con trỏ. Trả false khi tia không cắt mặt phẳng. */
+  /** Điểm trên mặt đất dưới con trỏ. Trả false khi tia không cắt mặt đất. */
   private groundPoint(e: PointerEvent): boolean {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    return this.raycaster.ray.intersectPlane(this.ground, this.hitPoint) !== null;
+    return this.castToGround();
+  }
+
+  /**
+   * Cắt tia với MẶT ĐẤT THẬT, không phải mặt phẳng y = 0.
+   *
+   * Mặt đất lên tới +2,8 ở vách đá; cắt với y = 0 thì điểm bấm lệch hai, ba đơn vị theo
+   * hướng nhìn — bấm vào căn nhà trên đồi mà trúng nền bên cạnh. Lặp vài lần: cắt với mặt
+   * phẳng ở cao độ vừa tìm, đọc cao độ mới ở đó, cắt lại. Mặt ô phẳng nên hội tụ ngay, trừ
+   * đúng ở mép bậc — và ở đó lệch nửa ô thì cũng không ai bấm nhầm.
+   */
+  private castToGround(): boolean {
+    let y = 0;
+    let ok = false;
+    for (let k = 0; k < 4; k += 1) {
+      this.ground.constant = -y;
+      ok = this.raycaster.ray.intersectPlane(this.ground, this.hitPoint) !== null;
+      if (!ok) break;
+      const ny = this.map.groundY(this.hitPoint.x, this.hitPoint.z);
+      if (Math.abs(ny - y) < 0.01) break;
+      y = ny;
+    }
+    this.ground.constant = 0;
+    return ok;
   }
 
   /**
@@ -690,7 +774,7 @@ export class Game {
     const hits = this.raycaster.intersectObjects(this.pickable, false);
     if (hits.length) return hits[0].object.userData.plotId as string;
 
-    if (!this.raycaster.ray.intersectPlane(this.ground, this.hitPoint)) return null;
+    if (!this.castToGround()) return null;
     let best: string | null = null;
     let bestDist = 2.6;
     for (const p of this.map.plots) {
@@ -757,8 +841,9 @@ export class Game {
     this.camera.right = halfH * aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    // composer.setSize tự đặt cỡ cho từng pass, đã nhân pixel ratio. Bản trước gọi thêm
+    // gtao.setSize(w, h) theo điểm ảnh CSS, đè mất cỡ đúng trên màn hình mật độ cao.
     this.composer.setSize(w, h);
-    this.gtao.setSize(w, h);
   };
 
   private watchHud(): void {
@@ -816,7 +901,8 @@ export class Game {
       if (this.selectedUnitId) {
         const u = this.economy.state.units.find((x) => x.id === this.selectedUnitId);
         if (!u) this.chooseUnit(null);           // xe giao xong là biến mất
-        else this.unitRing.position.set(u.position[0], 0.3, u.position[2]);
+        else this.unitRing.position.set(
+          u.position[0], this.map.groundY(u.position[0], u.position[2]) + 0.3, u.position[2]);
       }
       // Vòng chọn thở nhẹ để mắt bắt được ngay giữa một bản đồ dày đặc.
       if (this.selectRing.visible) {
@@ -872,11 +958,15 @@ export class Game {
       const re = id === this.hoveredId;
       const chon = id === this.selectedId;
       const bat = this.popping.get(id);
-      if (!re && !chon && bat === undefined && g.position.y === 0 && g.scale.x === 1) continue;
-      g.position.y = toi(g.position.y, re ? 0.22 : 0, 16);
+      const y0 = (g.userData.baseY as number | undefined) ?? 0;
+      if (!re && !chon && bat === undefined && g.position.y === y0 && g.scale.x === 1) continue;
+      g.position.y = toi(g.position.y, y0 + (re ? 0.22 : 0), 16);
+      // Nội suy mũ không bao giờ chạm đích; sát rồi thì gán thẳng để vòng lặp còn bỏ qua được.
+      if (!re && Math.abs(g.position.y - y0) < 1e-3) g.position.y = y0;
       const phong = (chon ? 1 + this.punch * 0.1 : 1) * (re ? 1.04 : 1);
       if (bat === undefined) {
-        g.scale.setScalar(toi(g.scale.x, phong, 18));
+        const k = toi(g.scale.x, phong, 18);
+        g.scale.setScalar(Math.abs(k - phong) < 1e-3 ? phong : k);
       } else {
         // Đường cong nở quá cỡ: tới 1,18 rồi lắng xuống. Không nội suy mượt ở đây, vì mượt
         // thì nó chỉ là "to dần ra", còn cái nảy mới đọc ra là một vật rơi xuống đúng chỗ.
@@ -918,9 +1008,53 @@ export class Game {
 
     this.camera.position.set(this.target.x + 60, 70, this.target.z + 60);
     this.camera.lookAt(this.target);
-    this.sun.position.set(this.target.x + 18, 28, this.target.z + 14);
-    this.sun.target.position.copy(this.target);
+    this.fitShadow();
+  }
+
+  /**
+   * Khung bóng đổ ôm vừa vùng đất đang thấy, và bám lưới texel.
+   *
+   * Bản trước cố định ±30 đơn vị quanh tâm ngắm, trong khi ở mức phóng xa nhất khung nhìn
+   * phủ hơn ±100 — ra khỏi vùng giữa là cây cối nhà cửa không còn bóng.
+   *
+   * Bám lưới texel: hướng nắng không đổi nên hai trục ngang của camera bóng là hằng số. Làm
+   * tròn hình chiếu của tâm lên hai trục ấy về bội số một texel thì lưới điểm ảnh của bản đồ
+   * bóng đứng yên trong thế giới khi người chơi kéo bản đồ. Thiếu bước này thì mép bóng lăn
+   * tăn từng điểm ảnh mỗi lần kéo.
+   */
+  private fitShadow(): void {
+    const cam = this.camera;
+    cam.updateMatrixWorld();
+    const dir = cam.getWorldDirection(this.tmpD);
+    let r = 0;
+    for (const [nx, ny] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) {
+      this.tmpV.set(nx, ny, -1).unproject(cam);
+      const t = -this.tmpV.y / dir.y;
+      r = Math.max(r, Math.hypot(
+        this.tmpV.x + dir.x * t - this.target.x, this.tmpV.z + dir.z * t - this.target.z));
+    }
+    // Cộng lề cho vật cao ở rìa, rồi lượng tử hoá theo bậc 1,2 lần: cỡ khung chỉ đổi theo
+    // từng nấc, nên texel không co giãn liên tục mỗi khung lúc đang phóng.
+    const half = Math.pow(1.2, Math.ceil(Math.log(r + 8) / Math.log(1.2)));
+    const texel = (2 * half) / this.sun.shadow.mapSize.x;
+    const a = this.target.dot(this.sunRight);
+    const b = this.target.dot(this.sunUp);
+    this.tmpV.copy(this.target)
+      .addScaledVector(this.sunRight, Math.round(a / texel) * texel - a)
+      .addScaledVector(this.sunUp, Math.round(b / texel) * texel - b);
+    this.sun.target.position.copy(this.tmpV);
+    this.sun.position.copy(this.tmpV).addScaledVector(this.sunDir, half * 2 + 40);
     this.sun.target.updateMatrixWorld();
+    const sc = this.sun.shadow.camera;
+    if (sc.right !== half) {
+      sc.left = -half;
+      sc.right = half;
+      sc.top = half;
+      sc.bottom = -half;
+      sc.near = 1;
+      sc.far = half * 4 + 80;
+      sc.updateProjectionMatrix();
+    }
   }
 
   plotById(id: string): Plot | undefined {

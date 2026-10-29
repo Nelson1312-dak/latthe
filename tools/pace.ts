@@ -111,7 +111,7 @@ const thayBai: Partial<Record<ResourceKind, number>> = {};
 const hang = (n: number, w: number) => String(Math.floor(n)).padStart(w);
 
 for (; sim <= MOC[MOC.length - 1]; sim += DT) {
-  workers.update(DT);
+  workers.update(DT, false);
   fog.update(DT, economy.state.units, target, 1 / (1 - economy.bonus.survey));
   economy.tick(DT);
 

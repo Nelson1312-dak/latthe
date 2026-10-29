@@ -23,7 +23,7 @@ const ui = new UIManager(economy, game);
  * về có thể thấy đội thám hiểm đã vén thêm được một vùng — đúng như khi ngồi nhìn.
  */
 const stepWorld = (dt: number): void => {
-  game.workers.update(dt);
+  game.workers.update(dt, false);
   game.fog.update(dt, economy.state.units, game.target,
     1 / (1 - economy.bonus.survey));
 };

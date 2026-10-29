@@ -50,6 +50,13 @@ export class WorkerManager {
   private readonly axis = new THREE.Vector3(0, 1, 0);
   private readonly hidden = new THREE.Matrix4().makeScale(0, 0, 0);
   private readonly color = new THREE.Color();
+  private readonly euler = new THREE.Euler(0, 0, 0, 'YXZ');
+  /**
+   * Cao độ ĐANG VẼ của từng người — nội suy về cao độ mặt đất chứ không nhảy thẳng tới. Mặt
+   * ô phẳng nên đi qua mép bậc là cao độ đổi đột ngột; gán thẳng thì người giật lên một bậc
+   * trong một khung, đọc ra như lỗi. Không lưu vào bản lưu: nó thuần tuý là hình.
+   */
+  private readonly yVe = new Map<string, number>();
 
   constructor(economy: Economy, map: MapManager, fog: FogOfWar) {
     this.economy = economy;
@@ -165,7 +172,12 @@ export class WorkerManager {
 
   // --------------------------------------------------------------- mô phỏng
 
-  update(dt: number): void {
+  /**
+   * `ve = false` khi tua nhanh lúc người chơi quay lại: hai giờ vắng là 14.400 bước mô phỏng,
+   * và không ai nhìn thấy khung hình nào trong số đó — dựng ma trận cho từng người mỗi bước
+   * là tốn vô ích.
+   */
+  update(dt: number, ve = true): void {
     this.elapsed += dt;
     const units = this.economy.state.units;
 
@@ -196,7 +208,7 @@ export class WorkerManager {
       }
       this.villager(u, dt);
     }
-    this.draw();
+    if (ve) this.draw(dt);
   }
 
   private villager(u: Unit, dt: number): void {
@@ -508,7 +520,16 @@ export class WorkerManager {
 
   // ------------------------------------------------------------------- vẽ
 
-  private draw(): void {
+  /** Cao độ vẽ của một người, đã nội suy về mặt đất bên dưới. */
+  private yOf(id: string, x: number, z: number, dt: number): number {
+    const dat = this.map.groundY(x, z);
+    const cu = this.yVe.get(id);
+    const y = cu === undefined ? dat : cu + (dat - cu) * (1 - Math.exp(-14 * dt));
+    this.yVe.set(id, y);
+    return y;
+  }
+
+  private draw(dt: number): void {
     const units = this.economy.state.units;
     let vi = 0;
     let ci = 0;
@@ -516,7 +537,7 @@ export class WorkerManager {
     for (const u of units) {
       if (u.kind === 'cart') {
         if (ci < this.carts.count) {
-          this.v.set(u.position[0], 0, u.position[2]);
+          this.v.set(u.position[0], this.yOf(u.id, u.position[0], u.position[2], dt), u.position[2]);
           this.q.setFromAxisAngle(this.axis, u.facing + Math.PI / 2);
           this.s.set(1, 1, 1);
           this.carts.setMatrixAt(ci, this.m.compose(this.v, this.q, this.s));
@@ -535,15 +556,16 @@ export class WorkerManager {
       const tilt = walking ? Math.sin(phase) * 0.15 : 0;
       const chop = u.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7)) * 0.5 : 0;
 
-      this.v.set(u.position[0], lift, u.position[2]);
-      this.q.setFromEuler(new THREE.Euler(chop, u.facing, tilt, 'YXZ'));
+      const y = this.yOf(u.id, u.position[0], u.position[2], dt);
+      this.v.set(u.position[0], y + lift, u.position[2]);
+      this.q.setFromEuler(this.euler.set(chop, u.facing, tilt, 'YXZ'));
       this.s.set(1, 1, 1);
       this.bodies.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
 
       if (u.carrying > 0 && u.carryingKind) {
         this.v.set(
           u.position[0] - Math.sin(u.facing) * 0.33,
-          0.52 + lift,
+          y + 0.52 + lift,
           u.position[2] - Math.cos(u.facing) * 0.33);
         this.cargo.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
         this.cargo.setColorAt(vi, this.color.setHex(RESOURCES[u.carryingKind].color));
@@ -559,6 +581,11 @@ export class WorkerManager {
       this.cargo.setMatrixAt(i, this.hidden);
     }
     for (let i = ci; i < this.carts.count; i += 1) this.carts.setMatrixAt(i, this.hidden);
+    // Xe giao xong thì biến mất; dọn cao độ của chúng khỏi bảng.
+    if (this.yVe.size > units.length + 32) {
+      const con = new Set(units.map((u) => u.id));
+      for (const id of this.yVe.keys()) if (!con.has(id)) this.yVe.delete(id);
+    }
 
     this.bodies.instanceMatrix.needsUpdate = true;
     this.cargo.instanceMatrix.needsUpdate = true;

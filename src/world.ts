@@ -129,6 +129,68 @@ export function hexIsRoad(x: number, z: number): boolean {
   return trong(x, HEX_STEP_X) || trong(z, HEX_STEP_Z);
 }
 
+// ---------------------------------------------------------------- cao độ
+
+/**
+ * MỌI THỨ ĐỨNG TRÊN MẶT ĐẤT LẤY CAO ĐỘ TỪ ĐÂY.
+ *
+ * Trước đây cây, đá, nền đất, nhà và dân làng đều đặt ở y = 0, trong khi mặt đất lượn ±0,7
+ * ở đồng cỏ và lên tới +2,8 ở vách đá. Cây nổi lơ lửng hoặc lún, và một mỏ đá ở vách đá có
+ * mặt đất cao 2,02 trong khi đá đặt ở 0,3–0,7 — chìm hẳn trong cột đất, bấm được mà không
+ * thấy gì. Không ai phát hiện vì không có gì báo lỗi: chỉ có hình là sai.
+ *
+ * Mặt trên mỗi ô lục giác là PHẲNG, nên cao độ tại một điểm chính là cao độ mặt trên của ô
+ * chứa điểm đó. Ô thì có hai loại: ô tự nhiên (naturalTop) và ô đã bị san phẳng quanh một
+ * nền đất hay trong lòng một bãi — phần san phẳng do MapManager quyết vì nó cần biết các
+ * khối lân cận.
+ */
+
+/** Tâm ô lục giác chứa điểm (x, z). Lưới lục giác chính quy nên tâm gần nhất là ô chứa. */
+export function hexCenterAt(x: number, z: number): [number, number] {
+  const ic = Math.round(x / HEX_STEP_X);
+  let bx = 0;
+  let bz = 0;
+  let bd = Infinity;
+  for (let i = ic - 1; i <= ic + 1; i += 1) {
+    const hx = i * HEX_STEP_X;
+    const lech = (((i % 2) + 2) % 2) ? HEX_STEP_Z / 2 : 0;
+    const hz = Math.round((z - lech) / HEX_STEP_Z) * HEX_STEP_Z + lech;
+    const d = (hx - x) * (hx - x) + (hz - z) * (hz - z);
+    if (d < bd) { bd = d; bx = hx; bz = hz; }
+  }
+  return [bx, bz];
+}
+
+/**
+ * Cao độ mặt trên của một ô CHƯA san, theo tâm ô.
+ *
+ * Nhấp nhô 0,05–0,12 theo hàm băm: heightAt() là đường cong trơn, các ô cạnh nhau gần như
+ * bằng nhau nên không có mép nào để ánh sáng bắt. Ô đường thì không nhấp nhô — một lối đi
+ * gập ghềnh thì không ra lối đi.
+ */
+export function naturalTop(hx: number, hz: number): number {
+  const h = heightAt(hx, hz, biomeAt(hx, hz));
+  if (hexIsRoad(hx, hz)) return h + 0.02;
+  return h + 0.05 + hash2(Math.round(hx * 3), Math.round(hz * 3), 23) * 0.07;
+}
+
+/** Cao độ san phẳng của một nền đất hay một bãi: lấy theo địa hình ngay tại tâm. */
+export function levelAtCenter(x: number, z: number): number {
+  return heightAt(x, z, biomeAt(x, z)) + 0.04;
+}
+
+/**
+ * Bán kính san phẳng quanh một nền đất. Nền rộng 3×3, nhưng tâm nền không trùng tâm ô nên
+ * nó có thể chồm sang tới sáu ô xung quanh; 4,4 phủ hết các ô ấy và để lại một vành đất bằng
+ * nho nhỏ, đọc ra như một cái nền móng chứ không như căn nhà bị cắm vào sườn dốc.
+ */
+export const PLOT_FLAT_R = 4.4;
+
+/** Bán kính san phẳng trong một bãi: phủ hết quầng sáng của nó (1,16 × bán kính) và thêm một chút. */
+export function patchFlatR(p: Patch): number {
+  return p.radius * 1.16 + 1.2;
+}
+
 // ---------------------------------------------------------------- bãi
 
 /** Mỗi loại tài nguyên một kiểu bãi, với tên gọi và cỡ riêng. */
@@ -187,7 +249,8 @@ function makePatch(
     id: `b_${cx}_${cz}_${k}`,
     kind,
     label: spec.label,
-    center: [x, 0, z],
+    // center[1] là CAO ĐỘ của khoảnh đất đã san trong bãi — xem levelAtCenter().
+    center: [x, levelAtCenter(x, z), z],
     radius: spec.radius,
     spots,
     biome,
