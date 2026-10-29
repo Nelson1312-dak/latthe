@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { matte, haloTexture } from './materials';
 import { roundedBox } from './shapes';
+import { buildingGeometry, buildingMaterial } from './buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -51,10 +52,6 @@ const POP_SECONDS = 0.42;
 /** Tran so nen trong ve mot luc. Vung nap 11x11 khoi hiem khi qua 300. */
 const EMPTY_CAP = 520;
 
-const ROOF: Record<string, number> = {
-  townhall: PALETTE.roofCore, house: PALETTE.roofHouse,
-  granary: PALETTE.roofGranary, outpost: PALETTE.roofOutpost,
-};
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -440,6 +437,11 @@ export class Game {
       const sig = this.signature(building);
       const cu = this.structures.get(plot.id);
       if (cu && cu.sig === sig) continue;
+      // Đổi loại hay đổi cấp (không phải chỉ thêm thùng hàng) thì công trình nảy một nhịp,
+      // như lúc vừa xây — nâng cấp phải có cảm giác, không chỉ là con số trên thẻ đổi đi.
+      if (cu && cu.sig.split(':').slice(0, 2).join(':') !== sig.split(':').slice(0, 2).join(':')) {
+        this.popping.set(plot.id, 0);
+      }
       if (cu) this.plotGroup.remove(cu.g);
       const g = new THREE.Group();
       g.position.set(plot.position[0], plot.position[1], plot.position[2]);
@@ -497,39 +499,12 @@ export class Game {
   }
 
   private buildStructure(g: THREE.Group, b: Building, id: string): void {
-    const core = b.type === 'townhall';
-    const h = (core ? 1.6 : 1.15) + b.level * 0.12;
-
-    // Thủ phủ 4×4, công trình thường 3×3 — cùng cỡ nền đất mà nó thay thế.
-    const base = new THREE.Mesh(
-      core
-        ? this.geo('base:core', () => new THREE.CylinderGeometry(GRID * 2, GRID * 2, 0.4, 6))
-        : this.geo('base:plot', () => roundedBox(GRID * 3, 0.22, GRID * 3, 0.3, 0.05)),
-      this.mat(core ? PALETTE.graniteDark : PALETTE.plotDirt));
-    base.position.y = core ? 0.2 : 0.11;
-    base.receiveShadow = true;
-    g.add(base);
-
-    const w = core ? GRID * 3 : GRID * 2;
-    const body = new THREE.Mesh(
-      this.geo(`body:${w}:${h.toFixed(2)}`, () => roundedBox(w, h, w, 0.26, 0.1)),
-      this.mat(PALETTE.wall, true));
-    body.position.y = (core ? 0.4 : 0.18) + h / 2;
-    body.castShadow = true;
-    body.receiveShadow = true;
-    body.userData.plotId = id;
-    g.add(body);
-    this.pickable.push(body);
-
-    // Mái phủ đúng đường chéo của thân, nên hai cái khớp nhau thay vì xê xích vài phần mười.
-    const roof = new THREE.Mesh(
-      this.geo(`roof:${core}`, () => new THREE.ConeGeometry(
-        (core ? GRID * 3 : GRID * 2) * Math.SQRT1_2 + 0.22, core ? 1.6 : 1.1, 4)),
-      this.mat(ROOF[b.type], true));
-    roof.position.y = (core ? 0.4 : 0.18) + h + (core ? 0.8 : 0.55);
-    roof.rotation.y = Math.PI / 4;
-    roof.castShadow = true;
-    g.add(roof);
+    // Cả công trình là MỘT khối đã hàn, tô bằng màu đỉnh — xem buildings.ts.
+    const mesh = new THREE.Mesh(buildingGeometry(b.type, b.level), buildingMaterial());
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.plotId = id;
+    g.add(mesh);
 
     // Trạm trung chuyển: chồng thùng bên cạnh cho thấy đang gom được bao nhiêu, khỏi mở bảng.
     if (b.type === 'outpost') {
