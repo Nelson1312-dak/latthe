@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { gem, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BIOMES, CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
+import { han, paint } from './shapes';
 import type { BiomeId, Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, HEX_R, HEX_STEP_X, HEX_STEP_Z, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
@@ -899,30 +900,5 @@ function hexTile(r: number, h: number, vatCao: number, vatRong: number): THREE.B
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.computeVertexNormals();
-  return g;
-}
-
-/** Tô cả một phần hình bằng một màu đỉnh; null là trắng — tức nhận màu của bản (xem sway). */
-function paint(geo: THREE.BufferGeometry, hex: number | null): THREE.BufferGeometry {
-  const c = new THREE.Color(hex ?? 0xffffff);
-  const n = geo.getAttribute('position').count;
-  const a = new Float32Array(n * 3);
-  for (let i = 0; i < n; i += 1) {
-    a[i * 3] = c.r;
-    a[i * 3 + 1] = c.g;
-    a[i * 3 + 2] = c.b;
-  }
-  geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
-  return geo;
-}
-
-/**
- * Hàn nhiều phần thành một hình. Ném lỗi thay vì lặng lẽ trả về một phần: mergeGeometries trả
- * null khi các phần lệch thuộc tính (một phần có màu đỉnh, phần kia không; một phần có chỉ
- * mục, phần kia không), và bản cũ `?? trunk` sẽ biến cả cây thành một cái thân trơ trọi.
- */
-function han(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  const g = mergeGeometries(parts, false);
-  if (!g) throw new Error('han: cac phan lech thuoc tinh');
   return g;
 }

@@ -74,6 +74,12 @@ export function sway<T extends THREE.Material>(mat: T, amount: number): T {
   return mat;
 }
 
+/**
+ * Chỉ luật màu của sway(), không lắc: cho hình có màu đỉnh mà vẫn cần màu riêng từng bản —
+ * dân làng (áo theo việc, mặt và nón giữ màu), xe thồ (hàng theo loại, bò và gỗ giữ màu).
+ */
+export const tinted = <T extends THREE.Material>(mat: T): T => sway(mat, 0);
+
 /** Bề mặt thường: đất, cây, tường, mái, người. */
 export function matte(color?: number, flat = false): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({

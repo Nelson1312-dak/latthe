@@ -13,7 +13,8 @@
 import * as THREE from 'three';
 import { matte, haloTexture } from './materials';
 import { roundedBox } from './shapes';
-import { buildingGeometry, buildingMaterial } from './buildings';
+import { buildingGeometry, buildingMaterial, chimneyTop } from './buildings';
+import { Smoke } from './Smoke';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -98,6 +99,7 @@ export class Game {
   private readonly focusV = new THREE.Vector3();
   /** Báo cho HUD mỗi khi bậc đồ hoạ đổi — kể cả lúc Tự động tự hạ. */
   onQuality: (() => void) | null = null;
+  private readonly smoke = new Smoke();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -240,7 +242,7 @@ export class Game {
       this.rebuildPlots();
     };
 
-    this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup);
+    this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup, this.smoke.mesh);
     this.buildMarkers();
     this.buildEmptyMeshes();
     this.rebuildPlots();
@@ -410,11 +412,20 @@ export class Game {
   // ------------------------------------------------------------ đánh dấu
 
   private buildMarkers(): void {
+    /*
+     * Vòng chọn công trình và người cũng dùng ảnh quầng mềm như vòng chọn bãi, thay cho vành
+     * RingGeometry mép cứng — cả game chỉ còn một ngôn ngữ "đang chọn": một vùng sáng dần ra
+     * mép rồi tắt, không phải một nét khoanh bút. Đỉnh sáng của ảnh nằm ở 93% bán kính, nên
+     * tấm phẳng được nới ra cho vành sáng rơi đúng chỗ vành cũ. Vẫn xoay −π/2 quanh X như vành
+     * cũ, để mấy đoạn co giãn sẵn có (scale x, y) chạy y nguyên.
+     */
+    const quang = haloTexture();
     const ring = (color: number, opacity: number, r: number) => {
+      const nua = (r + 0.15) / 0.93;
       const m = new THREE.Mesh(
-        new THREE.RingGeometry(r, r + 0.3, 44),
+        new THREE.PlaneGeometry(nua * 2, nua * 2),
         new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false,
+          map: quang, color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false,
         }));
       m.rotation.x = -Math.PI / 2;
       m.position.y = 0.22;
@@ -426,9 +437,9 @@ export class Game {
     // Ban kinh phai RONG hon chan cong trinh. De sat qua (2,1 so voi chan 2,0) thi nhin
     // cheo tu tren xuong, chinh toa nha che mat nua vong phia sau - do duoc bang mat ngay
     // lan thu dau.
-    this.selectRing = ring(0xffc766, 0.95, 2.7);
-    this.hoverRing = ring(0xffffff, 0.55, 2.55);
-    this.unitRing = ring(0x7fd8ff, 0.95, 0.72);
+    this.selectRing = ring(0xffc766, 1, 2.7);
+    this.hoverRing = ring(0xffffff, 0.7, 2.55);
+    this.unitRing = ring(0x7fd8ff, 1, 0.72);
 
     /*
      * Vòng chọn bãi dùng CHÍNH ảnh quầng của bãi, chỉ sáng hơn.
@@ -527,6 +538,7 @@ export class Game {
     if (vuaXay) this.popping.set(vuaXay, 0);
 
     const con = new Set<string>();
+    const khoi: [number, number, number][] = [];
     let trong = 0;
     for (const plot of this.map.plots) {
       const building = this.economy.buildingAt(plot.id);
@@ -542,6 +554,8 @@ export class Game {
         continue;
       }
       con.add(plot.id);
+      const ong = chimneyTop(building.type, building.level);
+      if (ong) khoi.push([plot.position[0] + ong[0], plot.position[1] + ong[1], plot.position[2] + ong[2]]);
       const sig = this.signature(building);
       const cu = this.structures.get(plot.id);
       if (cu && cu.sig === sig) continue;
@@ -571,6 +585,7 @@ export class Game {
         if (o instanceof THREE.Mesh && o.userData.plotId) this.pickable.push(o);
       });
     }
+    this.smoke.setSources(khoi);
     this.emptyPads.count = trong;
     this.emptyPosts.count = trong;
     this.emptyPads.instanceMatrix.needsUpdate = true;
@@ -992,7 +1007,10 @@ export class Game {
     this.raf = requestAnimationFrame(this.loop);
     const now = nowMs / 1000;
     const gap = now - this.lastTime;
-    const dt = Math.min(gap, MAX_FRAME_DELTA);
+    // Kẹp cả hai đầu. Mốc của rAF là lúc khung BẮT ĐẦU, có thể sớm hơn lúc setPaused() ghi
+    // lastTime, nên gap âm là có thật; một dt âm đủ lớn làm người đứng đúng đích chia 0/0
+    // ra NaN, và toạ độ NaN thì nằm luôn trong bản lưu.
+    const dt = Math.min(Math.max(gap, 0), MAX_FRAME_DELTA);
     this.lastTime = now;
     this.autoTune(gap);
 
@@ -1017,6 +1035,7 @@ export class Game {
         1 / (1 - this.economy.bonus.survey));
       this.economy.tick(sim);
       this.map.animate(sim);
+      this.smoke.update(sim);
       // Vòng của người dân phải bám từng khung: họ đi liên tục, và cái vòng đứng yên thì
       // tệ hơn là không có vòng nào.
       if (this.selectedUnitId) {

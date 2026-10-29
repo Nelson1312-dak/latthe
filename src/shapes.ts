@@ -11,6 +11,7 @@
  * TUYỆT ĐỐI không dùng cho ô cỏ hay props, những thứ có hàng nghìn bản.
  */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /**
  * Hộp bo góc, tâm ở gốc, cao theo trục Y.
@@ -53,5 +54,30 @@ export function roundedBox(w: number, h: number, d: number, bo = 0.22, vat = 0.0
   g.rotateX(-Math.PI / 2);
   g.translate(0, -(h / 2 - b), 0);
   g.computeVertexNormals();
+  return g;
+}
+
+/** Tô cả một phần hình bằng một màu đỉnh; null là trắng — tức nhận màu của bản (xem sway). */
+export function paint(geo: THREE.BufferGeometry, hex: number | null): THREE.BufferGeometry {
+  const c = new THREE.Color(hex ?? 0xffffff);
+  const n = geo.getAttribute('position').count;
+  const a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i += 1) {
+    a[i * 3] = c.r;
+    a[i * 3 + 1] = c.g;
+    a[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  return geo;
+}
+
+/**
+ * Hàn nhiều phần thành một hình. Ném lỗi thay vì lặng lẽ trả về một phần: mergeGeometries trả
+ * null khi các phần lệch thuộc tính (một phần có màu đỉnh, phần kia không; một phần có chỉ
+ * mục, phần kia không), và kiểu `?? trunk` cũ sẽ biến cả cây thành một cái thân trơ trọi.
+ */
+export function han(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const g = mergeGeometries(parts, false);
+  if (!g) throw new Error('han: cac phan lech thuoc tinh');
   return g;
 }

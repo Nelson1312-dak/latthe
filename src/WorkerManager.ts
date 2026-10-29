@@ -15,8 +15,8 @@
  * Xe thồ chạy riêng: rời trạm theo chu kỳ, ôm hàng đã gom, bám trục đường về thủ phủ.
  */
 import * as THREE from 'three';
-import { matte } from './materials';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { matte, tinted } from './materials';
+import { han, paint } from './shapes';
 import {
   CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, GATHER_SECONDS, OUTPOST_RANGE, PALETTE, RESOURCES,
   SCOUT_MIN_VILLAGERS, SCOUT_RANGE_BASE, SCOUT_RANGE_PER_VILLAGER,
@@ -33,6 +33,13 @@ const CARRY_WORTH_IT = 0.5;
 const MAX_UNITS = 220;
 /** Sức chứa của lưới xe thồ. */
 const CART_CAP = 24;
+/** Bán kính bánh xe, và bốn chỗ trục bánh (x dọc thân xe, z ngang). */
+const WHEEL_R = 0.26;
+const WHEELS: readonly (readonly [number, number])[] = [[-0.32, -0.42], [-0.32, 0.42], [0.32, -0.42], [0.32, 0.42]];
+/** Tay phải của dân làng. Mặt hướng +Z cục bộ, nên bên phải là −X. */
+const HAND: Vec3 = [-0.27, 0.3, 0.05];
+
+type Role = ResourceKind | 'scout' | null;
 
 export class WorkerManager {
   private readonly economy: Economy;
@@ -43,6 +50,17 @@ export class WorkerManager {
   private readonly bodies: THREE.InstancedMesh;
   private readonly cargo: THREE.InstancedMesh;
   private readonly carts: THREE.InstancedMesh;
+  /** Dụng cụ trên tay — rìu cuốc cho người đang có việc. */
+  private readonly tools: THREE.InstancedMesh;
+  /** Bánh xe tách khỏi thân xe để lăn được. */
+  private readonly wheels: THREE.InstancedMesh;
+  /** Việc của từng người, nhớ theo đích để khỏi tra bãi mỗi khung. */
+  private readonly roles = new Map<string, { t: string; kind: ResourceKind | null }>();
+  /** Góc đã lăn của bánh từng xe, và chỗ xe đứng ở khung trước. */
+  private readonly wheelTurn = new Map<string, { x: number; z: number; goc: number }>();
+  private readonly mPart = new THREE.Matrix4();
+  private readonly mRot = new THREE.Matrix4();
+  private readonly mTmp = new THREE.Matrix4();
   private elapsed = 0;
 
   private readonly m = new THREE.Matrix4();
@@ -65,17 +83,23 @@ export class WorkerManager {
     this.map = map;
     this.fog = fog;
 
-    this.bodies = new THREE.InstancedMesh(
-      this.villagerGeometry(),
-      matte(undefined, true), MAX_UNITS);
+    // Áo trắng trong hình nên nhận màu của bản (màu theo việc); mặt, tay, nón giữ màu đỉnh.
+    const nguoi = tinted(matte());
+    nguoi.vertexColors = true;
+    this.bodies = new THREE.InstancedMesh(this.villagerGeometry(), nguoi, MAX_UNITS);
     this.cargo = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.38, 0.38, 0.3),
       matte(), MAX_UNITS);
-    this.carts = new THREE.InstancedMesh(
-      this.cartGeometry(),
-      matte(undefined, true), CART_CAP);
+    const xe = tinted(matte(undefined, true));
+    xe.vertexColors = true;
+    this.carts = new THREE.InstancedMesh(this.cartGeometry(), xe, CART_CAP);
+    const go = matte(undefined, true);
+    go.vertexColors = true;
+    this.tools = new THREE.InstancedMesh(this.toolGeometry(), go, MAX_UNITS);
+    this.wheels = new THREE.InstancedMesh(this.wheelGeometry(), go, CART_CAP * 4);
 
-    for (const mesh of [this.bodies, this.cargo, this.carts]) {
+    for (const mesh of [this.bodies, this.cargo, this.carts, this.tools, this.wheels]) {
+      mesh.count = 0;
       mesh.castShadow = true;
       mesh.frustumCulled = false;
       this.group.add(mesh);
@@ -91,41 +115,84 @@ export class WorkerManager {
 
   // ----------------------------------------------------------- hình học
 
-  /** Thân, đầu, nón rơm — hàn thành một hình học để một dân làng là một thực thể. */
+  /**
+   * Dân làng kiểu CHIBI: đầu to gần bằng thân, mắt chấm, hai bàn tay, nón lá rộng vành.
+   *
+   * Bản trước một màu kem từ nón tới chân — nhìn xa là một hạt gạo, gần cũng chẳng ra người.
+   * Giờ áo mang màu của việc đang làm (gỗ, lúa, đá, vàng, pha lê — đúng màu trên thanh tài
+   * nguyên), nên liếc bãi nào cũng đọc được ai đang làm gì mà không cần bấm vào.
+   */
   private villagerGeometry(): THREE.BufferGeometry {
     const parts: THREE.BufferGeometry[] = [];
-    const body = new THREE.CylinderGeometry(0.26, 0.3, 0.5, 7);
-    body.translate(0, 0.25, 0);
-    parts.push(body);
-    const head = new THREE.SphereGeometry(0.27, 8, 6);
-    head.translate(0, 0.65, 0);
-    parts.push(head);
-    const brim = new THREE.CylinderGeometry(0.42, 0.42, 0.05, 8);
-    brim.translate(0, 0.83, 0);
-    parts.push(brim);
-    const cone = new THREE.ConeGeometry(0.33, 0.26, 8);
-    cone.translate(0, 0.96, 0);
-    parts.push(cone);
-    return mergeGeometries(parts, false) ?? body;
+    const add = (g: THREE.BufferGeometry, x: number, y: number, z: number, hex: number | null): void => {
+      g.translate(x, y, z);
+      parts.push(paint(g, hex));
+    };
+    add(new THREE.CylinderGeometry(0.2, 0.27, 0.44, 8), 0, 0.22, 0, null);
+    add(new THREE.SphereGeometry(0.31, 12, 9), 0, 0.72, 0, PALETTE.skin);
+    for (const x of [-0.11, 0.11]) add(new THREE.BoxGeometry(0.055, 0.075, 0.04), x, 0.74, 0.29, PALETTE.eye);
+    for (const x of [-0.27, 0.27]) add(new THREE.SphereGeometry(0.075, 6, 5), x, 0.3, 0.05, PALETTE.skin);
+    add(new THREE.CylinderGeometry(0.44, 0.44, 0.05, 12), 0, 0.96, 0, PALETTE.hat);
+    add(new THREE.ConeGeometry(0.3, 0.26, 12), 0, 1.1, 0, PALETTE.hat);
+    return han(parts);
   }
 
+  /**
+   * Xe thồ: sàn gỗ có thành, đống hàng (trắng — nhận màu loại hàng), càng xe và con bò.
+   * Mũi xe là +X cục bộ. Bánh xe là lưới riêng, xem wheelGeometry.
+   */
   private cartGeometry(): THREE.BufferGeometry {
     const parts: THREE.BufferGeometry[] = [];
-    const bed = new THREE.BoxGeometry(1.0, 0.36, 0.72);
-    bed.translate(0, 0.46, 0);
-    parts.push(bed);
-    for (const dx of [-0.32, 0.32]) {
-      for (const dz of [-0.42, 0.42]) {
-        const wheel = new THREE.CylinderGeometry(0.26, 0.26, 0.1, 8);
-        wheel.rotateX(Math.PI / 2);
-        wheel.translate(dx, 0.26, dz);
-        parts.push(wheel);
-      }
+    const add = (g: THREE.BufferGeometry, x: number, y: number, z: number, hex: number | null): void => {
+      g.translate(x, y, z);
+      parts.push(paint(g, hex));
+    };
+    add(new THREE.BoxGeometry(1.0, 0.16, 0.72), 0, 0.42, 0, PALETTE.trunk);
+    for (const z of [-0.33, 0.33]) add(new THREE.BoxGeometry(1.0, 0.16, 0.06), 0, 0.57, z, PALETTE.trunk);
+    add(new THREE.BoxGeometry(0.8, 0.2, 0.54), 0, 0.6, 0, null);
+    add(new THREE.BoxGeometry(0.5, 0.15, 0.4), -0.05, 0.77, 0, null);
+    for (const z of [-0.14, 0.14]) add(new THREE.BoxGeometry(0.42, 0.05, 0.05), 0.68, 0.45, z, PALETTE.trunk);
+    add(new THREE.BoxGeometry(0.56, 0.34, 0.36), 1.04, 0.5, 0, PALETTE.ox);
+    add(new THREE.BoxGeometry(0.22, 0.22, 0.24), 1.38, 0.6, 0, PALETTE.trunk);
+    for (const z of [-0.1, 0.1]) add(new THREE.BoxGeometry(0.05, 0.12, 0.05), 1.4, 0.76, z, PALETTE.cloud);
+    for (const x of [0.86, 1.22]) {
+      for (const z of [-0.12, 0.12]) add(new THREE.BoxGeometry(0.08, 0.32, 0.08), x, 0.16, z, PALETTE.ox);
     }
-    const ox = new THREE.BoxGeometry(0.5, 0.4, 0.38);
-    ox.translate(0.82, 0.4, 0);
-    parts.push(ox);
-    return mergeGeometries(parts, false) ?? bed;
+    return han(parts);
+  }
+
+  /** Bánh xe: vành gỗ và hai nan bắt chéo. Nan phải nhô ra hai mặt vành, không thì quay không ai thấy. */
+  private wheelGeometry(): THREE.BufferGeometry {
+    const vanh = new THREE.CylinderGeometry(WHEEL_R, WHEEL_R, 0.08, 10);
+    vanh.rotateX(Math.PI / 2);
+    const parts = [paint(vanh, PALETTE.iron)];
+    for (const a of [0, Math.PI / 2]) {
+      const nan = new THREE.BoxGeometry(WHEEL_R * 1.9, 0.05, 0.1);
+      nan.rotateZ(a);
+      parts.push(paint(nan, PALETTE.trunk));
+    }
+    return han(parts);
+  }
+
+  /** Cuốc: cán gỗ, lưỡi sắt. Gốc toạ độ ở chỗ tay cầm. */
+  private toolGeometry(): THREE.BufferGeometry {
+    const can = new THREE.CylinderGeometry(0.026, 0.032, 0.6, 5);
+    can.translate(0, 0.22, 0);
+    const luoi = new THREE.BoxGeometry(0.34, 0.08, 0.08);
+    luoi.translate(0, 0.5, 0);
+    return han([paint(can, PALETTE.trunk), paint(luoi, PALETTE.granite)]);
+  }
+
+  /** Việc của một người: theo hàng đang mang, không thì theo bãi đang nhắm tới. */
+  private roleOf(u: Unit): Role {
+    if (u.targetId === 'scout') return 'scout';
+    if (u.carryingKind) return u.carryingKind;
+    if (!u.targetId) return null;
+    const c = this.roles.get(u.id);
+    if (c && c.t === u.targetId) return c.kind;
+    const kind = this.map.patchById(u.targetId)?.kind ?? null;
+    this.roles.set(u.id, { t: u.targetId, kind });
+    return kind;
   }
 
   // ------------------------------------------------------------- sinh đơn vị
@@ -535,18 +602,35 @@ export class WorkerManager {
     const units = this.economy.state.units;
     let vi = 0;
     let ci = 0;
+    let ti = 0;
 
     for (const u of units) {
       if (u.kind === 'cart') {
-        if (ci < CART_CAP) {
-          this.v.set(u.position[0], this.yOf(u.id, u.position[0], u.position[2], dt), u.position[2]);
-          this.q.setFromAxisAngle(this.axis, u.facing + Math.PI / 2);
-          this.s.set(1, 1, 1);
-          this.carts.setMatrixAt(ci, this.m.compose(this.v, this.q, this.s));
-          this.carts.setColorAt(ci, this.color.setHex(
-            u.carryingKind ? RESOURCES[u.carryingKind].color : 0xa9763f));
-          ci += 1;
+        if (ci >= CART_CAP) continue;
+        this.v.set(u.position[0], this.yOf(u.id, u.position[0], u.position[2], dt), u.position[2]);
+        // Mũi xe (phía con bò) là +X cục bộ; xoay facing − π/2 thì +X trùng hướng đi. Bản
+        // trước cộng π/2 nên bò đi giật lùi, đẩy xe từ phía sau.
+        this.q.setFromAxisAngle(this.axis, u.facing - Math.PI / 2);
+        this.s.set(1, 1, 1);
+        this.m.compose(this.v, this.q, this.s);
+        this.carts.setMatrixAt(ci, this.m);
+        this.carts.setColorAt(ci, this.color.setHex(
+          u.carryingKind ? RESOURCES[u.carryingKind].color : PALETTE.sand));
+        // Bánh lăn ĐÚNG quãng xe đã đi: góc = quãng đường / bán kính. Xe đứng thì bánh đứng.
+        const w = this.wheelTurn.get(u.id);
+        if (w) {
+          w.goc += Math.hypot(u.position[0] - w.x, u.position[2] - w.z) / WHEEL_R;
+          w.x = u.position[0];
+          w.z = u.position[2];
+        } else {
+          this.wheelTurn.set(u.id, { x: u.position[0], z: u.position[2], goc: 0 });
         }
+        this.mRot.makeRotationZ(-(w?.goc ?? 0));
+        for (let k = 0; k < 4; k += 1) {
+          this.mPart.makeTranslation(WHEELS[k][0], WHEEL_R, WHEELS[k][1]).multiply(this.mRot);
+          this.wheels.setMatrixAt(ci * 4 + k, this.mTmp.multiplyMatrices(this.m, this.mPart));
+        }
+        ci += 1;
         continue;
       }
       if (vi >= MAX_UNITS) break;
@@ -554,27 +638,46 @@ export class WorkerManager {
       // Nhịp đi nướng thẳng vào ma trận: lệch pha theo chỉ số nên cả đoàn không bước răm rắp.
       const walking = u.state === 'moving' || u.state === 'delivering';
       const phase = this.elapsed * 12 + vi * 1.7;
-      const lift = walking ? Math.abs(Math.sin(phase)) * 0.1 : 0;
+      const nhun = Math.abs(Math.sin(phase));
+      const lift = walking ? nhun * 0.1 : 0;
       const tilt = walking ? Math.sin(phase) * 0.15 : 0;
-      const chop = u.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7)) * 0.5 : 0;
+      const dap = u.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7 + vi * 0.9)) : 0;
+      const chop = dap * 0.5;
 
       const y = this.yOf(u.id, u.position[0], u.position[2], dt);
       this.v.set(u.position[0], y + lift, u.position[2]);
       this.q.setFromEuler(this.euler.set(chop, u.facing, tilt, 'YXZ'));
-      this.s.set(1, 1, 1);
-      this.bodies.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
+      // Nhún kiểu hoạt hình: chạm đất thì bè ra, bật lên thì thon lại.
+      const co = walking ? (nhun - 0.5) * 0.08 : 0;
+      this.s.set(1 - co * 0.6, 1 + co, 1 - co * 0.6);
+      this.m.compose(this.v, this.q, this.s);
+      this.bodies.setMatrixAt(vi, this.m);
+
+      const vai = this.roleOf(u);
+      this.bodies.setColorAt(vi, this.color.setHex(
+        vai === 'scout' ? PALETTE.water : vai ? RESOURCES[vai].color : PALETTE.villager));
+
+      // Dụng cụ ở tay phải: vác ngả ra sau khi đi, giơ lên rồi bổ xuống theo nhịp khi đào.
+      if (vai && vai !== 'scout') {
+        const vung = u.state === 'gathering' ? -1.1 + 2.3 * dap : walking ? -0.75 : -0.35;
+        this.mPart.makeTranslation(HAND[0], HAND[1], HAND[2]);
+        this.mPart.multiply(this.mRot.makeRotationZ(0.15));
+        this.mPart.multiply(this.mRot.makeRotationX(vung));
+        this.tools.setMatrixAt(ti, this.mTmp.multiplyMatrices(this.m, this.mPart));
+        ti += 1;
+      }
 
       if (u.carrying > 0 && u.carryingKind) {
         this.v.set(
           u.position[0] - Math.sin(u.facing) * 0.33,
-          y + 0.52 + lift,
+          y + 0.5 + lift,
           u.position[2] - Math.cos(u.facing) * 0.33);
+        this.s.set(1, 1, 1);
         this.cargo.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
         this.cargo.setColorAt(vi, this.color.setHex(RESOURCES[u.carryingKind].color));
       } else {
         this.cargo.setMatrixAt(vi, this.hidden);
       }
-      this.bodies.setColorAt(vi, this.color.setHex(PALETTE.villager));
       vi += 1;
     }
 
@@ -586,22 +689,28 @@ export class WorkerManager {
     this.bodies.count = vi;
     this.cargo.count = vi;
     this.carts.count = ci;
-    // Xe giao xong thì biến mất; dọn cao độ của chúng khỏi bảng.
+    this.wheels.count = ci * 4;
+    this.tools.count = ti;
+    // Xe giao xong thì biến mất; dọn cao độ, việc và bánh xe của chúng khỏi bảng.
     if (this.yVe.size > units.length + 32) {
       const con = new Set(units.map((u) => u.id));
       for (const id of this.yVe.keys()) if (!con.has(id)) this.yVe.delete(id);
+      for (const id of this.roles.keys()) if (!con.has(id)) this.roles.delete(id);
+      for (const id of this.wheelTurn.keys()) if (!con.has(id)) this.wheelTurn.delete(id);
     }
 
     this.bodies.instanceMatrix.needsUpdate = true;
     this.cargo.instanceMatrix.needsUpdate = true;
     this.carts.instanceMatrix.needsUpdate = true;
+    this.tools.instanceMatrix.needsUpdate = true;
+    this.wheels.instanceMatrix.needsUpdate = true;
     if (this.bodies.instanceColor) this.bodies.instanceColor.needsUpdate = true;
     if (this.cargo.instanceColor) this.cargo.instanceColor.needsUpdate = true;
     if (this.carts.instanceColor) this.carts.instanceColor.needsUpdate = true;
   }
 
   dispose(): void {
-    for (const mesh of [this.bodies, this.cargo, this.carts]) {
+    for (const mesh of [this.bodies, this.cargo, this.carts, this.tools, this.wheels]) {
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
     }

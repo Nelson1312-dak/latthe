@@ -258,6 +258,9 @@ export const PALETTE = {
 
   villager: KEM_SANG,
   hat: VANG,
+  skin: 0xe8c4a0,
+  eye: 0x3a2e2a,
+  ox: DAT_TOI,
   cloud: KEM,
   /**
    * Màu đất CHƯA VÉN được pha về phía này 72%. Ấm và nhạt như giấy bản đồ chưa vẽ; vẫn giữ

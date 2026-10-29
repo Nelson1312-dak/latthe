@@ -21,7 +21,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { PALETTE } from './config';
 import { METALNESS, ROUGHNESS } from './materials';
 import { roundedBox } from './shapes';
-import type { BuildingType } from './types';
+import type { BuildingType, Vec3 } from './types';
 
 /** Kính cửa sổ: xám lam đậm, đủ tối để đọc ra là lỗ cửa trên tường kem. */
 const GLASS = 0x46505e;
@@ -147,18 +147,34 @@ function nen(k: Kit): void {
 
 // ------------------------------------------------------------------ nhà ở
 
+/** Chiều cao thân nhà. Mốc 6 lên hai tầng; trước đó cao thêm từng chút một theo cấp. */
+const houseH = (level: number, st: number): number => (st >= 2 ? 1.95 + level * 0.03 : 1.05 + level * 0.04);
+/** Ống khói: chỗ đứng trên mặt bằng nhà, và chiều cao theo mốc. */
+const CHIMNEY_X = 0.5;
+const CHIMNEY_Z = -0.38;
+const chimneyH = (st: number): number => (st >= 3 ? 1.25 : 0.95);
+
+/**
+ * Miệng ống khói, toạ độ CỤC BỘ của công trình — null nếu loại này không có ống khói. Tính từ
+ * đúng những hằng số dựng nên cái ống, nên nhà lên cấp cao thêm thì khói bay ra đúng miệng mới.
+ */
+export function chimneyTop(type: BuildingType, level: number): Vec3 | null {
+  if (type !== 'house') return null;
+  const st = stage('house', level);
+  return [CHIMNEY_X, Y0 + houseH(level, st) + 0.15 + chimneyH(st), CHIMNEY_Z];
+}
+
 function house(level: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('house', level);
   nen(k);
   const w = 1.9;
   const d = 1.7;
-  // Mốc 6 lên hai tầng; trước đó nhà cao thêm từng chút một theo cấp.
-  const H = st >= 2 ? 1.95 + level * 0.03 : 1.05 + level * 0.04;
+  const H = houseH(level, st);
   k.rbox(w, H, d, 0.12, 0.05, 0, Y0, 0, PALETTE.wall);
   k.gable(w, d, 0.95, 0.18, 0, Y0 + H, 0, ROOF.house);
   // Ống khói xuyên sườn mái phía sau.
-  k.box(0.28, st >= 3 ? 1.25 : 0.95, 0.28, 0.5, Y0 + H + 0.15, -0.38, STONE);
+  k.box(0.28, chimneyH(st), 0.28, CHIMNEY_X, Y0 + H + 0.15, CHIMNEY_Z, STONE);
   // Mặt trước: cửa chính giữa, cửa sổ hai bên.
   k.box(0.42, 0.72, 0.06, 0, Y0, d / 2, WOOD);
   for (const x of [-0.6, 0.6]) k.box(0.34, 0.34, 0.06, x, Y0 + 0.36, d / 2, GLASS);
