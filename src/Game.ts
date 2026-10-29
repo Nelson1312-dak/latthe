@@ -78,6 +78,10 @@ export class Game {
   private readonly geoCache = new Map<string, THREE.BufferGeometry>();
   private readonly matCache = new Map<string, THREE.Material>();
   private readonly tmpV = new THREE.Vector3();
+  private readonly padColor = new THREE.Color();
+  /** Phien ban ban do ma nen dat va cong trinh dang phan anh. */
+  private builtVersion = -1;
+  private readonly fogLand = new THREE.Color(PALETTE.fogLand);
   private readonly tmpD = new THREE.Vector3();
   /** Hướng nắng và hai trục của camera bóng — hằng số, tính một lần. */
   private readonly sunDir = new THREE.Vector3(18, 28, 14).normalize();
@@ -201,8 +205,15 @@ export class Game {
 
     this.map = new MapManager();
     this.fog = new FogOfWar(economy.state.revealed);
+    // Ban do can biet o nao da ven (de nhuom dat chua ven), may can biet mat dat cao bao
+    // nhieu (de bay tren vach da chu khong cam vao no).
+    this.map.setFog((cx, cz) => this.fog.isRevealed(cx * CHUNK + 1, cz * CHUNK + 1));
+    this.fog.setGround((x, z) => this.map.groundY(x, z));
+    this.fog.onResync = () => this.map.refreshFog();
     this.fog.onReveal = (key) => {
       economy.state.revealed = this.fog.revealedKeys();
+      this.map.reveal(key);
+      this.rebuildPlots();
       // Quang duong tinh toi TAM o vua ven. Lay goc xa nhat se thuong hoi hao phong, lay
       // canh gan nhat thi nguoi choi phai di qua han o moi duoc tinh - tam la o giua.
       const [cx, cz] = key.split(',').map(Number);
@@ -380,11 +391,11 @@ export class Game {
     const pad = roundedBox(GRID * 3, 0.22, GRID * 3, 0.3, 0.05);
     pad.translate(0, 0.11, 0);
 
-    this.emptyPads = new THREE.InstancedMesh(
-      pad, matte(PALETTE.plotDirt), EMPTY_CAP);
+    // Vật liệu TRẮNG, màu thật nằm ở từng bản: nền trong vùng chưa vén phải nhạt đi cùng mặt
+    // đất, không thì nó nổi lên thành những ô vuông nâu sẫm giữa vùng sương nhạt màu.
+    this.emptyPads = new THREE.InstancedMesh(pad, matte(0xffffff), EMPTY_CAP);
     this.emptyPosts = new THREE.InstancedMesh(
-      mergeGeometries(posts, false)!,
-      matte(PALETTE.fence), EMPTY_CAP);
+      mergeGeometries(posts, false)!, matte(0xffffff), EMPTY_CAP);
     for (const m of [this.emptyPads, this.emptyPosts]) {
       m.receiveShadow = true;
       m.castShadow = true;
@@ -419,6 +430,9 @@ export class Game {
         this.mtx.makeTranslation(plot.position[0], plot.position[1], plot.position[2]);
         this.emptyPads.setMatrixAt(trong, this.mtx);
         this.emptyPosts.setMatrixAt(trong, this.mtx);
+        const sang = this.fog.isRevealed(plot.position[0], plot.position[2]);
+        this.emptyPads.setColorAt(trong, this.padTint(PALETTE.plotDirt, sang));
+        this.emptyPosts.setColorAt(trong, this.padTint(PALETTE.fence, sang));
         trong += 1;
         continue;
       }
@@ -451,6 +465,14 @@ export class Game {
     this.emptyPosts.count = trong;
     this.emptyPads.instanceMatrix.needsUpdate = true;
     this.emptyPosts.instanceMatrix.needsUpdate = true;
+    if (this.emptyPads.instanceColor) this.emptyPads.instanceColor.needsUpdate = true;
+    if (this.emptyPosts.instanceColor) this.emptyPosts.instanceColor.needsUpdate = true;
+  }
+
+  /** Màu một nền trống: màu thật nếu đã vén, nhạt về màu sương như mặt đất nếu chưa. */
+  private padTint(hex: number, sang: boolean): THREE.Color {
+    this.padColor.setHex(hex);
+    return sang ? this.padColor : this.padColor.lerp(this.fogLand, 0.72);
   }
 
   /** Chữ ký của một công trình: đổi một trong ba thứ này thì phải dựng lại hình. */
@@ -882,9 +904,13 @@ export class Game {
     this.moveCamera(dt);
     // Nạp khối chạy cả khi tạm dừng: người chơi vẫn kéo bản đồ đi xem được, và đất mới phải
     // hiện ra theo.
-    const before = this.map.version;
     this.map.update(this.target);
-    if (this.map.version !== before) this.rebuildPlots();
+    // So voi phien ban DA DUNG chu khong so truoc/sau trong cung mot khung: ai khac goi
+    // map.update() (bu gio, cong cu do, bang dieu khien) thi lan doi do khong bi bo qua.
+    if (this.map.version !== this.builtVersion) {
+      this.builtVersion = this.map.version;
+      this.rebuildPlots();
+    }
 
     if (!this.paused) {
       // Nut 1x/2x chi nhan cho MO PHONG, khong nhan cho camera - keo tha ma nhanh gap doi

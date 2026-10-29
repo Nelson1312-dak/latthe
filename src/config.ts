@@ -250,6 +250,11 @@ export const PALETTE = {
   villager: KEM_SANG,
   hat: VANG,
   cloud: KEM,
+  /**
+   * Màu đất CHƯA VÉN được pha về phía này 72%. Ấm và nhạt như giấy bản đồ chưa vẽ; vẫn giữ
+   * một chút màu gốc nên đồng cỏ, vách đá, cao nguyên còn nhận ra được bóng dáng.
+   */
+  fogLand: 0xe4e1d6,
 } as const;
 
 // ------------------------------------------------------------- tài nguyên

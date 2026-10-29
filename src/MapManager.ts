@@ -48,6 +48,15 @@ type PropKey = keyof typeof CAP;
  */
 const TILE_H = 6;
 
+/** Đất chưa vén pha về màu sương chừng này phần. */
+const FOG_MIX = 0.72;
+/** Hoạt cảnh vén: đất chuyển màu, quầng hiện, rồi cây đá mọc lên lần lượt. */
+const REVEAL_SECONDS = 1.6;
+
+const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
+/** Mọc lên có nảy: vượt quá cỡ một chút rồi lắng về 1. */
+const nay = (k: number): number => (k <= 0 ? 0 : k >= 1 ? 1 : 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2));
+
 /** Một props: pos[1] là độ cao TÍNH TỪ MẶT ĐẤT, không phải cao độ tuyệt đối. */
 interface Prop { key: PropKey; pos: Vec3; scale: number; rot: number; color: number }
 
@@ -78,7 +87,15 @@ export class MapManager {
   private readonly s = new THREE.Vector3();
   private readonly axis = new THREE.Vector3(0, 1, 0);
   private readonly color = new THREE.Color();
+  private readonly fogC = new THREE.Color();
+  private readonly fogLand = new THREE.Color(PALETTE.fogLand);
   private lastCenter = '';
+  /** Khối nào đã vén — Game nối vào FogOfWar. Mặc định coi như đã vén hết. */
+  private lo: (cx: number, cz: number) => boolean = () => true;
+  /** Khối đang vén dở, và đã vén được bao lâu. */
+  private readonly revealing = new Map<string, number>();
+  /** Chỉ số bắt đầu của từng khối trong từng lưới, ghi lại ở mỗi lần refill. */
+  private readonly ranges = new Map<string, Record<PropKey, number>>();
 
   /** Đổi mỗi khi tập khối thay đổi — Game dựa vào đây để dựng lại nền đất. */
   version = 0;
@@ -154,6 +171,31 @@ export class MapManager {
     this.version += 1;
   }
 
+  /** Nối danh sách khối đã vén. */
+  setFog(lo: (cx: number, cz: number) => boolean): void {
+    this.lo = lo;
+  }
+
+  /** Tô lại đất theo trạng thái sương hiện tại — sau khi danh sách ô đã vén bị đặt lại. */
+  refreshFog(): void {
+    this.revealing.clear();
+    this.refill();
+  }
+
+  /** Một khối vừa được vén: chạy hoạt cảnh chuyển màu và mọc cây đá. */
+  reveal(key: string): void {
+    this.revealing.set(key, 0);
+    this.refill();
+  }
+
+  /** Màu một ô: pha về màu sương theo k (0 = chưa vén, 1 = màu thật). */
+  private tint(hex: number, k: number): THREE.Color {
+    this.color.setHex(hex);
+    if (k >= 1) return this.color;
+    this.fogC.setHex(hex).lerp(this.fogLand, FOG_MIX);
+    return this.fogC.lerp(this.color, k);
+  }
+
   /** InstancedMesh mới với sức chứa lớn hơn, dùng lại hình học và vật liệu của cái cũ. */
   private regrow(key: PropKey, need: number): void {
     const old = this.meshes[key];
@@ -186,31 +228,40 @@ export class MapManager {
 
     const used = {} as Record<PropKey, number>;
     for (const k of Object.keys(CAP) as PropKey[]) used[k] = 0;
-    const put = (key: PropKey, mat: THREE.Matrix4, color: number) => {
+    const put = (key: PropKey, mat: THREE.Matrix4, color: THREE.Color) => {
       const i = used[key];
       this.meshes[key].setMatrixAt(i, mat);
-      this.meshes[key].setColorAt(i, this.color.setHex(color));
+      this.meshes[key].setColorAt(i, color);
       used[key] = i + 1;
     };
 
+    this.ranges.clear();
     for (const chunk of this.chunks.values()) {
-      for (const t of chunk.tiles) {
-        put('tile', this.m.makeTranslation(t.pos[0], t.pos[1], t.pos[2]), t.color);
+      const key = chunkKey(chunk.cx, chunk.cz);
+      const start = { ...used };
+      this.ranges.set(key, start);
+
+      /*
+       * ĐẤT CHƯA VÉN: nhạt màu, và TRỐNG TRƠN — không cây, không đá, không quầng bãi.
+       *
+       * Trước đây đất dưới mây vẫn vẽ đầy đủ, nên nhìn xuyên qua kẽ mây là thấy hết bãi tài
+       * nguyên của vùng chưa ai tới — sương mù khám phá mà chẳng giấu được gì. Giờ vùng chưa
+       * vén đọc ra như phần bản đồ chưa vẽ, và liếc là biết đâu đã khám phá.
+       */
+      const daVen = this.lo(chunk.cx, chunk.cz);
+      const t = this.revealing.get(key);
+      const kDat = !daVen ? 0 : t === undefined ? 1 : this.kDat(t);
+      for (const tile of chunk.tiles) {
+        put('tile', this.m.makeTranslation(tile.pos[0], tile.pos[1], tile.pos[2]), this.tint(tile.color, kDat));
       }
-      for (const p of chunk.patches) {
-        // Quầng nằm ngay trên khoảnh đất đã san của bãi. Rộng hơn bãi một chút, vì phần
-        // ngoài cùng của ảnh gradient đã tắt gần hết.
-        this.v.set(p.center[0], p.center[1] + 0.06, p.center[2]);
-        this.q.identity();
-        this.s.set(p.radius * 1.16, 1, p.radius * 1.16);
-        put('halo', this.m.compose(this.v, this.q, this.s), RESOURCES[p.kind].color);
-      }
-      for (const pr of chunk.props) {
-        this.v.set(pr.pos[0], this.groundY(pr.pos[0], pr.pos[2]) + pr.pos[1], pr.pos[2]);
-        this.q.setFromAxisAngle(this.axis, pr.rot);
-        this.s.setScalar(pr.scale);
-        put(pr.key, this.m.compose(this.v, this.q, this.s), pr.color);
-      }
+      if (!daVen) continue;
+
+      chunk.patches.forEach((p, i) => {
+        put('halo', this.haloMatrix(p, t === undefined ? 1 : this.kQuang(t, i)), this.color.setHex(RESOURCES[p.kind].color));
+      });
+      chunk.props.forEach((pr, i) => {
+        put(pr.key, this.propMatrix(pr, t === undefined ? 1 : this.kMoc(t, i)), this.color.setHex(pr.color));
+      });
     }
 
     // Vẽ ĐÚNG số đã dùng. Bản trước để count = trần và thu nhỏ phần thừa về 0, nên GPU vẫn
@@ -222,6 +273,36 @@ export class MapManager {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
+  }
+
+  /** Quầng nằm ngay trên khoảnh đất đã san của bãi, rộng hơn bãi một chút. */
+  private haloMatrix(p: Patch, k: number): THREE.Matrix4 {
+    this.v.set(p.center[0], p.center[1] + 0.06, p.center[2]);
+    this.q.identity();
+    const r = p.radius * 1.16 * Math.max(0.0001, k);
+    this.s.set(r, 1, r);
+    return this.m.compose(this.v, this.q, this.s);
+  }
+
+  private propMatrix(pr: Prop, k: number): THREE.Matrix4 {
+    this.v.set(pr.pos[0], this.groundY(pr.pos[0], pr.pos[2]) + pr.pos[1], pr.pos[2]);
+    this.q.setFromAxisAngle(this.axis, pr.rot);
+    this.s.setScalar(pr.scale * Math.max(0.0001, k));
+    return this.m.compose(this.v, this.q, this.s);
+  }
+
+  /** Tiến độ của ba lớp trong hoạt cảnh vén: đất trước, quầng sau, cây đá mọc lần lượt. */
+  private kDat(t: number): number {
+    const k = clamp01(t / 0.9);
+    return k * k * (3 - 2 * k);
+  }
+
+  private kQuang(t: number, i: number): number {
+    return clamp01((t - 0.35 - i * 0.12) / 0.6);
+  }
+
+  private kMoc(t: number, i: number): number {
+    return nay(clamp01((t - 0.3 - i * 0.006) / 0.5));
   }
 
   // ------------------------------------------------------------ cao độ
@@ -463,6 +544,38 @@ export class MapManager {
     this.tho += dt;
     const mat = this.meshes.halo.material as THREE.MeshBasicMaterial;
     mat.opacity = 0.78 + Math.sin(this.tho * 1.25) * 0.1;
+
+    // Hoạt cảnh vén: chỉ cập nhật đúng các phần tử của khối đang vén, không đụng phần còn lại.
+    for (const [key, t0] of this.revealing) {
+      const t = t0 + dt;
+      const chunk = this.chunks.get(key);
+      const start = this.ranges.get(key);
+      if (!chunk || !start || t >= REVEAL_SECONDS + chunk.props.length * 0.006) {
+        this.revealing.delete(key);
+        if (chunk && start) this.paintReveal(chunk, start, 1e9);
+        continue;
+      }
+      this.revealing.set(key, t);
+      this.paintReveal(chunk, start, t);
+    }
+  }
+
+  private paintReveal(chunk: Chunk, start: Record<PropKey, number>, t: number): void {
+    const kDat = this.kDat(t);
+    chunk.tiles.forEach((tile, i) => {
+      this.meshes.tile.setColorAt(start.tile + i, this.tint(tile.color, kDat));
+    });
+    chunk.patches.forEach((p, i) => {
+      this.meshes.halo.setMatrixAt(start.halo + i, this.haloMatrix(p, this.kQuang(t, i)));
+    });
+    const seen = {} as Record<PropKey, number>;
+    chunk.props.forEach((pr, i) => {
+      const j = seen[pr.key] ?? 0;
+      seen[pr.key] = j + 1;
+      this.meshes[pr.key].setMatrixAt(start[pr.key] + j, this.propMatrix(pr, this.kMoc(t, i)));
+    });
+    if (this.meshes.tile.instanceColor) this.meshes.tile.instanceColor.needsUpdate = true;
+    for (const k of Object.keys(CAP) as PropKey[]) this.meshes[k].instanceMatrix.needsUpdate = true;
   }
 
   // -------------------------------------------------- hình học đã hàn sẵn
