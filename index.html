@@ -29,10 +29,27 @@
   <div class="group">
     <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
     <div class="stat reach" id="reach"><small>Xa nhất</small><strong id="reach-val">0</strong></div>
+    <button class="icon" id="gfx" title="Đồ hoạ" aria-label="Chất lượng đồ hoạ"
+            aria-haspopup="dialog" aria-expanded="false" aria-controls="gfx-menu"></button>
     <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm"></button>
     <button class="icon" id="pause" title="Tạm dừng (Esc)" aria-label="Tạm dừng"></button>
   </div>
 </header>
+
+<!-- ------------------------------------------------------------------ bảng đồ hoạ -->
+<div class="gfx glass" id="gfx-menu" role="dialog" aria-label="Chất lượng đồ hoạ" hidden>
+  <div class="gfx-head"><small>Đồ hoạ</small><span id="gfx-now"></span></div>
+  <div class="seg" id="gfx-seg" role="radiogroup" aria-label="Bậc đồ hoạ">
+    <button data-q="auto" role="radio">Tự động</button>
+    <button data-q="low" role="radio">Thấp</button>
+    <button data-q="medium" role="radio">Vừa</button>
+    <button data-q="high" role="radio">Cao</button>
+  </div>
+  <button class="gfx-tilt" id="gfx-tilt" role="switch" aria-checked="false">
+    <span>Mô hình thu nhỏ</span><i class="sw" aria-hidden="true"></i>
+  </button>
+  <p class="gfx-note" id="gfx-note"></p>
+</div>
 
 <!-- ------------------------------------------------------------------ minimap -->
 <aside class="map" id="mapbox" title="Bấm để đưa camera tới đó">

@@ -54,6 +54,7 @@ window.addEventListener('pagehide', () => economy.save());
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   e.preventDefault();
+  if (ui.dismiss()) return;
   ui.setPaused(!game.isPaused);
 });
 

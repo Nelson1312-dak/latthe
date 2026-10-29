@@ -16,6 +16,7 @@ import { ico, iconSvg } from './icons';
 import type { IconName } from './icons';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
+import type { Choice } from './quality';
 import type { BiomeId, BuildingType, Cost, OfflineReport, Patch, ResourceKind, Unit } from './types';
 import { RESOURCE_KINDS } from './types';
 
@@ -71,6 +72,8 @@ export class UIManager {
     resbar: $('resbar'), level: $('level'),
     reach: $('reach'), reachVal: $('reach-val'),
     mute: $<HTMLButtonElement>('mute'), pause: $<HTMLButtonElement>('pause'),
+    gfx: $<HTMLButtonElement>('gfx'), gfxMenu: $('gfx-menu'), gfxSeg: $('gfx-seg'),
+    gfxTilt: $<HTMLButtonElement>('gfx-tilt'), gfxNow: $('gfx-now'), gfxNote: $('gfx-note'),
     crewpill: $('crewpill'), tiles: $('tiles'), speed: $<HTMLButtonElement>('speed'),
     farm: $<HTMLButtonElement>('farm'),
     inspector: $('inspector'), dock: $('dock'),
@@ -105,6 +108,23 @@ export class UIManager {
     };
 
     this.el.mute.addEventListener('click', () => this.toggleMute());
+    this.el.gfx.addEventListener('click', () => this.toggleGfx());
+    this.el.gfxSeg.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-q]');
+      if (b?.dataset.q) this.game.setQuality(b.dataset.q as Choice);
+    });
+    this.el.gfxTilt.addEventListener('click', () => {
+      const q = this.game.quality;
+      if (q.tiltAllowed) this.game.setTilt(!q.tilt);
+    });
+    // Bấm ra ngoài thì đóng bảng — kể cả bấm xuống bản đồ.
+    document.addEventListener('pointerdown', (e) => {
+      const t = e.target as Node;
+      if (!this.el.gfxMenu.hidden && !this.el.gfxMenu.contains(t) && !this.el.gfx.contains(t)) this.closeGfx();
+    });
+    game.onQuality = () => this.renderGfx();
+    this.el.gfx.innerHTML = iconSvg('gear');
+    this.renderGfx();
     this.el.pause.addEventListener('click', () => this.setPaused(!game.isPaused));
     this.el.resume.addEventListener('click', () => this.setPaused(false));
     this.el.awayOk.addEventListener('click', () => { this.el.welcome.hidden = true; });
@@ -815,6 +835,50 @@ export class UIManager {
     this.game.setPaused(p);
     this.el.paused.hidden = !p;
     this.el.pause.innerHTML = iconSvg(p ? 'play' : 'pause');
+  }
+
+  // ----------------------------------------------------------- bảng đồ hoạ
+
+  private toggleGfx(): void {
+    if (!this.el.gfxMenu.hidden) {
+      this.closeGfx();
+      return;
+    }
+    // Neo ngay dưới nút. Thanh trên xuống hai dòng ở màn hẹp nên không đặt cứng một độ cao.
+    const r = this.el.gfx.getBoundingClientRect();
+    this.el.gfxMenu.style.top = `${Math.round(r.bottom + 8)}px`;
+    this.el.gfxMenu.style.right = `${Math.max(10, Math.round(window.innerWidth - r.right - 6))}px`;
+    this.el.gfxMenu.hidden = false;
+    this.el.gfx.setAttribute('aria-expanded', 'true');
+    this.renderGfx();
+  }
+
+  private closeGfx(): void {
+    this.el.gfxMenu.hidden = true;
+    this.el.gfx.setAttribute('aria-expanded', 'false');
+  }
+
+  /** Esc đóng bảng đang mở trước; chỉ khi không có gì để đóng thì Esc mới là tạm dừng. */
+  dismiss(): boolean {
+    if (this.el.gfxMenu.hidden) return false;
+    this.closeGfx();
+    return true;
+  }
+
+  private renderGfx(): void {
+    const q = this.game.quality;
+    for (const b of this.el.gfxSeg.querySelectorAll<HTMLButtonElement>('button[data-q]')) {
+      const on = b.dataset.q === q.choice;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+    }
+    // Tự động thì nói rõ nó đang chạy bậc nào — không thì người chơi không biết máy mình ra sao.
+    this.el.gfxNow.textContent = q.choice === 'auto' ? `đang ở ${q.label}` : '';
+    const bat = q.tilt && q.tiltAllowed;
+    this.el.gfxTilt.disabled = !q.tiltAllowed;
+    this.el.gfxTilt.classList.toggle('on', bat);
+    this.el.gfxTilt.setAttribute('aria-checked', String(bat));
+    this.el.gfxNote.textContent = q.tiltAllowed ? '' : 'Mô hình thu nhỏ chỉ có ở bậc Cao.';
   }
 
   private toggleMute(): void {

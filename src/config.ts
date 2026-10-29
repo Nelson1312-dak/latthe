@@ -200,6 +200,12 @@ const KEM_SANG = 0xf7f1e4;
 /** Màu nhấn duy nhất: vàng. */
 const VANG = 0xd9a441;
 
+/**
+ * Vị trí camera so với tâm ngắm. Camera chỉ trượt và thu phóng, không bao giờ xoay, nên hướng
+ * nhìn là hằng số — những thứ cần quay mặt về phía camera (quầng sáng) tính một lần là xong.
+ */
+export const CAMERA_OFFSET = [60, 70, 60] as const;
+
 export const PALETTE = {
   sky: LAM_SANG,
   cliffTop: DAT,

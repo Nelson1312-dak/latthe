@@ -17,9 +17,12 @@ import { buildingGeometry, buildingMaterial } from './buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { BUILDINGS, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
+import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { BUILDINGS, CAMERA_OFFSET, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
+import { OpaqueGTAOPass, finishPass } from './post';
+import { AutoTune, TIERS, loadGfx, saveGfx, stepDown, tierOf } from './quality';
+import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
 import type { Economy } from './Economy';
 import { FogOfWar, chime } from './FogOfWar';
 import { MapManager } from './MapManager';
@@ -84,8 +87,17 @@ export class Game {
   private readonly sunDir = new THREE.Vector3(18, 28, 14).normalize();
   private readonly sunRight = new THREE.Vector3();
   private readonly sunUp = new THREE.Vector3();
-  private composer!: EffectComposer;
-  private gtao!: GTAOPass;
+  /** Chuỗi hậu kỳ. Null ở bậc Thấp — khi đó vẽ thẳng ra màn hình. */
+  private composer: EffectComposer | null = null;
+  private gtao: OpaqueGTAOPass | null = null;
+  private finish: ShaderPass | null = null;
+  private readonly gfx: GfxSettings = loadGfx();
+  private tier: Tier = 'high';
+  private spec: TierSpec = TIERS.high;
+  private readonly tune = new AutoTune();
+  private readonly focusV = new THREE.Vector3();
+  /** Báo cho HUD mỗi khi bậc đồ hoạ đổi — kể cả lúc Tự động tự hạ. */
+  onQuality: (() => void) | null = null;
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -149,7 +161,6 @@ export class Game {
     this.economy = economy;
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'low-power' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(PALETTE.sky, 1);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
@@ -164,7 +175,6 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
-    this.buildComposer();
 
     /*
      * Ánh sáng ngả hẳn về phía TRỜI, không về phía mặt trời.
@@ -235,7 +245,9 @@ export class Game {
     this.buildEmptyMeshes();
     this.rebuildPlots();
 
-    this.resize();
+    // Áp bậc đồ hoạ (cũng gọi resize). Tự động thì đo ngay từ khung đầu.
+    this.applyQuality(tierOf(this.gfx));
+    if (this.gfx.choice === 'auto') this.tune.start();
     this.watchHud();
     window.addEventListener('resize', this.resize);
     window.addEventListener('keydown', this.onKeyDown);
@@ -264,7 +276,7 @@ export class Game {
    * tuyến tính, nên PHẢI có OutputPass ở cuối để áp tone mapping và đổi về sRGB. Thiếu nó,
    * toàn bộ màu nhạt toẹt đi mà không báo lỗi gì — chỉ nhìn mới thấy.
    */
-  private buildComposer(): void {
+  private buildComposer(q: TierSpec): void {
     /*
      * Render target ĐA MẪU. Mặc định EffectComposer dựng target 0 mẫu, nên từ khi có AO thì
      * `antialias: true` của renderer chỉ còn áp lên lớp vẽ cuối — một hình chữ nhật phủ kín
@@ -274,29 +286,125 @@ export class Game {
      */
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
-    this.composer = new EffectComposer(this.renderer, rt);
-    this.composer.setPixelRatio(this.renderer.getPixelRatio());
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    const composer = new EffectComposer(this.renderer, rt);
+    composer.setPixelRatio(this.renderer.getPixelRatio());
+    composer.addPass(new RenderPass(this.scene, this.camera));
 
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.gtao = new GTAOPass(this.scene, this.camera, w, h);
+    const gtao = new OpaqueGTAOPass(this.scene, this.camera, size.x, size.y);
     // Bán kính nhỏ: cần bóng Ở KHE, không phải một lớp xám phủ lên cả cảnh. Đơn vị là đơn
     // vị thế giới, mà nhà ở đây rộng 2 — nên 1,2 là đúng tầm chân tường và mép mái.
-    this.gtao.updateGtaoMaterial({
+    gtao.updateGtaoMaterial({
       radius: 1.2,
       distanceExponent: 1.0,
       thickness: 1.0,
       scale: 1.0,
-      samples: 12,
+      samples: q.aoSamples,
       distanceFallOff: 1.0,
       screenSpaceRadius: false,
     });
     // 0,85 thì mỗi đường nối giữa hai ô lục giác đều hằn lên, mặt đất đọc ra như lưới mắt
     // cáo. 0,7 giữ được bóng ở chỗ tiếp xúc mà không biến nền thành hoa văn.
-    this.gtao.blendIntensity = 0.7;
-    this.composer.addPass(this.gtao);
-    this.composer.addPass(new OutputPass());
+    gtao.blendIntensity = 0.7;
+    composer.addPass(gtao);
+    composer.addPass(new OutputPass());
+    // Lớp hoàn thiện: lọc màu ấm, tối góc, mô hình thu nhỏ — xem post.ts.
+    const finish = finishPass();
+    composer.addPass(finish);
+    this.composer = composer;
+    this.gtao = gtao;
+    this.finish = finish;
+  }
+
+  private disposeComposer(): void {
+    if (!this.composer) return;
+    for (const p of this.composer.passes) p.dispose();
+    this.composer.dispose();
+    this.composer = null;
+    this.gtao = null;
+    this.finish = null;
+  }
+
+  /**
+   * Áp một bậc đồ hoạ: mật độ điểm ảnh, bản đồ bóng, chuỗi hậu kỳ, và phần hình học của bản
+   * đồ và mây. Chuỗi hậu kỳ dựng lại từ đầu thay vì vá từng chỗ: số mẫu MSAA của một target
+   * không đổi được sau khi đã cấp phát, và đổi bậc là việc hiếm.
+   */
+  private applyQuality(tier: Tier): void {
+    const q = TIERS[tier];
+    this.tier = tier;
+    this.spec = q;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.dpr));
+    this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
+    this.sun.shadow.radius = q.shadowRadius;
+    // Bản đồ bóng cũ mang cỡ cũ; bỏ đi để three cấp phát lại đúng cỡ ở lượt vẽ sau.
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null;
+    this.map.setQuality(q);
+    this.fog.setDetail(q.cloudDetail);
+    this.disposeComposer();
+    if (q.post) this.buildComposer(q);
+    this.resize();
+    this.onQuality?.();
+  }
+
+  /** Trạng thái đồ hoạ cho HUD. */
+  get quality(): { choice: Choice; tier: Tier; label: string; tilt: boolean; tiltAllowed: boolean } {
+    return {
+      choice: this.gfx.choice, tier: this.tier, label: this.spec.label,
+      tilt: this.gfx.tilt, tiltAllowed: this.spec.tilt,
+    };
+  }
+
+  /** Người chơi chọn bậc. Chọn Tự động là đo lại từ Cao — cách duy nhất để thử lại bậc cao hơn. */
+  setQuality(choice: Choice): void {
+    this.gfx.choice = choice;
+    if (choice === 'auto') {
+      this.gfx.autoTier = 'high';
+      this.tune.start();
+    } else {
+      this.tune.stop();
+    }
+    saveGfx(this.gfx);
+    const t = tierOf(this.gfx);
+    if (t !== this.tier) this.applyQuality(t);
+    else this.onQuality?.();
+  }
+
+  setTilt(on: boolean): void {
+    this.gfx.tilt = on;
+    saveGfx(this.gfx);
+    this.onQuality?.();
+  }
+
+  /** Chế độ Tự động: đo xong một đợt mà chậm thì hạ một bậc, rồi đo lại ở bậc mới. */
+  private autoTune(gap: number): void {
+    if (this.gfx.choice !== 'auto') return;
+    if (this.tune.frame(gap) !== 'slow') return;
+    const next = stepDown(this.tier);
+    if (!next) return;
+    this.gfx.autoTier = next;
+    saveGfx(this.gfx);
+    this.applyQuality(next);
+    this.tune.start();
+  }
+
+  /**
+   * Thông số của lớp hoàn thiện mỗi khung. Dải nét bám tâm ngắm — tâm ngắm nằm giữa DẢI
+   * TRỐNG giữa hai thanh HUD chứ không giữa màn hình. Phóng gần thì dải hẹp và mờ đậm (cảm
+   * giác sa bàn rõ nhất), kéo xa thì dải rộng và mờ nhạt: lúc ấy người chơi đang nhìn bao
+   * quát, không được làm nhoè chỗ họ cần đọc.
+   */
+  private updateFinish(): void {
+    const f = this.finish;
+    if (!f) return;
+    const tilt = this.spec.tilt && this.gfx.tilt;
+    f.uniforms.uTilt.value = tilt ? 1 : 0;
+    if (!tilt) return;
+    const p = this.focusV.copy(this.target).project(this.camera);
+    f.uniforms.uFocus.value = (p.y + 1) / 2;
+    const k = THREE.MathUtils.clamp((this.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM), 0, 1);
+    f.uniforms.uBand.value = THREE.MathUtils.lerp(0.12, 0.24, k);
+    f.uniforms.uBlur.value = THREE.MathUtils.lerp(5, 2.5, k) * this.renderer.getPixelRatio();
   }
 
   // ------------------------------------------------------------ đánh dấu
@@ -838,9 +946,19 @@ export class Game {
     this.camera.right = halfH * aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    if (!this.composer) return;
     // composer.setSize tự đặt cỡ cho từng pass, đã nhân pixel ratio. Bản trước gọi thêm
     // gtao.setSize(w, h) theo điểm ảnh CSS, đè mất cỡ đúng trên màn hình mật độ cao.
     this.composer.setSize(w, h);
+    const pr = this.renderer.getPixelRatio();
+    // Bậc Vừa tính AO ở nửa độ phân giải: AO vốn là thứ mềm, nửa cỡ mắt khó nhận ra, mà
+    // lượt vẽ pháp tuyến lẫn lượt tính AO đều rẻ đi bốn lần.
+    if (this.gtao && this.spec.aoScale < 1) {
+      this.gtao.setSize(
+        Math.max(1, Math.round(w * pr * this.spec.aoScale)),
+        Math.max(1, Math.round(h * pr * this.spec.aoScale)));
+    }
+    this.finish?.uniforms.uRes.value.set(w * pr, h * pr);
   };
 
   private watchHud(): void {
@@ -873,8 +991,10 @@ export class Game {
   private loop = (nowMs: number): void => {
     this.raf = requestAnimationFrame(this.loop);
     const now = nowMs / 1000;
-    const dt = Math.min(now - this.lastTime, MAX_FRAME_DELTA);
+    const gap = now - this.lastTime;
+    const dt = Math.min(gap, MAX_FRAME_DELTA);
     this.lastTime = now;
+    this.autoTune(gap);
 
     this.moveCamera(dt);
     // Nạp khối chạy cả khi tạm dừng: người chơi vẫn kéo bản đồ đi xem được, và đất mới phải
@@ -912,7 +1032,12 @@ export class Game {
       }
       this.tweenFeedback(dt);
     }
-    this.composer.render();
+    if (this.composer) {
+      this.updateFinish();
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   };
 
   /**
@@ -1007,7 +1132,8 @@ export class Game {
       this.resize();
     }
 
-    this.camera.position.set(this.target.x + 60, 70, this.target.z + 60);
+    this.camera.position.set(
+      this.target.x + CAMERA_OFFSET[0], CAMERA_OFFSET[1], this.target.z + CAMERA_OFFSET[2]);
     this.camera.lookAt(this.target);
     this.fitShadow();
   }

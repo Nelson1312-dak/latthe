@@ -27,6 +27,9 @@ export const METALNESS = 0.04;
  */
 export const WIND = { value: 0 };
 
+/** Công tắc gió chung cho mọi tán lá: bậc đồ hoạ Thấp đặt về 0. */
+export const SWAY_ON = { value: 1 };
+
 /**
  * Cho một vật liệu đung đưa theo gió — chạy trong vertex shader, gần như không tốn gì.
  *
@@ -48,7 +51,8 @@ export function sway<T extends THREE.Material>(mat: T, amount: number): T {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = WIND;
     shader.uniforms.uSway = u;
-    shader.vertexShader = 'uniform float uTime;\nuniform float uSway;\n' + shader.vertexShader
+    shader.uniforms.uSwayOn = SWAY_ON;
+    shader.vertexShader = 'uniform float uTime;\nuniform float uSway;\nuniform float uSwayOn;\n' + shader.vertexShader
       .replace('#include <color_vertex>', `#include <color_vertex>
 #if defined( USE_COLOR ) && defined( USE_INSTANCING_COLOR ) && ! defined( USE_COLOR_ALPHA )
       vColor = color.r + color.g + color.b > 2.99 ? instanceColor.xyz : color.xyz;
@@ -64,8 +68,8 @@ export function sway<T extends THREE.Material>(mat: T, amount: number): T {
       float cao = max(transformed.y, 0.0);
       float gio = sin(uTime * 1.3 + goc.x * 0.35 + goc.z * 0.27) * 0.6
                 + sin(uTime * 2.3 + goc.x * 0.9 - goc.z * 0.5) * 0.25;
-      transformed.x += gio * cao * cao * uSway;
-      transformed.z += gio * 0.55 * cao * cao * uSway;`);
+      transformed.x += gio * cao * cao * uSway * uSwayOn;
+      transformed.z += gio * 0.55 * cao * cao * uSway * uSwayOn;`);
   };
   return mat;
 }
@@ -114,6 +118,29 @@ export function haloTexture(): THREE.CanvasTexture {
   grad.addColorStop(0.84, 'rgba(255,255,255,0.55)');
   grad.addColorStop(0.93, 'rgba(255,255,255,1.00)');
   grad.addColorStop(1.00, 'rgba(255,255,255,0.00)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, N, N);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/**
+ * Đốm sáng tròn mềm cho quầng quanh pha lê và quặng vàng: đặc ở tâm, tắt dần ra rìa. Khác
+ * haloTexture (rỗng ở giữa, sáng ở vành) vì đây là ánh sáng toả ra từ một vật, không phải
+ * đường biên của một vùng.
+ */
+export function glowTexture(): THREE.CanvasTexture {
+  const N = 64;
+  const cv = document.createElement('canvas');
+  cv.width = N;
+  cv.height = N;
+  const g = cv.getContext('2d')!;
+  const grad = g.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2);
+  grad.addColorStop(0.0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.3, 'rgba(255,255,255,0.55)');
+  grad.addColorStop(0.65, 'rgba(255,255,255,0.15)');
+  grad.addColorStop(1.0, 'rgba(255,255,255,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, N, N);
   const t = new THREE.CanvasTexture(cv);

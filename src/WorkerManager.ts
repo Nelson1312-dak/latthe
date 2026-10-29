@@ -31,6 +31,8 @@ const ARRIVE = 0.35;
 /** Duoi ngan nay don thi chua bo mot chuyen cho hang. */
 const CARRY_WORTH_IT = 0.5;
 const MAX_UNITS = 220;
+/** Sức chứa của lưới xe thồ. */
+const CART_CAP = 24;
 
 export class WorkerManager {
   private readonly economy: Economy;
@@ -71,7 +73,7 @@ export class WorkerManager {
       matte(), MAX_UNITS);
     this.carts = new THREE.InstancedMesh(
       this.cartGeometry(),
-      matte(undefined, true), 24);
+      matte(undefined, true), CART_CAP);
 
     for (const mesh of [this.bodies, this.cargo, this.carts]) {
       mesh.castShadow = true;
@@ -536,7 +538,7 @@ export class WorkerManager {
 
     for (const u of units) {
       if (u.kind === 'cart') {
-        if (ci < this.carts.count) {
+        if (ci < CART_CAP) {
           this.v.set(u.position[0], this.yOf(u.id, u.position[0], u.position[2], dt), u.position[2]);
           this.q.setFromAxisAngle(this.axis, u.facing + Math.PI / 2);
           this.s.set(1, 1, 1);
@@ -576,11 +578,14 @@ export class WorkerManager {
       vi += 1;
     }
 
-    for (let i = vi; i < MAX_UNITS; i += 1) {
-      this.bodies.setMatrixAt(i, this.hidden);
-      this.cargo.setMatrixAt(i, this.hidden);
-    }
-    for (let i = ci; i < this.carts.count; i += 1) this.carts.setMatrixAt(i, this.hidden);
+    /*
+     * Vẽ ĐÚNG số đang có. Bản trước để nguyên count = 220 và thu nhỏ phần thừa về 0, nên ván
+     * mới một người dân vẫn chạy đỉnh cho 220 thân, 220 kiện hàng — đo được 160 nghìn tam
+     * giác mỗi khung cho đúng một người.
+     */
+    this.bodies.count = vi;
+    this.cargo.count = vi;
+    this.carts.count = ci;
     // Xe giao xong thì biến mất; dọn cao độ của chúng khỏi bảng.
     if (this.yVe.size > units.length + 32) {
       const con = new Set(units.map((u) => u.id));

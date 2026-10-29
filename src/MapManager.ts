@@ -16,9 +16,9 @@
  * có vòng lặp: bố cục không cần cao độ, cao độ chỉ cần bố cục.
  */
 import * as THREE from 'three';
-import { gem, matte, metal, haloTexture, sway, WIND } from './materials';
+import { gem, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BIOMES, PALETTE, RESOURCES } from './config';
+import { BIOMES, CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
 import type { BiomeId, Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, HEX_R, HEX_STEP_X, HEX_STEP_Z, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
@@ -37,7 +37,7 @@ import {
 const CAP = {
   tile: 11400, halo: 300,
   pine: 1100, wheat: 900, rock: 1400, ore: 800, spire: 500, palm: 300, tuft: 2300,
-  leaf: 520, bush: 350, flower: 900,
+  leaf: 520, bush: 350, flower: 900, glow: 750,
 } as const;
 
 type PropKey = keyof typeof CAP;
@@ -63,6 +63,9 @@ const KE: readonly (readonly [number, number])[] = [
   [HEX_STEP_X, HEX_STEP_Z / 2], [HEX_STEP_X, -HEX_STEP_Z / 2],
   [-HEX_STEP_X, HEX_STEP_Z / 2], [-HEX_STEP_X, -HEX_STEP_Z / 2],
 ];
+
+/** Hướng từ tâm ngắm về phía camera — hằng số, vì camera không bao giờ xoay. */
+const VIEW = new THREE.Vector3(...CAMERA_OFFSET).normalize();
 
 /** Bốn nền quanh thủ phủ. Chúng nằm vắt sang ba khối lân cận, nên trang trí phải tránh riêng. */
 const CORE_PLOTS = [[-9, -8], [9, -8], [-9, 8], [9, 8]] as const;
@@ -120,13 +123,17 @@ export class MapManager {
   /** Đổi mỗi khi tập khối thay đổi — Game dựa vào đây để dựng lại nền đất. */
   version = 0;
 
+  /** Ô vát mép (30 tam giác) cho bậc Vừa và Cao, ô phẳng (18) cho bậc Thấp. */
+  private readonly tileBevel = hexTile(HEX_R, TILE_H, VAT_CAO, VAT_RONG);
+  private readonly tileFlat = hexTile(HEX_R, TILE_H, 0, 0);
+
   constructor() {
     const make = (key: PropKey, geo: THREE.BufferGeometry, material: THREE.Material, shadow: boolean) => {
       const mesh = new THREE.InstancedMesh(geo, material, CAP[key]);
       mesh.castShadow = shadow;
       mesh.receiveShadow = key === 'tile';
       mesh.frustumCulled = false;
-      mesh.renderOrder = key === 'halo' ? 1 : 0;
+      mesh.renderOrder = key === 'halo' ? 1 : key === 'glow' ? 2 : 0;
       mesh.count = 0;
       this.meshes[key] = mesh;
       this.group.add(mesh);
@@ -140,7 +147,7 @@ export class MapManager {
      * góc xoay này thì theo một hướng các ô chồng lên nhau, hướng kia hở khe tam giác — mặt
      * đất chưa từng khít, và AO bám vào mấy cái khe đó nên trông như những rãnh tối.
      */
-    make('tile', hexTile(HEX_R, TILE_H, VAT_CAO, VAT_RONG), matte(), false);
+    make('tile', this.tileBevel, matte(), false);
 
     // Quầng của bãi: một hình vuông phẳng mang ảnh gradient tròn. Đây là thứ khiến một bãi
     // đọc được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
@@ -175,6 +182,23 @@ export class MapManager {
     make('bush', this.bushGeometry(), la(0.05), true);
     // Hoa không đổ bóng: thân mảnh như sợi chỉ, bóng của nó chỉ thành những chấm nhiễu.
     make('flower', this.flowerGeometry(), la(0.4, true), false);
+
+    /*
+     * Quầng sáng quanh pha lê và quặng vàng — thay cho bloom.
+     *
+     * Bloom thật lọc theo độ sáng, mà ở đây tường kem dưới nắng còn sáng hơn pha lê: lọc
+     * kiểu gì cũng loé luôn cả làng. Bloom chọn lọc thì phải vẽ lại cả cảnh thêm một lượt.
+     * Còn đây là một tấm phẳng mang đốm sáng mềm, cộng dồn ánh sáng, đặt đúng chỗ từng viên
+     * — một lệnh vẽ, vài trăm tấm. Camera không bao giờ xoay nên tấm quay sẵn về phía camera
+     * một lần là đủ, khỏi xoay theo từng khung.
+     */
+    const glow = new THREE.PlaneGeometry(2, 2);
+    glow.lookAt(VIEW);
+    make('glow', glow, new THREE.MeshBasicMaterial({
+      map: glowTexture(),
+      transparent: true, depthWrite: false, opacity: 0.24,
+      blending: THREE.AdditiveBlending,
+    }), false);
   }
 
   // ------------------------------------------------------------ nạp và huỷ
@@ -203,6 +227,15 @@ export class MapManager {
     if (this.tops.size > 60000) this.tops.clear();
     this.refill();
     this.version += 1;
+  }
+
+  /** Áp bậc đồ hoạ: dạng ô, gió, quầng sáng. Không đụng gì tới bố cục hay cao độ. */
+  setQuality(q: { bevel: boolean; sway: boolean; glow: boolean }): void {
+    const tile = this.meshes.tile;
+    const want = q.bevel ? this.tileBevel : this.tileFlat;
+    if (tile.geometry !== want) tile.geometry = want;
+    SWAY_ON.value = q.sway ? 1 : 0;
+    this.meshes.glow.visible = q.glow;
   }
 
   /** Nối danh sách khối đã vén. */
@@ -239,6 +272,7 @@ export class MapManager {
     mesh.receiveShadow = old.receiveShadow;
     mesh.frustumCulled = false;
     mesh.renderOrder = old.renderOrder;
+    mesh.visible = old.visible;
     mesh.count = 0;
     this.group.remove(old);
     old.dispose();
@@ -576,6 +610,24 @@ export class MapManager {
     const [x, , z] = p.center;
     const put = (key: PropKey, dx: number, dy: number, dz: number, scale: number, color: number) => {
       layout.props.push({ key, pos: [x + dx, dy, z + dz], scale, rot: r() * 6, color });
+      /*
+       * Quầng sáng đi kèm pha lê và quặng. Không rút số nào: chuỗi ngẫu nhiên giữ nguyên.
+       *
+       * Quầng LÙI ra sau viên đá theo hướng nhìn, nên chính viên đá che phần giữa và ánh sáng
+       * chỉ còn toả quanh viền, như được rọi từ phía sau. Đặt ngay tâm thì quầng phủ lên chính
+       * nó: chín viên một rừng cộng dồn lại, cả rừng pha lê bạc trắng mất màu tím.
+       */
+      if (key === 'spire' || key === 'ore') {
+        const tinh = key === 'spire';
+        const lui = (tinh ? 1.0 : 0.6) * scale;
+        layout.props.push({
+          key: 'glow',
+          pos: [x + dx - VIEW.x * lui, dy + (tinh ? 1.5 * scale : 0) - VIEW.y * lui, z + dz - VIEW.z * lui],
+          scale: (tinh ? 1.8 : 1.4) * scale,
+          rot: 0,
+          color: tinh ? PALETTE.crystalGlow : PALETTE.goldOre,
+        });
+      }
     };
     const rai = (n: number, fn: (a: number, d: number) => void) => {
       for (let i = 0; i < n; i += 1) fn(r() * Math.PI * 2, Math.sqrt(r()) * p.radius * 0.88);
@@ -795,11 +847,14 @@ export class MapManager {
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
     }
+    this.tileBevel.dispose();
+    this.tileFlat.dispose();
   }
 }
 
 /**
  * Ô lục giác vát mép trên, KHÔNG có đáy (đáy chôn sâu dưới các ô kề, không ai nhìn thấy).
+ * `vatCao` bằng 0 thì không vát: thành và mặt, 18 tam giác.
  *
  * Ghép tay thay cho LatheGeometry: lathe sinh thêm một tam giác suy biến cho mỗi cạnh ở tâm
  * mặt trên. Ba mươi tam giác mỗi ô — thành, mép vát, mặt — so với hai mươi tư của hình trụ
@@ -823,6 +878,14 @@ function hexTile(r: number, h: number, vatCao: number, vatRong: number): THREE.B
   for (let k = 0; k < 6; k += 1) {
     const a0 = dinh(r, day, k);
     const a1 = dinh(r, day, k + 1);
+    if (vatCao <= 0) {
+      const m0 = dinh(r, mat, k);
+      const m1 = dinh(r, mat, k + 1);
+      tamGiac(a0, a1, m0);
+      tamGiac(m1, m0, a1);
+      tamGiac(m0, m1, [0, mat, 0]);
+      continue;
+    }
     const b0 = dinh(r, vai, k);
     const b1 = dinh(r, vai, k + 1);
     const c0 = dinh(trong, mat, k);

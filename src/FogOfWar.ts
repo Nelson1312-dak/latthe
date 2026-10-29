@@ -73,17 +73,7 @@ export class FogOfWar {
      * một hình — chỗ các quả cầu giao nhau tạo ra nếp gấp, và AO bám vào đó cho ra dáng bông.
      * Đục chứ không trong: mây trong suốt thì AO vẫn tính nó như vật đặc, ra quầng tối lạ.
      */
-    const parts: THREE.BufferGeometry[] = [];
-    for (const [x, y, z, r] of [
-      [0, 0.62, 0, 0.66], [0.6, 0.42, 0.12, 0.46], [-0.56, 0.4, -0.06, 0.44], [0.06, 0.38, 0.5, 0.4],
-    ] as const) {
-      const g = new THREE.IcosahedronGeometry(r, 1);
-      g.translate(x, y, z);
-      parts.push(g);
-    }
-    const geo = mergeGeometries(parts, false) ?? parts[0];
-    geo.scale(1, 0.82, 1);
-    this.mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({
+    this.mesh = new THREE.InstancedMesh(this.cloudGeometry(1), new THREE.MeshStandardMaterial({
       color: PALETTE.cloud, roughness: 1, metalness: 0,
       // Tự sáng một chút để mây vẫn trắng ở phía khuất nắng: mây xám thì đọc ra là khói.
       emissive: 0xffffff, emissiveIntensity: 0.16,
@@ -91,6 +81,42 @@ export class FogOfWar {
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
     this.group.add(this.mesh);
+  }
+
+  private readonly geos: THREE.BufferGeometry[] = [];
+
+  /**
+   * Hình một đám mây ở độ chia cho trước. Pháp tuyến đặt HƯỚNG TÂM từng quả cầu, nên cả ở độ
+   * chia 0 (20 mặt mỗi quả) mây vẫn đổ bóng trơn: thô ở viền ngoài, nhưng không thành khối đá.
+   */
+  private cloudGeometry(detail: 0 | 1): THREE.BufferGeometry {
+    const cached = this.geos[detail];
+    if (cached) return cached;
+    const parts: THREE.BufferGeometry[] = [];
+    const n = new THREE.Vector3();
+    for (const [x, y, z, r] of [
+      [0, 0.62, 0, 0.66], [0.6, 0.42, 0.12, 0.46], [-0.56, 0.4, -0.06, 0.44], [0.06, 0.38, 0.5, 0.4],
+    ] as const) {
+      const g = new THREE.IcosahedronGeometry(r, detail);
+      const pos = g.getAttribute('position');
+      const nor = g.getAttribute('normal');
+      for (let i = 0; i < pos.count; i += 1) {
+        n.fromBufferAttribute(pos, i).normalize();
+        nor.setXYZ(i, n.x, n.y, n.z);
+      }
+      g.translate(x, y, z);
+      parts.push(g);
+    }
+    const geo = mergeGeometries(parts, false) ?? parts[0];
+    geo.scale(1, 0.82, 1);
+    this.geos[detail] = geo;
+    return geo;
+  }
+
+  /** Bậc đồ hoạ Thấp dùng mây thô: 80 tam giác mỗi đám thay vì 320. */
+  setDetail(detail: 0 | 1): void {
+    const g = this.cloudGeometry(detail);
+    if (this.mesh.geometry !== g) this.mesh.geometry = g;
   }
 
   /** Nối cao độ mặt đất. */
