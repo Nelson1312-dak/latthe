@@ -116,11 +116,18 @@ export class Economy {
             name: String(parsed.village?.name ?? '').slice(0, 24),
             color: Number(parsed.village?.color) || VILLAGE_COLORS[0],
           };
-          // Bản lưu trước mùa bão: cho đầy một kỳ chuẩn bị chứ không ập tới ngay lúc mở
-          // game, vì người chơi ấy chưa từng nghe nói tới chòi canh.
+          /*
+           * Bản lưu TRƯỚC mùa bão được cho hẳn hai kỳ chuẩn bị.
+           *
+           * Sức của một đợt bám theo cấp căn cứ, nên một người đã chơi bốn tiếng sẽ gặp
+           * ngay một đợt mạnh gấp mười đợt đầu của người mới — mà họ thì chưa từng nghe
+           * nói tới chòi canh, chưa xây cái nào, và sẽ mất gần nửa kho ngay lần mở game
+           * đầu tiên sau khi cập nhật. Hai mươi phút là đủ để nhìn thấy bảng đếm ngược ở
+           * góc màn hình, đọc hai con số thủ/giặc, và dựng mấy cái chòi.
+           */
           const th = parsed.threat as Partial<Threat> | undefined;
           state.threat = {
-            next: Number(th?.next) > 0 ? Number(th?.next) : WAVE_FIRST_SECONDS,
+            next: Number(th?.next) > 0 ? Number(th?.next) : WAVE_FIRST_SECONDS * 2,
             wave: Math.max(0, Math.floor(Number(th?.wave) || 0)),
             hired: 0,
             last: th?.last ?? null,
