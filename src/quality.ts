@@ -16,8 +16,10 @@ export type Choice = Tier | 'auto';
 
 export interface TierSpec {
   label: string;
-  /** Trần mật độ điểm ảnh. */
+  /** Mật độ điểm ảnh ở khung nhìn tham chiếu 1920x1080 — xem pixelRatioFor. */
   dpr: number;
+  /** Trần mật độ trên khung nhìn hẹp, nơi ngân sách điểm ảnh cho phép vẽ dày hơn. */
+  dprMax: number;
   /** Vẽ qua chuỗi hậu kỳ. Tắt thì vẽ thẳng ra màn hình: không AO, không lọc màu. */
   post: boolean;
   /** AO: độ phân giải so với khung hình, và số mẫu mỗi điểm. */
@@ -50,7 +52,10 @@ export interface TierSpec {
 
 export const TIERS: Record<Tier, TierSpec> = {
   low: {
-    label: 'Thấp', dpr: 1, post: false, aoScale: 0, aoSamples: 0,
+    // Đã thử cho bậc này chạy qua hậu kỳ mà bỏ AO, để nó cũng được lọc màu ấm: đo ra
+    // 1,54 → 2,39 ms, tức đắt thêm hơn nửa, chỉ vì phải cấp một target đa mẫu rồi phân giải
+    // nó. Quá nhiều cho một bậc mà cả lý do tồn tại là chạy được trên máy yếu.
+    label: 'Thấp', dpr: 1, dprMax: 2, post: false, aoScale: 0, aoSamples: 0,
     shadowMap: 1024, shadowRadius: 3,
     // Không có bầu trời làm nguồn sáng: đo ở 1920x1080, phóng xa nhất, GTX 1660 SUPER thì nó
     // tốn 0,84 trên tổng 2,4 ms — hơn một phần ba cả khung hình, cho một bậc mà cả lý do tồn
@@ -59,7 +64,7 @@ export const TIERS: Record<Tier, TierSpec> = {
     bevel: false, sway: false, cloudDetail: 0, glow: false, tilt: false,
   },
   medium: {
-    label: 'Vừa', dpr: 1.5, post: true, aoScale: 0.5, aoSamples: 8,
+    label: 'Vừa', dpr: 1.5, dprMax: 2.5, post: true, aoScale: 0.5, aoSamples: 8,
     shadowMap: 2048, shadowRadius: 5,
     env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: false, tilt: false,
@@ -71,12 +76,35 @@ export const TIERS: Record<Tier, TierSpec> = {
    * 0,1 ms và mô hình thu nhỏ gần như không tốn gì, nên giữ cả hai.
    */
   high: {
-    label: 'Cao', dpr: 2, post: true, aoScale: 0.75, aoSamples: 12,
+    label: 'Cao', dpr: 2, dprMax: 3, post: true, aoScale: 0.75, aoSamples: 12,
     shadowMap: 4096, shadowRadius: 6,
     env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: true, tilt: true,
   },
 };
+
+/**
+ * Mật độ điểm ảnh thật sự dùng, cho một khung nhìn cỡ bất kỳ.
+ *
+ * `dpr` của mỗi bậc được chọn khi ngắm một màn hình bàn giấy, và đem thẳng sang điện thoại
+ * thì hỏng nặng: khung nhìn CSS của điện thoại chỉ bằng một phần sáu màn 1080p, nhưng màn
+ * hình nó lại dày gấp ba. "Trần 1" ở đó nghĩa là vẽ ở một phần ba độ phân giải màn hình rồi
+ * phóng to lên — mờ tịt — trong khi GPU mới gánh một phần sáu khối lượng nó chịu được.
+ *
+ * Nên trần không phải một TỈ LỆ mà là một NGÂN SÁCH ĐIỂM ẢNH: đúng bằng số điểm bậc ấy vẽ ở
+ * 1920×1080. Khung nhìn nhỏ hơn thì được vẽ dày hơn, vừa đúng chỗ dư ra. Ở đúng khung tham
+ * chiếu con số không đổi, nên không máy bàn nào thấy khác đi.
+ *
+ * `dprMax` chặn trên, vì ngân sách suy từ một con GTX còn chip điện thoại yếu hơn nhiều; và
+ * vì trên 2 lần thì mắt gần như không phân biệt được nữa.
+ */
+const THAM_CHIEU = 1920 * 1080;
+
+export function pixelRatioFor(q: TierSpec, w: number, h: number, dpr: number): number {
+  const css = Math.max(1, w * h);
+  const can = Math.sqrt((THAM_CHIEU * q.dpr * q.dpr) / css);
+  return Math.min(dpr, q.dprMax, Math.max(q.dpr, can));
+}
 
 const DOWN: Record<Tier, Tier | null> = { high: 'medium', medium: 'low', low: null };
 export const stepDown = (t: Tier): Tier | null => DOWN[t];

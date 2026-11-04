@@ -22,7 +22,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { BUILDINGS, CAMERA_OFFSET, CAM_DIST, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
 import { OpaqueGTAOPass, finishPass } from './post';
-import { AutoTune, TIERS, loadGfx, saveGfx, stepDown, tierOf } from './quality';
+import { AutoTune, TIERS, loadGfx, pixelRatioFor, saveGfx, stepDown, tierOf } from './quality';
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
 import type { Economy } from './Economy';
 import { FogOfWar, chime } from './FogOfWar';
@@ -96,6 +96,14 @@ export class Game {
   private tier: Tier = 'high';
   private spec: TierSpec = TIERS.high;
   private readonly tune = new AutoTune();
+  /**
+   * Nấc rút lui cuối cùng của chế độ Tự động, nhân vào mật độ điểm ảnh.
+   *
+   * Dưới bậc Thấp không còn bậc nào để hạ, nên trước đây một chiếc máy quá yếu cứ chạy giật
+   * mãi mà hệ thống hết cách. Sàn 1,0 là đúng mức bậc Thấp từng chạy, nên tệ nhất cũng chỉ
+   * quay về chỗ cũ chứ không tụt xuống dưới.
+   */
+  private dprScale = 1;
   private readonly focusV = new THREE.Vector3();
   private hazeFar = 400;
   /** Báo cho HUD mỗi khi bậc đồ hoạ đổi — kể cả lúc Tự động tự hạ. */
@@ -333,19 +341,19 @@ export class Game {
     composer.addPass(new RenderPass(this.scene, this.camera));
 
     const gtao = new OpaqueGTAOPass(this.scene, this.camera, size.x, size.y);
-    // Bán kính nhỏ: cần bóng Ở KHE, không phải một lớp xám phủ lên cả cảnh. Đơn vị là đơn
-    // vị thế giới, mà nhà ở đây rộng 2 — nên 1,2 là đúng tầm chân tường và mép mái.
-    gtao.updateGtaoMaterial({
-      radius: 1.2,
-      distanceExponent: 1.0,
-      thickness: 1.0,
-      scale: 1.0,
-      samples: q.aoSamples,
-      distanceFallOff: 1.0,
-      screenSpaceRadius: false,
-    });
-    // 0,85 thì mỗi đường nối giữa hai ô lục giác đều hằn lên, mặt đất đọc ra như lưới mắt
-    // cáo. 0,7 giữ được bóng ở chỗ tiếp xúc mà không biến nền thành hoa văn.
+      // Bán kính nhỏ: cần bóng Ở KHE, không phải một lớp xám phủ lên cả cảnh. Đơn vị là đơn
+      // vị thế giới, mà nhà ở đây rộng 2 — nên 1,2 là đúng tầm chân tường và mép mái.
+      gtao.updateGtaoMaterial({
+        radius: 1.2,
+        distanceExponent: 1.0,
+        thickness: 1.0,
+        scale: 1.0,
+        samples: q.aoSamples,
+        distanceFallOff: 1.0,
+        screenSpaceRadius: false,
+      });
+      // 0,85 thì mỗi đường nối giữa hai ô lục giác đều hằn lên, mặt đất đọc ra như lưới mắt
+      // cáo. 0,7 giữ được bóng ở chỗ tiếp xúc mà không biến nền thành hoa văn.
     gtao.blendIntensity = 0.7;
     composer.addPass(gtao);
     composer.addPass(new OutputPass());
@@ -355,6 +363,20 @@ export class Game {
     this.composer = composer;
     this.gtao = gtao;
     this.finish = finish;
+  }
+
+  /**
+   * Đặt mật độ điểm ảnh theo khung nhìn HIỆN TẠI, trả về true nếu nó vừa đổi.
+   *
+   * Gọi lại ở mỗi lần đổi cỡ chứ không chỉ lúc đổi bậc: xoay ngang một chiếc điện thoại là
+   * khung nhìn đổi hình dạng, mà ngân sách điểm ảnh lại tính từ diện tích khung nhìn.
+   */
+  private applyPixelRatio(): boolean {
+    const raw = pixelRatioFor(this.spec, window.innerWidth, window.innerHeight, window.devicePixelRatio);
+    const pr = Math.max(Math.min(raw, 1), raw * this.dprScale);
+    if (Math.abs(pr - this.renderer.getPixelRatio()) < 0.001) return false;
+    this.renderer.setPixelRatio(pr);
+    return true;
   }
 
   private disposeComposer(): void {
@@ -375,7 +397,7 @@ export class Game {
     const q = TIERS[tier];
     this.tier = tier;
     this.spec = q;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.dpr));
+    this.applyPixelRatio();
     this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
     this.sun.shadow.radius = q.shadowRadius;
     // Bản đồ bóng cũ mang cỡ cũ; bỏ đi để three cấp phát lại đúng cỡ ở lượt vẽ sau.
@@ -428,7 +450,18 @@ export class Game {
     if (this.gfx.choice !== 'auto') return;
     if (this.tune.frame(gap) !== 'slow') return;
     const next = stepDown(this.tier);
-    if (!next) return;
+    if (!next) {
+      // Đã ở đáy thang mà vẫn chậm: bớt điểm ảnh. Mờ đi một chút còn hơn giật.
+      if (this.dprScale <= 0.5) return;
+      this.dprScale = Math.max(0.5, this.dprScale - 0.2);
+      if (this.applyPixelRatio()) {
+        this.composer?.setPixelRatio(this.renderer.getPixelRatio());
+        this.resize();
+      }
+      this.tune.start();
+      return;
+    }
+    this.dprScale = 1;
     this.gfx.autoTier = next;
     saveGfx(this.gfx);
     this.applyQuality(next);
@@ -444,7 +477,15 @@ export class Game {
   private updateFinish(): void {
     const f = this.finish;
     if (!f) return;
-    const tilt = this.spec.tilt && this.gfx.tilt;
+    /*
+     * MÀN HẸP THÌ KHÔNG LÀM MỜ.
+     *
+     * Dải nét chỉ chiếm chừng một phần ba chiều cao màn hình; trên màn bàn giấy phần còn lại
+     * là rìa bản đồ, nhưng trên một chiếc điện thoại dựng đứng thì đó là gần như cả chỗ
+     * người chơi đang nhìn — hiệu ứng sa bàn biến thành "nhìn gì cũng mờ". Đây là đúng cái
+     * người chơi chụp màn hình gửi về.
+     */
+    const tilt = this.spec.tilt && this.gfx.tilt && window.innerWidth >= 820;
     f.uniforms.uTilt.value = tilt ? 1 : 0;
     if (!tilt) return;
     const p = this.focusV.copy(this.target).project(this.camera);
@@ -782,7 +823,9 @@ export class Game {
     if (this.dragged > 6) this.followId = null;
     // Đổi dịch chuyển trên màn thành dịch chuyển trên mặt đất: lấy trục phải và trục tiến của
     // camera rồi dẹt xuống mặt phẳng XZ, nên kéo hướng nào thì đất trôi đúng hướng đó.
-    const k = (this.zoom * 2) / window.innerHeight;
+    // Tỉ lệ lấy THẲNG từ khung camera chứ không đoán lại từ mức phóng: khung ấy còn bị dải
+    // HUD và hệ số màn hẹp nắn lại, nên đoán lại là đất trôi không khớp ngón tay.
+    const k = (this.camera.top - this.camera.bottom) / window.innerHeight;
     const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0).setY(0).normalize();
     const fwd = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), right).normalize();
     this.wanted.addScaledVector(right, -dx * k).addScaledVector(fwd, dy * k);
@@ -1051,8 +1094,6 @@ export class Game {
     const freeH = Math.max(h * 0.34, h - topPx - botPx);
 
     const aspect = w / h;
-    // Phóng theo DẢI TRỐNG giữa hai thanh HUD rồi dịch khung nhìn để tâm rơi vào giữa dải đó
-    // — đo ở 700×460, hai thanh che 63% chiều cao nên nửa dưới bản đồ nằm khuất.
     const halfH = this.zoom * (h / freeH);
     const shift = ((topPx - botPx) / 2 / h) * 2 * halfH;
     this.camera.top = halfH + shift;
@@ -1060,8 +1101,11 @@ export class Game {
     this.camera.left = -halfH * aspect;
     this.camera.right = halfH * aspect;
     this.camera.updateProjectionMatrix();
+    const doiMatDo = this.applyPixelRatio();
     this.renderer.setSize(w, h, false);
     if (!this.composer) return;
+    // Chuỗi hậu kỳ giữ mật độ điểm ảnh riêng; quên đồng bộ là mọi target lệch cỡ với khung.
+    if (doiMatDo) this.composer.setPixelRatio(this.renderer.getPixelRatio());
     // composer.setSize tự đặt cỡ cho từng pass, đã nhân pixel ratio. Bản trước gọi thêm
     // gtao.setSize(w, h) theo điểm ảnh CSS, đè mất cỡ đúng trên màn hình mật độ cao.
     this.composer.setSize(w, h);
