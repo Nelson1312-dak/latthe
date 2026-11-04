@@ -12,6 +12,7 @@ import {
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
   EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
+  VILLAGE_COLORS,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
@@ -36,6 +37,7 @@ function emptyInv(): Inventory {
 
 function freshState(): GameState {
   return {
+    village: { name: '', color: VILLAGE_COLORS[0] },
     inv: { ...STARTING },
     storageLimit: BASE_STORAGE,
     level: 1,
@@ -105,6 +107,12 @@ export class Economy {
           state.assignments = parsed.assignments ?? {};
           state.autoFarm = parsed.autoFarm !== false;
           state.maxReach = Number(parsed.maxReach) || 0;
+          // Bản lưu cũ không có làng: để trống thì màn lập làng tự hiện ra, người chơi đang
+          // chơi dở vẫn được đặt tên cho chỗ mình đã xây.
+          state.village = {
+            name: String(parsed.village?.name ?? '').slice(0, 24),
+            color: Number(parsed.village?.color) || VILLAGE_COLORS[0],
+          };
           state.storageLimit = Number(parsed.storageLimit) || base.storageLimit;
           state.totalGold = Number(parsed.totalGold) || 0;
         }

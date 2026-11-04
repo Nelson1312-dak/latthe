@@ -118,7 +118,16 @@ export interface FogChunk {
 
 // ---------------------------------------------------------------- trạng thái
 
+/** Làng của người chơi: cái tên và màu cờ họ chọn lúc mới mở game. */
+export interface Village {
+  name: string;
+  /** Màu cờ, cũng là màu dải băng trên mặt tiền thủ phủ. */
+  color: number;
+}
+
 export interface GameState {
+  /** Rỗng nghĩa là chưa lập làng — mở game ra sẽ hỏi. */
+  village: Village;
   inv: Inventory;
   storageLimit: number;
   level: number;

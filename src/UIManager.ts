@@ -9,7 +9,7 @@
  * hình như thanh cũ, nên hai bên vẫn nhìn thấy bản đồ — thứ mà cái khung rỗng bên phải của
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
-import { BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES } from './config';
+import { BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES, VILLAGE_COLORS, tenLangNgauNhien } from './config';
 import { CHUNK, biomeAt, chunkOf } from './world';
 import { rewardText } from './milestones';
 import { ico, iconSvg } from './icons';
@@ -72,6 +72,10 @@ export class UIManager {
     resbar: $('resbar'), level: $('level'),
     reach: $('reach'), reachVal: $('reach-val'),
     mute: $<HTMLButtonElement>('mute'), pause: $<HTMLButtonElement>('pause'),
+    lapLang: $('lap-lang'), langTen: $<HTMLInputElement>('lang-ten'),
+    langBoc: $<HTMLButtonElement>('lang-boc'), langMau: $('lang-mau'),
+    langOk: $<HTMLButtonElement>('lang-ok'), langChip: $<HTMLButtonElement>('lang-chip'),
+    langDot: $('lang-dot'), langHud: $('lang-hud'),
     gfx: $<HTMLButtonElement>('gfx'), gfxMenu: $('gfx-menu'), gfxSeg: $('gfx-seg'),
     gfxTilt: $<HTMLButtonElement>('gfx-tilt'), gfxNow: $('gfx-now'), gfxNote: $('gfx-note'),
     crewpill: $('crewpill'), tiles: $('tiles'), speed: $<HTMLButtonElement>('speed'),
@@ -108,6 +112,7 @@ export class UIManager {
     };
 
     this.el.mute.addEventListener('click', () => this.toggleMute());
+    this.buildLang();
     this.el.gfx.addEventListener('click', () => this.toggleGfx());
     this.el.gfxSeg.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-q]');
@@ -125,6 +130,9 @@ export class UIManager {
     game.onQuality = () => this.renderGfx();
     this.el.gfx.innerHTML = iconSvg('gear');
     this.renderGfx();
+    // Chưa có tên thì hỏi ngay. Không tạm dừng game: đây là game nhàn rỗi, vài giây đầu
+    // người chơi gõ tên thì dân vẫn cứ làm việc, mất mát bằng không.
+    if (!this.economy.state.village.name) this.openLang(true);
     this.el.pause.addEventListener('click', () => this.setPaused(!game.isPaused));
     this.el.resume.addEventListener('click', () => this.setPaused(false));
     this.el.awayOk.addEventListener('click', () => { this.el.welcome.hidden = true; });
@@ -837,6 +845,73 @@ export class UIManager {
     this.el.pause.innerHTML = iconSvg(p ? 'play' : 'pause');
   }
 
+  // ----------------------------------------------------------- lập làng
+
+  /** Màu cờ đang chọn trong màn lập làng, chưa lưu cho tới khi bấm xong. */
+  private mauDangChon = 0;
+  /** Lần đầu thì không cho thoát: chưa có tên thì chẳng có gì để quay về. */
+  private langBatBuoc = false;
+
+  private buildLang(): void {
+    this.el.langBoc.innerHTML = iconSvg('shuffle');
+    for (const mau of VILLAGE_COLORS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-label', `Màu cờ #${mau.toString(16)}`);
+      b.style.background = `#${mau.toString(16).padStart(6, '0')}`;
+      b.addEventListener('click', () => { this.mauDangChon = mau; this.renderLangMau(); });
+      this.el.langMau.append(b);
+    }
+    this.el.langBoc.addEventListener('click', () => { this.el.langTen.value = tenLangNgauNhien(); });
+    this.el.langOk.addEventListener('click', () => this.saveLang());
+    this.el.langChip.addEventListener('click', () => this.openLang(false));
+    this.el.langTen.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); this.saveLang(); }
+    });
+    this.renderLangChip();
+  }
+
+  private openLang(batBuoc: boolean): void {
+    const v = this.economy.state.village;
+    this.langBatBuoc = batBuoc;
+    this.mauDangChon = v.color;
+    // Lần đầu thì điền sẵn một cái tên: màn hình trống bắt người ta nghĩ, còn một cái tên có
+    // sẵn thì chỉ cần bấm tiếp — và ai muốn tên riêng vẫn xoá đi gõ lại được.
+    this.el.langTen.value = v.name || tenLangNgauNhien();
+    this.el.langOk.textContent = batBuoc ? 'Vào đảo' : 'Xong';
+    this.renderLangMau();
+    this.el.lapLang.hidden = false;
+    this.el.langTen.focus();
+    this.el.langTen.select();
+  }
+
+  private saveLang(): void {
+    const ten = this.el.langTen.value.trim().slice(0, 24) || tenLangNgauNhien();
+    this.economy.state.village = { name: ten, color: this.mauDangChon };
+    this.economy.save();
+    this.el.lapLang.hidden = true;
+    this.langBatBuoc = false;
+    this.renderLangChip();
+    this.game.refreshVillage();
+  }
+
+  private renderLangMau(): void {
+    const nut = [...this.el.langMau.querySelectorAll('button')];
+    nut.forEach((b, i) => {
+      const on = VILLAGE_COLORS[i] === this.mauDangChon;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+  }
+
+  private renderLangChip(): void {
+    const v = this.economy.state.village;
+    this.el.langHud.textContent = v.name || 'Lập làng';
+    this.el.langDot.style.background = `#${v.color.toString(16).padStart(6, '0')}`;
+    document.title = v.name ? `${v.name} · Quần Đảo Vô Tận` : 'Quần Đảo Vô Tận';
+  }
+
   // ----------------------------------------------------------- bảng đồ hoạ
 
   private toggleGfx(): void {
@@ -860,6 +935,13 @@ export class UIManager {
 
   /** Esc đóng bảng đang mở trước; chỉ khi không có gì để đóng thì Esc mới là tạm dừng. */
   dismiss(): boolean {
+    if (!this.el.lapLang.hidden) {
+      // Đổi tên thì Esc là huỷ bỏ. Còn lần lập làng ĐẦU TIÊN thì Esc không làm gì: đóng đi
+      // là người chơi ngồi trước một hòn đảo không tên, mà thẻ làng trên HUD lúc ấy vẫn bấm
+      // được nên không mất đường quay lại — chỉ là không nên để họ rơi vào đó.
+      if (!this.langBatBuoc) this.el.lapLang.hidden = true;
+      return true;
+    }
     if (this.el.gfxMenu.hidden) return false;
     this.closeGfx();
     return true;

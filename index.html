@@ -27,6 +27,9 @@
   <div class="res" id="resbar"></div>
   <div class="spacer"></div>
   <div class="group">
+    <button class="stat lang-chip" id="lang-chip" title="Đổi tên làng và màu cờ">
+      <i class="dot" id="lang-dot" aria-hidden="true"></i><strong id="lang-hud">Làng</strong>
+    </button>
     <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
     <div class="stat reach" id="reach"><small>Xa nhất</small><strong id="reach-val">0</strong></div>
     <button class="icon" id="gfx" title="Đồ hoạ" aria-label="Chất lượng đồ hoạ"
@@ -83,6 +86,21 @@
     <h2>Tạm dừng</h2>
     <p class="away">Không ai làm việc cả. Nhấn Esc hoặc bấm nút dưới để chạy tiếp.</p>
     <button class="primary" id="resume">Chạy tiếp</button>
+  </div>
+</div>
+
+<!-- ------------------------------------------------------------------ lập làng -->
+<div class="veil" id="lap-lang" hidden>
+  <div class="card lang">
+    <h2>Lập làng</h2>
+    <p class="away">Đặt cho hòn đảo của bạn một cái tên và một màu cờ. Đổi lại lúc nào cũng được.</p>
+    <div class="lang-ten">
+      <input id="lang-ten" maxlength="24" autocomplete="off" spellcheck="false"
+             placeholder="Tên làng" aria-label="Tên làng" />
+      <button class="icon" id="lang-boc" title="Bốc một tên khác" aria-label="Bốc một tên khác"></button>
+    </div>
+    <div class="lang-mau" id="lang-mau" role="radiogroup" aria-label="Màu cờ"></div>
+    <button class="primary" id="lang-ok">Vào đảo</button>
   </div>
 </div>
 

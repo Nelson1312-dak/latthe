@@ -306,6 +306,51 @@ export function grain<T extends THREE.Material>(mat: T, co: number, manh: number
   return mat;
 }
 
+/**
+ * Biển tên treo trên thủ phủ: chữ trắng trên một viên kính tối, bo tròn, viền theo màu cờ.
+ *
+ * Vẽ ra ảnh rồi dán lên một Sprite, nên nó luôn quay mặt về phía người chơi mà không tốn một
+ * phép xoay nào. Cùng ngôn ngữ với lớp HUD kính mờ bên trên, để cái tên đọc ra là của người
+ * chơi chứ không phải một thứ mọc lên từ cảnh vật.
+ */
+export function labelTexture(text: string, vien: number): THREE.CanvasTexture {
+  const W = 512;
+  const H = 128;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const g = cv.getContext('2d')!;
+  const R = 34;
+  const m = 10;
+  g.beginPath();
+  g.roundRect(m, m, W - m * 2, H - m * 2, R);
+  g.fillStyle = 'rgba(15,23,42,0.82)';
+  g.fill();
+  g.lineWidth = 5;
+  g.strokeStyle = `#${vien.toString(16).padStart(6, '0')}`;
+  g.stroke();
+  g.font = '600 52px "Plus Jakarta Sans", system-ui, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillStyle = '#f3f4f6';
+  // Chữ dài thì BÓP NGANG chứ không cắt bớt: cái tên là của người chơi, cắt mất đuôi thì thà
+  // đừng hiện. 512 điểm ảnh chứa vừa chừng mười hai chữ cái ở cỡ này.
+  const rong = g.measureText(text).width;
+  const toi = W - m * 2 - 36;
+  if (rong > toi) {
+    g.save();
+    g.translate(W / 2, H / 2);
+    g.scale(toi / rong, 1);
+    g.fillText(text, 0, 2);
+    g.restore();
+  } else {
+    g.fillText(text, W / 2, H / 2 + 2);
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 /** Pha lê: không phải kim loại, nhưng tự phát sáng để đọc được giữa vùng cao nguyên tối. */
 export function gem(color: number, glow = color): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({

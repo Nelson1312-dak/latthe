@@ -11,7 +11,7 @@
  * trải trên diện tích gấp mười, bóng vỡ răng cưa ngay mà chẳng thêm được gì.
  */
 import * as THREE from 'three';
-import { matte, haloTexture, skyEnvTexture, GRAIN_ON } from './materials';
+import { matte, haloTexture, labelTexture, skyEnvTexture, GRAIN_ON } from './materials';
 import { roundedBox } from './shapes';
 import { buildingGeometry, buildingMaterial, chimneyTop } from './buildings';
 import { Smoke } from './Smoke';
@@ -101,6 +101,8 @@ export class Game {
   /** Báo cho HUD mỗi khi bậc đồ hoạ đổi — kể cả lúc Tự động tự hạ. */
   onQuality: (() => void) | null = null;
   private readonly smoke = new Smoke();
+  /** Biển tên làng treo trên thủ phủ. */
+  private villageLabel!: THREE.Sprite;
   /** Bầu trời đã qua PMREM, dùng làm ánh sáng nền. Dựng một lần, bật tắt theo bậc. */
   private env: THREE.Texture | null = null;
   private hemi!: THREE.HemisphereLight;
@@ -282,6 +284,7 @@ export class Game {
     this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup, this.smoke.mesh);
     this.buildMarkers();
     this.buildEmptyMeshes();
+    this.buildVillageLabel();
     this.rebuildPlots();
 
     // Áp bậc đồ hoạ (cũng gọi resize). Tự động thì đo ngay từ khung đầu.
@@ -451,6 +454,41 @@ export class Game {
     f.uniforms.uBlur.value = THREE.MathUtils.lerp(5, 2.5, k) * this.renderer.getPixelRatio();
   }
 
+  /**
+   * Biển tên làng: một Sprite nên nó tự quay mặt về người chơi, không cần xoay gì.
+   *
+   * KHÔNG xét độ sâu và vẽ sau cùng: cái tên phải đọc được cả khi thủ phủ khuất sau một
+   * vách đá. Và nó nằm NGOÀI nhóm công trình, vì nhóm ấy bị co giãn mỗi lần nảy hay rê
+   * chuột — biển tên mà nảy theo thì thành ra cái tên đang bị bóp.
+   */
+  private buildVillageLabel(): void {
+    this.villageLabel = new THREE.Sprite(new THREE.SpriteMaterial({
+      transparent: true, depthTest: false, depthWrite: false, fog: false,
+    }));
+    this.villageLabel.scale.set(5.2, 1.3, 1);
+    this.villageLabel.renderOrder = 5;
+    this.villageLabel.visible = false;
+    this.scene.add(this.villageLabel);
+    // CHỈ vẽ chữ, không dựng lại nền đất: hàm này chạy trong khối khởi tạo, lúc lưới nền
+    // trống còn chưa tồn tại — gọi rebuildPlots ở đây là ném lỗi ngay khi mở game.
+    this.paintVillageLabel();
+  }
+
+  private paintVillageLabel(): void {
+    const v = this.economy.state.village;
+    const mat = this.villageLabel.material;
+    mat.map?.dispose();
+    mat.map = v.name ? labelTexture(v.name, v.color) : null;
+    mat.needsUpdate = true;
+    this.villageLabel.visible = !!v.name;
+  }
+
+  /** Người chơi vừa đổi tên hay đổi cờ: vẽ lại biển tên và dựng lại thủ phủ. */
+  refreshVillage(): void {
+    this.paintVillageLabel();
+    this.rebuildPlots();
+  }
+
   // ------------------------------------------------------------ đánh dấu
 
   private buildMarkers(): void {
@@ -598,7 +636,7 @@ export class Game {
       con.add(plot.id);
       const ong = chimneyTop(building.type, building.level);
       if (ong) khoi.push([plot.position[0] + ong[0], plot.position[1] + ong[1], plot.position[2] + ong[2]]);
-      const sig = this.signature(building);
+      const sig = this.signatureOf(building);
       const cu = this.structures.get(plot.id);
       if (cu && cu.sig === sig) continue;
       // Đổi loại hay đổi cấp (không phải chỉ thêm thùng hàng) thì công trình nảy một nhịp,
@@ -627,6 +665,13 @@ export class Game {
         if (o instanceof THREE.Mesh && o.userData.plotId) this.pickable.push(o);
       });
     }
+    // Biển tên bám thủ phủ. Tháp chuông cao chừng 5 đơn vị ở cấp đầu và cao thêm theo cấp,
+    // nên treo ở 6,2 cộng một phần của cấp thì biển luôn ở ngay trên chóp cờ.
+    const core = this.map.plots.find((p) => p.core);
+    const lv = this.economy.buildingAt('core')?.level ?? 1;
+    if (core) {
+      this.villageLabel.position.set(core.position[0], core.position[1] + 6.2 + lv * 0.12, core.position[2]);
+    }
     this.smoke.setSources(khoi);
     this.emptyPads.count = trong;
     this.emptyPosts.count = trong;
@@ -643,6 +688,18 @@ export class Game {
   }
 
   /** Chữ ký của một công trình: đổi một trong ba thứ này thì phải dựng lại hình. */
+  /**
+   * Chữ ký của một công trình: đổi một trong các thứ này thì phải dựng lại hình.
+   *
+   * Thủ phủ mang thêm màu cờ, vì màu ấy nằm trong các đỉnh của khối đã hàn chứ không tô
+   * sau được — đổi cờ mà chữ ký không đổi thì lá cờ cứ giữ màu cũ tới khi lên cấp.
+   */
+  private signatureOf(b: Building): string {
+    return b.type === 'townhall'
+      ? `${this.signature(b)}:${this.economy.state.village.color}`
+      : this.signature(b);
+  }
+
   private signature(b: Building): string {
     const crates = b.type === 'outpost'
       ? Math.min(5, Math.ceil(Object.values(b.stock).reduce<number>((a, v) => a + (v ?? 0), 0) / 20))
@@ -665,7 +722,8 @@ export class Game {
 
   private buildStructure(g: THREE.Group, b: Building, id: string): void {
     // Cả công trình là MỘT khối đã hàn, tô bằng màu đỉnh — xem buildings.ts.
-    const mesh = new THREE.Mesh(buildingGeometry(b.type, b.level), buildingMaterial());
+    const mesh = new THREE.Mesh(
+      buildingGeometry(b.type, b.level, this.economy.state.village.color), buildingMaterial());
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.plotId = id;

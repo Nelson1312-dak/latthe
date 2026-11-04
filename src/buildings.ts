@@ -201,7 +201,7 @@ function house(level: number): THREE.BufferGeometry {
 
 // ------------------------------------------------------------------ thủ phủ
 
-function townhall(level: number): THREE.BufferGeometry {
+function townhall(level: number, co: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('townhall', level);
   // Bệ lục giác, xoay 30° cho khớp với lưới ô — thủ phủ ngồi đúng trên một ô.
@@ -225,12 +225,16 @@ function townhall(level: number): THREE.BufferGeometry {
   k.box(1.0, 0.1, 0.25, 0, y0, zt + 0.62, STONE);
   // Cột cờ trên đỉnh tháp, cờ bay về phía +X.
   k.cyl(0.035, 0.035, 0.95, 5, 0, y0 + Ht + 0.9, zt, WOOD);
-  k.box(0.55, 0.32, 0.03, 0.3, y0 + Ht + 1.45, zt, st >= 3 ? GOLD : ROOF.townhall);
+  // Lá cờ mang MÀU NGƯỜI CHƠI CHỌN. Đây là chỗ duy nhất trên bản đồ nói "làng này là của
+  // tôi", nên nó phải ở trên cao nhất và không bị vàng cấp 3 chiếm mất.
+  k.box(0.55, 0.32, 0.03, 0.3, y0 + Ht + 1.45, zt, co);
   if (st >= 1) {
     // Mặt đồng hồ trên tháp và hai dải băng đỏ trên mặt tiền.
     k.disc(0.27, 0, y0 + Ht - 0.5, zt + 0.47, PALETTE.wall);
     k.disc(0.05, 0, y0 + Ht - 0.5, zt + 0.5, WOOD);
-    for (const x of [-0.85, 0.85]) k.box(0.24, 0.62, 0.03, x, y0 + H - 0.75, zb + d / 2 + 0.02, ROOF.townhall);
+    // Hai dải băng trên mặt tiền cũng theo màu cờ: một lá cờ bé tí trên đỉnh tháp thì ở mức
+    // phóng xa không còn thấy, mà màu của mình thì phải thấy được từ xa.
+    for (const x of [-0.85, 0.85]) k.box(0.24, 0.62, 0.03, x, y0 + H - 0.75, zb + d / 2 + 0.02, co);
   }
   if (st >= 2) {
     // Tháp phụ phía sau, thấp hơn.
@@ -314,12 +318,19 @@ const CACHE = new Map<string, THREE.BufferGeometry>();
 let MAT: THREE.MeshStandardMaterial | null = null;
 
 /** Hình học của một công trình ở một cấp. Dựng một lần, dùng lại cho mọi công trình giống nó. */
-export function buildingGeometry(type: BuildingType, level: number): THREE.BufferGeometry {
-  const key = `${type}:${level}`;
+/**
+ * Hình của một công trình. `co` là màu cờ của người chơi, chỉ thủ phủ dùng tới.
+ *
+ * Màu cờ nằm trong KHOÁ bộ nhớ đệm chứ không tô sau: cả công trình là một khối đã hàn với
+ * màu nằm ở từng đỉnh, nên đổi màu một bộ phận là phải hàn lại. Người chơi đổi cờ mấy lần
+ * trong một ván, nên đệm thừa vài hình không đáng kể.
+ */
+export function buildingGeometry(type: BuildingType, level: number, co = 0): THREE.BufferGeometry {
+  const key = type === 'townhall' ? `townhall:${level}:${co}` : `${type}:${level}`;
   let g = CACHE.get(key);
   if (!g) {
     g = type === 'house' ? house(level)
-      : type === 'townhall' ? townhall(level)
+      : type === 'townhall' ? townhall(level, co || PALETTE.roofCore)
         : type === 'granary' ? granary(level)
           : outpost(level);
     CACHE.set(key, g);

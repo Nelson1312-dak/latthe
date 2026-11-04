@@ -271,6 +271,29 @@ export const PALETTE = {
   fogLand: 0xe4e1d6,
 } as const;
 
+/**
+ * Sáu màu cờ cho người chơi chọn. Lấy thẳng từ bốn màu mái đang có cộng tím và vàng, nên dù
+ * chọn màu nào thì lá cờ vẫn nằm trong bảng màu của cả thế giới.
+ */
+export const VILLAGE_COLORS = [
+  PALETTE.roofCore, PALETTE.roofHouse, PALETTE.roofGranary,
+  PALETTE.roofOutpost, TIM, VANG,
+] as const;
+
+/** Hai nửa của một cái tên gợi ý. Ghép lại ra 96 cái tên, đủ để không ai bấm hai lần ra một. */
+const TEN_DAU = ['Đảo', 'Vịnh', 'Làng', 'Bến', 'Cồn', 'Mũi', 'Xóm', 'Bãi'] as const;
+const TEN_SAU = [
+  'Mây Trắng', 'Gió Nồm', 'Sương Sớm', 'Cát Vàng', 'Rừng Thông', 'Đá Dựng',
+  'Trăng Non', 'Sóng Bạc', 'Nắng Hạ', 'Cỏ May', 'Lửa Ấm', 'Chim Sẻ',
+] as const;
+
+/** Một cái tên làng bốc ngẫu nhiên. */
+export function tenLangNgauNhien(): string {
+  const a = TEN_DAU[Math.floor(Math.random() * TEN_DAU.length)];
+  const b = TEN_SAU[Math.floor(Math.random() * TEN_SAU.length)];
+  return `${a} ${b}`;
+}
+
 // ------------------------------------------------------------- tài nguyên
 
 export const RESOURCES: Record<ResourceKind, {
