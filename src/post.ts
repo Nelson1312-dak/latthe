@@ -49,6 +49,12 @@ const FinishShader = {
     uBand: { value: 0.2 },
     uBlur: { value: 4 },
     uVignette: { value: 0.16 },
+    /*
+     * Độ ấm của lớp lọc màu. 2,0 là nấc người chơi chọn khi so ba nấc cạnh nhau: ấm hơn hẳn
+     * bản cũ mà chưa đánh mất tông pastel — nấc 3,2 thì đường thành cam và cỏ thành xanh lá
+     * đậm, giống niemphat nhất nhưng không còn là bảng màu của game này nữa.
+     */
+    uWarm: { value: 2 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -64,13 +70,14 @@ const FinishShader = {
     uniform float uBand;
     uniform float uBlur;
     uniform float uVignette;
+    uniform float uWarm;
     varying vec2 vUv;
 
     vec3 grade(vec3 c) {
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       float k = 1.0 - smoothstep(0.55, 1.0, l) * 0.75;
-      c *= mix(vec3(1.0), vec3(1.028, 1.006, 0.962), k);
-      return clamp(mix(vec3(l), c, 1.04), 0.0, 1.0);
+      c *= mix(vec3(1.0), mix(vec3(1.0), vec3(1.028, 1.006, 0.962), uWarm), k);
+      return clamp(mix(vec3(l), c, 1.0 + 0.04 * uWarm), 0.0, 1.0);
     }
 
     void main() {

@@ -11,7 +11,7 @@
  * trải trên diện tích gấp mười, bóng vỡ răng cưa ngay mà chẳng thêm được gì.
  */
 import * as THREE from 'three';
-import { matte, haloTexture } from './materials';
+import { matte, haloTexture, skyEnvTexture, GRAIN_ON } from './materials';
 import { roundedBox } from './shapes';
 import { buildingGeometry, buildingMaterial, chimneyTop } from './buildings';
 import { Smoke } from './Smoke';
@@ -20,7 +20,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { BUILDINGS, CAMERA_OFFSET, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
+import { BUILDINGS, CAMERA_OFFSET, CAM_DIST, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
 import { OpaqueGTAOPass, finishPass } from './post';
 import { AutoTune, TIERS, loadGfx, saveGfx, stepDown, tierOf } from './quality';
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
@@ -97,9 +97,13 @@ export class Game {
   private spec: TierSpec = TIERS.high;
   private readonly tune = new AutoTune();
   private readonly focusV = new THREE.Vector3();
+  private hazeFar = 400;
   /** Báo cho HUD mỗi khi bậc đồ hoạ đổi — kể cả lúc Tự động tự hạ. */
   onQuality: (() => void) | null = null;
   private readonly smoke = new Smoke();
+  /** Bầu trời đã qua PMREM, dùng làm ánh sáng nền. Dựng một lần, bật tắt theo bậc. */
+  private env: THREE.Texture | null = null;
+  private hemi!: THREE.HemisphereLight;
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -190,8 +194,41 @@ export class Game {
      * Đất hắt lên cũng đổi: 0x386641 là xanh lá đậm, nên mặt dưới mọi thứ ám xanh. Lấy màu
      * kem trung tính thì bóng râm sạch màu, đúng kiểu đất nặn.
      */
-    this.scene.add(new THREE.HemisphereLight(0xdceef5, 0xbfae95, 1.7));
-    this.sun = new THREE.DirectionalLight(0xfff6e8, 1.0);
+    /*
+     * Ánh sáng nền tới từ MỘT BẦU TRỜI, không phải từ hai con số.
+     *
+     * HemisphereLight chỉ biết màu trời và màu đất, pha theo pháp tuyến ngửa lên hay úp
+     * xuống. Nên mọi mặt ĐỨNG — tường nhà, vách đá, thân cây — nhận đúng một màu ở giữa, bất
+     * kể quay về phía mặt trời hay quay đi; cảnh phẳng vì thế, và cái bóng đổ là manh mối duy
+     * nhất về hướng nắng. Bản đồ môi trường thì mỗi hướng một màu: mặt quay về phía mặt trời
+     * tự ấm lên, mặt quay đi tự xanh đi, và bề mặt có một lớp phản chiếu mờ rất nhẹ.
+     *
+     * Giữ lại HemisphereLight nhưng hạ từ 1,7 xuống 0,7: nó giờ chỉ còn việc nâng nền cho
+     * bậc Thấp và vá những chỗ bản đồ môi trường còn thiếu. Cộng cả hai ở mức cũ thì cảnh
+     * cháy trắng, mất sạch bóng râm — đo được độ sáng trung bình vọt từ 0,48 lên 0,59.
+     */
+    this.env = new THREE.PMREMGenerator(this.renderer)
+      .fromEquirectangular(skyEnvTexture(this.sunDir)).texture;
+    this.scene.environmentIntensity = 0.4;
+    this.hemi = new THREE.HemisphereLight(0xdceef5, 0xbfae95, 0.7);
+    this.scene.add(this.hemi);
+
+    /*
+     * Sương xa. Bản đồ vô hạn nên mép vùng nạp luôn nằm đâu đó trong khung hình; không có
+     * sương thì nó là một đường cắt thẳng giữa đất và trời. Khoảng sương bám theo mức phóng
+     * (xem moveCamera): phóng gần thì sương lùi ra xa, không thì ngôi nhà cách ba ô đã mờ.
+     */
+    this.scene.fog = new THREE.Fog(PALETTE.sky, 100, 400);
+
+    /*
+     * Nắng mạnh lên 1,5 và ngả vàng hơn, bóng đậm lên 0,62.
+     *
+     * Bản trước cố tình để nắng 1,0 và bóng 0,45 — "bóng chỉ là một gợi ý, hình khối để AO
+     * lo". Nhưng AO chỉ tả được chỗ TIẾP XÚC, nên giữa một bãi cỏ trống thì không còn gì nói
+     * lên là trời đang nắng. Ánh sáng nền giờ tới từ bản đồ môi trường nên nó đã lo phần dịu;
+     * nắng được rảnh tay làm đúng việc của nắng.
+     */
+    this.sun = new THREE.DirectionalLight(0xffeccd, 1.5);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const d = 30;
@@ -204,7 +241,7 @@ export class Game {
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.02;
     // Bóng nhạt hẳn: nó chỉ còn để nói hướng nắng, còn hình khối thì AO lo.
-    this.sun.shadow.intensity = 0.45;
+    this.sun.shadow.intensity = 0.62;
     // Mềm tới mức gần như chỉ còn một vệt tối dưới chân vật thể.
     this.sun.shadow.radius = 5;
     this.scene.add(this.sun, this.sun.target);
@@ -341,6 +378,11 @@ export class Game {
     // Bản đồ bóng cũ mang cỡ cũ; bỏ đi để three cấp phát lại đúng cỡ ở lượt vẽ sau.
     this.sun.shadow.map?.dispose();
     this.sun.shadow.map = null;
+    this.scene.environment = q.env ? this.env : null;
+    // Không có bản đồ môi trường thì ánh sáng nền phải quay về trông cậy cả vào hemisphere.
+    this.hemi.intensity = q.env ? 0.7 : 1.55;
+    if (this.scene.fog) (this.scene.fog as THREE.Fog).far = q.haze ? this.hazeFar : 1e6;
+    GRAIN_ON.value = q.grain ? 1 : 0;
     this.map.setQuality(q);
     this.fog.setDetail(q.cloudDetail);
     this.disposeComposer();
@@ -1151,6 +1193,17 @@ export class Game {
       this.resize();
     }
 
+    /*
+     * Khoảng sương tính từ khoảng cách camera tới tâm ngắm cộng một bội của mức phóng. Camera
+     * trực giao nên bề rộng khung nhìn tỉ lệ thẳng với mức phóng: lấy một khoảng cố định thì
+     * ở mức 10 cả bản đồ chìm trong sương, còn ở mức 62 sương không với tới đâu.
+     */
+    const f = this.scene.fog as THREE.Fog | null;
+    if (f) {
+      this.hazeFar = CAM_DIST + this.zoom * 3.4;
+      f.near = CAM_DIST + this.zoom * 0.9;
+      if (this.spec.haze) f.far = this.hazeFar;
+    }
     this.camera.position.set(
       this.target.x + CAMERA_OFFSET[0], CAMERA_OFFSET[1], this.target.z + CAMERA_OFFSET[2]);
     this.camera.lookAt(this.target);

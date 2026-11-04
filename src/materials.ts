@@ -154,6 +154,158 @@ export function glowTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/**
+ * Bầu trời dưới dạng ảnh cầu, để làm NGUỒN SÁNG chứ không phải để nhìn.
+ *
+ * Một HemisphereLight chỉ biết hai màu, trời và đất, pha theo pháp tuyến hướng lên hay xuống.
+ * Nên mọi mặt đứng — tường nhà, vách đá, thân cây — đều nhận đúng một màu xám ở giữa, bất kể
+ * nó quay về phía mặt trời hay quay đi. Đó là lý do cảnh cũ phẳng: không có thông tin nào về
+ * ánh sáng ĐẾN TỪ ĐÂU ngoài một cái bóng đổ.
+ *
+ * Ảnh này đi qua PMREM thành bản đồ môi trường, nên mỗi hướng có màu riêng: xanh lam nhạt ở
+ * đỉnh trời, một vầng ấm nơi mặt trời đứng, kem ở chân trời, và nâu ấm hắt lên từ đất. Mặt
+ * quay về phía mặt trời tự ấm lên, mặt quay đi tự xanh đi — thứ mà trước đây không đèn nào
+ * tả được. Nó cũng cho bề mặt một lớp phản chiếu mờ rất nhẹ, đủ để đất nặn không ra nhựa.
+ *
+ * Vẽ ra ảnh cầu 256×128: PMREM sẽ làm mờ nó đi rất nhiều, nên thêm điểm ảnh chỉ tốn công.
+ * Toạ độ ngang là phương vị, dọc là độ cao; hàng trên cùng là thẳng đứng trên đầu.
+ */
+export function skyEnvTexture(sun: THREE.Vector3): THREE.CanvasTexture {
+  const W = 256;
+  const H = 128;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const g = cv.getContext('2d')!;
+
+  const doc = g.createLinearGradient(0, 0, 0, H);
+  doc.addColorStop(0.0, '#9fc3dd');   // đỉnh trời
+  doc.addColorStop(0.42, '#cfe2ee');
+  doc.addColorStop(0.5, '#f1e7d6');   // chân trời, ấm
+  doc.addColorStop(0.62, '#c3a888');  // đất gần
+  doc.addColorStop(1.0, '#8e7558');   // đất hắt lên
+  g.fillStyle = doc;
+  g.fillRect(0, 0, W, H);
+
+  // Vầng mặt trời: toạ độ lấy từ chính hướng nắng, nên đổi hướng nắng là vầng sáng đi theo.
+  const u = (Math.atan2(sun.x, sun.z) / (Math.PI * 2) + 0.5) * W;
+  const v = (0.5 - Math.asin(Math.min(1, Math.max(-1, sun.y))) / Math.PI) * H;
+  // Vẽ ba lần, lệch một vòng sang hai bên, để vầng sáng không bị cắt đôi ở mép ảnh.
+  for (const dx of [-W, 0, W]) {
+    const vang = g.createRadialGradient(u + dx, v, 0, u + dx, v, W * 0.3);
+    vang.addColorStop(0.0, 'rgba(255,244,214,0.95)');
+    vang.addColorStop(0.25, 'rgba(255,233,190,0.45)');
+    vang.addColorStop(1.0, 'rgba(255,226,170,0)');
+    g.fillStyle = vang;
+    g.fillRect(0, 0, W, H);
+  }
+
+  const t = new THREE.CanvasTexture(cv);
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/**
+ * Vân bề mặt: nhiễu trơn xám, lát lại được, dùng làm hệ số nhân cho màu mặt.
+ *
+ * Hai tầng nhiễu, tầng sau nhỏ gấp bốn và nhạt một nửa, nên nhìn gần thấy lấm tấm mà nhìn xa
+ * thấy mảng loang — chỉ một lần tra ảnh cho cả hai.
+ */
+export function grainTexture(): THREE.CanvasTexture {
+  const N = 128;
+  const cv = document.createElement('canvas');
+  cv.width = N;
+  cv.height = N;
+  const g = cv.getContext('2d')!;
+  const img = g.createImageData(N, N);
+  // Băm hai chiều có LÁT LẠI: lấy dư theo cỡ lưới nên mép trái khớp mép phải.
+  const bam = (x: number, y: number, n: number, salt: number): number => {
+    const h = Math.sin(((x % n) + n) % n * 127.1 + (((y % n) + n) % n) * 311.7 + salt) * 43758.5453;
+    return h - Math.floor(h);
+  };
+  const muot = (x: number, y: number, n: number, salt: number): number => {
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    const fx = x - ix;
+    const fy = y - iy;
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    const a = bam(ix, iy, n, salt);
+    const b = bam(ix + 1, iy, n, salt);
+    const c = bam(ix, iy + 1, n, salt);
+    const d = bam(ix + 1, iy + 1, n, salt);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  };
+  for (let y = 0; y < N; y += 1) {
+    for (let x = 0; x < N; x += 1) {
+      const v = muot(x / 16, y / 16, 8, 1.3) * 0.68 + muot(x / 4, y / 4, 32, 7.7) * 0.32;
+      const k = Math.round(v * 255);
+      const i = (y * N + x) * 4;
+      img.data[i] = k;
+      img.data[i + 1] = k;
+      img.data[i + 2] = k;
+      img.data[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  // Ảnh hệ số, KHÔNG phải màu: để ở không gian tuyến tính, không thì nó bị bẻ cong hai lần.
+  t.colorSpace = THREE.NoColorSpace;
+  return t;
+}
+
+/** Vân dùng chung cho cả thế giới — dựng một lần, mọi vật liệu trỏ vào đây. */
+let vanChung: THREE.CanvasTexture | null = null;
+/** Công tắc vân: bậc Thấp đặt về 0. */
+export const GRAIN_ON = { value: 1 };
+
+/**
+ * Rắc vân lên một vật liệu, lấy toạ độ theo THẾ GIỚI chứ không theo UV.
+ *
+ * Phải theo thế giới vì ô đất và cây cối đều là InstancedMesh dùng chung một hình, mà hình ấy
+ * còn chẳng có UV. Theo thế giới thì vân liền mạch qua ranh giới các ô, và hai ô cạnh nhau
+ * không bị lặp y hệt — đúng thứ cần cho một mặt đất lát bằng hàng nghìn viên giống nhau.
+ *
+ * `co` là số đơn vị thế giới cho một lần lát, `manh` là biên độ sáng tối.
+ */
+export function grain<T extends THREE.Material>(mat: T, co: number, manh: number): T {
+  if (!vanChung) vanChung = grainTexture();
+  const u = { value: new THREE.Vector2(1 / co, manh) };
+  // Để ngoài cho chỉnh được: `mat.userData.van.value` là (1/cỡ, mạnh).
+  mat.userData.van = u;
+  const tex = { value: vanChung };
+  // Khoá chương trình phải lấy TRƯỚC khi thay onBeforeCompile: mặc định three sinh khoá từ
+  // nguồn của chính hàm ấy, mà nguồn hàm dưới đây y hệt nhau dù phía trước có sway hay không
+  // — không nối khoá cũ vào thì cây có gió và ô đất dùng chung nhầm một chương trình.
+  const khoaTruoc = mat.customProgramCacheKey();
+  const truoc = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader, renderer) => {
+    truoc?.call(mat, shader, renderer);
+    shader.uniforms.uVan = tex;
+    shader.uniforms.uVanCo = u;
+    shader.uniforms.uVanOn = GRAIN_ON;
+    shader.vertexShader = 'varying vec2 vVanXZ;\n' + shader.vertexShader.replace(
+      '#include <fog_vertex>',
+      `#include <fog_vertex>
+      vec4 vanWP = vec4(transformed, 1.0);
+#ifdef USE_INSTANCING
+      vanWP = instanceMatrix * vanWP;
+#endif
+      vVanXZ = (modelMatrix * vanWP).xz;`);
+    shader.fragmentShader = 'uniform sampler2D uVan;\nuniform vec2 uVanCo;\nuniform float uVanOn;\nvarying vec2 vVanXZ;\n'
+      + shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+      float van = texture2D(uVan, vVanXZ * uVanCo.x).r;
+      diffuseColor.rgb *= 1.0 + (van - 0.5) * 2.0 * uVanCo.y * uVanOn;`);
+  };
+  mat.customProgramCacheKey = () => `${khoaTruoc}|van`;
+  return mat;
+}
+
 /** Pha lê: không phải kim loại, nhưng tự phát sáng để đọc được giữa vùng cao nguyên tối. */
 export function gem(color: number, glow = color): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({

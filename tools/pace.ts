@@ -35,7 +35,12 @@ import { CHUNK } from '../src/world';
     height: 0,
     getContext: () => ({
       createRadialGradient: () => ({ addColorStop: () => undefined }),
+      createLinearGradient: () => ({ addColorStop: () => undefined }),
       fillRect: () => undefined,
+      // Van be mat ve tung diem anh. Noi dung khong anh huong mo phong, nhung grainTexture
+      // CO doc lai mang data de ghi vao, nen ban gia phai tra ve mot mang that.
+      createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+      putImageData: () => undefined,
       set fillStyle(_v: unknown) { /* khong dung toi */ },
     }),
   }),

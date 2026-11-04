@@ -19,7 +19,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { PALETTE } from './config';
-import { METALNESS, ROUGHNESS } from './materials';
+import { grain, METALNESS, ROUGHNESS } from './materials';
 import { roundedBox } from './shapes';
 import type { BuildingType, Vec3 } from './types';
 
@@ -329,8 +329,11 @@ export function buildingGeometry(type: BuildingType, level: number): THREE.Buffe
 
 /** Vật liệu chung của mọi công trình: màu đọc từ đỉnh, nhám như mọi bề mặt khác. */
 export function buildingMaterial(): THREE.MeshStandardMaterial {
-  MAT ??= new THREE.MeshStandardMaterial({
+  // Thớ mịn hơn mặt đất: lát lại mỗi 2,2 đơn vị, mà căn nhà cũng chỉ rộng chừng 2 — nên nó
+  // đọc ra là vữa tường và ngói rám, không phải cỏ. Biên độ nhẹ hơn mặt đất, vì tường kem
+  // sáng nên cùng một biên độ trên tường trông gấp đôi trên cỏ.
+  MAT ??= grain(new THREE.MeshStandardMaterial({
     vertexColors: true, roughness: ROUGHNESS, metalness: METALNESS, flatShading: true,
-  });
+  }), 2.2, 0.11);
   return MAT;
 }

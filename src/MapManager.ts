@@ -16,7 +16,7 @@
  * có vòng lặp: bố cục không cần cao độ, cao độ chỉ cần bố cục.
  */
 import * as THREE from 'three';
-import { gem, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
+import { gem, grain, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BIOMES, CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
 import { han, paint } from './shapes';
@@ -148,7 +148,19 @@ export class MapManager {
      * góc xoay này thì theo một hướng các ô chồng lên nhau, hướng kia hở khe tam giác — mặt
      * đất chưa từng khít, và AO bám vào mấy cái khe đó nên trông như những rãnh tối.
      */
-    make('tile', this.tileBevel, matte(), false);
+    /*
+    /*
+     * Thớ trên mặt đất: lát lại mỗi 6 đơn vị, biên độ 18%.
+     *
+     * Cỡ 6 chứ không phải cỡ lớn. Thử 47 trước — hai tầng nhiễu khi ấy to bằng 6 và 1,5 đơn
+     * vị, tức bằng một ô rưỡi, nên nó đọc ra là những mảng loang tối như vết mốc chứ không ra
+     * thớ. Ở cỡ 6 thì hai tầng còn 0,75 và 0,19 đơn vị: nhỏ hơn một ô nhiều lần, nên mặt đất
+     * có hạt như đất nặn mà hình dáng từng ô vẫn sạch.
+     *
+     * Và 6 không phải bội của bước lưới 4,157 — trùng bước lưới thì mọi ô nhận đúng một mẩu
+     * thớ, cả bản đồ lấm tấm y hệt nhau.
+     */
+    make('tile', this.tileBevel, grain(matte(), 6, 0.18), false);
 
     // Quầng của bãi: một hình vuông phẳng mang ảnh gradient tròn. Đây là thứ khiến một bãi
     // đọc được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
@@ -199,6 +211,9 @@ export class MapManager {
       map: glowTexture(),
       transparent: true, depthWrite: false, opacity: 0.24,
       blending: THREE.AdditiveBlending,
+      // Cộng dồn ánh sáng thì KHÔNG được dính sương: sương pha về màu trời, mà pha vào một
+      // lớp cộng dồn là cộng thêm một mảng xám sáng lên giữa trời.
+      fog: false,
     }), false);
   }
 

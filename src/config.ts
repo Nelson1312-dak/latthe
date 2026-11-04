@@ -205,6 +205,8 @@ const VANG = 0xd9a441;
  * nhìn là hằng số — những thứ cần quay mặt về phía camera (quầng sáng) tính một lần là xong.
  */
 export const CAMERA_OFFSET = [60, 70, 60] as const;
+/** Khoảng cách từ camera tới tâm ngắm — hằng số, vì camera chỉ trượt chứ không đổi góc. */
+export const CAM_DIST = Math.hypot(...CAMERA_OFFSET);
 
 export const PALETTE = {
   sky: LAM_SANG,

@@ -36,6 +36,12 @@ export interface TierSpec {
   sway: boolean;
   /** Độ chia của mây: 1 là 320 tam giác mỗi đám, 0 là 80. */
   cloudDetail: 0 | 1;
+  /** Bầu trời làm nguồn sáng (bản đồ môi trường PMREM). */
+  env: boolean;
+  /** Vân bề mặt theo toạ độ thế giới. */
+  grain: boolean;
+  /** Sương xa: vật ở xa nhoà dần về màu trời. */
+  haze: boolean;
   /** Quầng sáng quanh pha lê và quặng vàng. */
   glow: boolean;
   /** Được phép bật hiệu ứng mô hình thu nhỏ. */
@@ -46,11 +52,16 @@ export const TIERS: Record<Tier, TierSpec> = {
   low: {
     label: 'Thấp', dpr: 1, post: false, aoScale: 0, aoSamples: 0,
     shadowMap: 1024, shadowRadius: 3,
+    // Không có bầu trời làm nguồn sáng: đo ở 1920x1080, phóng xa nhất, GTX 1660 SUPER thì nó
+    // tốn 0,84 trên tổng 2,4 ms — hơn một phần ba cả khung hình, cho một bậc mà cả lý do tồn
+    // tại là chạy được trên máy yếu. Hemisphere nhận lại phần việc, xem applyQuality.
+    env: false, grain: false, haze: true,
     bevel: false, sway: false, cloudDetail: 0, glow: false, tilt: false,
   },
   medium: {
     label: 'Vừa', dpr: 1.5, post: true, aoScale: 0.5, aoSamples: 8,
     shadowMap: 2048, shadowRadius: 5,
+    env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: false, tilt: false,
   },
   /*
@@ -62,6 +73,7 @@ export const TIERS: Record<Tier, TierSpec> = {
   high: {
     label: 'Cao', dpr: 2, post: true, aoScale: 0.75, aoSamples: 12,
     shadowMap: 4096, shadowRadius: 6,
+    env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: true, tilt: true,
   },
 };
