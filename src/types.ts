@@ -66,7 +66,41 @@ export interface Patch {
 
 // ------------------------------------------------------------------ công trình
 
-export type BuildingType = 'townhall' | 'house' | 'granary' | 'outpost';
+export type BuildingType = 'townhall' | 'house' | 'granary' | 'outpost' | 'watchtower';
+
+// ------------------------------------------------------------------ mùa bão
+
+/** Bão phá công trình, cướp khuân hàng. Hai mối hoạ khác nhau nên phải phòng khác nhau. */
+export type WaveKind = 'storm' | 'raid';
+
+/** Chuyện đã xảy ra ở một đợt. Lưu lại để kể cho người chơi, kể cả lúc họ vắng mặt. */
+export interface WaveResult {
+  wave: number;
+  kind: WaveKind;
+  /** Sức của đợt và sức thủ lúc đối đầu. Hiện cả hai để người chơi biết còn thiếu bao nhiêu. */
+  power: number;
+  guard: number;
+  won: boolean;
+  /** Hàng bị khuân đi. */
+  lost: Partial<Inventory>;
+  /** Số cấp công trình bị bão đánh sập. */
+  levels: number;
+  /** Thu được từ xác tàu, nếu đẩy lui được. */
+  reward: Partial<Inventory>;
+  /** Đợt này nổ ra lúc người chơi không có mặt. */
+  away: boolean;
+}
+
+export interface Threat {
+  /** Giây còn lại tới đợt tới. Chạy cả lúc vắng mặt. */
+  next: number;
+  /** Số đợt đã qua. Sức của đợt lớn dần theo con số này. */
+  wave: number;
+  /** Sức thủ đã thuê thêm cho đợt sắp tới. Về 0 ngay khi đợt ấy xong. */
+  hired: number;
+  /** Kết quả đợt gần nhất. */
+  last: WaveResult | null;
+}
 
 export interface Building {
   id: string;
@@ -128,6 +162,7 @@ export interface Village {
 export interface GameState {
   /** Rỗng nghĩa là chưa lập làng — mở game ra sẽ hỏi. */
   village: Village;
+  threat: Threat;
   inv: Inventory;
   storageLimit: number;
   level: number;
@@ -183,6 +218,10 @@ export interface Plot {
 
 /** Kết quả tính lúc quay lại sau khi vắng mặt. */
 export interface OfflineReport {
+  /** Đợt bão/cướp nổ ra lúc vắng mặt, nếu có. */
+  wave: WaveResult | null;
+  /** Số đợt nữa đã bị bỏ qua — chỉ để kể, không có hậu quả. */
+  waveSkipped: number;
   elapsedSeconds: number;
   creditedSeconds: number;
   gained: Partial<Inventory>;

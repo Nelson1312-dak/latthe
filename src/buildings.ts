@@ -35,6 +35,9 @@ export const ROOF: Record<BuildingType, number> = {
   house: PALETTE.roofHouse,
   granary: PALETTE.roofGranary,
   outpost: PALETTE.roofOutpost,
+  // Mái đá xám lam, lệch hẳn khỏi bốn mái ấm kia: chòi canh không phải chỗ ở, nó là thứ
+  // người chơi phải nhận ra ngay giữa một làng toàn mái đỏ cam khi đợt bão sắp tới.
+  watchtower: PALETTE.graniteDark,
 };
 
 /** Mặt trên tấm bệ đất — mọi thân công trình đứng lên đây. */
@@ -42,7 +45,7 @@ const Y0 = 0.18;
 
 /** Mốc đổi dáng: 0 tới 3 (trạm trung chuyển chỉ tới 2, vì nó tối đa cấp 5). */
 function stage(type: BuildingType, level: number): number {
-  if (type === 'outpost') return level >= 5 ? 2 : level >= 3 ? 1 : 0;
+  if (type === 'outpost' || type === 'watchtower') return level >= 5 ? 2 : level >= 3 ? 1 : 0;
   return level >= 10 ? 3 : level >= 6 ? 2 : level >= 3 ? 1 : 0;
 }
 
@@ -312,6 +315,42 @@ function outpost(level: number): THREE.BufferGeometry {
   return k.build();
 }
 
+/**
+ * Chòi canh: một cái tháp đá CAO, và cao hơn nữa theo cấp.
+ *
+ * Mọi công trình khác ở đây đều bè ra; chòi canh là thứ duy nhất vươn lên, nên nhìn bóng
+ * dáng một cái làng là biết ngay nó phòng thủ tới đâu. Đó cũng là thông tin người chơi cần
+ * đọc nhanh nhất lúc đồng hồ đếm ngược chuyển đỏ.
+ */
+function watchtower(level: number): THREE.BufferGeometry {
+  const k = new Kit();
+  const st = stage('watchtower', level);
+  nen(k);
+  // Thân đá thuôn dần, cao theo cấp. Hai bậc màu để khối đá không đọc ra là một cục phẳng.
+  const H = 2.5 + level * 0.42;
+  k.cyl(0.62, 0.74, H * 0.55, 6, 0, Y0, 0, STONE);
+  k.cyl(0.52, 0.62, H * 0.45, 6, 0, Y0 + H * 0.55, 0, STONE_DARK);
+  // Sàn canh nhô ra, có lan can cọc.
+  const yS = Y0 + H;
+  k.cyl(0.78, 0.78, 0.12, 6, 0, yS, 0, WOOD);
+  for (let i = 0; i < 6; i += 1) {
+    const a = (i / 6) * Math.PI * 2;
+    k.box(0.1, 0.42, 0.1, Math.cos(a) * 0.62, yS + 0.12, Math.sin(a) * 0.62, WOOD);
+  }
+  k.cone(0.92, 0.68, 6, 0, yS + 0.54, 0, ROOF.watchtower);
+  if (st >= 1) {
+    // Ngọn lửa hiệu trên đỉnh: cái làng đã biết báo động cho nhau.
+    k.cyl(0.16, 0.2, 0.18, 6, 0, yS + 1.18, 0, STONE_DARK);
+    k.cone(0.2, 0.34, 5, 0, yS + 1.3, 0, PALETTE.goldOre);
+  }
+  if (st >= 2) {
+    // Nhà kho áp chân tháp: chòi cấp cuối là một cứ điểm chứ không còn là cái cọc canh.
+    k.box(0.86, 0.5, 0.62, -0.78, Y0, 0.42, PALETTE.wall);
+    k.cone(0.76, 0.34, 4, -0.78, Y0 + 0.5, 0.42, ROOF.watchtower, Math.PI / 4);
+  }
+  return k.build();
+}
+
 // ------------------------------------------------------------------ bộ nhớ đệm
 
 const CACHE = new Map<string, THREE.BufferGeometry>();
@@ -332,7 +371,8 @@ export function buildingGeometry(type: BuildingType, level: number, co = 0): THR
     g = type === 'house' ? house(level)
       : type === 'townhall' ? townhall(level, co || PALETTE.roofCore)
         : type === 'granary' ? granary(level)
-          : outpost(level);
+          : type === 'watchtower' ? watchtower(level)
+            : outpost(level);
     CACHE.set(key, g);
   }
   return g;

@@ -9,7 +9,10 @@
  * hình như thanh cũ, nên hai bên vẫn nhìn thấy bản đồ — thứ mà cái khung rỗng bên phải của
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
-import { BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES, VILLAGE_COLORS, tenLangNgauNhien } from './config';
+import {
+  BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES, VILLAGE_COLORS, WAVE_WARN_SECONDS, tenLangNgauNhien,
+} from './config';
+import { waveKind } from './raids';
 import { CHUNK, biomeAt, chunkOf } from './world';
 import { rewardText } from './milestones';
 import { ico, iconSvg } from './icons';
@@ -17,7 +20,9 @@ import type { IconName } from './icons';
 import type { Economy } from './Economy';
 import type { Game } from './Game';
 import type { Choice } from './quality';
-import type { BiomeId, BuildingType, Cost, OfflineReport, Patch, ResourceKind, Unit } from './types';
+import type {
+  BiomeId, BuildingType, Cost, Inventory, OfflineReport, Patch, ResourceKind, Unit, WaveResult,
+} from './types';
 import { RESOURCE_KINDS } from './types';
 
 const STAT_MS = 200;
@@ -85,6 +90,10 @@ export class UIManager {
     welcome: $('welcome'), awayTime: $('away-time'), awayLoot: $('away-loot'),
     awayCapped: $('away-capped'), awayOk: $<HTMLButtonElement>('away-ok'),
     paused: $('paused'), resume: $<HTMLButtonElement>('resume'), toast: $('toast'),
+    storm: $('storm'), stormIco: $('storm-ico'), stormKind: $('storm-kind'),
+    stormWhen: $('storm-when'), stormGuard: $('storm-guard'), stormPower: $('storm-power'),
+    stormFill: $('storm-fill'), stormCall: $<HTMLButtonElement>('storm-call'),
+    waveBanner: $('wave-banner'), waveTitle: $('wave-title'), waveText: $('wave-text'),
   };
 
   constructor(economy: Economy, game: Game) {
@@ -111,6 +120,13 @@ export class UIManager {
       this.renderAll();
     };
 
+    economy.onWave = (r) => this.showWave(r);
+    this.el.stormCall.addEventListener('click', () => {
+      const mua = this.economy.hireGuards();
+      if (mua > 0) this.toast(`Thuê thêm ${mua} sức thủ cho đợt này`, 'shield');
+      else this.toast('Không đủ vàng để thuê lính', 'warn');
+      this.renderStorm();
+    });
     this.el.mute.addEventListener('click', () => this.toggleMute());
     this.buildLang();
     this.el.gfx.addEventListener('click', () => this.toggleGfx());
@@ -135,7 +151,12 @@ export class UIManager {
     if (!this.economy.state.village.name) this.openLang(true);
     this.el.pause.addEventListener('click', () => this.setPaused(!game.isPaused));
     this.el.resume.addEventListener('click', () => this.setPaused(false));
-    this.el.awayOk.addEventListener('click', () => { this.el.welcome.hidden = true; });
+    this.el.awayOk.addEventListener('click', () => {
+      this.el.welcome.hidden = true;
+      // Bảng kết đợt đợi tới đây mới hiện: chồng lên bảng "đi vắng" thì che mất chính cái
+      // tiêu đề của nó, và người chơi đọc được một nửa của cả hai.
+      if (this.waveCho) { this.showWave(this.waveCho); this.waveCho = null; }
+    });
     this.el.speed.addEventListener('click', () => this.toggleSpeed());
     this.el.farm.addEventListener('click', () => this.toggleFarm());
     this.el.minimap.addEventListener('pointerdown', (e) => this.mapClick(e));
@@ -147,6 +168,91 @@ export class UIManager {
     this.renderAll();
     this.timers.push(window.setInterval(() => this.refresh(), STAT_MS));
     this.timers.push(window.setInterval(() => this.drawMap(), MAP_MS));
+  }
+
+  // ----------------------------------------------------------- mùa bão
+
+  private waveTimer = 0;
+  /** Đợt xảy ra lúc vắng mặt, chờ người chơi đóng bảng "đi vắng" rồi mới kể. */
+  private waveCho: WaveResult | null = null;
+
+  /**
+   * Bảng mùa bão, vẽ lại mỗi 200ms cùng phần còn lại của HUD.
+   *
+   * Hai con số thủ/giặc là toàn bộ thông tin người chơi cần: thiếu bao nhiêu thì biết ngay
+   * phải xây thêm chòi hay gọi dân về. Không có thanh máu, không có phần trăm — một phép trừ
+   * đọc được trong nửa giây giữa lúc đang làm việc khác.
+   */
+  private renderStorm(): void {
+    const t = this.economy.state.threat;
+    const kind = waveKind(t.wave + 1);
+    const guard = this.economy.guard();
+    const power = this.economy.wavePower();
+    const near = t.next <= WAVE_WARN_SECONDS;
+    const e = this.el;
+
+    e.stormIco.innerHTML = iconSvg(kind === 'storm' ? 'storm' : 'raid');
+    e.stormKind.textContent = kind === 'storm' ? 'Bão' : 'Cướp biển';
+    const s = Math.max(0, Math.ceil(t.next));
+    e.stormWhen.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    e.stormGuard.textContent = String(guard);
+    e.stormPower.textContent = String(power);
+    // Thanh chạy ĐẦY DẦN về phía đợt tới, chứ không vơi đi: cái gì đang tiến tới thì phải
+    // thấy nó lớn lên.
+    e.stormFill.style.width = `${Math.round(100 - (t.next / this.economy.waveGap()) * 100)}%`;
+    e.storm.classList.toggle('near', near);
+    e.storm.classList.toggle('weak', guard < power);
+    e.storm.classList.toggle('safe', guard >= power);
+    /*
+     * Nút thuê lính chỉ hiện khi CÓ VIỆC CHO NÓ: đang thiếu thủ và đồng hồ đã đỏ. Để nó
+     * sáng suốt bốn phút thì nó thành đồ trang trí, mà cái cần là người chơi nhìn thấy nó
+     * đúng vào lúc nó có nghĩa.
+     */
+    const thieu = power - guard;
+    const gia = thieu > 0 ? thieu * this.economy.mercPrice() : 0;
+    const du = this.economy.state.inv.gold >= gia;
+    e.stormCall.hidden = !near || thieu <= 0;
+    e.stormCall.classList.toggle('on', du);
+    e.stormCall.textContent = du
+      ? `Thuê lính · ${fmt(gia)}`
+      : `Thuê tạm · ${fmt(Math.floor(this.economy.state.inv.gold))}`;
+  }
+
+  private lootText(inv: Partial<Inventory>): string {
+    return RESOURCE_KINDS
+      .filter((k) => (inv[k] ?? 0) > 0)
+      .map((k) => `${fmt(inv[k] ?? 0)} ${RESOURCES[k].label.toLowerCase()}`)
+      .join(', ');
+  }
+
+  private showWave(r: WaveResult): void {
+    // Tiêu đề phải NGẮN — nó in cỡ 21px giữa màn hình, nhét cả danh sách hàng hoá vào thì
+    // tràn thành năm dòng và chẳng ai đọc dòng nào. Con số xuống dòng dưới.
+    const ten = r.kind === 'storm' ? 'Bão' : 'Cướp biển';
+    const mat = this.lootText(r.lost);
+    let title: string;
+    const bits: string[] = [`Thủ ${r.guard} · Giặc ${r.power}`];
+    if (r.won) {
+      title = `Đẩy lui ${ten.toLowerCase()}`;
+      const thu = this.lootText(r.reward);
+      if (thu) bits.push(`Nhặt từ xác tàu ${thu}`);
+    } else if (r.kind === 'storm') {
+      title = r.levels > 0 ? `Bão quật đổ ${r.levels} cấp công trình` : 'Bão càn qua làng';
+      if (mat) bits.push(`Cuốn đi ${mat}`);
+    } else {
+      title = mat ? 'Cướp biển khoắng kho' : 'Cướp biển tới, chẳng vơ được gì';
+      if (mat) bits.push(`Mất ${mat}`);
+    }
+    if (r.away) bits.push('Lúc bạn đi vắng');
+    this.el.waveTitle.textContent = title;
+    this.el.waveText.textContent = bits.join(' · ');
+    this.el.waveBanner.classList.toggle('won', r.won);
+    this.el.waveBanner.classList.toggle('lost', !r.won);
+    // Cú đập: thua bão rung mạnh nhất, đẩy lui được thì chỉ giật một cái cho biết.
+    this.game.shake(r.won ? 0.3 : r.kind === 'storm' ? 1 : 0.6);
+    this.el.waveBanner.hidden = false;
+    window.clearTimeout(this.waveTimer);
+    this.waveTimer = window.setTimeout(() => { this.el.waveBanner.hidden = true; }, 6000);
   }
 
   private renderAll(): void {
@@ -172,6 +278,7 @@ export class UIManager {
   }
 
   refresh(): void {
+    this.renderStorm();
     const s = this.economy.state;
     const need = new Set(this.economy.demandKinds());
     for (const chip of Array.from(this.el.resbar.children) as HTMLElement[]) {
@@ -681,7 +788,7 @@ export class UIManager {
 
       // Tren ban do vo han, nen nao cung xay duoc moi thu. Tram trung chuyen van doi cap 4,
       // va chi dang xay khi o xa - nen de no cuoi danh sach.
-      const types: BuildingType[] = ['house', 'granary', 'outpost'];
+      const types: BuildingType[] = ['house', 'granary', 'watchtower', 'outpost'];
       for (const type of types) {
         const cost = this.economy.buildCostFor(type);
         const row = el('div', 'insp-choice');
@@ -816,8 +923,14 @@ export class UIManager {
   }
 
   showOffline(r: OfflineReport): void {
+    // Đợt bão lúc vắng mặt được kể bằng chính bảng kết đợt, chứ không nhét vào bảng "đi
+    // vắng": nó là một sự kiện, không phải một dòng thu nhập.
     const kinds = RESOURCE_KINDS.filter((k) => (r.gained[k] ?? 0) > 0);
-    if (kinds.length === 0) return;
+    if (kinds.length === 0) {
+      if (r.wave) this.showWave(r.wave);
+      return;
+    }
+    this.waveCho = r.wave;
     this.el.awayTime.textContent =
       `Bạn đi ${dur(r.elapsedSeconds)}, được tính ${dur(r.creditedSeconds)}.`;
     this.el.awayLoot.innerHTML = '';
@@ -829,6 +942,10 @@ export class UIManager {
     }
     const notes: string[] = [];
     if (r.capped) notes.push('Đã chạm trần tích luỹ 2 giờ.');
+    if (r.waveSkipped > 0) {
+      notes.push(`Còn ${r.waveSkipped} đợt nữa đi qua trong lúc bạn vắng mặt, nhưng đi vắng`
+        + ' bao lâu thì cũng chỉ một đợt được tính.');
+    }
     if (r.full.length) {
       notes.push(`Kho đầy ${r.full.map((k) => RESOURCES[k].label.toLowerCase()).join(', ')} nên dân phải dừng — xây thêm Kho lẫm.`);
     }

@@ -20,7 +20,9 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { BUILDINGS, CAMERA_OFFSET, CAM_DIST, GRID, MAX_FRAME_DELTA, PALETTE } from './config';
+import {
+  BUILDINGS, CAMERA_OFFSET, CAM_DIST, GRID, MAX_FRAME_DELTA, PALETTE, WAVE_WARN_SECONDS,
+} from './config';
 import { OpaqueGTAOPass, finishPass } from './post';
 import { AutoTune, TIERS, loadGfx, pixelRatioFor, saveGfx, stepDown, tierOf } from './quality';
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
@@ -30,6 +32,10 @@ import { MapManager } from './MapManager';
 import type { Building, Plot } from './types';
 import { WorkerManager } from './WorkerManager';
 import { CHUNK } from './world';
+
+/** Màu sương ngày thường và lúc trời sắp đổ. Xám lam, không phải xám chì: vẫn là bảng màu này. */
+const TROI_THUONG = new THREE.Color(PALETTE.sky);
+const TROI_BAO = new THREE.Color(0x4d5b6b);
 
 const MIN_ZOOM = 10;
 /**
@@ -114,6 +120,19 @@ export class Game {
   /** Bầu trời đã qua PMREM, dùng làm ánh sáng nền. Dựng một lần, bật tắt theo bậc. */
   private env: THREE.Texture | null = null;
   private hemi!: THREE.HemisphereLight;
+  /**
+   * Trời dữ tới đâu: 0 là ngày thường, 1 là lúc đợt ập tới.
+   *
+   * Cái đồng hồ đếm ngược ở góc màn hình là thông tin; cái này mới là thứ người chơi CẢM
+   * thấy. Nắng tắt dần, bóng nhạt đi, sương dày lên và ngả xám trong ba mươi giây cuối, nên
+   * ngay cả người đang mải bấm ở chỗ khác cũng ngẩng lên.
+   */
+  private baoLuc = 0;
+  /** Biên độ rung camera còn lại sau cú đập của một đợt. */
+  private rung = 0;
+  /** Cường độ hemisphere mà bậc đồ hoạ đang đặt — trời bão nhân vào con số này. */
+  private hemiBase = 0.7;
+  private readonly troi = new THREE.Color();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -405,7 +424,7 @@ export class Game {
     this.sun.shadow.map = null;
     this.scene.environment = q.env ? this.env : null;
     // Không có bản đồ môi trường thì ánh sáng nền phải quay về trông cậy cả vào hemisphere.
-    this.hemi.intensity = q.env ? 0.7 : 1.55;
+    this.hemiBase = q.env ? 0.7 : 1.55;
     if (this.scene.fog) (this.scene.fog as THREE.Fog).far = q.haze ? this.hazeFar : 1e6;
     GRAIN_ON.value = q.grain ? 1 : 0;
     this.map.setQuality(q);
@@ -1158,6 +1177,7 @@ export class Game {
     this.lastTime = now;
     this.autoTune(gap);
 
+    this.updateWeather(this.paused ? 0 : dt);
     this.moveCamera(dt);
     // Nạp khối chạy cả khi tạm dừng: người chơi vẫn kéo bản đồ đi xem được, và đất mới phải
     // hiện ra theo.
@@ -1266,6 +1286,39 @@ export class Game {
     }
   }
 
+  /**
+   * Trời chuyển theo đồng hồ mùa bão, và camera rung sau cú đập.
+   *
+   * Màu sương đổi theo chứ không chỉ đèn: sương là thứ chiếm phần lớn mép màn hình ở mức
+   * phóng xa, nên để nó xanh trong khi nắng đã tắt thì cảnh đọc ra là "đèn hỏng" chứ không
+   * phải "trời sắp mưa".
+   */
+  private updateWeather(dt: number): void {
+    const t = this.economy.state.threat;
+    const toi = t.next <= WAVE_WARN_SECONDS
+      ? 1 - Math.max(0, t.next) / WAVE_WARN_SECONDS
+      : 0;
+    this.baoLuc += (toi - this.baoLuc) * Math.min(1, dt * 2.6);
+    this.rung = Math.max(0, this.rung - dt * 1.8);
+    const k = this.baoLuc;
+    if (k < 0.002 && this.rung <= 0) return;
+    this.sun.intensity = 1.5 * (1 - 0.74 * k);
+    this.sun.shadow.intensity = 0.62 * (1 - 0.8 * k);
+    this.hemi.intensity = this.hemiBase * (1 - 0.26 * k);
+    this.scene.environmentIntensity = 0.4 * (1 - 0.6 * k);
+    // Cả nền trời sau mép bản đồ cũng phải tối theo, nếu không thì đất xám dưới một bầu
+    // trời xanh trong đọc ra là lỗi dựng hình.
+    this.troi.copy(TROI_THUONG).lerp(TROI_BAO, k);
+    this.renderer.setClearColor(this.troi, 1);
+    const f = this.scene.fog as THREE.Fog | null;
+    if (f) f.color.copy(this.troi);
+  }
+
+  /** Cú đập lúc một đợt nổ ra. Rung mạnh hay nhẹ tuỳ thiệt hại. */
+  shake(manh: number): void {
+    this.rung = Math.max(this.rung, manh);
+  }
+
   private moveCamera(dt: number): void {
     if (this.keys.size) {
       this.followId = null;          // go WASD cung la tu dieu camera
@@ -1309,6 +1362,14 @@ export class Game {
     this.camera.position.set(
       this.target.x + CAMERA_OFFSET[0], CAMERA_OFFSET[1], this.target.z + CAMERA_OFFSET[2]);
     this.camera.lookAt(this.target);
+    if (this.rung > 0) {
+      // Rung SAU lookAt, nếu không thì hướng nhìn tự chỉnh lại và cú rung triệt tiêu chính
+      // nó. Hai tần số lệch nhau cho ra nhịp vỡ chứ không phải một con lắc.
+      const a = this.elapsed * 47;
+      const m = this.rung * this.rung * this.zoom * 0.05;
+      this.camera.position.x += Math.sin(a) * m;
+      this.camera.position.y += Math.sin(a * 1.63 + 1.1) * m * 0.6;
+    }
     this.fitShadow();
   }
 

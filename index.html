@@ -59,6 +59,30 @@
   <canvas id="minimap" width="168" height="168"></canvas>
 </aside>
 
+<!-- ------------------------------------------------------------------ mùa bão -->
+<aside class="storm" id="storm">
+  <div class="storm-head">
+    <i class="storm-ico" id="storm-ico" aria-hidden="true"></i>
+    <div class="storm-what">
+      <small id="storm-kind">Cướp biển</small>
+      <strong id="storm-when">—</strong>
+    </div>
+  </div>
+  <div class="storm-num">
+    <span class="guard">Thủ <b id="storm-guard">0</b></span>
+    <span class="power">Giặc <b id="storm-power">0</b></span>
+  </div>
+  <div class="storm-bar"><i id="storm-fill"></i></div>
+  <button class="storm-call" id="storm-call">Gọi dân về</button>
+</aside>
+
+<!-- Bảng kết đợt: to, giữa màn, tự tắt. Không phải hộp thoại — bốn phút một lần mà bắt bấm
+     xác nhận thì thành ra phiền, nhưng phải đủ to để không ai bỏ lỡ việc mình vừa mất gì. -->
+<div class="wave-banner" id="wave-banner" hidden>
+  <strong id="wave-title"></strong>
+  <span id="wave-text"></span>
+</div>
+
 <!-- ------------------------------------- thẻ công trình, trượt lên trên dock -->
 <section class="inspector" id="inspector" hidden></section>
 

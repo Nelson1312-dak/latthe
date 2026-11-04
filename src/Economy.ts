@@ -12,13 +12,15 @@ import {
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
   EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
-  VILLAGE_COLORS,
+  VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
 import type {
-  Building, BuildingType, Cost, GameState, Inventory, OfflineReport, Plot, ResourceKind, Unit,
+  Building, BuildingType, Cost, GameState, Inventory, OfflineReport, Plot, ResourceKind, Threat,
+  Unit, WaveResult,
 } from './types';
+import { guardOf, mercPrice, resolveWave, stormTargets, wavePower } from './raids';
 import { RESOURCE_KINDS } from './types';
 import { bonusesFor, milestoneAt, nextMilestone, reachedCount } from './milestones';
 
@@ -38,6 +40,7 @@ function emptyInv(): Inventory {
 function freshState(): GameState {
   return {
     village: { name: '', color: VILLAGE_COLORS[0] },
+    threat: { next: WAVE_FIRST_SECONDS, wave: 0, hired: 0, last: null },
     inv: { ...STARTING },
     storageLimit: BASE_STORAGE,
     level: 1,
@@ -112,6 +115,15 @@ export class Economy {
           state.village = {
             name: String(parsed.village?.name ?? '').slice(0, 24),
             color: Number(parsed.village?.color) || VILLAGE_COLORS[0],
+          };
+          // Bản lưu trước mùa bão: cho đầy một kỳ chuẩn bị chứ không ập tới ngay lúc mở
+          // game, vì người chơi ấy chưa từng nghe nói tới chòi canh.
+          const th = parsed.threat as Partial<Threat> | undefined;
+          state.threat = {
+            next: Number(th?.next) > 0 ? Number(th?.next) : WAVE_FIRST_SECONDS,
+            wave: Math.max(0, Math.floor(Number(th?.wave) || 0)),
+            hired: 0,
+            last: th?.last ?? null,
           };
           state.storageLimit = Number(parsed.storageLimit) || base.storageLimit;
           state.totalGold = Number(parsed.totalGold) || 0;
@@ -514,7 +526,94 @@ export class Economy {
     this.marketBusy = budget > 0 && left <= budget * 0.02;
   }
 
+  // --------------------------------------------------------------- mùa bão
+
+  /** Đợt vừa nổ ra. Game dựng cảnh, UI kể lại — Economy không biết gì về hai việc đó. */
+  onWave: ((r: WaveResult) => void) | null = null;
+
+  /** Sức thủ lúc này, đã gồm lính vừa thuê. */
+  guard(): number {
+    return guardOf(this.state.buildings, this.state.threat.hired);
+  }
+
+  /** Giá vàng mỗi điểm sức thủ thuê thêm cho đợt đang tới. */
+  mercPrice(): number {
+    return mercPrice(this.wavePower());
+  }
+
+  /**
+   * Thuê lính bù vào chỗ còn thiếu. Trả về số điểm thực sự mua được.
+   *
+   * Thiếu tiền thì mua được bao nhiêu hay bấy nhiêu, chứ không từ chối: thiệt hại tính theo
+   * TỈ LỆ chỗ còn hở, nên lấp được một nửa cái hố cũng là cứu được một nửa kho hàng. Từ chối
+   * một nửa là bắt người chơi hiểu sai luật của chính mình.
+   */
+  hireGuards(): number {
+    const thieu = this.wavePower() - this.guard();
+    if (thieu <= 0) return 0;
+    const gia = this.mercPrice();
+    const mua = Math.min(thieu, Math.floor(this.state.inv.gold / gia));
+    if (mua <= 0) return 0;
+    this.state.inv.gold -= mua * gia;
+    this.state.threat.hired += mua;
+    this.onChange?.();
+    return mua;
+  }
+
+  /** Khoảng cách giữa hai đợt tính từ đợt vừa rồi — thanh đếm ngược chia theo số này. */
+  waveGap(): number {
+    return this.state.threat.wave === 0 ? WAVE_FIRST_SECONDS : WAVE_EVERY_SECONDS;
+  }
+
+  /** Sức của đợt đang tới. */
+  wavePower(): number {
+    return wavePower(this.state.threat.wave + 1, this.state.level);
+  }
+
+  /**
+   * Cho một đợt nổ ra ngay bây giờ và áp hậu quả.
+   *
+   * `away` là đợt xảy ra lúc người chơi vắng mặt — xem guardOf.
+   */
+  private runWave(away: boolean): WaveResult {
+    const t = this.state.threat;
+    const power = wavePower(t.wave, this.state.level);
+    const guard = guardOf(this.state.buildings, t.hired);
+    const { result, take, levels } = resolveWave(t.wave, power, guard, this.state.inv, away);
+    for (const k of RESOURCE_KINDS) {
+      const n = take[k];
+      if (n) this.state.inv[k] = Math.max(0, this.state.inv[k] - n);
+    }
+    // Số cấp THỰC SỰ hạ được có thể ít hơn số bão định đánh: làng toàn công trình cấp 1 thì
+    // chẳng còn gì để sập. Ghi lại con số thật, đừng kể một thiệt hại không xảy ra.
+    let ha = 0;
+    for (const id of stormTargets(this.state.buildings, levels)) {
+      const b = this.state.buildings.find((x) => x.id === id);
+      if (b && b.level > 1) { b.level -= 1; ha += 1; }
+    }
+    result.levels = ha;
+    for (const k of RESOURCE_KINDS) {
+      const n = result.reward[k];
+      if (n) this.deposit(k, n);
+    }
+    t.hired = 0;
+    t.last = result;
+    this.recompute();
+    this.onChange?.();
+    return result;
+  }
+
+  private tickThreat(dt: number): void {
+    const t = this.state.threat;
+    t.next -= dt;
+    if (t.next > 0) return;
+    t.wave += 1;
+    t.next = WAVE_EVERY_SECONDS;
+    this.onWave?.(this.runWave(false));
+  }
+
   tick(dt: number): void {
+    this.tickThreat(dt);
     this.checkDemand();
     this.sellSurplus(dt);
     const k = Math.min(1, dt / RATE_TAU);
@@ -541,6 +640,10 @@ export class Economy {
 
     const creditedSeconds = Math.min(elapsedSeconds, AFK_CAP_SECONDS);
     const before = { ...this.state.inv };
+    // Đồng hồ mùa bão chạy theo giờ THẬT, không theo giờ được bù: đi vắng ba ngày thì lúc
+    // quay lại đợt tới phải sát nút, chứ không phải còn nguyên hai tiếng.
+    const soDot = Math.floor(Math.max(0, elapsedSeconds - this.state.threat.next)
+      / WAVE_EVERY_SECONDS) + (elapsedSeconds >= this.state.threat.next ? 1 : 0);
     const full = new Set<ResourceKind>();
 
     const STEP = 0.5;
@@ -560,10 +663,29 @@ export class Economy {
       if (kept > 0) gained[kind] = kept;
     }
 
+    /*
+     * ĐI VẮNG BAO LÂU THÌ CŨNG CHỈ MỘT ĐỢT NỔ RA.
+     *
+     * Dồn cả tám đợt của một đêm vào lúc mở game là vừa vô lý vừa tàn nhẫn: người chơi mở
+     * máy ra thấy làng tan hoang vì một việc họ không có mặt để ngăn. Một đợt thì vừa đủ để
+     * tắt máy không còn là cách né mùa bão, mà vẫn giữ được chuyện "đi vắng rồi quay lại"
+     * là điều game này mời gọi.
+     */
+    let wave: WaveResult | null = null;
+    if (soDot > 0) {
+      this.state.threat.wave += 1;
+      wave = this.runWave(true);
+    }
+    this.state.threat.next = soDot > 0
+      ? WAVE_EVERY_SECONDS - (elapsedSeconds - this.state.threat.next) % WAVE_EVERY_SECONDS
+      : this.state.threat.next - elapsedSeconds;
+
     return {
       elapsedSeconds, creditedSeconds, gained,
       capped: elapsedSeconds > AFK_CAP_SECONDS,
       full: [...full],
+      wave,
+      waveSkipped: Math.max(0, soDot - 1),
     };
   }
 }

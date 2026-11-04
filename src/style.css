@@ -245,6 +245,75 @@ html, body {
 .lang-mau button:hover { transform: scale(1.08); }
 .lang-mau button.on { border-color: var(--ink); transform: scale(1.08); }
 
+/* -------------------------------------------------------------- mùa bão */
+
+/*
+ * Bảng mùa bão nằm GÓC TRÁI DƯỚI, ngay trên dock: góc duy nhất còn trống ở cả màn rộng lẫn
+ * màn điện thoại, và sát tay cái phải — nút "Gọi dân về" phải bấm được trong hai giây cuối.
+ */
+.storm {
+  position: fixed; left: 12px; bottom: calc(100px + env(safe-area-inset-bottom));
+  z-index: 6; width: 164px; display: grid; gap: 7px;
+  padding: 10px 11px; border-radius: var(--r-md);
+  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--hairline); box-shadow: var(--shadow);
+  transition: border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+.storm-head { display: flex; align-items: center; gap: 9px; }
+.storm-ico { display: flex; width: 22px; height: 22px; color: var(--ink-dim); flex: none; }
+.storm-ico svg { width: 100%; height: 100%; }
+.storm-what { display: grid; line-height: 1.15; min-width: 0; }
+.storm-what small { font-size: 11px; color: var(--ink-dim); font-weight: 600; }
+.storm-what strong { font-size: 17px; font-variant-numeric: tabular-nums; }
+
+.storm-num { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+.storm-num .guard { color: var(--ink-dim); }
+.storm-num .power { color: var(--ink-dim); }
+.storm-num b { color: var(--ink); font-size: 13px; }
+/* Thủ không đủ thì con số giặc đỏ lên. Đây là thứ duy nhất trong bảng cần đọc trong một nháy. */
+.storm.weak .storm-num .power b { color: var(--rose); }
+.storm.safe .storm-num .guard b { color: var(--mint); }
+
+.storm-bar { height: 4px; border-radius: 2px; background: var(--glass-inner); overflow: hidden; }
+.storm-bar i { display: block; height: 100%; background: var(--ink-dim); transition: width 0.2s linear; }
+.storm.near .storm-bar i { background: var(--rose); }
+
+.storm-call {
+  border: 1px solid var(--hairline); background: var(--glass-inner);
+  color: var(--ink); font: inherit; font-size: 12px; font-weight: 700;
+  padding: 7px 0; border-radius: var(--r-sm); cursor: pointer;
+}
+.storm-call:hover { background: var(--glass-inner-hi); }
+.storm-call.on { background: var(--amber); color: #1b1407; border-color: transparent; }
+
+/* Sắp tới nơi: cả bảng đỏ lên và thở. Người chơi đang nhìn chỗ khác vẫn bắt được bằng đuôi mắt. */
+.storm.near {
+  border-color: var(--rose);
+  animation: storm-tho 1.1s var(--ease) infinite;
+}
+@keyframes storm-tho {
+  0%, 100% { box-shadow: var(--shadow); }
+  50% { box-shadow: var(--shadow), 0 0 0 3px rgba(251, 113, 133, 0.28); }
+}
+.storm.near .storm-ico { color: var(--rose); }
+
+.wave-banner {
+  position: fixed; left: 50%; top: 22%; transform: translateX(-50%);
+  z-index: 40; display: grid; gap: 4px; justify-items: center; text-align: center;
+  padding: 16px 26px; border-radius: var(--r-md); max-width: min(420px, 88vw);
+  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--hairline); box-shadow: var(--shadow);
+  animation: wave-vao 0.36s var(--ease);
+}
+.wave-banner strong { font-size: 21px; letter-spacing: -0.01em; }
+.wave-banner span { font-size: 13.5px; color: var(--ink-dim); font-weight: 600; }
+.wave-banner.lost { border-color: var(--rose); }
+.wave-banner.won { border-color: var(--mint); }
+@keyframes wave-vao {
+  from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.96); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
 /* -------------------------------------------------------------- bảng đồ hoạ */
 
 .gfx {

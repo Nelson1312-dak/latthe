@@ -50,8 +50,9 @@ const { Economy } = await import('../src/Economy');
 const { MapManager } = await import('../src/MapManager');
 const { FogOfWar } = await import('../src/FogOfWar');
 const { WorkerManager } = await import('../src/WorkerManager');
-const { RESOURCES } = await import('../src/config');
+const { RESOURCES, WAVE_WARN_SECONDS } = await import('../src/config');
 const { RESOURCE_KINDS } = await import('../src/types');
+const { guardOf } = await import('../src/raids');
 type BuildingType = import('../src/types').BuildingType;
 type ResourceKind = import('../src/types').ResourceKind;
 
@@ -102,7 +103,9 @@ let nhipDay = 0;
   };
 }
 
-const XAY: BuildingType[] = ['house', 'granary', 'outpost'];
+// Choi canh dung NGAY SAU kho lam: mot nguoi choi biet luat se dung no truoc dot dau tien,
+// va ban mo phong phai la nguoi choi biet luat, khong thi con so doc ra la "neu khong ai thu".
+const XAY: BuildingType[] = ['house', 'granary', 'watchtower', 'outpost'];
 const MOC = [300, 600, 1800, 3600, 7200, 14400];
 const DT = 0.25;
 let moc = 0;
@@ -115,7 +118,22 @@ const thayBai: Partial<Record<ResourceKind, number>> = {};
 
 const hang = (n: number, w: number) => String(Math.floor(n)).padStart(w);
 
+/** Mùa bão: đếm thắng thua và tổng thiệt hại, để biết luật có cân hay không. */
+const dot = { thang: 0, thua: 0, cap: 0, mat: 0, thuong: 0 };
+economy.onWave = (r) => {
+  if (r.won) {
+    dot.thang += 1;
+    for (const k of RESOURCE_KINDS) dot.thuong += r.reward[k] ?? 0;
+  } else {
+    dot.thua += 1;
+    dot.cap += r.levels;
+    for (const k of RESOURCE_KINDS) dot.mat += r.lost[k] ?? 0;
+  }
+};
+
 for (; sim <= MOC[MOC.length - 1]; sim += DT) {
+  // Nguoi choi biet luat se thue linh bu cho du, ngay khi dong ho chuyen do.
+  if (economy.state.threat.next <= WAVE_WARN_SECONDS) economy.hireGuards();
   workers.update(DT, false);
   fog.update(DT, economy.state.units, target, 1 / (1 - economy.bonus.survey), false);
   economy.tick(DT);
@@ -132,6 +150,11 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
     } else {
       let xong = false;
       for (const t of XAY) {
+        // Choi canh xay THEO NHU CAU, khong xay cho vui: nguoi choi that nhin hai con so
+        // thu/giac roi moi quyet. Xay bua thi con so nhip choi doc ra la "neu tieu tien
+        // nham", chu khong phai "mua bao ton bao nhieu".
+        if (t === 'watchtower'
+          && guardOf(economy.state.buildings) >= economy.wavePower()) continue;
         if (!economy.canAfford(economy.buildCostFor(t))) continue;
         const o = map.plots.find((p) => !economy.buildingAt(p.id)
           && Math.hypot(p.position[0], p.position[2]) < 80);
@@ -225,3 +248,12 @@ for (const k of RESOURCE_KINDS) {
 console.log('\n--- thế giới ---');
 console.log(`  bãi đang nạp ${map.patches.length} · nền đất ${map.plots.length}`);
 console.log(`  bản lưu ${(JSON.stringify(economy.state).length / 1024).toFixed(1)} KB`);
+
+console.log('');
+console.log('--- mùa bão ---');
+console.log(`  ${dot.thang + dot.thua} đợt · đẩy lui ${dot.thang} · thua ${dot.thua}`);
+console.log(`  mất ${Math.round(dot.mat)} món hàng và ${dot.cap} cấp công trình`
+  + ` · nhặt được ${Math.round(dot.thuong)} từ xác tàu`);
+const choi = economy.state.buildings.filter((b) => b.type === 'watchtower');
+console.log(`  cuối ván: ${choi.length} chòi canh (${choi.map((b) => b.level).join('+') || '0'})`
+  + ` · sức thủ ${economy.guard()} · đợt tới mạnh ${economy.wavePower()}`);

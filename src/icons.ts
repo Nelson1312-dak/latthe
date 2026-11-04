@@ -13,7 +13,8 @@
 
 export type IconName =
   | 'food' | 'wood' | 'gold' | 'stone' | 'relics'
-  | 'townhall' | 'house' | 'granary' | 'outpost'
+  | 'townhall' | 'house' | 'granary' | 'outpost' | 'tower'
+  | 'storm' | 'raid' | 'shield'
   | 'villager' | 'cart' | 'pick' | 'box' | 'axe'
   | 'boot' | 'pack' | 'compass' | 'basket'
   | 'crew' | 'broom' | 'robot' | 'hand' | 'medal' | 'warn' | 'pin'
@@ -75,6 +76,11 @@ const PATH: Record<IconName, string> = {
   ringOn: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>',
   shuffle: '<path d="M3 7h3.5l3 5M21 7h-4l-6 10H3"/><path d="M21 17h-4"/>'
     + '<path d="M18.5 4.5L21 7l-2.5 2.5"/><path d="M18.5 14.5L21 17l-2.5 2.5"/>',
+  tower: '<path d="M8 21V9l4-5 4 5v12"/><path d="M5 9h14"/><path d="M12 13v3"/>',
+  storm: '<path d="M7 16a4 4 0 010-8 5.5 5.5 0 0110.5 1.5A3.5 3.5 0 0117 16"/>'
+    + '<path d="M13 13l-3 5h4l-3 5"/>',
+  raid: '<path d="M3 17h18l-2.5 4h-13z"/><path d="M12 17V4"/><path d="M12 6l7 3-7 3"/>',
+  shield: '<path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z"/>',
   gear: '<circle cx="12" cy="12" r="2.8"/><circle cx="12" cy="12" r="6.4"/>'
     + '<path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1'
     + 'M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1"/>',

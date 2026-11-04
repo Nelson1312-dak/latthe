@@ -365,6 +365,10 @@ export const BUILDINGS = {
     describe: (l: number) =>
       `Gom hàng trong vùng, ${CART_INTERVAL_SECONDS}s một chuyến xe · sức chở ×${CART_CAPACITY_MULT * l}`,
   },
+  watchtower: {
+    label: 'Chòi canh', icon: 'tower', maxLevel: 5,
+    describe: (l: number) => `Sức thủ +${l * GUARD_PER_TOWER}`,
+  },
 } as const;
 
 /** Giá xây mới. Nâng cấp dùng cùng bảng này nhân theo cấp, xem Economy.costFor. */
@@ -378,6 +382,9 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   // Tram chi ton go va da thi dau game da xay het tam cai trong bay phut - do duoc. No phai
   // la buoc ngoat hau can giua van, nen doi ca vang va cap can cu.
   outpost: { gold: 300, wood: 150, stone: 100 },
+  // KHONG doi da. Da chi dao duoc tu phut 13 (do bang npm run pace) con dot bao dau tien
+  // ap toi o phut 7 — doi da la bat nguoi choi thua dot dau ma khong co cach nao khac.
+  watchtower: { gold: 110, wood: 70 },
 };
 
 /**
@@ -398,6 +405,56 @@ export const HIRE_COST: Cost = { gold: 80, food: 25 };
 export const HIRE_GROWTH = 1.25;
 export const TRAIN_COST: Cost = { gold: 120 };
 export const TRAIN_GROWTH = 1.3;
+
+// ------------------------------------------------------------------ mùa bão
+
+/*
+ * MÙA BÃO: thứ duy nhất trong game có thể LẤY ĐI của người chơi.
+ *
+ * Trước khi có nó, chạy `npm run pace` bốn tiếng thì từ phút 60 tới phút 240 quãng đi xa
+ * đứng im ở 233, dân đứng im ở 10, gỗ nằm chạm trần, và thứ duy nhất nhúc nhích là con số
+ * vàng bò từ 12.646 lên 83.926. Ba tiếng không có một quyết định nào.
+ *
+ * Nên mỗi vài phút có một đợt ập tới. Bão đánh sập cấp công trình, cướp khuân hàng trong
+ * kho. Chống lại bằng SỨC THỦ, mà sức thủ đến từ ba nguồn cố tình đặt lệch nhau: thủ phủ
+ * (có sẵn, yếu) và chòi canh (xây bằng vàng). Khi hai thứ đó vẫn chưa đủ thì còn một đòn
+ * bẩy cuối: THUÊ LÍNH trong ba mươi giây báo động, trả bằng vàng, chỉ ăn cho đúng đợt ấy.
+ *
+ * Đã thử một luật khác: gọi dân về giữ nhà. Nó đẹp — cả làng chạy về lúc trời tối sầm — mà
+ * đo ra thì hỏng, vì ba mươi giây cả làng đứng không, cứ bốn phút một lần, cắt mất một nửa
+ * kinh tế giờ đầu (vàng phút 30: 2.333 nếu không gọi, 1.499 nếu gọi). Và nó đòi người chơi
+ * phải đang nhìn màn hình, thứ mà một game nhàn rỗi trên điện thoại không được đòi. Thuê
+ * lính thì một cú bấm, không mất một giây công nào, và tiêu đúng vào đống vàng vốn nằm chết.
+ */
+
+/** Đợt đầu tiên. Đủ muộn để người chơi đã có kho hàng đáng mất và đã kịp xây một chòi. */
+export const WAVE_FIRST_SECONDS = 600;
+export const WAVE_EVERY_SECONDS = 240;
+/** Khoảng báo động trước khi đợt nổ ra: trời tối lại, đồng hồ đỏ, nút gọi dân hiện ra. */
+export const WAVE_WARN_SECONDS = 30;
+
+export const GUARD_PER_TOWNHALL = 6;
+export const GUARD_PER_TOWER = 12;
+
+/**
+ * Giá một điểm sức thủ thuê thêm, tính theo sức của chính đợt đang tới.
+ *
+ * Phải đắt dần theo đợt, nếu không thì cuối ván — lúc trong kho có hơn trăm nghìn vàng —
+ * một cú bấm là xoá sổ mùa bão. Ở đợt đầu khoảng 25 vàng một điểm, tới đợt cuối gần 300.
+ */
+export const MERC_BASE = 6;
+export const MERC_PER_POWER = 0.9;
+
+/**
+ * Sức của một đợt.
+ *
+ * Phần lớn bám theo CẤP CĂN CỨ chứ không theo thời gian, để người chơi chậm không bị nghiền
+ * nát còn người chơi nhanh không thoát ly khỏi mối hoạ. Phần theo số đợt chỉ là một con dốc
+ * thoải, đủ để chòi canh cấp 5 không phải là điểm dừng vĩnh viễn.
+ */
+export const WAVE_BASE = 10;
+export const WAVE_PER_LEVEL = 3.6;
+export const WAVE_PER_WAVE = 1.8;
 
 // ------------------------------------------------------------------ màu sắc
 
