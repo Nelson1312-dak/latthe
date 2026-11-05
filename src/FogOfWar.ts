@@ -275,6 +275,8 @@ export class FogOfWar {
       if (slot.fading === null) {
         // Khoảng cách tới CẠNH ô, không phải tới tâm.
         const near = units.some((u) => {
+          // Người đi biển không còn đứng ở đây, nên toạ độ cũ của họ không vén được gì.
+          if (u.state === 'voyage') return false;
           const dx = Math.max(0, Math.abs(u.position[0] - cx) - CHUNK / 2);
           const dz = Math.max(0, Math.abs(u.position[2] - cz) - CHUNK / 2);
           return Math.hypot(dx, dz) <= REVEAL_RADIUS;

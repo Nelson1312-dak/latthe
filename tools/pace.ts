@@ -50,9 +50,8 @@ const { Economy } = await import('../src/Economy');
 const { MapManager } = await import('../src/MapManager');
 const { FogOfWar } = await import('../src/FogOfWar');
 const { WorkerManager } = await import('../src/WorkerManager');
-const { RESOURCES, WAVE_WARN_SECONDS } = await import('../src/config');
+const { RESOURCES, WAVE_WARN_SECONDS, VOYAGES, GUARD_PER_VILLAGER } = await import('../src/config');
 const { RESOURCE_KINDS } = await import('../src/types');
-const { guardOf } = await import('../src/raids');
 type BuildingType = import('../src/types').BuildingType;
 type ResourceKind = import('../src/types').ResourceKind;
 
@@ -105,6 +104,33 @@ let nhipDay = 0;
 
 // Choi canh dung NGAY SAU kho lam: mot nguoi choi biet luat se dung no truoc dot dau tien,
 // va ban mo phong phai la nguoi choi biet luat, khong thi con so doc ra la "neu khong ai thu".
+
+/*
+ * Chuyen di bien: ban mo phong phai dong vai nguoi choi BIET LUAT, nen no chon tam xa nhat
+ * ma van giu duoc lang - de lai it nhat mot nguoi, va khong rut nguoi ngay truoc dot bao
+ * neu rut xong thi thu khong con du. Choi bua thi con so doc ra la "neu di lung tung", chu
+ * khong phai "di bien dang gia bao nhieu".
+ */
+function diBien(): void {
+  if (economy.state.voyage) return;
+  const nha = economy.atHome();
+  const gap = economy.state.threat.next;
+  /*
+   * NGAM MOT TAM, KHONG BOC TAM NAO MUA DUOC.
+   *
+   * Luong thuc la dong tien duy nhat cua di bien, ma chuyen ven bo thi luc nao cung mua
+   * noi — ban mo phong tham an se tieu sach kho vao chuyen re nhat va khong bao gio cham
+   * toi bien sau. Do ra la "mat nguoi 0" suot bon tieng, tuc cai tam gay can nhat chua
+   * tung duoc do lan nao. Nguoi choi that thi chon mot tam roi de danh cho no.
+   */
+  const muc = [...VOYAGES].reverse().find((s) => s.crew <= nha - 1);
+  if (!muc) return;
+  if (economy.voyageBlock(muc.id)) return;
+  // Rut nguoi la rut suc thu. Sat gio thi chi di khi di xong van du suc.
+  if (gap < 60 && economy.guard() - muc.crew * GUARD_PER_VILLAGER < economy.wavePower()) return;
+  economy.startVoyage(muc.id);
+}
+
 const XAY: BuildingType[] = ['house', 'granary', 'watchtower', 'outpost'];
 const MOC = [300, 600, 1800, 3600, 7200, 14400];
 const DT = 0.25;
@@ -120,6 +146,15 @@ const hang = (n: number, w: number) => String(Math.floor(n)).padStart(w);
 
 /** Mùa bão: đếm thắng thua và tổng thiệt hại, để biết luật có cân hay không. */
 const dot = { thang: 0, thua: 0, cap: 0, mat: 0, thuong: 0 };
+const bien = { chuyen: 0, trung: 0, khong: 0, mat: 0, vang: 0, manh: 0 };
+const theoTam: Record<string, number> = {};
+economy.onVoyage = (r) => {
+  bien.chuyen += 1;
+  theoTam[r.band] = (theoTam[r.band] ?? 0) + 1;
+  if (r.outcome === 'lost') bien.mat += 1;
+  else if (r.outcome === 'empty') bien.khong += 1;
+  else { bien.trung += 1; bien.vang += r.gold; bien.manh += r.relics; }
+};
 economy.onWave = (r) => {
   if (r.won) {
     dot.thang += 1;
@@ -145,6 +180,7 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
   }
 
   if (sim % 2 < DT / 2) {
+    diBien();
     if (economy.canHire() && economy.canAfford(economy.hireCost())) {
       economy.hire((h) => workers.spawnVillager(h));
     } else {
@@ -153,8 +189,7 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
         // Choi canh xay THEO NHU CAU, khong xay cho vui: nguoi choi that nhin hai con so
         // thu/giac roi moi quyet. Xay bua thi con so nhip choi doc ra la "neu tieu tien
         // nham", chu khong phai "mua bao ton bao nhieu".
-        if (t === 'watchtower'
-          && guardOf(economy.state.buildings) >= economy.wavePower()) continue;
+        if (t === 'watchtower' && economy.guard() >= economy.wavePower()) continue;
         if (!economy.canAfford(economy.buildCostFor(t))) continue;
         const o = map.plots.find((p) => !economy.buildingAt(p.id)
           && Math.hypot(p.position[0], p.position[2]) < 80);
@@ -257,3 +292,8 @@ console.log(`  mất ${Math.round(dot.mat)} món hàng và ${dot.cap} cấp côn
 const choi = economy.state.buildings.filter((b) => b.type === 'watchtower');
 console.log(`  cuối ván: ${choi.length} chòi canh (${choi.map((b) => b.level).join('+') || '0'})`
   + ` · sức thủ ${economy.guard()} · đợt tới mạnh ${economy.wavePower()}`);
+console.log('');
+console.log('--- đi biển ---');
+console.log(`  ${bien.chuyen} chuyến · trúng ${bien.trung} · tay không ${bien.khong} · mất người ${bien.mat}`);
+console.log(`  mang về ${bien.vang} vàng và ${bien.manh} mảnh cổ vật`);
+console.log(`  theo tầm: ${VOYAGES.map((v) => `${v.label} ${theoTam[v.id] ?? 0}`).join(' · ')}`);

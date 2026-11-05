@@ -117,7 +117,29 @@ export interface Building {
 // ---------------------------------------------------------------------- đơn vị
 
 export type UnitKind = 'villager' | 'cart';
-export type UnitState = 'idle' | 'moving' | 'gathering' | 'delivering';
+export type UnitState = 'idle' | 'moving' | 'gathering' | 'delivering' | 'voyage';
+
+/** Ba tầm xa của một chuyến đi biển. Số liệu nằm ở VOYAGES trong config. */
+export type VoyageBand = 'coast' | 'reef' | 'deep';
+/** Kết cục một chuyến: về đầy, về tay không, hoặc có người không về. */
+export type VoyageOutcome = 'win' | 'empty' | 'lost';
+
+export interface Voyage {
+  band: VoyageBand;
+  /** Giây còn lại. Chạy cả lúc vắng mặt, như đồng hồ mùa bão. */
+  left: number;
+  /** Mã những người đang đi. Họ vẫn nằm trong units nhưng ở trạng thái 'voyage'. */
+  crew: string[];
+}
+
+export interface VoyageResult {
+  band: VoyageBand;
+  outcome: VoyageOutcome;
+  gold: number;
+  relics: number;
+  /** Tên hòn đảo đoàn vừa tới. Thuần kể chuyện, không ảnh hưởng luật. */
+  where: string;
+}
 
 export interface Unit {
   id: string;
@@ -169,6 +191,10 @@ export interface GameState {
 
   buildings: Building[];
   units: Unit[];
+  /** Chuyến đi biển đang chạy, mỗi lúc nhiều nhất một chuyến. */
+  voyage: Voyage | null;
+  /** Số chuyến đã xong. Vừa để khoe, vừa là HẠT GIỐNG của lần bốc thăm tới. */
+  voyagesDone: number;
   /** Mã các ô sương đã vén. Chỉ lưu mã, còn hình dạng thế giới thì sinh lại được. */
   revealed: string[];
 
@@ -220,6 +246,8 @@ export interface Plot {
 export interface OfflineReport {
   /** Đợt bão/cướp nổ ra lúc vắng mặt, nếu có. */
   wave: WaveResult | null;
+  /** Chuyến đi biển cập bến trong lúc vắng mặt, nếu có. */
+  voyage: VoyageResult | null;
   /** Số đợt nữa đã bị bỏ qua — chỉ để kể, không có hậu quả. */
   waveSkipped: number;
   elapsedSeconds: number;

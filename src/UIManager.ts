@@ -10,8 +10,10 @@
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
 import {
-  BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES, VILLAGE_COLORS, WAVE_WARN_SECONDS, tenLangNgauNhien,
+  BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES, VILLAGE_COLORS, VOYAGES, WAVE_WARN_SECONDS,
+  tenLangNgauNhien,
 } from './config';
+import { voyageSpec } from './voyage';
 import { waveKind } from './raids';
 import { CHUNK, biomeAt, chunkOf } from './world';
 import { rewardText } from './milestones';
@@ -21,7 +23,8 @@ import type { Economy } from './Economy';
 import type { Game } from './Game';
 import type { Choice } from './quality';
 import type {
-  BiomeId, BuildingType, Cost, Inventory, OfflineReport, Patch, ResourceKind, Unit, WaveResult,
+  BiomeId, BuildingType, Cost, Inventory, OfflineReport, Patch, ResourceKind, Unit, VoyageBand,
+  VoyageResult, WaveResult,
 } from './types';
 import { RESOURCE_KINDS } from './types';
 
@@ -94,6 +97,8 @@ export class UIManager {
     stormWhen: $('storm-when'), stormGuard: $('storm-guard'), stormPower: $('storm-power'),
     stormFill: $('storm-fill'), stormCall: $<HTMLButtonElement>('storm-call'),
     waveBanner: $('wave-banner'), waveTitle: $('wave-title'), waveText: $('wave-text'),
+    sea: $('sea'), seaIco: $('sea-ico'), seaKind: $('sea-kind'), seaWhen: $('sea-when'),
+    seaBar: $('sea-bar'), seaFill: $('sea-fill'), seaList: $('sea-list'), seaNote: $('sea-note'),
   };
 
   constructor(economy: Economy, game: Game) {
@@ -121,6 +126,8 @@ export class UIManager {
     };
 
     economy.onWave = (r) => this.showWave(r);
+    economy.onVoyage = (r) => this.showVoyage(r);
+    this.buildSea();
     this.el.stormCall.addEventListener('click', () => {
       const mua = this.economy.hireGuards();
       if (mua > 0) this.toast(`Thuê thêm ${mua} sức thủ cho đợt này`, 'shield');
@@ -156,6 +163,7 @@ export class UIManager {
       // Bảng kết đợt đợi tới đây mới hiện: chồng lên bảng "đi vắng" thì che mất chính cái
       // tiêu đề của nó, và người chơi đọc được một nửa của cả hai.
       if (this.waveCho) { this.showWave(this.waveCho); this.waveCho = null; }
+      else if (this.voyageCho) { this.showVoyage(this.voyageCho); this.voyageCho = null; }
     });
     this.el.speed.addEventListener('click', () => this.toggleSpeed());
     this.el.farm.addEventListener('click', () => this.toggleFarm());
@@ -255,6 +263,102 @@ export class UIManager {
     this.waveTimer = window.setTimeout(() => { this.el.waveBanner.hidden = true; }, 6000);
   }
 
+  // ----------------------------------------------------------- đi biển
+
+  /** Chuyến cập bến lúc vắng mặt, kể sau khi người chơi đóng bảng "đi vắng". */
+  private voyageCho: VoyageResult | null = null;
+  private readonly seaNut = new Map<string, HTMLButtonElement>();
+
+  /**
+   * Ba cái nút dựng MỘT LẦN rồi chỉ đổi chữ.
+   *
+   * Bảng này vẽ lại năm lần một giây. Dựng lại nút mỗi lần thì ngón tay đang đè xuống một
+   * nút vừa bị thay bằng nút mới, và cú bấm rơi vào khoảng không — lỗi chỉ hiện ra trên
+   * điện thoại, nơi người ta bấm chứ không rê chuột.
+   */
+  private buildSea(): void {
+    this.el.seaNote.textContent = 'Người đi biển không gác làng.';
+    for (const v of VOYAGES) {
+      const b = el('button', 'sea-go') as HTMLButtonElement;
+      b.type = 'button';
+      b.classList.toggle('lieu', v.lost > 0);
+      b.append(ico(v.icon, 'gico'));
+      const col = el('span', 'col');
+      col.append(el('b', undefined, v.label), el('small'));
+      b.append(col);
+      b.addEventListener('click', () => this.goSea(v.id));
+      this.seaNut.set(v.id, b);
+      this.el.seaList.append(b);
+    }
+  }
+
+  private goSea(band: VoyageBand): void {
+    const vi = this.economy.voyageBlock(band);
+    if (vi) { this.toast(vi, 'warn'); return; }
+    const s = voyageSpec(band);
+    if (!this.economy.startVoyage(band)) return;
+    this.toast(`${s.crew} người lên thuyền · ${s.label}`, s.icon);
+    this.renderSea();
+  }
+
+  private renderSea(): void {
+    const v = this.economy.state.voyage;
+    const e = this.el;
+    e.sea.classList.toggle('di', v !== null);
+    e.seaList.hidden = v !== null;
+    e.seaBar.hidden = v === null;
+    if (v) {
+      const s = voyageSpec(v.band);
+      const con = Math.max(0, Math.ceil(v.left));
+      e.seaIco.innerHTML = iconSvg(s.icon);
+      e.seaKind.textContent = `${s.label} · ${v.crew.length} người`;
+      e.seaWhen.textContent = `${Math.floor(con / 60)}:${String(con % 60).padStart(2, '0')}`;
+      e.seaFill.style.width = `${Math.round(100 - (v.left / s.seconds) * 100)}%`;
+      e.seaNote.textContent = 'Đang ngoài khơi. Về rồi mới đi chuyến khác được.';
+      return;
+    }
+    e.seaIco.innerHTML = iconSvg('compass');
+    e.seaKind.textContent = 'Đi biển';
+    e.seaWhen.textContent = 'Chọn chuyến';
+    e.seaNote.textContent = 'Người đi biển không gác làng.';
+    for (const spec of VOYAGES) {
+      const b = this.seaNut.get(spec.id);
+      if (!b) continue;
+      const vi = this.economy.voyageBlock(spec.id);
+      b.disabled = vi !== null;
+      // Dòng này rộng chừng 120 điểm ảnh trên điện thoại, nên phải viết thật gọn: dài
+      // thêm một chữ là nó cắt mất con số cuối, mà con số cuối là cái người chơi đang cân.
+      const phut = String(Math.round(spec.seconds / 60 * 10) / 10).replace('.', ',');
+      (b.querySelector('small') as HTMLElement).textContent =
+        vi ?? `${spec.crew} người · ${spec.food} lương · ${phut}′`;
+    }
+  }
+
+  /** Bảng cập bến. Dùng chung khung với bảng kết đợt — cũng là một tin đến rồi đi. */
+  private showVoyage(r: VoyageResult): void {
+    const s = voyageSpec(r.band);
+    const e = this.el;
+    e.waveBanner.classList.toggle('won', r.outcome === 'win');
+    e.waveBanner.classList.toggle('lost', r.outcome === 'lost');
+    // Tiêu đề in cỡ 21px trong một khung rộng 88% màn. Nhét tên hòn đảo vào đó là nó
+    // xuống ba dòng — cùng cái lỗi đã phải sửa một lần ở bảng kết đợt. Tên xuống dòng dưới.
+    if (r.outcome === 'lost') {
+      e.waveTitle.textContent = 'Thiếu một người về';
+      e.waveText.textContent = `${s.label} · ${r.where}`;
+    } else if (r.outcome === 'empty') {
+      e.waveTitle.textContent = 'Về tay không';
+      e.waveText.textContent = `${r.where} · đã có người tới trước`;
+    } else {
+      e.waveTitle.textContent = 'Thuyền về';
+      e.waveText.textContent = `${r.where} · ${this.lootText({ gold: r.gold, relics: r.relics })
+        || 'không có gì đáng kể'}`;
+    }
+    e.waveBanner.hidden = false;
+    window.clearTimeout(this.waveTimer);
+    this.waveTimer = window.setTimeout(() => { e.waveBanner.hidden = true; }, 6000);
+    this.renderAll();
+  }
+
   private renderAll(): void {
     this.renderResourceBar();
     this.renderDock();
@@ -279,6 +383,7 @@ export class UIManager {
 
   refresh(): void {
     this.renderStorm();
+    this.renderSea();
     const s = this.economy.state;
     const need = new Set(this.economy.demandKinds());
     for (const chip of Array.from(this.el.resbar.children) as HTMLElement[]) {
@@ -452,6 +557,8 @@ export class UIManager {
       return `Đang chở ${fmt(u.carrying)} ${kindLabel} về thủ phủ`;
     }
     switch (u.state) {
+      case 'voyage':
+        return 'Đang lênh đênh ngoài khơi';
       case 'idle':
         return 'Đang chờ việc';
       case 'moving': {
@@ -928,9 +1035,11 @@ export class UIManager {
     const kinds = RESOURCE_KINDS.filter((k) => (r.gained[k] ?? 0) > 0);
     if (kinds.length === 0) {
       if (r.wave) this.showWave(r.wave);
+      else if (r.voyage) this.showVoyage(r.voyage);
       return;
     }
     this.waveCho = r.wave;
+    this.voyageCho = r.voyage;
     this.el.awayTime.textContent =
       `Bạn đi ${dur(r.elapsedSeconds)}, được tính ${dur(r.creditedSeconds)}.`;
     this.el.awayLoot.innerHTML = '';

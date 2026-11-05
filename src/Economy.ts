@@ -12,14 +12,15 @@ import {
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
   EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
-  VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS,
+  VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS, VOYAGES,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
 import type {
   Building, BuildingType, Cost, GameState, Inventory, OfflineReport, Plot, ResourceKind, Threat,
-  Unit, WaveResult,
+  Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
 } from './types';
+import { resolveVoyage, voyageSpec } from './voyage';
 import { guardOf, mercPrice, resolveWave, stormTargets, wavePower } from './raids';
 import { RESOURCE_KINDS } from './types';
 import { bonusesFor, milestoneAt, nextMilestone, reachedCount } from './milestones';
@@ -44,6 +45,8 @@ function freshState(): GameState {
     inv: { ...STARTING },
     storageLimit: BASE_STORAGE,
     level: 1,
+    voyage: null,
+    voyagesDone: 0,
     buildings: [{
       id: 'core', type: 'townhall', level: 1,
       position: [0, 0, 0], biome: 'meadow',
@@ -132,6 +135,13 @@ export class Economy {
             hired: 0,
             last: th?.last ?? null,
           };
+          // Bản lưu trước khi có đi biển: không có chuyến nào đang chạy, và người nào
+          // lỡ mang trạng thái 'voyage' thì trả về làm việc, không thì họ đứng hình mãi.
+          state.voyage = parsed.voyage ?? null;
+          state.voyagesDone = Math.max(0, Math.floor(Number(parsed.voyagesDone) || 0));
+          if (!state.voyage) {
+            for (const u of state.units) if (u.state === 'voyage') u.state = 'idle';
+          }
           state.storageLimit = Number(parsed.storageLimit) || base.storageLimit;
           state.totalGold = Number(parsed.totalGold) || 0;
         }
@@ -538,9 +548,14 @@ export class Economy {
   /** Đợt vừa nổ ra. Game dựng cảnh, UI kể lại — Economy không biết gì về hai việc đó. */
   onWave: ((r: WaveResult) => void) | null = null;
 
-  /** Sức thủ lúc này, đã gồm lính vừa thuê. */
+  /** Người dân đang có mặt ở làng — người đi biển không tính. */
+  atHome(): number {
+    return this.villagers().filter((u) => u.state !== 'voyage').length;
+  }
+
+  /** Sức thủ lúc này, đã gồm lính vừa thuê và số dân đang ở nhà. */
   guard(): number {
-    return guardOf(this.state.buildings, this.state.threat.hired);
+    return guardOf(this.state.buildings, this.state.threat.hired, this.atHome());
   }
 
   /** Giá vàng mỗi điểm sức thủ thuê thêm cho đợt đang tới. */
@@ -585,7 +600,7 @@ export class Economy {
   private runWave(away: boolean): WaveResult {
     const t = this.state.threat;
     const power = wavePower(t.wave, this.state.level);
-    const guard = guardOf(this.state.buildings, t.hired);
+    const guard = guardOf(this.state.buildings, t.hired, this.atHome());
     const { result, take, levels } = resolveWave(t.wave, power, guard, this.state.inv, away);
     for (const k of RESOURCE_KINDS) {
       const n = take[k];
@@ -616,11 +631,19 @@ export class Economy {
     if (t.next > 0) return;
     t.wave += 1;
     t.next = WAVE_EVERY_SECONDS;
-    this.onWave?.(this.runWave(false));
+    /*
+     * CHẠY TRƯỚC, BÁO SAU. `this.onWave?.(this.runWave(false))` đọc thì gọn mà sai: toán
+     * tử ?. bỏ qua CẢ BIỂU THỨC ĐỐI SỐ khi chưa ai gắn hàm nghe, nên đợt bão lặng lẽ không
+     * nổ ra. Tìm ra bằng bản thước đo quên gắn onVoyage: chuyến đi không bao giờ cập bến,
+     * và cả hệ thống đứng im mà không một lỗi nào báo.
+     */
+    const r = this.runWave(false);
+    this.onWave?.(r);
   }
 
   tick(dt: number): void {
     this.tickThreat(dt);
+    this.tickVoyage(dt);
     this.checkDemand();
     this.sellSurplus(dt);
     const k = Math.min(1, dt / RATE_TAU);
@@ -629,6 +652,93 @@ export class Economy {
       this.gained[kind] = 0;
     }
   }
+
+  // ----------------------------------------------------------------- đi biển
+
+  onVoyage: ((r: VoyageResult) => void) | null = null;
+
+  /**
+   * Vì sao chưa đi được, hoặc null nếu đi được ngay. Trả về LÝ DO chứ không phải true/false:
+   * nút xám không nói gì cả, còn "cần 3 người ở nhà" thì vừa là lời từ chối vừa là chỉ dẫn.
+   */
+  voyageBlock(band: VoyageBand): string | null {
+    if (this.state.voyage) return 'Đang có một chuyến ngoài khơi';
+    const s = voyageSpec(band);
+    const co = this.atHome();
+    // Phải chừa lại một người. Làng trống không thì sản xuất đứng hẳn và sức thủ tụt
+    // xuống đáy — đó không còn là một canh bạc, đó là một cái bẫy.
+    // Câu phải NGẮN: nó in vừa một dòng rộng chừng 120 điểm ảnh dưới tên chuyến, dài hơn
+    // là bị cắt mất đúng cái con số người chơi cần đọc.
+    if (co - s.crew < 1) return `Cần ${s.crew + 1} người ở nhà`;
+    if (this.state.inv.food < s.food) return `Thiếu ${Math.ceil(s.food - this.state.inv.food)} lương`;
+    return null;
+  }
+
+  /**
+   * Cho một đoàn ra khơi. Người được chọn là NHỮNG NGƯỜI ĐANG TAY KHÔNG trước: ai đang cõng
+   * hàng về thì để họ về đã, không thì chuyến hàng ấy bốc hơi cùng với họ.
+   */
+  startVoyage(band: VoyageBand): boolean {
+    if (this.voyageBlock(band)) return false;
+    const s = voyageSpec(band);
+    const san = this.villagers().filter((u) => u.state !== 'voyage');
+    san.sort((a, b) => (a.carrying > 0 ? 1 : 0) - (b.carrying > 0 ? 1 : 0));
+    const doan = san.slice(0, s.crew);
+    this.state.inv.food -= s.food;
+    for (const u of doan) {
+      // Hàng trên vai vào kho trước khi lên thuyền: mất nó đi thì người chơi đọc ra là lỗi.
+      if (u.carryingKind && u.carrying > 0) this.deposit(u.carryingKind, u.carrying);
+      u.carrying = 0;
+      u.carryingKind = null;
+      u.state = 'voyage';
+      u.targetId = null;
+      u.targetPos = null;
+    }
+    this.state.voyage = { band, left: s.seconds, crew: doan.map((u) => u.id) };
+    this.onChange?.();
+    return true;
+  }
+
+  /** Giây còn lại của chuyến đang chạy, hoặc 0. */
+  private tickVoyage(dt: number): void {
+    const v = this.state.voyage;
+    if (!v) return;
+    v.left -= dt;
+    if (v.left > 0) return;
+    const r = this.landVoyage(v);   // chạy trước, báo sau — xem tickThreat
+    this.onVoyage?.(r);
+  }
+
+  /**
+   * Cập bến: áp kết quả, trả người về làng. Người "không về" bị xoá khỏi units — đây là
+   * thứ duy nhất trong game lấy mất một người dân, và chỉ ở tầm xa nhất.
+   */
+  private landVoyage(v: Voyage): VoyageResult {
+    const r = resolveVoyage(v.band, this.state.voyagesDone);
+    this.state.voyagesDone += 1;
+    this.state.voyage = null;
+    const mat = r.outcome === 'lost' ? v.crew[v.crew.length - 1] : null;
+    for (const id of v.crew) {
+      const u = this.state.units.find((x) => x.id === id);
+      if (!u) continue;
+      if (u.id === mat) {
+        this.state.units.splice(this.state.units.indexOf(u), 1);
+        continue;
+      }
+      u.state = 'idle';
+      // Về đúng thủ phủ chứ không về chỗ cũ: chỗ cũ có khi cách đây hai trăm đơn vị.
+      const core = this.state.buildings.find((b) => b.type === 'townhall');
+      if (core) u.position = [core.position[0], 0, core.position[2]];
+    }
+    if (r.gold) this.deposit('gold', r.gold);
+    if (r.relics) this.deposit('relics', r.relics);
+    this.recompute();
+    this.onChange?.();
+    return r;
+  }
+
+  /** Bảng chuyến cho HUD đọc. */
+  voyageList(): typeof VOYAGES { return VOYAGES; }
 
   // ---------------------------------------------------------------- vắng mặt
 
@@ -678,6 +788,18 @@ export class Economy {
      * tắt máy không còn là cách né mùa bão, mà vẫn giữ được chuyện "đi vắng rồi quay lại"
      * là điều game này mời gọi.
      */
+    /*
+     * Chuyến đi biển cũng cập bến trong lúc vắng mặt, và cũng tính SAU vòng tua như mùa
+     * bão — nên món mang về không bị nhân với hiệu suất vắng mặt. Nó là phần thưởng của
+     * một quyết định đã ra TRƯỚC lúc tắt máy, không phải thứ kiếm thêm trong lúc ngủ.
+     */
+    let voyage: VoyageResult | null = null;
+    const vo = this.state.voyage;
+    if (vo) {
+      vo.left -= elapsedSeconds;
+      if (vo.left <= 0) voyage = this.landVoyage(vo);
+    }
+
     let wave: WaveResult | null = null;
     if (soDot > 0) {
       this.state.threat.wave += 1;
@@ -692,6 +814,7 @@ export class Economy {
       capped: elapsedSeconds > AFK_CAP_SECONDS,
       full: [...full],
       wave,
+      voyage,
       waveSkipped: Math.max(0, soDot - 1),
     };
   }

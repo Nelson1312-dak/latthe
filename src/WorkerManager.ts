@@ -114,8 +114,11 @@ export class WorkerManager {
       mesh.frustumCulled = false;
       this.group.add(mesh);
     }
+    // HAI người chứ không phải một. Một người thì làng trông như bị bỏ hoang, và quan
+    // trọng hơn: chuyến đi biển đòi để lại một người giữ làng, nên với đúng một dân thì
+    // thứ duy nhất làm được trong mười phút đầu lại bị khoá mất.
     const seed = () => {
-      if (this.economy.state.units.length === 0) {
+      while (this.economy.state.units.length < 2) {
         this.spawnVillager(this.economy.state.buildings[0]);
       }
     };
@@ -285,6 +288,9 @@ export class WorkerManager {
         }
         continue;
       }
+      // Người đang đi biển không có mặt trên bản đồ: không đi làm, không vén sương, và
+      // dưới kia draw() cũng bỏ qua họ nên họ biến mất khỏi cảnh cho tới lúc về.
+      if (u.state === 'voyage') continue;
       this.villager(u, dt);
     }
     if (ve) this.draw(dt);
@@ -645,6 +651,7 @@ export class WorkerManager {
         ci += 1;
         continue;
       }
+      if (u.state === 'voyage') continue;
       if (vi >= MAX_UNITS) break;
 
       // Nhịp đi nướng thẳng vào ma trận: lệch pha theo chỉ số nên cả đoàn không bước răm rắp.

@@ -4,7 +4,7 @@
  * Thế giới rộng 60×60 nên toạ độ chạy từ -30 tới 30, thủ phủ ở gốc. Bốn biến sinh thái toả
  * ra bốn phía; vùng giữa luôn là đồng cỏ để người chơi có chỗ đứng chân ngay từ đầu.
  */
-import type { Biome, BiomeId, Cost, ResourceKind } from './types';
+import type { Biome, BiomeId, Cost, ResourceKind, VoyageBand } from './types';
 import type { IconName } from './icons';
 
 // Kich thuoc the gioi khong con y nghia: ban do la vo han, sinh theo khoi trong world.ts.
@@ -435,6 +435,14 @@ export const WAVE_WARN_SECONDS = 30;
 
 export const GUARD_PER_TOWNHALL = 6;
 export const GUARD_PER_TOWER = 12;
+/**
+ * Mỗi người dân ĐANG Ở NHÀ cũng là một phần sức thủ.
+ *
+ * Trước đây sức thủ chỉ đến từ công trình, nên dân số — thứ người chơi dồn hết tâm sức vào
+ * — không liên quan gì tới chuyện giữ làng. Cho dân góp vào thì có hai cái được: dân số
+ * thành một trục phòng thủ thật, và chuyến đi biển có một cái giá KHÔNG trả bằng tiền được.
+ */
+export const GUARD_PER_VILLAGER = 1;
 
 /**
  * Giá một điểm sức thủ thuê thêm, tính theo sức của chính đợt đang tới.
@@ -459,3 +467,64 @@ export const WAVE_PER_WAVE = 1.8;
 // ------------------------------------------------------------------ màu sắc
 
 
+
+// ------------------------------------------------------------------ đi biển
+
+/**
+ * CHUYẾN ĐI BIỂN: chỗ duy nhất trong game dám hứa một món lời mà không chắc có.
+ *
+ * Đo bằng một bản thước tạm (đếm xem mỗi giây người chơi có bao nhiêu nút bấm được):
+ * MƯỜI PHÚT ĐẦU người chơi không làm được gì trong 99% thời gian — bảy giây có việc trên
+ * sáu trăm giây ngồi nhìn. Nửa giờ đầu là 87%, đoạn chết dài nhất 190 giây liền. Mùa bão
+ * không vá được chỗ ấy: bốn phút nó mới tới một lần, và tới thì tự nó giải quyết lấy.
+ *
+ * Cái thiếu là một việc LÚC NÀO CŨNG LÀM ĐƯỢC mà vẫn đáng phải cân nhắc. Nên giá của
+ * chuyến đi cố tình KHÔNG phải vàng — mười phút đầu vàng là thứ không có. Giá là NGƯỜI:
+ * đi biển là rút tay khỏi bãi, và rút người khỏi làng đúng lúc giặc sắp tới. Lương thực
+ * chỉ là phần lương mang theo, cố ý rẻ, vì lương thực là thứ duy nhất lúc nào cũng chạm
+ * trần rồi chảy thành vàng — tiêu nó đi gần như không mất gì.
+ *
+ * Ba tầm xa cố tình lệch hẳn nhau chứ không phải một thang trượt: gần thì chắc ăn và buồn
+ * tẻ, xa thì có thể về tay không, và tầm cuối có thể MẤT MỘT NGƯỜI. Người chơi phải tự
+ * chọn mức sợ của mình, và cái nhãn nói thẳng ra điều đó trước khi họ bấm.
+ */
+export interface VoyageSpec {
+  id: VoyageBand;
+  label: string;
+  /** Một dòng nói thẳng cái giá và cái hoạ. Người chơi đọc đúng dòng này rồi mới bấm. */
+  blurb: string;
+  icon: IconName;
+  crew: number;
+  seconds: number;
+  food: number;
+  gold: readonly [number, number];
+  relics: readonly [number, number];
+  /** Xác suất về tay không. */
+  empty: number;
+  /** Xác suất một người không về. */
+  lost: number;
+}
+
+export const VOYAGES: readonly VoyageSpec[] = [
+  {
+    id: 'coast', label: 'Ven bờ', blurb: 'Một người, một phút. Chắc chắn có hàng.',
+    icon: 'boot', crew: 1, seconds: 60, food: 18,
+    gold: [70, 120], relics: [0, 1], empty: 0, lost: 0,
+  },
+  {
+    id: 'reef', label: 'Rạn ngầm', blurb: 'Hai người. Một phần năm số chuyến về tay không.',
+    icon: 'compass', crew: 2, seconds: 210, food: 70,
+    gold: [360, 620], relics: [4, 9], empty: 0.2, lost: 0,
+  },
+  {
+    id: 'deep', label: 'Biển sâu', blurb: 'Ba người, bảy phút. Có chuyến thiếu một người về.',
+    icon: 'relics', crew: 3, seconds: 420, food: 160,
+    gold: [1500, 2600], relics: [22, 40], empty: 0.24, lost: 0.12,
+  },
+] as const;
+
+/** Tên hòn đảo đoàn vừa ghé. Thuần kể chuyện — nhưng thiếu nó thì mọi chuyến giống hệt nhau. */
+export const VOYAGE_PLACES = [
+  'Hòn Mực', 'Bãi Xương Cá', 'Đá Bảy Chị Em', 'Vụng Tàu Chìm', 'Cồn Chim Lạc',
+  'Mũi Sóng Thần', 'Rạn Gãy', 'Đảo Không Tên', 'Vịnh Đèn Cũ', 'Bãi Neo Hoang',
+] as const;
