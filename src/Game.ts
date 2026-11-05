@@ -53,8 +53,18 @@ const MAX_ZOOM = 62;
  * thì sau khi bù ra đúng 26 — tức là bấm chọn mà màn hình không nhúc nhích.
  */
 const FOCUS_ZOOM = 12;
-/** Mức phóng mặc định lúc mở game và sau khi bỏ chọn. */
-const REST_ZOOM = 26;
+/**
+ * Tỉ lệ nghỉ: bấy nhiêu điểm ảnh CSS cho một đơn vị thế giới.
+ *
+ * Trước đây mức phóng nghỉ là một CON SỐ CỐ ĐỊNH (26), mà khung nhìn còn nở ra theo phần
+ * chiều cao HUD chiếm của màn. Trên điện thoại hai thanh HUD ăn gần một phần ba, nên cùng
+ * con số ấy màn 375 điểm ảnh chỉ vẽ 11,8 điểm cho một đơn vị thế giới trong khi màn 1080p
+ * vẽ 16,9 — máy có màn hình dày gấp ba lại nhìn thế giới NHỎ HƠN máy bàn. Đặt thẳng tỉ lệ
+ * thì mọi màn hình nhìn cùng một cỡ thật, và điện thoại được kéo lại gần đúng chỗ nó thiệt.
+ */
+const PX_PER_UNIT = 20;
+/** Mức phóng tạm lúc chưa đo được HUD; resize() đầu tiên thay bằng mức theo tỉ lệ trên. */
+const SEED_ZOOM = 26;
 /** Hệ số trượt: càng lớn càng bám sát, càng nhỏ càng trôi. */
 const GLIDE = 9;
 /** Cú bật của một công trình vừa đặt xong kéo dài bấy nhiêu giây. */
@@ -139,8 +149,14 @@ export class Game {
   /** Tâm ngắm hiện tại và tâm ngắm đích — khoảng cách giữa hai cái tạo ra độ trượt. */
   readonly target = new THREE.Vector3(0, 0, 0);
   private wanted = new THREE.Vector3(0, 0, 0);
-  private zoom = REST_ZOOM;
-  private wantedZoom = REST_ZOOM;
+  private zoom = SEED_ZOOM;
+  private wantedZoom = SEED_ZOOM;
+  /** Các ngón đang chạm. Hai ngón trở lên thì đó là cử chỉ chụm, không phải kéo bản đồ. */
+  private readonly ngon = new Map<number, { x: number; y: number }>();
+  /** Khoảng cách hai ngón ở lần đo trước, để biết đang chụm vào hay xoè ra. */
+  private khoangNgon = 0;
+  /** Mức nghỉ đã tính lần gần nhất. Xem theoHud() để biết vì sao phải nhớ lại. */
+  private mucNghi = SEED_ZOOM;
 
   private dragging = false;
   private dragged = 0;
@@ -316,6 +332,7 @@ export class Game {
 
     // Áp bậc đồ hoạ (cũng gọi resize). Tự động thì đo ngay từ khung đầu.
     this.applyQuality(tierOf(this.gfx));
+    this.theoHud();
     if (this.gfx.choice === 'auto') this.tune.start();
     this.watchHud();
     window.addEventListener('resize', this.resize);
@@ -324,6 +341,7 @@ export class Game {
     canvas.addEventListener('pointerdown', this.onPointerDown);
     canvas.addEventListener('pointermove', this.onPointerMove);
     canvas.addEventListener('pointerup', this.onPointerUp);
+    canvas.addEventListener('pointercancel', this.onPointerCancel);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
   }
 
@@ -815,14 +833,51 @@ export class Game {
       this.wantedZoom * (1 + Math.sign(e.deltaY) * 0.12), MIN_ZOOM, MAX_ZOOM);
   };
 
+  /** Khoảng cách giữa hai ngón đầu tiên đang chạm; 0 khi chưa đủ hai ngón. */
+  private doNgon(): number {
+    const [a, b] = [...this.ngon.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  }
+
   private onPointerDown = (e: PointerEvent): void => {
+    this.ngon.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // Bắt con trỏ SAU khi đã ghi xong trạng thái: setPointerCapture ném lỗi khi id không
+    // còn sống, và ném giữa chừng là cả cử chỉ chụm chết theo.
+    try { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } catch { /* bỏ qua */ }
+    if (this.ngon.size >= 2) {
+      // Ngón thứ hai chạm xuống là chuyển hẳn sang chụm: buông kéo, và đánh dấu đã rê đủ
+      // xa để lúc nhấc tay không bị tính thành một cú bấm chọn.
+      this.dragging = false;
+      this.dragged = 99;
+      this.khoangNgon = this.doNgon();
+      return;
+    }
     this.dragging = true;
     this.dragged = 0;
     this.last.set(e.clientX, e.clientY);
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  private onPointerCancel = (e: PointerEvent): void => {
+    this.ngon.delete(e.pointerId);
+    this.khoangNgon = 0;
+    this.dragging = false;
   };
 
   private onPointerMove = (e: PointerEvent): void => {
+    const ghi = this.ngon.get(e.pointerId);
+    if (ghi) { ghi.x = e.clientX; ghi.y = e.clientY; }
+    // Chụm hai ngón: tỉ lệ khoảng cách đổi bao nhiêu thì khung nhìn đổi bấy nhiêu, nên
+    // ngón tay giữ đúng chỗ nó đang nắm. Trên điện thoại đây là ĐƯỜNG DUY NHẤT để phóng —
+    // trước bản này máy không có con lăn chuột thì chỉ còn cách chụm trang web cho mờ ra.
+    if (this.ngon.size >= 2) {
+      const d = this.doNgon();
+      if (this.khoangNgon > 0 && d > 0) {
+        this.wantedZoom = THREE.MathUtils.clamp(
+          this.wantedZoom * (this.khoangNgon / d), MIN_ZOOM, MAX_ZOOM);
+      }
+      this.khoangNgon = d;
+      return;
+    }
     if (!this.dragging) {
       // Rê tới đâu sáng tới đó. Con trỏ đổi hình là tín hiệu rẻ nhất cho biết "bấm được".
       const id = this.pickPlot(e);
@@ -852,7 +907,17 @@ export class Game {
   };
 
   private onPointerUp = (e: PointerEvent): void => {
+    const dangChum = this.ngon.size >= 2;
+    this.ngon.delete(e.pointerId);
     this.dragging = false;
+    if (dangChum) {
+      // Nhấc một ngón giữa lúc chụm: ngón còn lại thành điểm kéo mới. Không đặt lại thì
+      // lần rê kế tiếp tính từ toạ độ của ngón vừa nhấc, và bản đồ giật một đoạn.
+      this.khoangNgon = 0;
+      const con = [...this.ngon.values()][0];
+      if (con) { this.dragging = true; this.last.set(con.x, con.y); }
+      return;
+    }
     // Đã kéo thì đừng coi là bấm chọn — ngưỡng nhỏ để bấm nhanh vẫn ăn.
     if (this.dragged > 6) return;
 
@@ -937,7 +1002,7 @@ export class Game {
     this.pickPatch(null);
     this.selectedId = null;
     this.updateMarkers();
-    this.wantedZoom = Math.max(this.wantedZoom, REST_ZOOM);
+    this.wantedZoom = Math.max(this.wantedZoom, this.mucNghi);
     this.onSelect?.(null);
   }
 
@@ -1103,7 +1168,47 @@ export class Game {
 
   // ------------------------------------------------------------ vòng render
 
+  /**
+   * Chiều cao còn trống giữa hai thanh HUD. KHÔNG trừ thẻ kiểm tra: thẻ trượt lên trượt
+   * xuống suốt ván, mà tỉ lệ nghỉ thì phải đứng yên.
+   */
+  private freeHeight(): number {
+    const h = window.innerHeight;
+    const topPx = document.querySelector('.bar-top')?.getBoundingClientRect().height ?? 0;
+    const dockPx = document.querySelector('.dock')?.getBoundingClientRect().height ?? 0;
+    return Math.max(h * 0.34, h - topPx - dockPx - 24);
+  }
+
+  /**
+   * Mức phóng cho ra đúng PX_PER_UNIT. Suy thẳng từ công thức khung nhìn dưới đây:
+   * halfH = zoom × h/freeH, nên số điểm ảnh cho một đơn vị = freeH / (2 × zoom).
+   */
+  private restZoom(): number {
+    return THREE.MathUtils.clamp(this.freeHeight() / (2 * PX_PER_UNIT), MIN_ZOOM, MAX_ZOOM);
+  }
+
+  /**
+   * Bám mức nghỉ theo HUD, nhưng KHÔNG giằng tay người chơi.
+   *
+   * Lúc dựng game chưa đo được HUD thật: chữ trong hai thanh còn chưa xuống dòng xong nên
+   * chúng thấp hơn cỡ cuối chừng bốn mươi điểm ảnh, tính mức nghỉ ngay lúc ấy là lệch một
+   * phần mười. Xoay máy hay mở bàn phím cũng đổi. Nên tính lại mỗi lần khung đổi cỡ — chỉ
+   * kéo camera theo khi nó đang ĐỨNG ĐÚNG mức nghỉ cũ; ai đã tự chụm hay lăn chuột tới
+   * mức riêng thì mức ấy là của họ, không ai được đụng vào.
+   */
+  private theoHud(): void {
+    const moi = this.restZoom();
+    if (Math.abs(moi - this.mucNghi) < 0.01) return;
+    const dangNghi = Math.abs(this.wantedZoom - this.mucNghi) < 0.01;
+    this.mucNghi = moi;
+    if (!dangNghi) return;
+    this.wantedZoom = moi;
+    this.zoom = moi;
+    this.resize();
+  }
+
   private resize = (): void => {
+    this.theoHud();
     const w = window.innerWidth;
     const h = window.innerHeight;
     const topPx = document.querySelector('.bar-top')?.getBoundingClientRect().height ?? 0;

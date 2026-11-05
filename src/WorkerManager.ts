@@ -34,6 +34,16 @@ const MAX_UNITS = 220;
 /** Sức chứa của lưới xe thồ. */
 const CART_CAP = 24;
 /** Bán kính bánh xe, và bốn chỗ trục bánh (x dọc thân xe, z ngang). */
+/**
+ * Cỡ người dân, xe bò và kiện hàng so với bản dựng gốc.
+ *
+ * Mô hình vẽ đúng tỉ lệ thật so với ô đất: người cao 1,23 trên ô rộng 4,16 — một người
+ * đứng giữa thửa ruộng. Nhưng đây là game nhìn từ trên cao trên màn điện thoại, và ở tỉ lệ
+ * thật người dân cao chừng hai chục điểm ảnh, tức một hạt bụi biết đi. Hệ số này nhân cho
+ * CẢ người, dụng cụ, kiện hàng lẫn xe bò nên không có món nào lệch cỡ với món nào; nó chỉ
+ * đụng tới ma trận vẽ, không đụng tới bán kính tới nơi hay vùng bấm chọn.
+ */
+const NGUOI = 1.35;
 const WHEEL_R = 0.26;
 const WHEELS: readonly (readonly [number, number])[] = [[-0.32, -0.42], [-0.32, 0.42], [0.32, -0.42], [0.32, 0.42]];
 /** Tay phải của dân làng. Mặt hướng +Z cục bộ, nên bên phải là −X. */
@@ -611,7 +621,7 @@ export class WorkerManager {
         // Mũi xe (phía con bò) là +X cục bộ; xoay facing − π/2 thì +X trùng hướng đi. Bản
         // trước cộng π/2 nên bò đi giật lùi, đẩy xe từ phía sau.
         this.q.setFromAxisAngle(this.axis, u.facing - Math.PI / 2);
-        this.s.set(1, 1, 1);
+        this.s.set(NGUOI, NGUOI, NGUOI);
         this.m.compose(this.v, this.q, this.s);
         this.carts.setMatrixAt(ci, this.m);
         this.carts.setColorAt(ci, this.color.setHex(
@@ -619,7 +629,8 @@ export class WorkerManager {
         // Bánh lăn ĐÚNG quãng xe đã đi: góc = quãng đường / bán kính. Xe đứng thì bánh đứng.
         const w = this.wheelTurn.get(u.id);
         if (w) {
-          w.goc += Math.hypot(u.position[0] - w.x, u.position[2] - w.z) / WHEEL_R;
+          // Bán kính thật của bánh là WHEEL_R đã phóng, không thì bánh quay sai nhịp đi.
+          w.goc += Math.hypot(u.position[0] - w.x, u.position[2] - w.z) / (WHEEL_R * NGUOI);
           w.x = u.position[0];
           w.z = u.position[2];
         } else {
@@ -627,6 +638,7 @@ export class WorkerManager {
         }
         this.mRot.makeRotationZ(-(w?.goc ?? 0));
         for (let k = 0; k < 4; k += 1) {
+          // Toạ độ bánh là CỤC BỘ nên đã được this.m phóng sẵn, giữ nguyên số gốc.
           this.mPart.makeTranslation(WHEELS[k][0], WHEEL_R, WHEELS[k][1]).multiply(this.mRot);
           this.wheels.setMatrixAt(ci * 4 + k, this.mTmp.multiplyMatrices(this.m, this.mPart));
         }
@@ -649,7 +661,7 @@ export class WorkerManager {
       this.q.setFromEuler(this.euler.set(chop, u.facing, tilt, 'YXZ'));
       // Nhún kiểu hoạt hình: chạm đất thì bè ra, bật lên thì thon lại.
       const co = walking ? (nhun - 0.5) * 0.08 : 0;
-      this.s.set(1 - co * 0.6, 1 + co, 1 - co * 0.6);
+      this.s.set(NGUOI * (1 - co * 0.6), NGUOI * (1 + co), NGUOI * (1 - co * 0.6));
       this.m.compose(this.v, this.q, this.s);
       this.bodies.setMatrixAt(vi, this.m);
 
@@ -668,11 +680,13 @@ export class WorkerManager {
       }
 
       if (u.carrying > 0 && u.carryingKind) {
+        // Kiện hàng đặt theo toạ độ THẾ GIỚI chứ không phải cục bộ như dụng cụ, nên hệ số
+        // phải nhân tay vào cả chỗ đặt lẫn cỡ hộp, không thì nó lọt vào trong vai.
         this.v.set(
-          u.position[0] - Math.sin(u.facing) * 0.33,
-          y + 0.5 + lift,
-          u.position[2] - Math.cos(u.facing) * 0.33);
-        this.s.set(1, 1, 1);
+          u.position[0] - Math.sin(u.facing) * 0.33 * NGUOI,
+          y + 0.5 * NGUOI + lift,
+          u.position[2] - Math.cos(u.facing) * 0.33 * NGUOI);
+        this.s.set(NGUOI, NGUOI, NGUOI);
         this.cargo.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
         this.cargo.setColorAt(vi, this.color.setHex(RESOURCES[u.carryingKind].color));
       } else {
