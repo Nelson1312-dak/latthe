@@ -182,6 +182,32 @@ export function hexCenterAt(x: number, z: number): [number, number] {
 }
 
 /**
+ * Ô lục giác dưới dạng MỘT CẶP SỐ NGUYÊN.
+ *
+ * Từ bản "đặt tự do", công trình không còn gắn vào nền đất sinh sẵn nữa mà đứng trên một ô
+ * lục giác. Ô là đơn vị tự nhiên của thế giới này: mặt ô vốn đã phẳng, nên công trình đứng
+ * lên không phải san nền — tức không đụng một dòng nào của `MapManager.layoutOf`, nơi thứ
+ * tự rút số ngẫu nhiên bị khoá vì bản lưu người chơi.
+ *
+ * Phép làm tròn ở đây PHẢI y hệt `hexCenterAt`, nên nó gọi thẳng hàm ấy thay vì tự tính
+ * lại: hai hàm lục giác lệch nhau nửa ô là một lỗi chỉ lộ ra ở mối nối, rất khó tìm.
+ */
+export function cellOf(x: number, z: number): [number, number] {
+  const [hx, hz] = hexCenterAt(x, z);
+  const i = Math.round(hx / HEX_STEP_X);
+  const lech = (((i % 2) + 2) % 2) ? HEX_STEP_Z / 2 : 0;
+  return [i, Math.round((hz - lech) / HEX_STEP_Z)];
+}
+
+/** Tâm thật của ô (i, j). Cột lẻ lệch xuống nửa bước, đúng như lưới của hexCenterAt. */
+export function cellCenter(i: number, j: number): [number, number] {
+  const lech = (((i % 2) + 2) % 2) ? HEX_STEP_Z / 2 : 0;
+  return [i * HEX_STEP_X, j * HEX_STEP_Z + lech];
+}
+
+export const cellKey = (i: number, j: number): string => `${i},${j}`;
+
+/**
  * Cao độ mặt trên của một ô CHƯA san, theo tâm ô.
  *
  * Nhấp nhô 0,05–0,12 theo hàm băm: heightAt() là đường cong trơn, các ô cạnh nhau gần như

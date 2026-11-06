@@ -28,13 +28,14 @@ import { AutoTune, TIERS, loadGfx, pixelRatioFor, saveGfx, stepDown, tierOf } fr
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
 import type { Economy } from './Economy';
 import { ArmyManager } from './ArmyManager';
+import { TOWER_RANGE } from './battle';
 import { BATTLE_RADIUS } from './battle';
 import type { BattleSeed } from './battle';
 import { FogOfWar, chime } from './FogOfWar';
 import { MapManager } from './MapManager';
-import type { Building, Plot } from './types';
+import type { Building, BuildingType } from './types';
 import { WorkerManager } from './WorkerManager';
-import { CHUNK } from './world';
+import { CHUNK, HEX_R, cellCenter, cellOf } from './world';
 
 /** Màu sương ngày thường và lúc trời sắp đổ. Xám lam, không phải xám chì: vẫn là bảng màu này. */
 const TROI_THUONG = new THREE.Color(PALETTE.sky);
@@ -173,7 +174,7 @@ export class Game {
   private paused = false;
   private selectedId: string | null = null;
 
-  onSelect: ((plotId: string | null) => void) | null = null;
+  onSelect: ((buildingId: string | null) => void) | null = null;
   onReveal: ((chunkId: string) => void) | null = null;
   onSelectPatch: ((patchId: string | null) => void) | null = null;
   onMilestone: ((label: string) => void) | null = null;
@@ -631,9 +632,12 @@ export class Game {
 
   private updateMarkers(): void {
     const place = (mesh: THREE.Mesh, id: string | null) => {
-      const plot = id ? this.map.plotById(id) : null;
-      mesh.visible = !!plot;
-      if (plot) mesh.position.set(plot.position[0], plot.position[1] + 0.22, plot.position[2]);
+      const b = id ? this.economy.buildingById(id) : undefined;
+      mesh.visible = !!b;
+      if (b) {
+        mesh.position.set(b.position[0],
+          this.map.groundY(b.position[0], b.position[2]) + 0.22, b.position[2]);
+      }
     };
     place(this.selectRing, this.selectedId);
     place(this.hoverRing, this.hoveredId === this.selectedId ? null : this.hoveredId);
@@ -702,41 +706,54 @@ export class Game {
     this.economy.justBuilt = null;
     if (vuaXay) this.popping.set(vuaXay, 0);
 
+    /*
+     * HAI VONG RIENG, vi cong trinh khong con la mot nen dat nua.
+     *
+     * Ban cu duyet nen dat roi tra xem nen ay co cong trinh chua - nen cong trinh chi ton
+     * tai o noi may sinh the gioi da rai san mot o nau. Gio cong trinh dung tren o luc giac
+     * cua rieng no: vong mot ve cong trinh theo state.buildings, vong hai ve nhung nen nau
+     * con trong, bo qua nen nao da bi mot cong trinh chiem mat o.
+     */
     const con = new Set<string>();
     const khoi: [number, number, number][] = [];
-    let trong = 0;
-    for (const plot of this.map.plots) {
-      const building = this.economy.buildingAt(plot.id);
-      if (!building) {
-        if (trong >= EMPTY_CAP) continue;
-        this.mtx.makeTranslation(plot.position[0], plot.position[1], plot.position[2]);
-        this.emptyPads.setMatrixAt(trong, this.mtx);
-        this.emptyPosts.setMatrixAt(trong, this.mtx);
-        const sang = this.fog.isRevealed(plot.position[0], plot.position[2]);
-        this.emptyPads.setColorAt(trong, this.padTint(PALETTE.plotDirt, sang));
-        this.emptyPosts.setColorAt(trong, this.padTint(PALETTE.fence, sang));
-        trong += 1;
+    for (const building of this.economy.state.buildings) {
+      const x = building.position[0];
+      const z = building.position[2];
+      const y = this.map.groundY(x, z);
+      con.add(building.id);
+      const ong = chimneyTop(building.type, building.level);
+      if (ong) khoi.push([x + ong[0], y + ong[1], z + ong[2]]);
+      const sig = this.signatureOf(building);
+      const cu = this.structures.get(building.id);
+      if (cu && cu.sig === sig) {
+        // Dat duoi chan co the doi cao do khi khoi ban do nap lai; bam theo.
+        cu.g.userData.baseY = y;
         continue;
       }
-      con.add(plot.id);
-      const ong = chimneyTop(building.type, building.level);
-      if (ong) khoi.push([plot.position[0] + ong[0], plot.position[1] + ong[1], plot.position[2] + ong[2]]);
-      const sig = this.signatureOf(building);
-      const cu = this.structures.get(plot.id);
-      if (cu && cu.sig === sig) continue;
-      // Đổi loại hay đổi cấp (không phải chỉ thêm thùng hàng) thì công trình nảy một nhịp,
-      // như lúc vừa xây — nâng cấp phải có cảm giác, không chỉ là con số trên thẻ đổi đi.
       if (cu && cu.sig.split(':').slice(0, 2).join(':') !== sig.split(':').slice(0, 2).join(':')) {
-        this.popping.set(plot.id, 0);
+        this.popping.set(building.id, 0);
       }
       if (cu) this.plotGroup.remove(cu.g);
       const g = new THREE.Group();
-      g.position.set(plot.position[0], plot.position[1], plot.position[2]);
-      g.userData.plotId = plot.id;
-      g.userData.baseY = plot.position[1];
-      this.buildStructure(g, building, plot.id);
+      g.position.set(x, y, z);
+      g.userData.bid = building.id;
+      g.userData.baseY = y;
+      this.buildStructure(g, building, building.id);
       this.plotGroup.add(g);
-      this.structures.set(plot.id, { g, sig });
+      this.structures.set(building.id, { g, sig });
+    }
+    let trong = 0;
+    for (const plot of this.map.plots) {
+      if (trong >= EMPTY_CAP) break;
+      const [ci, cj] = cellOf(plot.position[0], plot.position[2]);
+      if (this.economy.buildingAtCell(ci, cj)) continue;
+      this.mtx.makeTranslation(plot.position[0], plot.position[1], plot.position[2]);
+      this.emptyPads.setMatrixAt(trong, this.mtx);
+      this.emptyPosts.setMatrixAt(trong, this.mtx);
+      const sang = this.fog.isRevealed(plot.position[0], plot.position[2]);
+      this.emptyPads.setColorAt(trong, this.padTint(PALETTE.plotDirt, sang));
+      this.emptyPosts.setColorAt(trong, this.padTint(PALETTE.fence, sang));
+      trong += 1;
     }
     for (const [id, st] of this.structures) {
       if (!con.has(id)) {
@@ -747,15 +764,16 @@ export class Game {
     this.pickable.length = 0;
     for (const st of this.structures.values()) {
       st.g.traverse((o) => {
-        if (o instanceof THREE.Mesh && o.userData.plotId) this.pickable.push(o);
+        if (o instanceof THREE.Mesh && o.userData.bid) this.pickable.push(o);
       });
     }
-    // Biển tên bám thủ phủ. Tháp chuông cao chừng 5 đơn vị ở cấp đầu và cao thêm theo cấp,
-    // nên treo ở 6,2 cộng một phần của cấp thì biển luôn ở ngay trên chóp cờ.
-    const core = this.map.plots.find((p) => p.core);
-    const lv = this.economy.buildingAt('core')?.level ?? 1;
+    // Bien ten bam THU PHU, khong bam nen dat: nen dat bien mat khi khoi goc roi bo nho,
+    // va bien ten thi khong duoc phep bien theo.
+    const core = this.economy.state.buildings.find((b) => b.type === 'townhall');
     if (core) {
-      this.villageLabel.position.set(core.position[0], core.position[1] + 6.2 + lv * 0.12, core.position[2]);
+      const cy = this.map.groundY(core.position[0], core.position[2]);
+      this.villageLabel.position.set(
+        core.position[0], cy + 6.2 + core.level * 0.12, core.position[2]);
     }
     this.smoke.setSources(khoi);
     this.emptyPads.count = trong;
@@ -811,7 +829,7 @@ export class Game {
       buildingGeometry(b.type, b.level, this.economy.state.village.color), buildingMaterial());
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    mesh.userData.plotId = id;
+    mesh.userData.bid = id;
     g.add(mesh);
 
     // Trạm trung chuyển: chồng thùng bên cạnh cho thấy đang gom được bao nhiêu, khỏi mở bảng.
@@ -887,7 +905,7 @@ export class Game {
     }
     if (!this.dragging) {
       // Rê tới đâu sáng tới đó. Con trỏ đổi hình là tín hiệu rẻ nhất cho biết "bấm được".
-      const id = this.pickPlot(e);
+      const id = this.pickBuilding(e);
       if (id !== this.hoveredId) {
         this.hoveredId = id;
         this.renderer.domElement.style.cursor = id ? 'pointer' : 'grab';
@@ -936,8 +954,8 @@ export class Game {
       // cong trinh, vi renderInspector() xet bai truoc nen dat.
       this.pickPatch(null);
       this.punch = 1;
-      this.selectedId = hit.userData.plotId as string;
-      this.focusOnPlot(this.selectedId);
+      this.selectedId = hit.userData.bid as string;
+      this.focusOnBuilding(this.selectedId);
       this.updateMarkers();
       this.onSelect?.(this.selectedId);
       return;
@@ -951,11 +969,11 @@ export class Game {
      */
     const px = this.hitPoint.x;
     const pz = this.hitPoint.z;
-    let bestKind: 'unit' | 'plot' | 'node' | null = null;
+    let bestKind: 'unit' | 'build' | 'node' | null = null;
     let bestId: string | null = null;
     let bestScore = 1;
 
-    const consider = (kind: 'unit' | 'plot' | 'node', id: string, dist: number, radius: number) => {
+    const consider = (kind: 'unit' | 'build' | 'node', id: string, dist: number, radius: number) => {
       const score = dist / radius;
       if (score < bestScore) { bestScore = score; bestKind = kind; bestId = id; }
     };
@@ -963,8 +981,10 @@ export class Game {
     for (const u of this.economy.state.units) {
       consider('unit', u.id, Math.hypot(u.position[0] - px, u.position[2] - pz), 1.7);
     }
-    for (const plot of this.map.plots) {
-      consider('plot', plot.id, Math.hypot(plot.position[0] - px, plot.position[2] - pz), 2.6);
+    // Bán kính 2,1 là bán kính nội tiếp của một ô lục giác: bấm trong ô nào thì trúng
+    // công trình của ô ấy, không với sang ô bên.
+    for (const b of this.economy.state.buildings) {
+      consider('build', b.id, Math.hypot(b.position[0] - px, b.position[2] - pz), 2.1);
     }
     // Bai lay CHINH ban kinh cua no lam vung bam: bai la mot khu dat, nen bam dau trong khu
     // cung phai trung. Day la dieu kien de "chi vao roi dieu dan toi" thanh mot thao tac tu
@@ -982,12 +1002,12 @@ export class Game {
       this.chooseUnit(bestId);
       return;
     }
-    if (bestKind === 'plot' && bestId) {
+    if (bestKind === 'build' && bestId) {
       this.chooseUnit(null);
       this.pickPatch(null);
       this.punch = 1;
       this.selectedId = bestId;
-      this.focusOnPlot(bestId);
+      this.focusOnBuilding(bestId);
       this.updateMarkers();
       this.onSelect?.(bestId);
       return;
@@ -1093,10 +1113,10 @@ export class Game {
    * trúng rồi vẫn không đọc nổi nó là nhà gì. Bay tới là cách duy nhất khiến thao tác chọn
    * có nghĩa, và vì camera vốn đã trượt mượt nên không cần thêm hoạt cảnh nào.
    */
-  private focusOnPlot(id: string): void {
-    const plot = this.map.plotById(id);
-    if (!plot) return;
-    this.panTo(plot.position[0], plot.position[2]);
+  private focusOnBuilding(id: string): void {
+    const b = this.economy.buildingById(id);
+    if (!b) return;
+    this.panTo(b.position[0], b.position[2]);
     if (this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
   }
 
@@ -1120,20 +1140,20 @@ export class Game {
     return hits.length ? hits[0].object : null;
   }
 
-  private pickPlot(e: PointerEvent): string | null {
+  private pickBuilding(e: PointerEvent): string | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const hits = this.raycaster.intersectObjects(this.pickable, false);
-    if (hits.length) return hits[0].object.userData.plotId as string;
+    if (hits.length) return hits[0].object.userData.bid as string;
 
     if (!this.castToGround()) return null;
     let best: string | null = null;
-    let bestDist = 2.6;
-    for (const p of this.map.plots) {
-      const d = Math.hypot(p.position[0] - this.hitPoint.x, p.position[2] - this.hitPoint.z);
-      if (d < bestDist) { bestDist = d; best = p.id; }
+    let bestDist = 2.1;
+    for (const b of this.economy.state.buildings) {
+      const d = Math.hypot(b.position[0] - this.hitPoint.x, b.position[2] - this.hitPoint.z);
+      if (d < bestDist) { bestDist = d; best = b.id; }
     }
     return best;
   }
@@ -1212,6 +1232,157 @@ export class Game {
     this.updateMarkers();
   }
   get selected(): string | null { return this.selectedId; }
+
+
+  // ------------------------------------------------------------ chế độ đặt
+
+  /*
+   * NGẮM BẰNG BẢN ĐỒ, KHÔNG BẰNG NGÓN TAY.
+   *
+   * Cách quen thuộc là rê mô hình mờ theo ngón tay, nhưng trên một màn 393 điểm ảnh thì
+   * ngón tay che đúng cái đang chọn, và nó giành mất cử chỉ kéo bản đồ — đang đặt mà muốn
+   * nhìn chỗ khác thì không còn ngón nào rảnh. Nên mô hình mờ đứng yên ở GIỮA MÀN, hơi
+   * chếch lên trên vùng thanh xác nhận, còn người chơi kéo thế giới trôi bên dưới nó. Kéo,
+   * chụm, thả tay — mọi cử chỉ cũ chạy y nguyên, và không có gì bị che.
+   */
+
+  private ghost: THREE.Mesh | null = null;
+  private ghostType: BuildingType | null = null;
+  private ghostCell: [number, number] | null = null;
+  private ghostWhy: string | null = 'Chưa chọn';
+  private baseRing: THREE.Mesh | null = null;
+  private rangeRings: THREE.Mesh[] = [];
+
+  private readonly ghostMat = new THREE.MeshBasicMaterial({
+    color: 0x5eead4, transparent: true, opacity: 0.62, depthWrite: false,
+  });
+  /** Ô đang ngắm, sáng lên dưới chân mô hình mờ. */
+  private ghostCellMesh: THREE.Mesh | null = null;
+  private readonly cellMat = new THREE.MeshBasicMaterial({
+    color: 0x5eead4, transparent: true, opacity: 0.3, side: THREE.DoubleSide,
+    depthWrite: false, depthTest: false,
+  });
+
+  /**
+   * Báo khi LÝ DO đổi. Thanh xác nhận vẽ lại mỗi 200ms, nên nếu chỉ dựa vào nhịp ấy thì
+   * có lúc ô đã đỏ mà nút vẫn còn ghi ĐẶT — một phần năm giây nói sai cũng là nói sai.
+   */
+  onGhost: (() => void) | null = null;
+
+  get placing(): BuildingType | null { return this.ghostType; }
+  /** null nghĩa là đặt được; khác null là lý do chưa đặt được, hiện thẳng lên nút. */
+  get placeWhy(): string | null { return this.ghostWhy; }
+
+  private ringMesh(r: number, color: number, opacity: number): THREE.Mesh {
+    const m = new THREE.Mesh(
+      new THREE.RingGeometry(Math.max(0.1, r - 0.28), r, 72),
+      // depthTest tắt: vành là lớp chỉ dẫn, nó phải thấy được cả khi chạy qua sau một quả
+      // đồi. Vẽ sau cùng nên không che mất gì.
+      new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false,
+        depthTest: false,
+      }));
+    m.rotation.x = -Math.PI / 2;
+    m.renderOrder = 6;
+    this.scene.add(m);
+    return m;
+  }
+
+  /** Bật/tắt chế độ đặt. Truyền null là thoát. */
+  setPlacing(type: BuildingType | null): void {
+    // KHÔNG dispose hình học của mô hình mờ: `buildingGeometry` trả về một hình học DÙNG
+    // CHUNG, có cache theo loại và cấp. Huỷ nó ở đây là huỷ luôn cái mà mọi căn nhà cùng
+    // loại đang vẽ bằng — và lỗi ấy chỉ lộ ra ở lần dựng sau, xa chỗ gây ra nó.
+    if (this.ghost) this.scene.remove(this.ghost);
+    this.ghost = null;
+    this.ghostType = type;
+    this.ghostCell = null;
+    this.ghostWhy = 'Chưa chọn';
+    for (const r of this.rangeRings) this.scene.remove(r);
+    this.rangeRings = [];
+    if (this.baseRing) { this.scene.remove(this.baseRing); this.baseRing = null; }
+    if (this.ghostCellMesh) this.ghostCellMesh.visible = type !== null;
+    if (!type) { this.updateMarkers(); return; }
+
+    this.ghost = new THREE.Mesh(buildingGeometry(type, 1, this.economy.state.village.color),
+      this.ghostMat);
+    this.ghost.renderOrder = 5;
+    this.scene.add(this.ghost);
+    /*
+     * Ô sáng dưới chân. Thiếu nó thì mô hình mờ chỉ là một khối trong trong giữa đồng cỏ —
+     * nhìn ảnh thử lần đầu không đọc được nó đang nhắm vào ô nào. Sáu cạnh, bán kính bằng
+     * đúng bán kính ngoại tiếp của ô, nên nó TRÙNG KHÍT mặt ô chứ không phải một vệt tròn.
+     */
+    if (!this.ghostCellMesh) {
+      const g = new THREE.CircleGeometry(HEX_R * 0.97, 6);
+      this.ghostCellMesh = new THREE.Mesh(g, this.cellMat);
+      this.ghostCellMesh.rotation.x = -Math.PI / 2;
+      this.ghostCellMesh.renderOrder = 4;
+      this.scene.add(this.ghostCellMesh);
+    }
+    this.ghostCellMesh.visible = true;
+
+    // Vành căn cứ, và vòng tầm bắn của MỌI chòi canh đang có — chỗ hở nằm ở đâu phải nhìn
+    // một cái là thấy, chứ không phải đặt xong mới biết.
+    this.baseRing = this.ringMesh(this.economy.baseRadius(), 0x9ab393, 0.5);
+    this.baseRing.position.y = 0.3;
+    for (const b of this.economy.state.buildings) {
+      if (b.type !== 'watchtower') continue;
+      const r = this.ringMesh(TOWER_RANGE, 0xfbbf24, 0.28);
+      r.position.set(b.position[0], this.map.groundY(b.position[0], b.position[2]) + 0.3,
+        b.position[2]);
+      this.rangeRings.push(r);
+    }
+    this.updateGhost();
+  }
+
+  /**
+   * Ô đang ngắm: điểm giữa màn, nhích lên một phần tư chiều cao cho khỏi nằm dưới thanh
+   * xác nhận và dưới bàn tay đang cầm máy.
+   */
+  private updateGhost(): void {
+    const type = this.ghostType;
+    if (!type || !this.ghost) return;
+    this.pointer.set(0, 0.22);
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    if (!this.castToGround()) {
+      this.ghost.visible = false;
+      if (this.ghostCellMesh) this.ghostCellMesh.visible = false;
+      return;
+    }
+    const [i, j] = cellOf(this.hitPoint.x, this.hitPoint.z);
+    const [cx, cz] = cellCenter(i, j);
+    this.ghostCell = [i, j];
+    const truoc = this.ghostWhy;
+    this.ghostWhy = this.economy.placeBlock(i, j, type, this.fog.isRevealed(cx, cz));
+    const du = this.economy.canAfford(this.economy.buildCostFor(type));
+    if (!this.ghostWhy && !du) this.ghostWhy = 'Chưa đủ vật liệu';
+    if (truoc !== this.ghostWhy) this.onGhost?.();
+    this.ghost.visible = true;
+    const gy = this.map.groundY(cx, cz);
+    this.ghost.position.set(cx, gy, cz);
+    const mau = this.ghostWhy ? 0xfb7185 : 0x5eead4;
+    this.ghostMat.color.setHex(mau);
+    this.cellMat.color.setHex(mau);
+    if (this.ghostCellMesh) {
+      this.ghostCellMesh.visible = true;
+      this.ghostCellMesh.position.set(cx, gy + 0.26, cz);
+    }
+  }
+
+  /** Đặt xuống ô đang ngắm. Trả về false kèm lý do nằm ở placeWhy. */
+  placeNow(): boolean {
+    if (!this.ghostType || !this.ghostCell || this.ghostWhy) return false;
+    const [i, j] = this.ghostCell;
+    const ok = this.economy.build(i, j, this.ghostType, true);
+    if (ok) {
+      this.punch = 1;
+      // Dựng lại vành tầm bắn: vừa đặt thêm một chòi canh thì vùng phủ đã khác, mà cái
+      // người chơi cần thấy nhất lúc này đúng là vùng phủ mới.
+      this.setPlacing(this.ghostType);
+    }
+    return ok;
+  }
 
   // ------------------------------------------------------------ vòng render
 
@@ -1334,6 +1505,8 @@ export class Game {
     // Nạp khối chạy cả khi tạm dừng: người chơi vẫn kéo bản đồ đi xem được, và đất mới phải
     // hiện ra theo.
     this.map.update(this.target);
+    // Mô hình mờ bám ô giữa màn, nên phải tính SAU khi camera đã trôi xong trong khung này.
+    if (this.ghostType) this.updateGhost();
     // So voi phien ban DA DUNG chu khong so truoc/sau trong cung mot khung: ai khac goi
     // map.update() (bu gio, cong cu do, bang dieu khien) thi lan doi do khong bi bo qua.
     if (this.map.version !== this.builtVersion) {
@@ -1415,7 +1588,7 @@ export class Game {
 
     // Công trình dưới con trỏ nhấc lên; công trình vừa bấm phình một nhịp rồi về.
     for (const g of this.plotGroup.children) {
-      const id = g.userData.plotId as string | undefined;
+      const id = g.userData.bid as string | undefined;
       if (!id) continue;
       const re = id === this.hoveredId;
       const chon = id === this.selectedId;
@@ -1570,10 +1743,6 @@ export class Game {
       sc.far = half * 4 + 80;
       sc.updateProjectionMatrix();
     }
-  }
-
-  plotById(id: string): Plot | undefined {
-    return this.map.plotById(id);
   }
 
   describe(b: Building): string {

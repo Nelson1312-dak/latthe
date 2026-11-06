@@ -10,8 +10,8 @@
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
 import {
-  BIOMES, BUILDINGS, MINIMAP_SPAN, RESOURCES, VILLAGE_COLORS, VOYAGES, WAVE_WARN_SECONDS,
-  tenLangNgauNhien,
+  BIOMES, BUILDINGS, BUILD_MIN_LEVEL, MINIMAP_SPAN, RESOURCES, VILLAGE_COLORS, VOYAGES,
+  WAVE_WARN_SECONDS, tenLangNgauNhien,
 } from './config';
 import { voyageSpec } from './voyage';
 import { waveKind } from './raids';
@@ -87,7 +87,8 @@ export class UIManager {
     gfx: $<HTMLButtonElement>('gfx'), gfxMenu: $('gfx-menu'), gfxSeg: $('gfx-seg'),
     gfxTilt: $<HTMLButtonElement>('gfx-tilt'), gfxNow: $('gfx-now'), gfxNote: $('gfx-note'),
     crewpill: $('crewpill'), tiles: $('tiles'), speed: $<HTMLButtonElement>('speed'),
-    farm: $<HTMLButtonElement>('farm'),
+    farm: $<HTMLButtonElement>('farm'), build: $<HTMLButtonElement>('build'),
+    aim: $('aim'),
     inspector: $('inspector'), dock: $('dock'),
     minimap: $<HTMLCanvasElement>('minimap'),
     welcome: $('welcome'), awayTime: $('away-time'), awayLoot: $('away-loot'),
@@ -183,6 +184,8 @@ export class UIManager {
     });
     this.el.speed.addEventListener('click', () => this.toggleSpeed());
     this.el.farm.addEventListener('click', () => this.toggleFarm());
+    this.el.build.addEventListener('click', () => this.setXay(!this.xayMo));
+    game.onGhost = () => { if (this.xayMo) this.renderXayBar(); };
     this.el.minimap.addEventListener('pointerdown', (e) => this.mapClick(e));
 
     this.applyMute();
@@ -283,6 +286,129 @@ export class UIManager {
     this.el.waveBanner.hidden = false;
     window.clearTimeout(this.waveTimer);
     this.waveTimer = window.setTimeout(() => { this.el.waveBanner.hidden = true; }, 6000);
+  }
+
+  // ----------------------------------------------------------- chế độ xây
+
+  /*
+   * MỘT CHẾ ĐỘ, KHÔNG PHẢI MỘT BẢNG MỚI.
+   *
+   * Màn hình đã có sáu mặt — thanh trên, minimap, bảng bão, bảng đi biển, thẻ kiểm tra,
+   * dock — và trên một màn 393 điểm ảnh thì không còn chỗ cho mặt thứ bảy. Nên vào chế độ
+   * xây là ba bảng kia lui hết, dãy nút trong dock đổi thành bảng chọn loại, và thẻ kiểm
+   * tra thành thanh xác nhận. Ra khỏi chế độ thì mọi thứ về chỗ cũ.
+   */
+
+  private xayMo = false;
+  private xayType: BuildingType | null = null;
+  /** Nút ĐẶT dựng MỘT LẦN rồi chỉ đổi chữ: bảng này vẽ lại năm lần một giây. */
+  private xayNut: HTMLButtonElement | null = null;
+  private xayWhy: HTMLElement | null = null;
+  private xayCost: HTMLElement | null = null;
+
+  /** Bốn loại xây được. Thủ phủ không có ở đây: nó chỉ nâng cấp. */
+  private readonly XAY: BuildingType[] = ['house', 'granary', 'watchtower', 'outpost'];
+
+  private setXay(on: boolean): void {
+    this.xayMo = on;
+    document.body.classList.toggle('xay', on);
+    this.el.aim.hidden = !on;
+    if (!on) {
+      this.xayType = null;
+      this.xayNut = null;
+      this.game.setPlacing(null);
+      this.renderDock();
+      this.renderInspector();
+      return;
+    }
+    // Mở ra là chọn sẵn loại đầu tiên còn xây được, để không ai phải bấm hai lần mới thấy
+    // mô hình mờ hiện ra.
+    this.selected = null;
+    this.game.select(null);
+    this.xayType = this.XAY.find((t) => !this.economy.placeBlock(0, 0, t, true)
+      || this.economy.state.level >= (BUILD_MIN_LEVEL[t] ?? 0)) ?? 'house';
+    this.game.setPlacing(this.xayType);
+    this.renderDock();
+    this.renderInspector();
+  }
+
+  private chonXay(type: BuildingType): void {
+    this.xayType = type;
+    this.game.setPlacing(type);
+    this.renderDock();
+    this.renderInspector();
+  }
+
+  /** Dãy nút chọn loại, thay chỗ dãy nút thuê/huấn luyện trong dock. */
+  private renderXayTiles(): void {
+    this.el.tiles.innerHTML = '';
+    for (const type of this.XAY) {
+      const cost = this.economy.buildCostFor(type);
+      const b = el('button', 'tile' + (type === this.xayType ? ' ready' : '')) as HTMLButtonElement;
+      b.append(ico(BUILDINGS[type].icon, 'tico'));
+      const col = el('span', 'tcol');
+      col.append(el('span', 'tname', BUILDINGS[type].label), this.costRow(cost));
+      b.append(col);
+      const khoa = this.economy.state.level < (BUILD_MIN_LEVEL[type] ?? 0);
+      if (khoa) {
+        b.disabled = true;
+        b.classList.add('blocked');
+        b.dataset.warn = `Cần căn cứ cấp ${BUILD_MIN_LEVEL[type]}`;
+      }
+      b.addEventListener('click', () => this.chonXay(type));
+      this.el.tiles.append(b);
+    }
+  }
+
+  /** Thanh xác nhận. Dựng khung một lần, mỗi nhịp sau chỉ thay chữ. */
+  private renderXayBar(): void {
+    const box = this.el.inspector;
+    const type = this.xayType;
+    if (!type) { box.hidden = true; return; }
+    box.hidden = false;
+
+    if (!this.xayNut) {
+      box.innerHTML = '';
+      const head = el('div', 'xay-head');
+      head.append(ico(BUILDINGS[type].icon, 'insp-ico'));
+      const t = el('div', 'insp-title');
+      t.append(el('strong', undefined, BUILDINGS[type].label),
+        el('small', undefined, BUILDINGS[type].describe(1)));
+      head.append(t);
+      const cost = el('div');
+      const why = el('p', 'xay-why');
+      const row = el('div', 'xay-row');
+      const nut = el('button', 'insp-go') as HTMLButtonElement;
+      nut.addEventListener('click', () => {
+        if (this.game.placeNow()) {
+          this.toast(`Đã xây ${BUILDINGS[this.xayType ?? 'house'].label.toLowerCase()}`, 'house');
+          // Ở lại trong chế độ xây: dựng một cái tháp rồi muốn dựng cái thứ hai ngay là
+          // chuyện thường, mà thoát ra rồi vào lại thì mất cả bố cục đang ngắm.
+          this.renderXayBar();
+        } else {
+          this.toast(this.game.placeWhy ?? 'Chưa đặt được', 'warn');
+        }
+      });
+      const huy = el('button', 'xay-huy', 'Xong') as HTMLButtonElement;
+      huy.addEventListener('click', () => this.setXay(false));
+      row.append(nut, huy);
+      box.append(head, cost, why, row);
+      this.xayNut = nut;
+      this.xayWhy = why;
+      this.xayCost = cost;
+    }
+
+    const why = this.game.placeWhy;
+    const cost = this.economy.buildCostFor(type);
+    if (this.xayCost) { this.xayCost.innerHTML = ''; this.xayCost.append(this.costRow(cost)); }
+    if (this.xayWhy) {
+      this.xayWhy.textContent = why ?? 'Kéo bản đồ cho khung ngắm tới ô muốn xây.';
+    }
+    if (this.xayNut) {
+      this.xayNut.textContent = why ? 'CHƯA ĐẶT ĐƯỢC' : 'ĐẶT';
+      this.xayNut.classList.toggle('pulse', !why);
+      this.xayNut.classList.toggle('want', !!why);
+    }
   }
 
   // ----------------------------------------------------------- đi biển
@@ -455,6 +581,8 @@ export class UIManager {
   // ------------------------------------------------------------- dock nổi
 
   private renderDock(): void {
+    this.el.build.innerHTML = iconSvg(this.xayMo ? 'close' : 'hammer');
+    if (this.xayMo) { this.renderXayTiles(); this.updateCrewPill(); return; }
     this.updateCrewPill();
     const tiles = this.el.tiles;
     tiles.innerHTML = '';
@@ -856,8 +984,10 @@ export class UIManager {
     }
     this.patchLive = null;
 
-    const plot = this.selected ? this.game.plotById(this.selected) : null;
-    if (!plot) {
+    if (this.xayMo) { this.renderXayBar(); return; }
+
+    const b = this.selected ? this.economy.buildingById(this.selected) : undefined;
+    if (!b) {
       box.hidden = true;
       box.innerHTML = '';
       return;
@@ -865,7 +995,6 @@ export class UIManager {
     box.hidden = false;
     box.innerHTML = '';
 
-    const b = this.economy.buildingAt(plot.id);
     const head = el('div', 'insp-head');
     // Nut dong ro rang. Bam ra cho trong cung dong duoc, nhung khong ai doan ra dieu do neu
     // khong co gi noi.
@@ -878,58 +1007,32 @@ export class UIManager {
     });
     const body = el('div', 'insp-body');
 
-    if (b) {
-      head.append(ico(BUILDINGS[b.type].icon, 'insp-ico'));
-      const t = el('div', 'insp-title');
-      t.append(el('strong', undefined, BUILDINGS[b.type].label),
-        el('small', undefined, `Cấp ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
-      head.append(t);
+    head.append(ico(BUILDINGS[b.type].icon, 'insp-ico'));
+    const t = el('div', 'insp-title');
+    t.append(el('strong', undefined, BUILDINGS[b.type].label),
+      el('small', undefined, `Cấp ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
+    head.append(t);
 
-      /*
-       * Chợ nghẽn là thứ người chơi KHÔNG nhìn thấy được: kho cứ đầy lên, vàng nhỏ giọt, và
-       * chẳng gì nói cho họ biết nút cần bấm nằm ở đây. Nói thẳng ra, ngay trên cái thẻ có
-       * nút nâng cấp.
-       */
-      if (b.type === 'townhall' && this.economy.marketBusy) {
-        const canh = el('p', 'insp-warn');
-        canh.append(ico('warn', 'bico'), el('strong', undefined, 'Chợ đang quá tải'),
-          el('span', undefined, ' — hàng về nhanh hơn mức bán được, nên phần thừa'
-            + ' nằm chết trong kho. Nâng cấp thủ phủ để bán nhanh gấp đôi.'));
-        body.append(canh);
-      }
+    /*
+     * Chợ nghẽn là thứ người chơi KHÔNG nhìn thấy được: kho cứ đầy lên, vàng nhỏ giọt, và
+     * chẳng gì nói cho họ biết nút cần bấm nằm ở đây. Nói thẳng ra, ngay trên cái thẻ có
+     * nút nâng cấp.
+     */
+    if (b.type === 'townhall' && this.economy.marketBusy) {
+      const canh = el('p', 'insp-warn');
+      canh.append(ico('warn', 'bico'), el('strong', undefined, 'Chợ đang quá tải'),
+        el('span', undefined, ' — hàng về nhanh hơn mức bán được, nên phần thừa'
+          + ' nằm chết trong kho. Nâng cấp thủ phủ để bán nhanh gấp đôi.'));
+      body.append(canh);
+    }
 
-      if (b.level >= BUILDINGS[b.type].maxLevel) {
-        body.append(el('p', 'insp-note', 'Đã kịch cấp.'));
-      } else {
-        const cost = this.economy.costFor(b.type, b.level);
-        body.append(this.costRow(cost));
-        body.append(this.bigButton('NÂNG CẤP', cost, `${BUILDINGS[b.type].label} cấp ${b.level + 1}`,
-          () => this.economy.upgrade(b)));
-      }
+    if (b.level >= BUILDINGS[b.type].maxLevel) {
+      body.append(el('p', 'insp-note', 'Đã kịch cấp.'));
     } else {
-      const biome = BIOMES[plot.biome];
-      const far = Math.round(Math.hypot(plot.position[0], plot.position[2]));
-      head.append(ico('box', 'insp-ico'));
-      const t = el('div', 'insp-title');
-      t.append(el('strong', undefined, 'Nền đất trống'),
-        el('small', undefined, `${biome.label} · cách thủ phủ ${far}`));
-      head.append(t);
-
-      // Tren ban do vo han, nen nao cung xay duoc moi thu. Tram trung chuyen van doi cap 4,
-      // va chi dang xay khi o xa - nen de no cuoi danh sach.
-      const types: BuildingType[] = ['house', 'granary', 'watchtower', 'outpost'];
-      for (const type of types) {
-        const cost = this.economy.buildCostFor(type);
-        const row = el('div', 'insp-choice');
-        row.append(ico(BUILDINGS[type].icon, 'insp-ico small'));
-        const col = el('div', 'insp-title');
-        col.append(el('strong', undefined, BUILDINGS[type].label));
-        col.append(this.costRow(cost));
-        row.append(col);
-        row.append(this.bigButton('XÂY', cost, BUILDINGS[type].label,
-          () => this.economy.build(plot, type)));
-        body.append(row);
-      }
+      const cost = this.economy.costFor(b.type, b.level);
+      body.append(this.costRow(cost));
+      body.append(this.bigButton('NÂNG CẤP', cost, `${BUILDINGS[b.type].label} cấp ${b.level + 1}`,
+        () => this.economy.upgrade(b)));
     }
     head.append(close);
     box.append(head, body);
@@ -1190,6 +1293,7 @@ export class UIManager {
       if (!this.langBatBuoc) this.el.lapLang.hidden = true;
       return true;
     }
+    if (this.xayMo) { this.setXay(false); return true; }
     if (this.el.gfxMenu.hidden) return false;
     this.closeGfx();
     return true;

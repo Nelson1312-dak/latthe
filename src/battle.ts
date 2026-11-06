@@ -74,7 +74,7 @@ const MERC_SPEED = 3.2;
 const MERC_LEASH = 14;
 
 /** Chòi canh. Tầm bắn là thứ khiến CHỖ ĐẶT có nghĩa. */
-const TOWER_RANGE = 18;
+export const TOWER_RANGE = 18;
 const TOWER_DMG_BASE = 4;
 const TOWER_DMG_PER_LEVEL = 4;
 const TOWER_RELOAD = 1.25;

@@ -18,7 +18,8 @@ export type IconName =
   | 'villager' | 'cart' | 'pick' | 'box' | 'axe'
   | 'boot' | 'pack' | 'compass' | 'basket'
   | 'crew' | 'broom' | 'robot' | 'hand' | 'medal' | 'warn' | 'pin'
-  | 'sound' | 'mute' | 'pause' | 'play' | 'ring' | 'ringOn' | 'gear' | 'shuffle';
+  | 'sound' | 'mute' | 'pause' | 'play' | 'ring' | 'ringOn' | 'gear' | 'shuffle'
+  | 'hammer' | 'close';
 
 /** Phần bên trong <svg>. Giữ mỗi icon trong vài nét, đừng thêm chi tiết. */
 const PATH: Record<IconName, string> = {
@@ -74,6 +75,11 @@ const PATH: Record<IconName, string> = {
   play: '<path d="M7.5 4.5l11.5 7.5-11.5 7.5z"/>',
   ring: '<circle cx="12" cy="12" r="8.5"/>',
   ringOn: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>',
+  /** Bua: nut vao che do xay. */
+  hammer: '<path d="M14.5 6.5l3-3 3 3-3 3z"/><path d="M14.5 9.5l-9 9"/>'
+    + '<path d="M3.5 16.5l4 4"/><path d="M11 6l3 3"/><path d="M8 3l6 6"/>',
+  /** Dau nhan: thoat che do. */
+  close: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
   shuffle: '<path d="M3 7h3.5l3 5M21 7h-4l-6 10H3"/><path d="M21 17h-4"/>'
     + '<path d="M18.5 4.5L21 7l-2.5 2.5"/><path d="M18.5 14.5L21 17l-2.5 2.5"/>',
   tower: '<path d="M8 21V9l4-5 4 5v12"/><path d="M5 9h14"/><path d="M12 13v3"/>',

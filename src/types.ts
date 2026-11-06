@@ -107,9 +107,15 @@ export interface Threat {
 }
 
 export interface Building {
+  /**
+   * Mã định danh. Bản cũ dùng CHÍNH mã nền đất, nên công trình đứng đâu là do máy sinh thế
+   * giới quyết. Từ bản "đặt tự do" mã mới là `b_<số>`, còn mã cũ giữ nguyên để bản lưu cũ
+   * không mất gì — không chỗ nào suy ra vị trí từ mã nữa.
+   */
   id: string;
   type: BuildingType;
   level: number;
+  /** Toạ độ TÂM Ô. position[1] vẫn luôn là 0: cao độ lấy từ mặt đất lúc vẽ. */
   position: Vec3;
   biome: BiomeId;
   /** Hàng đang gom tại trạm, chờ xe thồ chở về thủ phủ. Chỉ `outpost` dùng. */
@@ -202,6 +208,8 @@ export interface GameState {
   /** Mã các ô sương đã vén. Chỉ lưu mã, còn hình dạng thế giới thì sinh lại được. */
   revealed: string[];
 
+  /** Số thứ tự cho mã công trình mới. Mã cũ (`core`, `p_…`) giữ nguyên mãi mãi. */
+  nextBuildingId: number;
   lastSavedTimestamp: number;
   muted: boolean;
   totalGold: number;

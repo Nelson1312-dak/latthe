@@ -97,6 +97,10 @@
   <span id="wave-text"></span>
 </div>
 
+<!-- Khung ngắm giữa màn: chỗ mô hình mờ đứng trong chế độ xây. Người chơi kéo bản đồ cho
+     ô cần xây vào đây, nên phải có một cái đích nhìn thấy được. -->
+<div class="aim" id="aim" hidden></div>
+
 <!-- ------------------------------------- thẻ công trình, trượt lên trên dock -->
 <section class="inspector" id="inspector" hidden></section>
 
@@ -104,6 +108,7 @@
 <nav class="dock" id="dock">
   <div class="crewpill" id="crewpill"></div>
   <div class="tiles" id="tiles"></div>
+  <button class="tile build" id="build" title="Xây công trình"></button>
   <button class="tile farm" id="farm" title="Tự farm"></button>
   <button class="tile speed" id="speed" title="Tốc độ game">1×</button>
 </nav>

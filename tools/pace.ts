@@ -18,7 +18,7 @@
  */
 import * as THREE from 'three';
 
-import { CHUNK } from '../src/world';
+import { CHUNK, cellCenter } from '../src/world';
 
 (globalThis as { localStorage?: unknown }).localStorage = {
   getItem: () => null, setItem: () => undefined, removeItem: () => undefined,
@@ -131,6 +131,28 @@ function diBien(): void {
   economy.startVoyage(muc.id);
 }
 
+/*
+ * O trong gan thu phu nhat ma dat duoc loai nay, quet theo vong vuong lon dan.
+ *
+ * Tram trung chuyen la ngoai le: viec cua no la dung XA de gom hang o nhung bai o ria, nen
+ * dat no sat lang thi chinh no thanh vo dung. Bat no ra ngoai 34 don vi, gan dung quang ma
+ * ban cu vo tinh dat no vao.
+ */
+function oTrong(t: BuildingType): [number, number] | null {
+  const xa = t === 'outpost' ? 34 : 0;
+  for (let r = 1; r <= 26; r += 1) {
+    for (let i = -r; i <= r; i += 1) {
+      for (let j = -r; j <= r; j += 1) {
+        if (Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+        const [cx, cz] = cellCenter(i, j);
+        if (Math.hypot(cx, cz) < xa) continue;
+        if (!economy.placeBlock(i, j, t, fog.isRevealed(cx, cz))) return [i, j];
+      }
+    }
+  }
+  return null;
+}
+
 const XAY: BuildingType[] = ['house', 'granary', 'watchtower', 'outpost'];
 const MOC = [300, 600, 1800, 3600, 7200, 14400];
 const DT = 0.25;
@@ -195,20 +217,13 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
         if (t === 'watchtower' && economy.guard() >= economy.wavePower()) continue;
         if (!economy.canAfford(economy.buildCostFor(t))) continue;
         /*
-         * Choi canh chon NEN GAN THU PHU NHAT, cac loai khac lay nen dau tien ranh.
-         *
-         * Tu ban nay tam ban cua thap doc tu vi tri that, nen dat thap o dau la mot quyet
-         * dinh. Ban mo phong khong thiet ke duoc bo cuc, nhung no phai dong vai mot nguoi
-         * choi biet dieu toi thieu: khong ai dung chi canh cach lang sau chuc don vi.
+         * Tu ban "dat tu do", cong trinh dung tren O LUC GIAC chu khong con tren nen dat
+         * sinh san. Ban mo phong khong thiet ke duoc bo cuc, nhung no phai dong vai mot
+         * nguoi choi biet dieu toi thieu: xay tu trong ra ngoai, va khong ai dung choi
+         * canh cach lang sau chuc don vi.
          */
-        const ranh = map.plots.filter((p) => !economy.buildingAt(p.id)
-          && Math.hypot(p.position[0], p.position[2]) < 80);
-        const o = t === 'watchtower'
-          ? ranh.reduce((a: typeof ranh[0] | undefined, p) => (!a
-            || Math.hypot(p.position[0], p.position[2])
-              < Math.hypot(a.position[0], a.position[2]) ? p : a), undefined)
-          : ranh[0];
-        if (o && economy.build(o, t)) { xong = true; break; }
+        const o = oTrong(t);
+        if (o && economy.build(o[0], o[1], t)) { xong = true; break; }
       }
       if (!xong) {
         for (const b of [...economy.state.buildings].sort((a, z) => a.level - z.level)) {

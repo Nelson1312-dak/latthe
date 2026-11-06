@@ -318,6 +318,43 @@ html, body {
   to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
+/* --------------------------------------------------------------- chế độ xây */
+
+/* Chế độ xây là một CHẾ ĐỘ, không phải một bảng mới: màn hình đã có sáu mặt và không còn
+   chỗ. Vào chế độ thì mấy bảng kia lui hết, nhường màn cho việc đang làm. */
+body.xay .map, body.xay .storm, body.xay .sea { display: none; }
+/* Dock nhường hết chỗ cho bảng chọn loại. Thẻ dân, nút tự farm và nút tốc độ đều không
+   dùng tới lúc đang xây, mà để lại thì trên màn 375 điểm ảnh chúng chèn lên nhau. */
+body.xay .crewpill, body.xay .tile.farm, body.xay .tile.speed { display: none; }
+body.xay #tiles { flex: 1; }
+body.xay .tile.build { background: var(--amber); color: #1b1407; border-color: transparent; }
+
+/* Thanh xác nhận phải GỌN: bản đầu nó chiếm gần nửa màn, và chỗ ấy đúng là chỗ người chơi
+   cần nhìn thấy đất. */
+body.xay .inspector { padding: 11px 13px; }
+body.xay .insp-cost { margin: 2px 0; }
+
+/* Khung ngắm ở giữa màn, đúng chỗ mô hình mờ đứng. Không có nó thì người chơi không biết
+   phải kéo bản đồ cho ô cần xây vào đâu. */
+.aim {
+  position: fixed; left: 50%; top: 39%; transform: translate(-50%, -50%);
+  z-index: 5; width: 54px; height: 54px; pointer-events: none;
+  border-radius: 50%; border: 1.5px dashed rgba(255, 255, 255, 0.5);
+}
+.aim[hidden] { display: none; }
+
+.xay-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.xay-head .insp-ico { width: 38px; height: 38px; }
+.xay-why { font-size: 11.5px; color: var(--ink-dim); font-weight: 600; margin: 6px 0 8px; line-height: 1.3; }
+.xay-row { display: flex; gap: 8px; }
+.xay-row .insp-go { flex: 1; }
+.xay-huy {
+  border: 1px solid var(--hairline); background: var(--glass-inner); color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 700; padding: 10px 16px;
+  border-radius: var(--r-sm); cursor: pointer;
+}
+.xay-huy:hover { background: var(--glass-inner-hi); }
+
 /* ------------------------------------------------------------------ đi biển */
 
 /* Đối xứng với bảng mùa bão ở góc trái: một bên là thứ ập tới, một bên là thứ mình chủ

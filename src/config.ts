@@ -445,6 +445,18 @@ export const GUARD_PER_TOWER = 12;
 export const GUARD_PER_VILLAGER = 1;
 
 /**
+ * VÀNH CĂN CỨ: xa tới đâu thì còn xây được.
+ *
+ * Không có nó thì "căn cứ" chỉ là mấy cái nhà rải rác, và chẳng có gì để mà thủ. Vành lớn
+ * dần theo cấp thủ phủ, nên nâng thủ phủ vừa mở thêm chợ vừa mở thêm đất.
+ *
+ * TRẠM TRUNG CHUYỂN KHÔNG BỊ VÀNH NÀY CHẶN. Việc của nó là gom hàng ở những bãi xa — bắt
+ * nó đứng trong làng là xoá sổ chính cái công trình đó.
+ */
+export const BASE_RADIUS = 17;
+export const BASE_RADIUS_PER_LEVEL = 2.4;
+
+/**
  * Giá một điểm sức thủ thuê thêm, tính theo sức của chính đợt đang tới.
  *
  * Phải đắt dần theo đợt, nếu không thì cuối ván — lúc trong kho có hơn trăm nghìn vàng —

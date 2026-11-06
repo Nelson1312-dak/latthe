@@ -12,14 +12,16 @@ import {
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
   EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
+  BASE_RADIUS, BASE_RADIUS_PER_LEVEL,
   VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS, VOYAGES,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
 import type {
-  Building, BuildingType, Cost, GameState, Inventory, OfflineReport, Plot, ResourceKind, Threat,
+  Building, BuildingType, Cost, GameState, Inventory, OfflineReport, ResourceKind, Threat,
   Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
 } from './types';
+import { biomeAt, cellCenter, cellKey, cellOf, hexIsRoad } from './world';
 import { resolveVoyage, voyageSpec } from './voyage';
 import { guardOf, mercPrice, stormTargets, waveKind, waveOutcome, wavePower } from './raids';
 import { raiderCount, resolveBattle } from './battle';
@@ -58,6 +60,7 @@ function freshState(): GameState {
     // Bốn ô giữa mở sẵn, đủ để nhìn thấy thủ phủ và vài mỏ quanh đó; phần còn lại là mây.
     // Bốn khối quanh gốc mở sẵn, đủ thấy thủ phủ và vài mỏ; phần còn lại là mây.
     revealed: ['0,0', '-1,0', '0,-1', '-1,-1'],
+    nextBuildingId: 1,
     lastSavedTimestamp: Date.now(),
     muted: false,
     totalGold: 0,
@@ -139,6 +142,16 @@ export class Economy {
           };
           // Bản lưu trước khi có đi biển: không có chuyến nào đang chạy, và người nào
           // lỡ mang trạng thái 'voyage' thì trả về làm việc, không thì họ đứng hình mãi.
+          /*
+           * Mã công trình mới đánh số tiếp từ mã lớn nhất đang có. Bản lưu cũ toàn mã
+           * `core` và `p_…`, nên số bắt đầu lại từ 1 mà không đụng ai.
+           */
+          let maxId = 0;
+          for (const b of state.buildings) {
+            const m = /^b_(\d+)$/.exec(b.id);
+            if (m) maxId = Math.max(maxId, Number(m[1]));
+          }
+          state.nextBuildingId = Math.max(Number(parsed.nextBuildingId) || 0, maxId + 1);
           state.voyage = parsed.voyage ?? null;
           state.voyagesDone = Math.max(0, Math.floor(Number(parsed.voyagesDone) || 0));
           if (!state.voyage) {
@@ -263,6 +276,7 @@ export class Economy {
   }
 
   recompute(): void {
+    this.rebuildCells();
     this.state.storageLimit = Math.floor(
       (BASE_STORAGE + this.sumLevels('granary') * STORAGE_PER_GRANARY) * (1 + this.bonus.storage));
     let total = 0;
@@ -334,8 +348,35 @@ export class Economy {
     return this.state.buildings.filter((b) => b.type === 'outpost');
   }
 
-  buildingAt(plotId: string): Building | undefined {
-    return this.state.buildings.find((b) => b.id === plotId);
+  buildingById(id: string): Building | undefined {
+    return this.state.buildings.find((b) => b.id === id);
+  }
+
+  /**
+   * Bảng tra Ô → CÔNG TRÌNH. Suy ra từ `state.buildings`, KHÔNG lưu: hai bản ghi về cùng
+   * một sự thật sớm muộn cũng lệch nhau. Dựng lại trong `recompute()`.
+   */
+  private readonly cells = new Map<string, Building>();
+
+  private rebuildCells(): void {
+    this.cells.clear();
+    for (const b of this.state.buildings) {
+      const [i, j] = cellOf(b.position[0], b.position[2]);
+      // Hai công trình CŨ có thể rơi vào cùng một ô: nền đất sinh sẵn không có luật cách
+      // nhau giữa hai khối khác nhau. Ai vào trước giữ ô; cả hai vẫn vẽ và vẫn chạy, chỉ là
+      // ô ấy coi như đã có chủ. Không mất gì, và không cần một đường di dời nào.
+      const k = cellKey(i, j);
+      if (!this.cells.has(k)) this.cells.set(k, b);
+    }
+  }
+
+  buildingAtCell(i: number, j: number): Building | undefined {
+    return this.cells.get(cellKey(i, j));
+  }
+
+  /** Bán kính xây được quanh thủ phủ, lớn dần theo cấp thủ phủ. */
+  baseRadius(): number {
+    return BASE_RADIUS + BASE_RADIUS_PER_LEVEL * this.sumLevels('townhall');
   }
 
   canHire(): boolean {
@@ -452,19 +493,40 @@ export class Economy {
    */
   justBuilt: string | null = null;
 
-  build(plot: Plot, type: BuildingType): boolean {
-    if (plot.core || this.buildingAt(plot.id)) return false;
-    if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) return false;
+  /**
+   * Vì sao chưa đặt được lên ô này, hoặc null nếu đặt được. Trả về LÝ DO chứ không phải
+   * true/false: một ô đỏ không nói gì cả, còn "ngoài vành căn cứ" thì vừa từ chối vừa chỉ
+   * đường. Hàm này cũng là thứ chế độ đặt gọi mỗi khung để tô màu ô dưới ngón tay.
+   */
+  placeBlock(i: number, j: number, type: BuildingType, revealed: boolean): string | null {
+    if (this.buildingAtCell(i, j)) return 'Ô này có rồi';
+    if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) {
+      return `Cần căn cứ cấp ${BUILD_MIN_LEVEL[type]}`;
+    }
+    if (!revealed) return 'Chưa vén tới đây';
+    const [cx, cz] = cellCenter(i, j);
+    // Lòng đường để trống: đó là làn giặc đi, và cũng là đường bắn của chòi canh.
+    if (hexIsRoad(cx, cz)) return 'Không xây trên đường';
+    // Trạm trung chuyển sống bằng việc đứng xa; mọi thứ khác phải nằm trong vành căn cứ.
+    if (type !== 'outpost' && Math.hypot(cx, cz) > this.baseRadius()) return 'Ngoài vành căn cứ';
+    return null;
+  }
+
+  build(i: number, j: number, type: BuildingType, revealed = true): boolean {
+    if (this.placeBlock(i, j, type, revealed)) return false;
     if (!this.pay(this.buildCostFor(type))) return false;
 
+    const [cx, cz] = cellCenter(i, j);
+    const id = `b_${this.state.nextBuildingId}`;
+    this.state.nextBuildingId += 1;
     this.state.buildings.push({
-      id: plot.id, type, level: 1,
-      position: [plot.position[0], 0, plot.position[2]],
-      biome: plot.biome,
+      id, type, level: 1,
+      position: [cx, 0, cz],
+      biome: biomeAt(cx, cz),
       stock: {}, cartTimer: 0,
     });
     this.state.demand = null;
-    this.justBuilt = plot.id;
+    this.justBuilt = id;
     this.after();
     return true;
   }
