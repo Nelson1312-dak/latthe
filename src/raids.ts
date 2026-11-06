@@ -7,7 +7,7 @@
  */
 import {
   GUARD_PER_TOWER, GUARD_PER_TOWNHALL, GUARD_PER_VILLAGER, MERC_BASE, MERC_PER_POWER,
-  WAVE_BASE, WAVE_PER_LEVEL, WAVE_PER_WAVE,
+  WAVE_BASE, WAVE_PER_LEVEL, WAVE_PER_WAVE, WAVE_RATCHET,
 } from './config';
 import type { Building, Inventory, WaveKind, WaveResult } from './types';
 import { RESOURCE_KINDS } from './types';
@@ -18,7 +18,10 @@ export function waveKind(wave: number): WaveKind {
 }
 
 export function wavePower(wave: number, level: number): number {
-  return Math.round(WAVE_BASE + WAVE_PER_LEVEL * level + WAVE_PER_WAVE * Math.max(0, wave - 1));
+  const theoCap = WAVE_BASE + WAVE_PER_LEVEL * level;
+  const theoDot = WAVE_PER_WAVE * Math.max(0, wave - 1);
+  // Phần theo số đợt không được vượt quá WAVE_RATCHET lần phần theo cấp: xem config.
+  return Math.round(theoCap + Math.min(theoDot, theoCap * WAVE_RATCHET));
 }
 
 /** Sức thủ sẵn có của một cái làng. `hired` là lính thuê thêm cho riêng đợt sắp tới. */

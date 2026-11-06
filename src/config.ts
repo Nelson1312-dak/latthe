@@ -516,6 +516,19 @@ export const MERC_PER_POWER = 0.9;
 export const WAVE_BASE = 10;
 export const WAVE_PER_LEVEL = 3.6;
 export const WAVE_PER_WAVE = 1.8;
+/*
+ * TRẦN CỦA PHẦN TĂNG THEO SỐ ĐỢT, tính theo chính sức vóc của căn cứ.
+ *
+ * Số đợt vẫn chạy trong lúc người chơi vắng mặt, còn căn cứ thì không lớn lên được. Một
+ * bản lưu thật trên latbai.vn: đợt thứ 272, căn cứ vẫn một cái thủ phủ cấp 1 — đợt tới
+ * mạnh 503 trong khi sức thủ là 8. Không có đường nào thắng, và cũng không có đường nào
+ * gỡ, vì mỗi đợt thua lại lấy thêm của.
+ *
+ * Trong lối chơi bình thường phần theo đợt chưa bao giờ vượt 0,7 lần phần theo cấp (đo
+ * bằng bản mô phỏng bốn tiếng), nên cái trần này không chạm vào đường cong đã cân — nó
+ * chỉ chặn đúng cái trường hợp căn cứ đứng yên mà đồng hồ vẫn chạy.
+ */
+export const WAVE_RATCHET = 1.5;
 
 // ------------------------------------------------------------------ màu sắc
 
