@@ -27,6 +27,9 @@ import { OpaqueGTAOPass, finishPass } from './post';
 import { AutoTune, TIERS, loadGfx, pixelRatioFor, saveGfx, stepDown, tierOf } from './quality';
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
 import type { Economy } from './Economy';
+import { ArmyManager } from './ArmyManager';
+import { BATTLE_RADIUS } from './battle';
+import type { BattleSeed } from './battle';
 import { FogOfWar, chime } from './FogOfWar';
 import { MapManager } from './MapManager';
 import type { Building, Plot } from './types';
@@ -78,6 +81,7 @@ export class Game {
   readonly camera: THREE.OrthographicCamera;
   readonly map: MapManager;
   readonly fog: FogOfWar;
+  readonly army: ArmyManager;
   readonly workers: WorkerManager;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly economy: Economy;
@@ -324,7 +328,10 @@ export class Game {
       this.rebuildPlots();
     };
 
-    this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup, this.smoke.mesh);
+    this.army = new ArmyManager(this.map);
+    this.army.onDone = () => this.endBattle();
+    this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup,
+      this.smoke.mesh, this.army.group);
     this.buildMarkers();
     this.buildEmptyMeshes();
     this.buildVillageLabel();
@@ -1159,6 +1166,46 @@ export class Game {
     if (this.wantedZoom > 30) this.wantedZoom = 30;
   }
 
+  /**
+   * Kéo khung nhìn ra cho vừa một vòng tròn bán kính `r` quanh tâm ngắm.
+   *
+   * Phải xét CẢ hai chiều: màn điện thoại dựng đứng thì chiều ngang mới là chiều hẹp, màn
+   * máy bàn thì ngược lại. Lấy chiều nào hẹp hơn làm chuẩn, không thì trận đánh tràn ra
+   * ngoài mép đúng ở cái máy người ta đang cầm.
+   */
+  frameRadius(r: number): void {
+    const aspect = window.innerWidth / window.innerHeight;
+    const no = window.innerHeight / this.freeHeight();
+    this.wantedZoom = THREE.MathUtils.clamp(
+      r / (Math.min(1, aspect) * no), MIN_ZOOM, MAX_ZOOM);
+  }
+
+  /** Mức phóng và tâm ngắm trước lúc vào trận, để xong trận trả lại y nguyên. */
+  private truocTran: { zoom: number; x: number; z: number } | null = null;
+  /** Báo khi bản diễn trận kết thúc — UI đợi tín hiệu này mới kể kết quả. */
+  onBattleEnd: (() => void) | null = null;
+
+  /**
+   * Diễn lại một trận: kéo camera về làng, mở khung cho thấy cả đường giặc tới.
+   *
+   * Không có bước này thì chẳng xem được gì: ở tỉ lệ nghỉ, một màn 393 điểm ảnh chỉ thấy
+   * chừng 17 đơn vị bề ngang, mà giặc đổ bộ cách thủ phủ bốn sáu đơn vị.
+   */
+  playBattle(seed: BattleSeed): void {
+    this.truocTran = { zoom: this.wantedZoom, x: this.wanted.x, z: this.wanted.z };
+    this.followId = null;
+    this.panTo(0, 0);
+    this.frameRadius(BATTLE_RADIUS * 0.62);
+    this.army.play(seed);
+  }
+
+  private endBattle(): void {
+    const t = this.truocTran;
+    this.truocTran = null;
+    if (t) { this.wantedZoom = t.zoom; this.panTo(t.x, t.z); }
+    this.onBattleEnd?.();
+  }
+
   get zoomLevel(): number { return this.zoom; }
   select(id: string | null): void {
     this.selectedId = id;
@@ -1300,6 +1347,7 @@ export class Game {
       const sim = dt * (this.economy.state.speedMult === 2 ? 2 : 1);
       this.elapsed += sim;
       this.workers.update(sim);
+      this.army.update(sim);
       this.fog.update(sim, this.economy.state.units, this.target,
         1 / (1 - this.economy.bonus.survey));
       this.economy.tick(sim);

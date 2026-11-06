@@ -40,22 +40,35 @@ export function mercPrice(power: number): number {
 }
 
 /**
- * Hậu quả của một đợt.
+ * Hậu quả của một đợt, tính từ SỔ SÁCH CỦA TRẬN chứ không từ một phép so hai con số.
  *
- * Thua KHÔNG phải mất sạch: thiệt hại tỉ lệ với phần còn thiếu, nên thủ được 80% thì chỉ mất
- * một góc nhỏ. Ngược lại thủ đủ thì có thưởng chứ không chỉ "không mất gì" — phần thưởng là
- * MẢNH CỔ VẬT, thứ hiếm nhất game (cả bốn tiếng chơi mới gom được 25), nên đẩy lui được một
- * đợt là một sự kiện đáng nhớ chứ không phải một việc vặt.
+ * `leak` là phần đợt lọt lưới: số tên ôm được hàng mà chạy thoát, chia cho tổng số tên. Thua
+ * KHÔNG phải mất sạch — thiệt hại tỉ lệ với phần lọt, nên chặn được 80% thì chỉ mất một góc
+ * nhỏ. Ngược lại không để lọt tên nào thì có thưởng chứ không chỉ "không mất gì": phần
+ * thưởng là MẢNH CỔ VẬT, thứ hiếm nhất game, nên đẩy lui một đợt là một sự kiện.
  *
  * `away` chỉ dùng để kể lại; mức thiệt hại lúc vắng mặt do bên gọi chặn trước, xem Economy.
  */
-export function resolveWave(
-  wave: number, power: number, guard: number, inv: Inventory, away: boolean,
+/**
+ * Lọt dưới ngần này thì vẫn tính là ĐẨY LUI ĐƯỢC.
+ *
+ * Để ngưỡng bằng 0 — tức phải hạ sạch không sót một tên — nghe thì chặt chẽ mà chơi thì
+ * sai: đo bốn tiếng ra 88% số giặc bị hạ, một thế trận rất khá, vậy mà chỉ thắng 30 trên
+ * 58 trận, vì đợt nào cũng có một hai tên luồn qua. Một đợt hai chục tên mà để lọt một
+ * đứa ôm bao tải chạy đi thì đó là một vết xước, không phải một thất bại.
+ */
+const WIN_LEAK = 0.12;
+
+export function waveOutcome(
+  wave: number, power: number, guard: number,
+  bat: { count: number; killed: number; escaped: number; leak: number },
+  inv: Inventory, away: boolean,
 ): { result: WaveResult; take: Partial<Inventory>; levels: number } {
   const kind = waveKind(wave);
-  const won = guard >= power;
+  const won = bat.leak < WIN_LEAK;
   const base: WaveResult = {
     wave, kind, power, guard, won, lost: {}, levels: 0, reward: {}, away,
+    count: bat.count, killed: bat.killed, escaped: bat.escaped,
   };
 
   if (won) {
@@ -63,7 +76,7 @@ export function resolveWave(
     return { result: base, take: {}, levels: 0 };
   }
 
-  const thieu = Math.min(1, 1 - guard / Math.max(1, power));
+  const thieu = Math.min(1, bat.leak);
   const take: Partial<Inventory> = {};
   // Cướp khuân hàng, bão chỉ cuốn đi một ít — cái đau của bão nằm ở công trình.
   const phan = kind === 'raid' ? Math.min(0.45, thieu * 0.55) : Math.min(0.15, thieu * 0.2);

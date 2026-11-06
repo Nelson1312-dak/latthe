@@ -80,6 +80,10 @@ export interface WaveResult {
   /** Sức của đợt và sức thủ lúc đối đầu. Hiện cả hai để người chơi biết còn thiếu bao nhiêu. */
   power: number;
   guard: number;
+  /** Sổ sách của trận: bao nhiêu tên tới, hạ được mấy, mấy tên ôm hàng chạy thoát. */
+  count: number;
+  killed: number;
+  escaped: number;
   won: boolean;
   /** Hàng bị khuân đi. */
   lost: Partial<Inventory>;

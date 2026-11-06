@@ -21,7 +21,9 @@ import type {
   Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
 } from './types';
 import { resolveVoyage, voyageSpec } from './voyage';
-import { guardOf, mercPrice, resolveWave, stormTargets, wavePower } from './raids';
+import { guardOf, mercPrice, stormTargets, waveKind, waveOutcome, wavePower } from './raids';
+import { raiderCount, resolveBattle } from './battle';
+import type { BattleSeed } from './battle';
 import { RESOURCE_KINDS } from './types';
 import { bonusesFor, milestoneAt, nextMilestone, reachedCount } from './milestones';
 
@@ -546,7 +548,11 @@ export class Economy {
   // --------------------------------------------------------------- mùa bão
 
   /** Đợt vừa nổ ra. Game dựng cảnh, UI kể lại — Economy không biết gì về hai việc đó. */
-  onWave: ((r: WaveResult) => void) | null = null;
+  /**
+   * Báo một đợt vừa xong. Kèm HẠT GIỐNG TRẬN để bên vẽ diễn lại đúng trận ấy — hạt giống
+   * không nằm trong bản lưu, mất nó thì chỉ mất phần hoạt hình, kết quả đã áp xong rồi.
+   */
+  onWave: ((r: WaveResult, seed: BattleSeed) => void) | null = null;
 
   /** Người dân đang có mặt ở làng — người đi biển không tính. */
   atHome(): number {
@@ -592,16 +598,46 @@ export class Economy {
     return wavePower(this.state.threat.wave + 1, this.state.level);
   }
 
+  /** Bao nhiêu tên sẽ đổ bộ ở đợt tới. Con số này mới là thứ người chơi đếm được trên màn. */
+  raiderCount(): number {
+    return raiderCount(this.wavePower());
+  }
+
   /**
    * Cho một đợt nổ ra ngay bây giờ và áp hậu quả.
    *
    * `away` là đợt xảy ra lúc người chơi vắng mặt — xem guardOf.
    */
+  /** Hạt giống trận vừa rồi, để bên vẽ diễn lại. KHÔNG lưu: mất nó chỉ mất hoạt hình. */
+  lastSeed: BattleSeed | null = null;
+
+  /** Dựng hạt giống cho một đợt: tháp nào đứng đâu, bao nhiêu lính, bao nhiêu dân ở nhà. */
+  battleSeed(wave: number): BattleSeed {
+    const towers: { x: number; z: number; level: number }[] = [];
+    for (const b of this.state.buildings) {
+      // Thủ phủ cũng là một ụ súng, nhưng nó bắn riêng trong battle.ts nên không vào đây.
+      if (b.type === 'watchtower') {
+        towers.push({ x: b.position[0], z: b.position[2], level: b.level });
+      }
+    }
+    return {
+      wave,
+      kind: waveKind(wave),
+      power: wavePower(wave, this.state.level),
+      towers,
+      mercs: this.state.threat.hired,
+      militia: this.atHome() + this.sumLevels('townhall'),
+    };
+  }
+
   private runWave(away: boolean): WaveResult {
     const t = this.state.threat;
     const power = wavePower(t.wave, this.state.level);
     const guard = guardOf(this.state.buildings, t.hired, this.atHome());
-    const { result, take, levels } = resolveWave(t.wave, power, guard, this.state.inv, away);
+    const seed = this.battleSeed(t.wave);
+    this.lastSeed = seed;
+    const bat = resolveBattle(seed);
+    const { result, take, levels } = waveOutcome(t.wave, power, guard, bat, this.state.inv, away);
     for (const k of RESOURCE_KINDS) {
       const n = take[k];
       if (n) this.state.inv[k] = Math.max(0, this.state.inv[k] - n);
@@ -638,7 +674,7 @@ export class Economy {
      * và cả hệ thống đứng im mà không một lỗi nào báo.
      */
     const r = this.runWave(false);
-    this.onWave?.(r);
+    if (this.lastSeed) this.onWave?.(r, this.lastSeed);
   }
 
   tick(dt: number): void {

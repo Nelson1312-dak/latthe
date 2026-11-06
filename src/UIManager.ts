@@ -125,7 +125,23 @@ export class UIManager {
       this.renderAll();
     };
 
-    economy.onWave = (r) => this.showWave(r);
+    /*
+     * ĐỢI DIỄN XONG MỚI KỂ KẾT QUẢ.
+     *
+     * Hậu quả đã áp xong từ lúc `resolveBattle` chạy, nên bảng kết đợt có thể hiện ra ngay
+     * — nhưng hiện ngay là nói trước cái kết của một trận người chơi đang xem. Giữ nó lại
+     * cho tới khi ArmyManager diễn hết.
+     */
+    economy.onWave = (r, seed) => {
+      if (r.away) { this.showWave(r); return; }
+      this.waveSauTran = r;
+      game.playBattle(seed);
+    };
+    game.onBattleEnd = () => {
+      if (!this.waveSauTran) return;
+      this.showWave(this.waveSauTran);
+      this.waveSauTran = null;
+    };
     economy.onVoyage = (r) => this.showVoyage(r);
     this.buildSea();
     this.el.stormCall.addEventListener('click', () => {
@@ -183,6 +199,8 @@ export class UIManager {
   private waveTimer = 0;
   /** Đợt xảy ra lúc vắng mặt, chờ người chơi đóng bảng "đi vắng" rồi mới kể. */
   private waveCho: WaveResult | null = null;
+  /** Kết quả đang giữ lại trong lúc trận còn đang diễn trên bản đồ. */
+  private waveSauTran: WaveResult | null = null;
 
   /**
    * Bảng mùa bão, vẽ lại mỗi 200ms cùng phần còn lại của HUD.
@@ -200,7 +218,10 @@ export class UIManager {
     const e = this.el;
 
     e.stormIco.innerHTML = iconSvg(kind === 'storm' ? 'storm' : 'raid');
-    e.stormKind.textContent = kind === 'storm' ? 'Bão' : 'Cướp biển';
+    // Con số người chơi đếm được trên màn là SỐ TÊN, không phải "sức đợt". Hiện cả hai:
+    // tên để biết sắp thấy gì, Thủ/Giặc để biết có đủ sức không.
+    e.stormKind.textContent = `${kind === 'storm' ? 'Bão' : 'Cướp biển'}`
+      + ` · ${this.economy.raiderCount()} tên`;
     const s = Math.max(0, Math.ceil(t.next));
     e.stormWhen.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     e.stormGuard.textContent = String(guard);
@@ -239,7 +260,8 @@ export class UIManager {
     const ten = r.kind === 'storm' ? 'Bão' : 'Cướp biển';
     const mat = this.lootText(r.lost);
     let title: string;
-    const bits: string[] = [`Thủ ${r.guard} · Giặc ${r.power}`];
+    const bits: string[] = [`Hạ ${r.killed}/${r.count} tên`];
+    if (r.escaped > 0) bits.push(`${r.escaped} tên ôm hàng chạy thoát`);
     if (r.won) {
       title = `Đẩy lui ${ten.toLowerCase()}`;
       const thu = this.lootText(r.reward);

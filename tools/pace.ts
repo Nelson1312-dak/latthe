@@ -145,7 +145,7 @@ const thayBai: Partial<Record<ResourceKind, number>> = {};
 const hang = (n: number, w: number) => String(Math.floor(n)).padStart(w);
 
 /** Mùa bão: đếm thắng thua và tổng thiệt hại, để biết luật có cân hay không. */
-const dot = { thang: 0, thua: 0, cap: 0, mat: 0, thuong: 0 };
+const dot = { thang: 0, thua: 0, cap: 0, mat: 0, thuong: 0, den: 0, ha: 0, thoat: 0 };
 const bien = { chuyen: 0, trung: 0, khong: 0, mat: 0, vang: 0, manh: 0 };
 const theoTam: Record<string, number> = {};
 economy.onVoyage = (r) => {
@@ -156,6 +156,9 @@ economy.onVoyage = (r) => {
   else { bien.trung += 1; bien.vang += r.gold; bien.manh += r.relics; }
 };
 economy.onWave = (r) => {
+  dot.den += r.count;
+  dot.ha += r.killed;
+  dot.thoat += r.escaped;
   if (r.won) {
     dot.thang += 1;
     for (const k of RESOURCE_KINDS) dot.thuong += r.reward[k] ?? 0;
@@ -191,8 +194,20 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
         // nham", chu khong phai "mua bao ton bao nhieu".
         if (t === 'watchtower' && economy.guard() >= economy.wavePower()) continue;
         if (!economy.canAfford(economy.buildCostFor(t))) continue;
-        const o = map.plots.find((p) => !economy.buildingAt(p.id)
+        /*
+         * Choi canh chon NEN GAN THU PHU NHAT, cac loai khac lay nen dau tien ranh.
+         *
+         * Tu ban nay tam ban cua thap doc tu vi tri that, nen dat thap o dau la mot quyet
+         * dinh. Ban mo phong khong thiet ke duoc bo cuc, nhung no phai dong vai mot nguoi
+         * choi biet dieu toi thieu: khong ai dung chi canh cach lang sau chuc don vi.
+         */
+        const ranh = map.plots.filter((p) => !economy.buildingAt(p.id)
           && Math.hypot(p.position[0], p.position[2]) < 80);
+        const o = t === 'watchtower'
+          ? ranh.reduce((a: typeof ranh[0] | undefined, p) => (!a
+            || Math.hypot(p.position[0], p.position[2])
+              < Math.hypot(a.position[0], a.position[2]) ? p : a), undefined)
+          : ranh[0];
         if (o && economy.build(o, t)) { xong = true; break; }
       }
       if (!xong) {
@@ -289,6 +304,8 @@ console.log('--- mùa bão ---');
 console.log(`  ${dot.thang + dot.thua} đợt · đẩy lui ${dot.thang} · thua ${dot.thua}`);
 console.log(`  mất ${Math.round(dot.mat)} món hàng và ${dot.cap} cấp công trình`
   + ` · nhặt được ${Math.round(dot.thuong)} từ xác tàu`);
+console.log(`  giặc tới ${dot.den} tên · hạ ${dot.ha}`
+  + ` (${(dot.ha / Math.max(1, dot.den) * 100).toFixed(0)}%) · ôm hàng chạy thoát ${dot.thoat}`);
 const choi = economy.state.buildings.filter((b) => b.type === 'watchtower');
 console.log(`  cuối ván: ${choi.length} chòi canh (${choi.map((b) => b.level).join('+') || '0'})`
   + ` · sức thủ ${economy.guard()} · đợt tới mạnh ${economy.wavePower()}`);
