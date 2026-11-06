@@ -18,7 +18,7 @@
  */
 import * as THREE from 'three';
 
-import { CHUNK, cellCenter } from '../src/world';
+import { CHUNK } from '../src/world';
 
 (globalThis as { localStorage?: unknown }).localStorage = {
   getItem: () => null, setItem: () => undefined, removeItem: () => undefined,
@@ -140,13 +140,17 @@ function diBien(): void {
  */
 function oTrong(t: BuildingType): [number, number] | null {
   const xa = t === 'outpost' ? 34 : 0;
-  for (let r = 1; r <= 26; r += 1) {
+  // Quet theo vong vuong lon dan, buoc 2 don vi. Khong con o luoi nao de duyet nua, nen
+  // buoc quet la mot con so CHON TAY: nho hon thi cham, lon hon thi bo sot khe hep.
+  const B = 2;
+  for (let r = 1; r <= 40; r += 1) {
     for (let i = -r; i <= r; i += 1) {
       for (let j = -r; j <= r; j += 1) {
         if (Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
-        const [cx, cz] = cellCenter(i, j);
+        const cx = i * B;
+        const cz = j * B;
         if (Math.hypot(cx, cz) < xa) continue;
-        if (!economy.placeBlock(i, j, t, fog.isRevealed(cx, cz))) return [i, j];
+        if (!economy.placeBlock(cx, cz, t, fog.isRevealed(cx, cz))) return [cx, cz];
       }
     }
   }
@@ -311,7 +315,7 @@ for (const k of RESOURCE_KINDS) {
 }
 
 console.log('\n--- thế giới ---');
-console.log(`  bãi đang nạp ${map.patches.length} · nền đất ${map.plots.length}`);
+console.log(`  bãi đang nạp ${map.patches.length}`);
 console.log(`  bản lưu ${(JSON.stringify(economy.state).length / 1024).toFixed(1)} KB`);
 
 console.log('');

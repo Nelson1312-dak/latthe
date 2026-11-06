@@ -16,6 +16,7 @@
  * ra như lỗi dựng hình chứ không ra chất liệu.
  */
 import * as THREE from 'three';
+import { ROAD_SPACING } from './world';
 
 /** Nhám tối thiểu của mọi bề mặt không phải kim loại. */
 export const ROUGHNESS = 0.82;
@@ -303,6 +304,79 @@ export function grain<T extends THREE.Material>(mat: T, co: number, manh: number
       diffuseColor.rgb *= 1.0 + (van - 0.5) * 2.0 * uVanCo.y * uVanOn;`);
   };
   mat.customProgramCacheKey = () => `${khoaTruoc}|van`;
+  return mat;
+}
+
+
+/**
+ * Sơn đường thẳng trong fragment, không sơn vào màu đỉnh.
+ *
+ * Con đường rộng chừng năm đơn vị, mà lưới đất thì ba đơn vị một đỉnh — tô vào đỉnh là mép
+ * đường phập phồng rộng hẹp theo từng ô và nhoè ra hai bên cả một ô. Trong fragment thì mép
+ * sắc đúng một điểm ảnh, bề rộng muốn bao nhiêu cũng được, và không tốn một tam giác nào.
+ *
+ * PHẢI bọc NGOÀI `grain`: varying toạ độ thế giới `vVanXZ` do `grain` khai báo.
+ */
+export function roadPaint<T extends THREE.Material>(
+  mat: T, mau: number, nua: number, mem: number,
+): T {
+  const u = { value: new THREE.Vector3(ROAD_SPACING, nua, mem) };
+  const c = { value: new THREE.Color(mau) };
+  const khoaTruoc = mat.customProgramCacheKey();
+  const truoc = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader, renderer) => {
+    truoc?.call(mat, shader, renderer);
+    shader.uniforms.uDuong = u;
+    shader.uniforms.uDuongMau = c;
+    shader.fragmentShader = 'uniform vec3 uDuong;\nuniform vec3 uDuongMau;\n'
+      + shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+      {
+        vec2 dd = abs(vVanXZ - uDuong.x * floor(vVanXZ / uDuong.x + 0.5));
+        float kd = 1.0 - smoothstep(uDuong.y - uDuong.z, uDuong.y, min(dd.x, dd.y));
+        diffuseColor.rgb = mix(diffuseColor.rgb, uDuongMau, kd);
+      }`);
+  };
+  mat.customProgramCacheKey = () => `${khoaTruoc}|duong`;
+  return mat;
+}
+
+/**
+ * Pha màu sương theo một tấm texture một texel một khối.
+ *
+ * Bản cũ pha sương vào màu từng ô đất trên CPU, nên vén một khối là ghi lại màu của bảy
+ * trăm ô, mỗi khung, suốt một giây sáu. Ở đây vén một khối là đổi một byte. Và nó xoá hẳn
+ * bài toán một khối sương nằm vắt qua hai mảnh đất — sương ở trong toạ độ thế giới, mảnh
+ * đất không cần biết gì về nó.
+ */
+export function fogPaint<T extends THREE.Material>(
+  mat: T, tex: THREE.Texture, goc: { value: THREE.Vector2 }, span: number, mauSuong: number,
+): T {
+  const t = { value: tex };
+  const s = { value: 1 / span };
+  const c = { value: new THREE.Color(mauSuong) };
+  const khoaTruoc = mat.customProgramCacheKey();
+  const truoc = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader, renderer) => {
+    truoc?.call(mat, shader, renderer);
+    shader.uniforms.uSuong = t;
+    shader.uniforms.uSuongGoc = goc;
+    shader.uniforms.uSuongTi = s;
+    shader.uniforms.uSuongMau = c;
+    shader.fragmentShader =
+      'uniform sampler2D uSuong;\nuniform vec2 uSuongGoc;\nuniform float uSuongTi;\n'
+      + 'uniform vec3 uSuongMau;\n'
+      + shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+      {
+        vec2 su = (vVanXZ - uSuongGoc) * uSuongTi;
+        float kv = texture2D(uSuong, su).r;
+        diffuseColor.rgb = mix(uSuongMau, diffuseColor.rgb, kv);
+      }`);
+  };
+  mat.customProgramCacheKey = () => `${khoaTruoc}|suong`;
   return mat;
 }
 

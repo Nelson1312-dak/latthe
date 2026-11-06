@@ -143,9 +143,19 @@ class Kit {
   }
 }
 
-/** Tấm bệ đất 3×3 dưới mọi công trình trừ thủ phủ. */
-function nen(k: Kit): void {
-  k.rbox(3, 0.22, 3, 0.3, 0.05, 0, 0, 0, PALETTE.plotDirt);
+/**
+ * Bệ đất dưới mọi công trình trừ thủ phủ.
+ *
+ * Trước là một tấm VUÔNG 3×3 — di sản của thời công trình phải đứng trên một nền đất sinh
+ * sẵn hình vuông. Giờ đất đã liền mạch và công trình chiếm một vùng TRÒN, nên bệ cũng tròn,
+ * đúng bằng diện tích nó chiếm.
+ *
+ * Và nó THỤT XUỐNG dưới mặt đất gần một đơn vị: mặt đất liền có dốc thật, không còn là
+ * những mặt phẳng từng ô, nên một tấm bệ mỏng đặt trên sườn sẽ hở một bên. Cái váy này
+ * chôn xuống đủ sâu để không bao giờ hở, và không ai nhìn thấy phần chôn.
+ */
+function nen(k: Kit, r = 1.7): void {
+  k.cyl(r, r * 0.94, 1.1, 14, 0, -0.88, 0, PALETTE.plotDirt);
 }
 
 // ------------------------------------------------------------------ nhà ở
@@ -170,7 +180,7 @@ export function chimneyTop(type: BuildingType, level: number): Vec3 | null {
 function house(level: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('house', level);
-  nen(k);
+  nen(k, 1.8);
   const w = 1.9;
   const d = 1.7;
   const H = houseH(level, st);
@@ -208,7 +218,9 @@ function townhall(level: number, co: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('townhall', level);
   // Bệ lục giác, xoay 30° cho khớp với lưới ô — thủ phủ ngồi đúng trên một ô.
-  k.cyl(2, 2, 0.4, 6, 0, 0, 0, STONE_DARK, Math.PI / 6);
+  // Bệ đá tròn, thụt xuống như mọi bệ khác. Bản cũ là lục giác xoay 30 độ cho khớp
+  // lưới ô — mà lưới ô thì không còn.
+  k.cyl(2.6, 2.45, 1.3, 16, 0, -1.0, 0, STONE_DARK);
   const y0 = 0.4;
   const w = 2.6;
   const d = 2.3;
@@ -258,7 +270,7 @@ function silo(k: Kit, x: number, z: number, h: number, r: number): void {
 function granary(level: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('granary', level);
-  nen(k);
+  nen(k, 2.0);
   const Hs = 1.5 + level * 0.07 + (st >= 2 ? 0.4 : 0);
   silo(k, -0.6, -0.5, Hs, 0.6);
   if (st >= 1) silo(k, 0.7, -0.75, Hs * 0.85, 0.48);
@@ -284,7 +296,7 @@ function granary(level: number): THREE.BufferGeometry {
 function outpost(level: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('outpost', level);
-  nen(k);
+  nen(k, 2.2);
   // Hàng rào cọc bốn cạnh, chừa cổng ở mặt trước. Chiều cao lệch nhẹ theo chỉ số cho bớt đều.
   const e = 1.32;
   for (let i = 0; i <= 6; i += 1) {
@@ -325,7 +337,7 @@ function outpost(level: number): THREE.BufferGeometry {
 function watchtower(level: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('watchtower', level);
-  nen(k);
+  nen(k, 1.5);
   // Thân đá thuôn dần, cao theo cấp. Hai bậc màu để khối đá không đọc ra là một cục phẳng.
   const H = 2.5 + level * 0.42;
   k.cyl(0.62, 0.74, H * 0.55, 6, 0, Y0, 0, STONE);

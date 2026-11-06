@@ -12,7 +12,7 @@ import {
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
   EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
-  BASE_RADIUS, BASE_RADIUS_PER_LEVEL,
+  BASE_RADIUS, BASE_RADIUS_PER_LEVEL, FOOTPRINT,
   VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS, VOYAGES,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
@@ -21,7 +21,7 @@ import type {
   Building, BuildingType, Cost, GameState, Inventory, OfflineReport, ResourceKind, Threat,
   Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
 } from './types';
-import { biomeAt, cellCenter, cellKey, cellOf, hexIsRoad } from './world';
+import { biomeAt, onRoad } from './world';
 import { resolveVoyage, voyageSpec } from './voyage';
 import { guardOf, mercPrice, stormTargets, waveKind, waveOutcome, wavePower } from './raids';
 import { raiderCount, resolveBattle } from './battle';
@@ -276,7 +276,6 @@ export class Economy {
   }
 
   recompute(): void {
-    this.rebuildCells();
     this.state.storageLimit = Math.floor(
       (BASE_STORAGE + this.sumLevels('granary') * STORAGE_PER_GRANARY) * (1 + this.bonus.storage));
     let total = 0;
@@ -352,26 +351,13 @@ export class Economy {
     return this.state.buildings.find((b) => b.id === id);
   }
 
-  /**
-   * Bảng tra Ô → CÔNG TRÌNH. Suy ra từ `state.buildings`, KHÔNG lưu: hai bản ghi về cùng
-   * một sự thật sớm muộn cũng lệch nhau. Dựng lại trong `recompute()`.
-   */
-  private readonly cells = new Map<string, Building>();
-
-  private rebuildCells(): void {
-    this.cells.clear();
+  /** Công trình nào đang chiếm chỗ quanh điểm này, nếu có. */
+  buildingNear(x: number, z: number, r: number): Building | undefined {
     for (const b of this.state.buildings) {
-      const [i, j] = cellOf(b.position[0], b.position[2]);
-      // Hai công trình CŨ có thể rơi vào cùng một ô: nền đất sinh sẵn không có luật cách
-      // nhau giữa hai khối khác nhau. Ai vào trước giữ ô; cả hai vẫn vẽ và vẫn chạy, chỉ là
-      // ô ấy coi như đã có chủ. Không mất gì, và không cần một đường di dời nào.
-      const k = cellKey(i, j);
-      if (!this.cells.has(k)) this.cells.set(k, b);
+      const d = Math.hypot(b.position[0] - x, b.position[2] - z);
+      if (d < r + FOOTPRINT[b.type]) return b;
     }
-  }
-
-  buildingAtCell(i: number, j: number): Building | undefined {
-    return this.cells.get(cellKey(i, j));
+    return undefined;
   }
 
   /** Bán kính xây được quanh thủ phủ, lớn dần theo cấp thủ phủ. */
@@ -498,25 +484,24 @@ export class Economy {
    * true/false: một ô đỏ không nói gì cả, còn "ngoài vành căn cứ" thì vừa từ chối vừa chỉ
    * đường. Hàm này cũng là thứ chế độ đặt gọi mỗi khung để tô màu ô dưới ngón tay.
    */
-  placeBlock(i: number, j: number, type: BuildingType, revealed: boolean): string | null {
-    if (this.buildingAtCell(i, j)) return 'Ô này có rồi';
+  placeBlock(cx: number, cz: number, type: BuildingType, revealed: boolean): string | null {
+    const r = FOOTPRINT[type];
+    if (this.buildingNear(cx, cz, r)) return 'Chồng lên công trình khác';
     if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) {
       return `Cần căn cứ cấp ${BUILD_MIN_LEVEL[type]}`;
     }
     if (!revealed) return 'Chưa vén tới đây';
-    const [cx, cz] = cellCenter(i, j);
     // Lòng đường để trống: đó là làn giặc đi, và cũng là đường bắn của chòi canh.
-    if (hexIsRoad(cx, cz)) return 'Không xây trên đường';
+    if (onRoad(cx, cz)) return 'Không xây trên đường';
     // Trạm trung chuyển sống bằng việc đứng xa; mọi thứ khác phải nằm trong vành căn cứ.
     if (type !== 'outpost' && Math.hypot(cx, cz) > this.baseRadius()) return 'Ngoài vành căn cứ';
     return null;
   }
 
-  build(i: number, j: number, type: BuildingType, revealed = true): boolean {
-    if (this.placeBlock(i, j, type, revealed)) return false;
+  build(cx: number, cz: number, type: BuildingType, revealed = true): boolean {
+    if (this.placeBlock(cx, cz, type, revealed)) return false;
     if (!this.pay(this.buildCostFor(type))) return false;
 
-    const [cx, cz] = cellCenter(i, j);
     const id = `b_${this.state.nextBuildingId}`;
     this.state.nextBuildingId += 1;
     this.state.buildings.push({

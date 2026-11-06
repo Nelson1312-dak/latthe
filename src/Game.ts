@@ -12,16 +12,14 @@
  */
 import * as THREE from 'three';
 import { matte, haloTexture, labelTexture, skyEnvTexture, GRAIN_ON } from './materials';
-import { roundedBox } from './shapes';
 import { buildingGeometry, buildingMaterial, chimneyTop } from './buildings';
 import { Smoke } from './Smoke';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import {
-  BUILDINGS, CAMERA_OFFSET, CAM_DIST, GRID, MAX_FRAME_DELTA, PALETTE, WAVE_WARN_SECONDS,
+  BUILDINGS, CAMERA_OFFSET, CAM_DIST, FOOTPRINT, MAX_FRAME_DELTA, PALETTE, WAVE_WARN_SECONDS,
 } from './config';
 import { OpaqueGTAOPass, finishPass } from './post';
 import { AutoTune, TIERS, loadGfx, pixelRatioFor, saveGfx, stepDown, tierOf } from './quality';
@@ -32,10 +30,11 @@ import { TOWER_RANGE } from './battle';
 import { BATTLE_RADIUS } from './battle';
 import type { BattleSeed } from './battle';
 import { FogOfWar, chime } from './FogOfWar';
+import { Ground } from './ground';
 import { MapManager } from './MapManager';
 import type { Building, BuildingType } from './types';
 import { WorkerManager } from './WorkerManager';
-import { CHUNK, HEX_R, cellCenter, cellOf } from './world';
+import { CHUNK } from './world';
 
 /** Màu sương ngày thường và lúc trời sắp đổ. Xám lam, không phải xám chì: vẫn là bảng màu này. */
 const TROI_THUONG = new THREE.Color(PALETTE.sky);
@@ -73,8 +72,6 @@ const SEED_ZOOM = 26;
 const GLIDE = 9;
 /** Cú bật của một công trình vừa đặt xong kéo dài bấy nhiêu giây. */
 const POP_SECONDS = 0.42;
-/** Tran so nen trong ve mot luc. Vung nap 11x11 khoi hiem khi qua 300. */
-const EMPTY_CAP = 520;
 
 
 export class Game {
@@ -83,6 +80,9 @@ export class Game {
   readonly map: MapManager;
   readonly fog: FogOfWar;
   readonly army: ArmyManager;
+  readonly dat = new Ground();
+  /** Khối ở giữa tấm sương lần nạp gần nhất — đổi khối thì nạp lại cả tấm. */
+  private fogAt = '';
   readonly workers: WorkerManager;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly economy: Economy;
@@ -91,19 +91,14 @@ export class Game {
   private readonly plotGroup = new THREE.Group();
   private readonly pickable: THREE.Mesh[] = [];
   /** Nền trống vẽ bằng lưới nhân bản, nên bao nhiêu nền cũng chỉ là hai lệnh vẽ. */
-  private emptyPads!: THREE.InstancedMesh;
-  private emptyPosts!: THREE.InstancedMesh;
-  private readonly mtx = new THREE.Matrix4();
   /** Công trình đang dựng, theo nền đất — kèm chữ ký để biết khi nào phải dựng lại. */
   private readonly structures = new Map<string, { g: THREE.Group; sig: string }>();
   /** Hình học và vật liệu công trình dùng chung: dựng một lần, không huỷ theo từng lần vẽ. */
   private readonly geoCache = new Map<string, THREE.BufferGeometry>();
   private readonly matCache = new Map<string, THREE.Material>();
   private readonly tmpV = new THREE.Vector3();
-  private readonly padColor = new THREE.Color();
   /** Phien ban ban do ma nen dat va cong trinh dang phan anh. */
   private builtVersion = -1;
-  private readonly fogLand = new THREE.Color(PALETTE.fogLand);
   private readonly tmpD = new THREE.Vector3();
   /** Hướng nắng và hai trục của camera bóng — hằng số, tính một lần. */
   private readonly sunDir = new THREE.Vector3(18, 28, 14).normalize();
@@ -332,9 +327,9 @@ export class Game {
     this.army = new ArmyManager(this.map);
     this.army.onDone = () => this.endBattle();
     this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup,
-      this.smoke.mesh, this.army.group);
+      this.smoke.mesh, this.army.group, this.dat.group);
+
     this.buildMarkers();
-    this.buildEmptyMeshes();
     this.buildVillageLabel();
     this.rebuildPlots();
 
@@ -653,43 +648,6 @@ export class Game {
 
   // ------------------------------------------------------------ công trình
 
-  /**
-   * Nền trống: hai lưới nhân bản cho cả bản đồ.
-   *
-   * Mỗi nền trống vốn là một bệ cộng bốn cọc rào — năm lệnh vẽ. Nhân với số nền của một bản
-   * đồ mở thì riêng mấy ô đất trống đã tốn nhiều lệnh vẽ hơn toàn bộ phần còn lại của thế
-   * giới cộng lại, và đó chính là thứ buộc bản trước phải rải nền thật thưa. Gộp bốn cọc
-   * thành một hình học rồi nhân bản cả hai, thì con số tụt xuống hai — cố định, không phụ
-   * thuộc số nền.
-   *
-   * Không đưa vào danh sách bắt tia: pickPlot() vốn đã có đường lùi bắt theo khoảng cách
-   * trên mặt đất, và đường ấy còn khớp với cách chấm điểm lúc chọn hơn là bắt trúng hình.
-   */
-  private buildEmptyMeshes(): void {
-    const posts: THREE.BufferGeometry[] = [];
-    for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) {
-      const c = new THREE.CylinderGeometry(0.1, 0.12, 0.6, 5);
-      c.translate(sx * 1.4, 0.38, sz * 1.4);
-      posts.push(c);
-    }
-    // 3×3 đơn vị lưới, bo góc như mọi khối khác.
-    const pad = roundedBox(GRID * 3, 0.22, GRID * 3, 0.3, 0.05);
-    pad.translate(0, 0.11, 0);
-
-    // Vật liệu TRẮNG, màu thật nằm ở từng bản: nền trong vùng chưa vén phải nhạt đi cùng mặt
-    // đất, không thì nó nổi lên thành những ô vuông nâu sẫm giữa vùng sương nhạt màu.
-    this.emptyPads = new THREE.InstancedMesh(pad, matte(0xffffff), EMPTY_CAP);
-    this.emptyPosts = new THREE.InstancedMesh(
-      mergeGeometries(posts, false)!, matte(0xffffff), EMPTY_CAP);
-    for (const m of [this.emptyPads, this.emptyPosts]) {
-      m.receiveShadow = true;
-      m.castShadow = true;
-      m.frustumCulled = false;
-      m.count = 0;
-      this.scene.add(m);
-    }
-  }
-
   rebuildPlots(): void {
     /*
      * CHỈ DỰNG LẠI CÁI ĐÃ ĐỔI.
@@ -742,19 +700,6 @@ export class Game {
       this.plotGroup.add(g);
       this.structures.set(building.id, { g, sig });
     }
-    let trong = 0;
-    for (const plot of this.map.plots) {
-      if (trong >= EMPTY_CAP) break;
-      const [ci, cj] = cellOf(plot.position[0], plot.position[2]);
-      if (this.economy.buildingAtCell(ci, cj)) continue;
-      this.mtx.makeTranslation(plot.position[0], plot.position[1], plot.position[2]);
-      this.emptyPads.setMatrixAt(trong, this.mtx);
-      this.emptyPosts.setMatrixAt(trong, this.mtx);
-      const sang = this.fog.isRevealed(plot.position[0], plot.position[2]);
-      this.emptyPads.setColorAt(trong, this.padTint(PALETTE.plotDirt, sang));
-      this.emptyPosts.setColorAt(trong, this.padTint(PALETTE.fence, sang));
-      trong += 1;
-    }
     for (const [id, st] of this.structures) {
       if (!con.has(id)) {
         this.plotGroup.remove(st.g);
@@ -776,19 +721,8 @@ export class Game {
         core.position[0], cy + 6.2 + core.level * 0.12, core.position[2]);
     }
     this.smoke.setSources(khoi);
-    this.emptyPads.count = trong;
-    this.emptyPosts.count = trong;
-    this.emptyPads.instanceMatrix.needsUpdate = true;
-    this.emptyPosts.instanceMatrix.needsUpdate = true;
-    if (this.emptyPads.instanceColor) this.emptyPads.instanceColor.needsUpdate = true;
-    if (this.emptyPosts.instanceColor) this.emptyPosts.instanceColor.needsUpdate = true;
   }
 
-  /** Màu một nền trống: màu thật nếu đã vén, nhạt về màu sương như mặt đất nếu chưa. */
-  private padTint(hex: number, sang: boolean): THREE.Color {
-    this.padColor.setHex(hex);
-    return sang ? this.padColor : this.padColor.lerp(this.fogLand, 0.72);
-  }
 
   /** Chữ ký của một công trình: đổi một trong ba thứ này thì phải dựng lại hình. */
   /**
@@ -1234,6 +1168,28 @@ export class Game {
   get selected(): string | null { return this.selectedId; }
 
 
+
+  /**
+   * Nạp mảnh đất và cập nhật tấm sương.
+   *
+   * Cả tấm sương chỉ nạp lại khi tâm ngắm sang khối khác; giữa hai lần ấy chỉ những khối
+   * đang chạy hoạt cảnh vén mới phải ghi, và mỗi khối là đúng một byte.
+   */
+  private updateGround(): void {
+    this.dat.update(this.target.x, this.target.z);
+    const cx = Math.floor(this.target.x / CHUNK);
+    const cz = Math.floor(this.target.z / CHUNK);
+    const key = `${cx},${cz}`;
+    if (key !== this.fogAt) {
+      this.fogAt = key;
+      this.dat.refillFog(cx, cz, (a, b) => this.map.fogLevel(a, b));
+      return;
+    }
+    for (const [a, b] of this.map.revealingChunks()) {
+      this.dat.setFogAt(a, b, this.map.fogLevel(a, b));
+    }
+  }
+
   // ------------------------------------------------------------ chế độ đặt
 
   /*
@@ -1313,13 +1269,17 @@ export class Game {
      * nhìn ảnh thử lần đầu không đọc được nó đang nhắm vào ô nào. Sáu cạnh, bán kính bằng
      * đúng bán kính ngoại tiếp của ô, nên nó TRÙNG KHÍT mặt ô chứ không phải một vệt tròn.
      */
-    if (!this.ghostCellMesh) {
-      const g = new THREE.CircleGeometry(HEX_R * 0.97, 6);
-      this.ghostCellMesh = new THREE.Mesh(g, this.cellMat);
-      this.ghostCellMesh.rotation.x = -Math.PI / 2;
-      this.ghostCellMesh.renderOrder = 4;
-      this.scene.add(this.ghostCellMesh);
-    }
+    /*
+     * Vùng sáng dưới chân là ĐÚNG diện tích công trình sẽ chiếm — không còn ô lục giác nào
+     * để bám. Thiếu nó thì mô hình mờ chỉ là một khối trong trong giữa đồng cỏ, và người
+     * chơi không biết nó ăn tới đâu.
+     */
+    if (this.ghostCellMesh) this.scene.remove(this.ghostCellMesh);
+    const g = new THREE.CircleGeometry(FOOTPRINT[type], 28);
+    this.ghostCellMesh = new THREE.Mesh(g, this.cellMat);
+    this.ghostCellMesh.rotation.x = -Math.PI / 2;
+    this.ghostCellMesh.renderOrder = 4;
+    this.scene.add(this.ghostCellMesh);
     this.ghostCellMesh.visible = true;
 
     // Vành căn cứ, và vòng tầm bắn của MỌI chòi canh đang có — chỗ hở nằm ở đâu phải nhìn
@@ -1350,11 +1310,13 @@ export class Game {
       if (this.ghostCellMesh) this.ghostCellMesh.visible = false;
       return;
     }
-    const [i, j] = cellOf(this.hitPoint.x, this.hitPoint.z);
-    const [cx, cz] = cellCenter(i, j);
-    this.ghostCell = [i, j];
+    // Làm tròn về lưới nửa đơn vị: đặt tự do không có nghĩa là toạ độ lẻ tới bảy chữ số,
+    // và một con số gọn thì bản lưu cũng gọn.
+    const cx = Math.round(this.hitPoint.x * 2) / 2;
+    const cz = Math.round(this.hitPoint.z * 2) / 2;
+    this.ghostCell = [cx, cz];
     const truoc = this.ghostWhy;
-    this.ghostWhy = this.economy.placeBlock(i, j, type, this.fog.isRevealed(cx, cz));
+    this.ghostWhy = this.economy.placeBlock(cx, cz, type, this.fog.isRevealed(cx, cz));
     const du = this.economy.canAfford(this.economy.buildCostFor(type));
     if (!this.ghostWhy && !du) this.ghostWhy = 'Chưa đủ vật liệu';
     if (truoc !== this.ghostWhy) this.onGhost?.();
@@ -1373,8 +1335,8 @@ export class Game {
   /** Đặt xuống ô đang ngắm. Trả về false kèm lý do nằm ở placeWhy. */
   placeNow(): boolean {
     if (!this.ghostType || !this.ghostCell || this.ghostWhy) return false;
-    const [i, j] = this.ghostCell;
-    const ok = this.economy.build(i, j, this.ghostType, true);
+    const [cx, cz] = this.ghostCell;
+    const ok = this.economy.build(cx, cz, this.ghostType, true);
     if (ok) {
       this.punch = 1;
       // Dựng lại vành tầm bắn: vừa đặt thêm một chòi canh thì vùng phủ đã khác, mà cái
@@ -1505,6 +1467,7 @@ export class Game {
     // Nạp khối chạy cả khi tạm dừng: người chơi vẫn kéo bản đồ đi xem được, và đất mới phải
     // hiện ra theo.
     this.map.update(this.target);
+    this.updateGround();
     // Mô hình mờ bám ô giữa màn, nên phải tính SAU khi camera đã trôi xong trong khung này.
     if (this.ghostType) this.updateGhost();
     // So voi phien ban DA DUNG chu khong so truoc/sau trong cung mot khung: ai khac goi

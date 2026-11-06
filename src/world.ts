@@ -220,9 +220,208 @@ export function naturalTop(hx: number, hz: number): number {
   return h + 0.05 + hash2(Math.round(hx * 3), Math.round(hz * 3), 23) * 0.07;
 }
 
-/** Cao độ san phẳng của một nền đất hay một bãi: lấy theo địa hình ngay tại tâm. */
+
+// ------------------------------------------------- mặt đất liền mạch
+
+/*
+ * MẶT ĐẤT KHÔNG CÒN LÁT BẰNG Ô.
+ *
+ * Trước đây mỗi ô lục giác là một khối riêng, mặt trên phẳng, và cao độ của nó là một con
+ * số. Giờ mặt đất là một tấm lưới tam giác liền — nên cao độ phải là một HÀM LIÊN TỤC, và
+ * hàm ấy phải trả về đúng cái mặt phẳng tam giác mà lưới vẽ ra, không xê một li: cây cối,
+ * người dân, công trình, mũi tên đều đứng theo nó.
+ *
+ * Ba điều học được lúc thiết kế, ghi lại vì không nhìn công thức mà thấy:
+ *
+ *   1. CHẤT TẠO HÌNH KHÔNG ĐẾN TỪ ĐỊA HÌNH. `heightAt` quá thoải: ở đồng cỏ, sa mạc và cao
+ *      nguyên, hai mặt cạnh nhau cách 3 đơn vị chỉ lệch nhau dưới hai độ — mắt không đọc ra,
+ *      và kết quả là một tấm vải gợn sóng chứ không phải low-poly. Cái làm nên những mảng
+ *      bắt sáng của bản cũ là cú nhiễu `hash2` mỗi ô trong `naturalTop` và vành vát quanh
+ *      mặt ô. Nên ở đây phải CỐ Ý nhiễu lại, khoá theo đỉnh lưới.
+ *
+ *   2. PHẢI HOÀ CAO ĐỘ GIỮA CÁC BIẾN SINH THÁI. `heightAt` đổi cứng theo biến, mà `biomeAt`
+ *      lại đổi cứng trên lưới 90×90 — để nguyên thì mặt đất RÁCH một đường thẳng tắp ở mọi
+ *      ranh giới. Và đừng quên cái đĩa bán kính 26 quanh gốc: nó cắt ngang lưới 90, quên nó
+ *      là có một vành vách đứng quây đúng quanh thủ phủ.
+ *
+ *   3. CHỈ HOÀ CAO ĐỘ, KHÔNG HOÀ `biomeAt`. Biến sinh thái quyết loại bãi tài nguyên, loại
+ *      cây, `Building.biome` nằm trong bản lưu, và màu minimap. Làm mượt nó là đổi luật chơi.
+ */
+
+/** Bước lưới. Chia hết cho 30 (khối) và 60 (trục đường) nên đường luôn rơi đúng hàng đỉnh. */
+export const GRID_STEP = 3;
+/** Cạnh một ô biến sinh thái — phải khớp với phép chia trong biomeAt. */
+const BIOME_CELL = 90;
+/** Bề rộng dải hoà giữa hai biến sinh thái. */
+const BLEND_BAND = 12;
+/**
+ * Biên độ nhiễu theo đỉnh lưới: thứ giữ cho mặt đất còn là những mảng phẳng bắt sáng.
+ *
+ * Bản đầu để 0,35 và nhìn ảnh thử thì mặt đất là một tấm vải phẳng lì — đúng cái mà bản kế
+ * hoạch đã đoán trước. Lý do: hai mặt cạnh nhau chỉ lệch chừng bảy độ, mà qua tone mapping
+ * và lớp màu ấm thì bảy độ không ra nổi một bậc sáng. Phải mạnh gấp đôi.
+ */
+const FACET = 0.7;
+const FACET_CRAGS = 1.1;
+/**
+ * Đồi thoai thoải tầm trung. `heightAt` có bước sóng 70–88 đơn vị, mà khung nhìn lúc chơi
+ * chỉ rộng chừng 80 — tức người chơi luôn đứng giữa một sườn dốc thoải và không thấy hình
+ * thù gì. Một lớp nhiễu 21 đơn vị cho bảy mặt mỗi quả đồi: đủ để có bóng, đủ để đọc ra là
+ * đất gợn chứ không phải sàn nhà.
+ */
+const ROLL_CELL = 21;
+const ROLL_AMP = 0.85;
+/**
+ * Bậc cao độ trên toàn bản đồ.
+ *
+ * Đây là đường lui đã viết sẵn trong kế hoạch, và nó đã phải dùng tới. Lát bằng ô lục giác
+ * thì mỗi ô là một mặt PHẲNG có vách đứng lộ ra ở chỗ chênh — cái đọc ra là "mặt phẳng xếp
+ * bậc". Lưới liền không có vách đứng, nên phải lấy lại cái phẳng: ghim cao độ vào bậc 0,2
+ * thì mỗi mảng vài ô liền nhau bằng phẳng rồi gãy một nhịp sang mảng bên.
+ */
+const STEP_Y = 0.2;
+/** Bậc thềm ở vách đá. Năm thềm trên biên độ 2,1. */
+const CRAG_STEP = 0.45;
+
+/**
+ * Biên trên và dưới của cao độ. Dùng để kẹp tia lúc bấm chọn — tia bắt đầu từ dưới lòng đất
+ * thì phép dò trả về rác mà không báo gì.
+ */
+export const GROUND_MAX = 3.8;
+export const GROUND_MIN = -2.8;
+
+/** Biến sinh thái của MỘT Ô LƯỚI, không có luật đĩa gốc. Phải trùng phép bốc của biomeAt. */
+function cellBiome(ci: number, cj: number): BiomeId {
+  const pick = hash2(ci, cj, 7);
+  if (pick < 0.34) return 'meadow';
+  if (pick < 0.56) return 'crags';
+  if (pick < 0.78) return 'desert';
+  return 'highlands';
+}
+
+const muot = (t: number): number => t * t * (3 - 2 * t);
+
+/**
+ * Dốc bị ÉP: lưới biến sinh thái rộng 90 nên nội suy thẳng cho một dải chuyển rộng 90 đơn
+ * vị, tức biến sinh thái mất hẳn phần ruột. Ép lại còn BLEND_BAND quanh đúng ranh giới.
+ */
+function epDoc(f: number): number {
+  return muot(Math.min(1, Math.max(0, (f - 0.5) * (BIOME_CELL / BLEND_BAND) + 0.5)));
+}
+
+/**
+ * Trọng số của từng biến sinh thái tại một điểm — tổng bằng 1.
+ *
+ * MỘT nguồn duy nhất cho cả cao độ lẫn màu: nếu màu hoà theo một phép còn đất hoà theo một
+ * phép khác thì ở mọi ranh giới sẽ có một dải mà màu đã đổi còn đất thì chưa, và mắt đọc
+ * ra ngay là sai.
+ */
+export function biomeWeights(x: number, z: number): [BiomeId, number][] {
+  // Lệch nửa ô: điểm nằm GIỮA hai tâm ô, nên ranh giới rơi đúng vào f = 0,5.
+  const gx = x / BIOME_CELL - 0.5;
+  const gz = z / BIOME_CELL - 0.5;
+  const ci = Math.floor(gx);
+  const cj = Math.floor(gz);
+  const u = epDoc(gx - ci);
+  const v = epDoc(gz - cj);
+  const w = [(1 - u) * (1 - v), u * (1 - v), (1 - u) * v, u * v];
+  const o = [[0, 0], [1, 0], [0, 1], [1, 1]] as const;
+
+  // Đĩa đồng cỏ quanh gốc cắt ngang lưới 90, nên nó là một trọng số riêng chồng lên trên.
+  const r = Math.hypot(x, z);
+  const dia = 1 - muot(Math.min(1, Math.max(0, (r - (26 - BLEND_BAND / 2)) / BLEND_BAND)));
+
+  const out: [BiomeId, number][] = [];
+  if (dia > 1e-6) out.push(['meadow', dia]);
+  for (let k = 0; k < 4; k += 1) {
+    const g = w[k] * (1 - dia);
+    if (g < 1e-6) continue;
+    out.push([cellBiome(ci + o[k][0], cj + o[k][1]), g]);
+  }
+  return out;
+}
+
+/** Cao độ đã hoà giữa các biến sinh thái, kèm trọng số vách đá để biết chỗ nào cần thềm. */
+export function heightBlended(x: number, z: number): { h: number; crags: number } {
+  let h = 0;
+  let crags = 0;
+  for (const [b, w] of biomeWeights(x, z)) {
+    h += w * heightAt(x, z, b);
+    if (b === 'crags') crags += w;
+  }
+  return { h, crags };
+}
+
+/** Mức "đang là lòng đường" ở một điểm, 0 tới 1. Mép mềm nửa đơn vị. */
+export function roadMask(x: number, z: number): number {
+  const gan = (v: number) => {
+    const d = Math.abs(v - Math.round(v / ROAD_SPACING) * ROAD_SPACING);
+    return 1 - muot(Math.min(1, Math.max(0, (d - (ROAD_HALF - 0.6)) / 0.6)));
+  };
+  return Math.max(gan(x), gan(z));
+}
+
+/**
+ * Cao độ tại MỘT ĐỈNH LƯỚI. Đây là nơi duy nhất sinh ra con số; `groundAt` chỉ nội suy
+ * giữa ba đỉnh, nên hình vẽ ra và cao độ tra được không bao giờ lệch nhau.
+ */
+export function nodeHeight(i: number, j: number): number {
+  const x = i * GRID_STEP;
+  const z = j * GRID_STEP;
+  const { h: nen, crags } = heightBlended(x, z);
+  const h = nen + (valueNoise(x, z, ROLL_CELL, 41) - 0.5) * 2 * ROLL_AMP;
+  // Thềm ở vách đá, mạnh dần theo trọng số vách đá: một thềm cứng đâm vào đồng cỏ đã hoà
+  // thì đọc ra như lỗi, nên nó phải tan dần đúng ở chỗ hai biến sinh thái gặp nhau.
+  const bac = Math.round(h / CRAG_STEP) * CRAG_STEP;
+  let y = h * (1 - crags) + bac * crags;
+  // Lòng đường phẳng: đường gập ghềnh thì không ra đường.
+  const duong = roadMask(x, z);
+  y += (hash2(i, j, 23) - 0.5) * (FACET + (FACET_CRAGS - FACET) * crags) * (1 - duong);
+  // Ghim vào bậc, trừ lòng đường — đường phải phẳng chứ không giật từng bậc.
+  const ghim = Math.round(y / STEP_Y) * STEP_Y;
+  return y * duong + ghim * (1 - duong);
+}
+
+/**
+ * Cao độ mặt đất tại một điểm bất kỳ.
+ *
+ * Nội suy theo ĐÚNG mặt phẳng tam giác của lưới, không nội suy song tuyến: song tuyến là
+ * một mặt yên ngựa, lệch tới một phần tư biên độ nhiễu ở giữa ô, và chênh ngần ấy là cây
+ * cối lửng lơ hoặc lún nửa thân. Ô chia chéo so le theo (i+j) chẵn lẻ — một chiều chéo duy
+ * nhất tạo ra một dải xương cá chạy khắp bản đồ, dấu hiệu "lưới máy sinh" dễ nhận nhất.
+ */
+export function groundAt(x: number, z: number): number {
+  const gi = x / GRID_STEP;
+  const gj = z / GRID_STEP;
+  const i = Math.floor(gi);
+  const j = Math.floor(gj);
+  const u = gi - i;
+  const v = gj - j;
+  const hA = nodeHeight(i, j);
+  const hB = nodeHeight(i + 1, j);
+  const hC = nodeHeight(i, j + 1);
+  const hD = nodeHeight(i + 1, j + 1);
+  if (((i + j) & 1) === 0) {
+    // Chéo từ A tới D.
+    return u >= v
+      ? hA + (hB - hA) * u + (hD - hB) * v
+      : hA + (hD - hC) * u + (hC - hA) * v;
+  }
+  // Chéo từ B tới C.
+  return u + v <= 1
+    ? hA + (hB - hA) * u + (hC - hA) * v
+    : hD + (hD - hC) * (u - 1) + (hD - hB) * (v - 1);
+}
+
+/**
+ * Cao độ tâm một nền đất hay một bãi.
+ *
+ * PHẢI gọi `groundAt`, không gọi thẳng `heightAt`. Mặt đất giờ đã hoà cao độ giữa các biến
+ * sinh thái, còn `heightAt` thì không — để nó gọi thẳng là quầng sáng của mọi bãi tài nguyên
+ * nằm gần ranh giới sẽ lửng lơ hoặc lún tới hai đơn vị, mà chẳng có gì báo.
+ */
 export function levelAtCenter(x: number, z: number): number {
-  return heightAt(x, z, biomeAt(x, z)) + 0.04;
+  return groundAt(x, z) + 0.04;
 }
 
 /**

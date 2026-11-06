@@ -453,6 +453,21 @@ export const GUARD_PER_VILLAGER = 1;
  * TRẠM TRUNG CHUYỂN KHÔNG BỊ VÀNH NÀY CHẶN. Việc của nó là gom hàng ở những bãi xa — bắt
  * nó đứng trong làng là xoá sổ chính cái công trình đó.
  */
+/**
+ * DIỆN TÍCH CHIẾM ĐẤT của từng loại công trình, tính bằng bán kính.
+ *
+ * Từ bản "đặt tự do" không còn ô lưới nào: đặt được ở đâu mà không đè lên cái khác là đặt,
+ * đúng kiểu đế chế. Con số lấy từ chính bề ngang của mô hình trong src/buildings.ts cộng
+ * một lề nhỏ, nên hai công trình sát nhau vẫn còn một khe nhìn thấy được.
+ */
+export const FOOTPRINT: Record<keyof typeof BUILDINGS, number> = {
+  townhall: 2.6,
+  house: 1.8,
+  granary: 2.0,
+  outpost: 2.2,
+  watchtower: 1.5,
+};
+
 export const BASE_RADIUS = 17;
 export const BASE_RADIUS_PER_LEVEL = 2.4;
 

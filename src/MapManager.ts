@@ -16,15 +16,15 @@
  * có vòng lặp: bố cục không cần cao độ, cao độ chỉ cần bố cục.
  */
 import * as THREE from 'three';
-import { gem, grain, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
+import { gem, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BIOMES, CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
+import { CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
 import { han, paint } from './shapes';
-import type { BiomeId, Patch, Plot, Vec3 } from './types';
+import type { Patch, Plot, Vec3 } from './types';
 import {
-  CHUNK, HEX_R, HEX_STEP_X, HEX_STEP_Z, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
-  biomeAt, chunkKey, chunkOf, chunkRng, hash2, hexCenterAt, hexIsRoad, levelAtCenter,
-  naturalTop, onRoad, patchFlatR, patchesOf, valueNoise,
+  CHUNK, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
+  biomeAt, chunkKey, chunkOf, chunkRng, groundAt, hash2, levelAtCenter,
+  onRoad, patchesOf,
 } from './world';
 
 /*
@@ -36,34 +36,12 @@ import {
  * khong co gi bao.
  */
 const CAP = {
-  tile: 11400, halo: 300,
+  halo: 300,
   pine: 1100, wheat: 900, rock: 1400, ore: 800, spire: 500, palm: 300, tuft: 2300,
   leaf: 520, bush: 350, flower: 900, glow: 750,
 } as const;
 
 type PropKey = keyof typeof CAP;
-
-/**
- * Cột ô cao 6 chứ không phải 2,6. San phẳng có thể đặt hai ô cạnh nhau chênh nhau hơn ba đơn
- * vị ở vách đá, và cột thấp hơn độ chênh thì đáy của ô cao lơ lửng phía trên mặt ô thấp —
- * để lộ một khe nhìn xuyên xuống. Cột cao thêm không tốn thêm tam giác nào.
- */
-const TILE_H = 6;
-
-/**
- * Mép vát trên của ô: tụt 0,1 trên bề ngang 0,14. Đủ để mỗi ô bắt sáng một viền mảnh và hai
- * ô kề nhau có một rãnh nhỏ — mặt đất đọc ra là lát bằng từng viên, như Townscaper, thay cho
- * một tấm phẳng có kẻ màu. Nhỏ hơn nữa thì ở mức phóng xa viền chỉ còn nửa điểm ảnh.
- */
-const VAT_CAO = 0.1;
-const VAT_RONG = 0.14;
-
-/** Sáu ô kề một ô, theo lưới cột lệch nửa bước của world.ts. */
-const KE: readonly (readonly [number, number])[] = [
-  [0, HEX_STEP_Z], [0, -HEX_STEP_Z],
-  [HEX_STEP_X, HEX_STEP_Z / 2], [HEX_STEP_X, -HEX_STEP_Z / 2],
-  [-HEX_STEP_X, HEX_STEP_Z / 2], [-HEX_STEP_X, -HEX_STEP_Z / 2],
-];
 
 /** Hướng từ tâm ngắm về phía camera — hằng số, vì camera không bao giờ xoay. */
 const VIEW = new THREE.Vector3(...CAMERA_OFFSET).normalize();
@@ -71,8 +49,6 @@ const VIEW = new THREE.Vector3(...CAMERA_OFFSET).normalize();
 /** Bốn nền quanh thủ phủ. Chúng nằm vắt sang ba khối lân cận, nên trang trí phải tránh riêng. */
 const CORE_PLOTS = [[-9, -8], [9, -8], [-9, 8], [9, 8]] as const;
 
-/** Đất chưa vén pha về màu sương chừng này phần. */
-const FOG_MIX = 0.72;
 /** Hoạt cảnh vén: đất chuyển màu, quầng hiện, rồi cây đá mọc lên lần lượt. */
 const REVEAL_SECONDS = 1.6;
 
@@ -92,7 +68,6 @@ interface Layout {
 interface Chunk extends Layout {
   cx: number;
   cz: number;
-  tiles: { pos: Vec3; color: number }[];
 }
 
 export class MapManager {
@@ -110,9 +85,6 @@ export class MapManager {
   private readonly s = new THREE.Vector3();
   private readonly axis = new THREE.Vector3(0, 1, 0);
   private readonly color = new THREE.Color();
-  private readonly fogC = new THREE.Color();
-  private readonly fogLand = new THREE.Color(PALETTE.fogLand);
-  private readonly mixC = new THREE.Color();
   private lastCenter = '';
   /** Khối nào đã vén — Game nối vào FogOfWar. Mặc định coi như đã vén hết. */
   private lo: (cx: number, cz: number) => boolean = () => true;
@@ -125,14 +97,12 @@ export class MapManager {
   version = 0;
 
   /** Ô vát mép (30 tam giác) cho bậc Vừa và Cao, ô phẳng (18) cho bậc Thấp. */
-  private readonly tileBevel = hexTile(HEX_R, TILE_H, VAT_CAO, VAT_RONG);
-  private readonly tileFlat = hexTile(HEX_R, TILE_H, 0, 0);
 
   constructor() {
     const make = (key: PropKey, geo: THREE.BufferGeometry, material: THREE.Material, shadow: boolean) => {
       const mesh = new THREE.InstancedMesh(geo, material, CAP[key]);
       mesh.castShadow = shadow;
-      mesh.receiveShadow = key === 'tile';
+      mesh.receiveShadow = false;
       mesh.frustumCulled = false;
       mesh.renderOrder = key === 'halo' ? 1 : key === 'glow' ? 2 : 0;
       mesh.count = 0;
@@ -160,7 +130,6 @@ export class MapManager {
      * Và 6 không phải bội của bước lưới 4,157 — trùng bước lưới thì mọi ô nhận đúng một mẩu
      * thớ, cả bản đồ lấm tấm y hệt nhau.
      */
-    make('tile', this.tileBevel, grain(matte(), 6, 0.18), false);
 
     // Quầng của bãi: một hình vuông phẳng mang ảnh gradient tròn. Đây là thứ khiến một bãi
     // đọc được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
@@ -247,9 +216,6 @@ export class MapManager {
 
   /** Áp bậc đồ hoạ: dạng ô, gió, quầng sáng. Không đụng gì tới bố cục hay cao độ. */
   setQuality(q: { bevel: boolean; sway: boolean; glow: boolean }): void {
-    const tile = this.meshes.tile;
-    const want = q.bevel ? this.tileBevel : this.tileFlat;
-    if (tile.geometry !== want) tile.geometry = want;
     SWAY_ON.value = q.sway ? 1 : 0;
     this.meshes.glow.visible = q.glow;
   }
@@ -265,18 +231,30 @@ export class MapManager {
     this.refill();
   }
 
+  /**
+   * Mức vén của một khối, 0 tới 1, đã gồm hoạt cảnh đang chạy. Mặt đất liền đọc con số này
+   * để ghi vào tấm sương, thay cho việc tô lại màu từng ô như bản lát ô vẫn làm.
+   */
+  fogLevel(cx: number, cz: number): number {
+    if (!this.lo(cx, cz)) return 0;
+    const t = this.revealing.get(chunkKey(cx, cz));
+    return t === undefined ? 1 : this.kDat(t);
+  }
+
+  /** Những khối đang chạy hoạt cảnh vén, để bên vẽ biết texel nào cần cập nhật. */
+  revealingChunks(): [number, number][] {
+    const out: [number, number][] = [];
+    for (const k of this.revealing.keys()) {
+      const [a, b] = k.split(',').map(Number);
+      out.push([a, b]);
+    }
+    return out;
+  }
+
   /** Một khối vừa được vén: chạy hoạt cảnh chuyển màu và mọc cây đá. */
   reveal(key: string): void {
     this.revealing.set(key, 0);
     this.refill();
-  }
-
-  /** Màu một ô: pha về màu sương theo k (0 = chưa vén, 1 = màu thật). */
-  private tint(hex: number, k: number): THREE.Color {
-    this.color.setHex(hex);
-    if (k >= 1) return this.color;
-    this.fogC.setHex(hex).lerp(this.fogLand, FOG_MIX);
-    return this.fogC.lerp(this.color, k);
   }
 
   /** InstancedMesh mới với sức chứa lớn hơn, dùng lại hình học và vật liệu của cái cũ. */
@@ -302,7 +280,6 @@ export class MapManager {
     const need = {} as Record<PropKey, number>;
     for (const k of Object.keys(CAP) as PropKey[]) need[k] = 0;
     for (const chunk of this.chunks.values()) {
-      need.tile += chunk.tiles.length;
       need.halo += chunk.patches.length;
       for (const pr of chunk.props) need[pr.key] += 1;
     }
@@ -334,10 +311,6 @@ export class MapManager {
        */
       const daVen = this.lo(chunk.cx, chunk.cz);
       const t = this.revealing.get(key);
-      const kDat = !daVen ? 0 : t === undefined ? 1 : this.kDat(t);
-      for (const tile of chunk.tiles) {
-        put('tile', this.m.makeTranslation(tile.pos[0], tile.pos[1], tile.pos[2]), this.tint(tile.color, kDat));
-      }
       if (!daVen) continue;
 
       chunk.patches.forEach((p, i) => {
@@ -398,113 +371,20 @@ export class MapManager {
    * nhớ đệm theo ô vì dân làng hỏi mỗi khung hình.
    */
   groundY(x: number, z: number): number {
-    const [hx, hz] = hexCenterAt(x, z);
-    return this.tileTop(hx, hz);
-  }
-
-  private tileTop(hx: number, hz: number): number {
-    const key = `${Math.round(hx * 10)},${Math.round(hz * 10)}`;
-    let t = this.tops.get(key);
-    if (t === undefined) {
-      t = this.levelAt(hx, hz) ?? naturalTop(hx, hz);
-      this.tops.set(key, t);
-    }
-    return t;
-  }
-
-  /**
-   * Cao độ san phẳng của ô có tâm (x, z), hoặc null nếu ô ấy để tự nhiên.
-   *
-   * Nền đất thắng bãi: một ô nằm trong cả vành san của nền lẫn của bãi thì theo nền, vì nhà
-   * cắm lệch nền trông tệ hơn nhiều so với rìa quầng bãi lệch một chút. Xét cả tám khối
-   * xung quanh: bãi gần ranh giới khối thì lòng bãi tràn sang khối bên cạnh.
-   */
-  private levelAt(x: number, z: number): number | null {
-    const cx = chunkOf(x);
-    const cz = chunkOf(z);
-    let plotY: number | null = null;
-    let plotD = PLOT_FLAT_R;
-    let patchY: number | null = null;
-    let patchK = 1;
-    for (let dx = -1; dx <= 1; dx += 1) {
-      for (let dz = -1; dz <= 1; dz += 1) {
-        const l = this.layoutOf(cx + dx, cz + dz);
-        for (const p of l.plots) {
-          const d = Math.hypot(p.position[0] - x, p.position[2] - z);
-          if (d < plotD) { plotD = d; plotY = p.position[1]; }
-        }
-        for (const b of l.patches) {
-          const k = Math.hypot(b.center[0] - x, b.center[2] - z) / patchFlatR(b);
-          if (k < patchK) { patchK = k; patchY = b.center[1]; }
-        }
-      }
-    }
-    return plotY ?? patchY;
+    return groundAt(x, z);
   }
 
   // ------------------------------------------------------------ sinh khối
 
   private makeChunk(cx: number, cz: number): Chunk {
-    const ox = cx * CHUNK;
-    const oz = cz * CHUNK;
     const layout = this.layoutOf(cx, cz);
-    const chunk: Chunk = { cx, cz, ...layout, tiles: [] };
-
     /*
-     * --- thảm cỏ, VÀ ĐƯỜNG ĐI LÀ MỘT LOẠI Ô TRONG CHÍNH THẢM ẤY ---
-     *
-     * Đường không phải một vật thể: nó chỉ là những ô lục giác được tô màu đất nện thay vì
-     * màu cỏ. Nhờ thế mép đường luôn khớp lưới, luôn đúng cao độ địa hình, và tốn đúng không
-     * lệnh vẽ nào.
-     *
-     * Chỉ số ô tính theo TOÀN THẾ GIỚI, nên lưới liền mạch qua ranh giới khối.
+     * Khối giờ chỉ còn là DỮ LIỆU: bãi, nền, props. Mặt đất do src/ground.ts dựng thành một
+     * lưới tam giác liền, và con đường là một vệt màu trong shader chứ không còn là một
+     * hàng ô lục giác được tô khác màu.
      */
-    const i0 = Math.ceil(ox / HEX_STEP_X);
-    const i1 = Math.floor((ox + CHUNK - 0.001) / HEX_STEP_X);
-    for (let i = i0; i <= i1; i += 1) {
-      const x = i * HEX_STEP_X;
-      // Cột lẻ lệch nửa bước. Phải lấy dư KHÔNG ÂM, vì i âm ở nửa bản đồ bên kia.
-      const lech = (((i % 2) + 2) % 2) ? HEX_STEP_Z / 2 : 0;
-      const j0 = Math.ceil((oz - lech) / HEX_STEP_Z);
-      const j1 = Math.floor((oz + CHUNK - 0.001 - lech) / HEX_STEP_Z);
-      for (let j = j0; j <= j1; j += 1) {
-        const z = j * HEX_STEP_Z + lech;
-        chunk.tiles.push({
-          pos: [x, this.tileTop(x, z) - TILE_H / 2, z],
-          color: hexIsRoad(x, z) ? PALETTE.road : this.groundColor(x, z, biomeAt(x, z)),
-        });
-      }
-    }
+    const chunk: Chunk = { cx, cz, ...layout };
     return chunk;
-  }
-
-  /**
-   * Màu một ô đất.
-   *
-   * Trước đây mỗi ô bốc thăm một trong hai bậc màu của vùng, nên mặt đất là một bàn ca-rô
-   * lấm tấm đều khắp. Giờ ba phần tư lấy từ NHIỄU TRƠN cỡ 14 đơn vị — những mảng sáng tối
-   * lớn, loang dần như cỏ chỗ dày chỗ thưa — và một phần tư từ hàm băm của riêng ô, để hai ô
-   * cạnh nhau vẫn khác nhau một chút.
-   *
-   * Ô GIÁP RANH pha 25% sang màu của vùng bên kia. Cả hai phía cùng pha nên ranh giới thành
-   * một dải chuyển hai ô (100 → 75 → 25 → 0), không còn là một đường cắt thẳng tắp ở mép
-   * vùng 90×90. Thử 35% thì giữa đồng cỏ và cao nguyên hiện ra một dải xám lam — xanh trộn
-   * tím ra xám — đọc nhầm thành một dải vách đá.
-   */
-  private groundColor(x: number, z: number, b: BiomeId): number {
-    const [c0, c1] = BIOMES[b].ground;
-    const k = valueNoise(x, z, 14, 31) * 0.75 + hash2(Math.round(x * 2), Math.round(z * 2), 11) * 0.25;
-    this.color.setHex(c0).lerp(this.fogC.setHex(c1), k);
-    let n = 0;
-    this.mixC.setRGB(0, 0, 0);
-    for (const [dx, dz] of KE) {
-      const nb = biomeAt(x + dx, z + dz);
-      if (nb === b) continue;
-      this.mixC.add(this.fogC.setHex(BIOMES[nb].ground[0]));
-      n += 1;
-    }
-    if (n > 0) this.color.lerp(this.mixC.multiplyScalar(1 / n), 0.25);
-    return this.color.getHex();
   }
 
   /**
@@ -746,10 +626,6 @@ export class MapManager {
   }
 
   private paintReveal(chunk: Chunk, start: Record<PropKey, number>, t: number): void {
-    const kDat = this.kDat(t);
-    chunk.tiles.forEach((tile, i) => {
-      this.meshes.tile.setColorAt(start.tile + i, this.tint(tile.color, kDat));
-    });
     chunk.patches.forEach((p, i) => {
       this.meshes.halo.setMatrixAt(start.halo + i, this.haloMatrix(p, this.kQuang(t, i)));
     });
@@ -759,7 +635,6 @@ export class MapManager {
       seen[pr.key] = j + 1;
       this.meshes[pr.key].setMatrixAt(start[pr.key] + j, this.propMatrix(pr, this.kMoc(t, i)));
     });
-    if (this.meshes.tile.instanceColor) this.meshes.tile.instanceColor.needsUpdate = true;
     for (const k of Object.keys(CAP) as PropKey[]) this.meshes[k].instanceMatrix.needsUpdate = true;
   }
 
@@ -863,57 +738,6 @@ export class MapManager {
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
     }
-    this.tileBevel.dispose();
-    this.tileFlat.dispose();
   }
 }
 
-/**
- * Ô lục giác vát mép trên, KHÔNG có đáy (đáy chôn sâu dưới các ô kề, không ai nhìn thấy).
- * `vatCao` bằng 0 thì không vát: thành và mặt, 18 tam giác.
- *
- * Ghép tay thay cho LatheGeometry: lathe sinh thêm một tam giác suy biến cho mỗi cạnh ở tâm
- * mặt trên. Ba mươi tam giác mỗi ô — thành, mép vát, mặt — so với hai mươi tư của hình trụ
- * cũ, mà hình trụ cũ còn phí sáu cho cái đáy.
- *
- * Đỉnh ở góc π/6 + kπ/3, cùng quy ước x = r·sinφ, z = r·cosφ với CylinderGeometry, nên cạnh
- * phẳng quay về ±Z như lưới cần (xem chú thích ở constructor). Mặt nào cũng có pháp tuyến
- * riêng: mép vát phải bắt sáng thành một viền sắc, không được nội suy loang sang mặt trên.
- */
-function hexTile(r: number, h: number, vatCao: number, vatRong: number): THREE.BufferGeometry {
-  const pos: number[] = [];
-  const dinh = (rad: number, y: number, k: number): number[] => {
-    const a = Math.PI / 6 + (k * Math.PI) / 3;
-    return [rad * Math.sin(a), y, rad * Math.cos(a)];
-  };
-  const tamGiac = (...p: number[][]): void => { for (const v of p) pos.push(...v); };
-  const day = -h / 2;
-  const vai = h / 2 - vatCao;
-  const mat = h / 2;
-  const trong = r - vatRong;
-  for (let k = 0; k < 6; k += 1) {
-    const a0 = dinh(r, day, k);
-    const a1 = dinh(r, day, k + 1);
-    if (vatCao <= 0) {
-      const m0 = dinh(r, mat, k);
-      const m1 = dinh(r, mat, k + 1);
-      tamGiac(a0, a1, m0);
-      tamGiac(m1, m0, a1);
-      tamGiac(m0, m1, [0, mat, 0]);
-      continue;
-    }
-    const b0 = dinh(r, vai, k);
-    const b1 = dinh(r, vai, k + 1);
-    const c0 = dinh(trong, mat, k);
-    const c1 = dinh(trong, mat, k + 1);
-    tamGiac(a0, a1, b0);
-    tamGiac(b1, b0, a1);
-    tamGiac(b0, b1, c0);
-    tamGiac(c1, c0, b1);
-    tamGiac(c0, c1, [0, mat, 0]);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.computeVertexNormals();
-  return g;
-}
