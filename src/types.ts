@@ -66,7 +66,22 @@ export interface Patch {
 
 // ------------------------------------------------------------------ công trình
 
-export type BuildingType = 'townhall' | 'house' | 'granary' | 'outpost' | 'watchtower';
+export type BuildingType = 'townhall' | 'house' | 'granary' | 'outpost' | 'watchtower'
+  | 'barracks' | 'archery' | 'stable' | 'smithy';
+
+/** Ba loại lính, khắc nhau theo vòng tròn — xem KHAC trong config. */
+export type TroopKind = 'spear' | 'archer' | 'horse';
+export const TROOP_KINDS: readonly TroopKind[] = ['spear', 'archer', 'horse'];
+
+/** Quân số của một bên. Lính là CON SỐ, không phải `Unit`: xem ghi chú ở Economy.army. */
+export type Troops = Record<TroopKind, number>;
+
+/** Một suất đang huấn luyện. Hàng đợi chung cho cả ba loại. */
+export interface TrainSlot {
+  kind: TroopKind;
+  /** Giây còn lại. Chỉ suất đầu hàng mới chạy. */
+  left: number;
+}
 
 // ------------------------------------------------------------------ mùa bão
 
@@ -210,6 +225,16 @@ export interface GameState {
 
   /** Số thứ tự cho mã công trình mới. Mã cũ (`core`, `p_…`) giữ nguyên mãi mãi. */
   nextBuildingId: number;
+  /** Thời đại hiện tại, 1 tới 4. */
+  age: number;
+  /** Giây còn lại của lần chuyển thời đại đang chạy; 0 là không chuyển. */
+  ageLeft: number;
+  /** Quân thường trực. */
+  army: Troops;
+  /** Hàng đợi huấn luyện. */
+  train: TrainSlot[];
+  /** Bậc nâng cấp mua ở lò rèn. */
+  smith: { attack: number; armour: number };
   lastSavedTimestamp: number;
   muted: boolean;
   totalGold: number;

@@ -9,8 +9,7 @@
  * Nhờ thế biến mất sạch một họ lỗi mà kiểu "mô phỏng trực tiếp" nào cũng phải trả giá: tạm
  * dừng giữa trận, ẩn tab giữa trận, tốc độ 2×, khung hình rớt, lưu giữa trận — và cái bẫy
  * lớn nhất của game này: `collectOffline` tua lại bằng bước 0,5 giây trong khi lúc chơi dt
- * đi theo khung hình. Hai đường ấy mà cùng chạy một trận "trực tiếp" thì cho hai kết quả
- * khác nhau, và `npm run pace` hết là một phép đo.
+ * đi theo khung hình.
  *
  * Hai luật phải giữ cho diễn lại trùng khít với lúc tính:
  *   — Đồng hồ của trận là SỐ BƯỚC nguyên, không bao giờ là một tổng dt kiểu dấu phẩy động.
@@ -18,8 +17,9 @@
  *     duyệt Map hay Set ở chỗ thứ tự có thể đổi, và mọi phép so hoà nhau phân định bằng
  *     chỉ số trong mảng.
  */
+import { KHAC, SMITH_ARMOUR, SMITH_ATTACK, TROOPS } from './config';
 import { ROAD_SPACING, hash2 } from './world';
-import type { WaveKind } from './types';
+import type { TroopKind, Troops, WaveKind } from './types';
 
 /** Một bước mô phỏng. Nhỏ hơn thì mượt hơn mà cũng tốn hơn; 0,1 giây là đủ cho tốc độ này. */
 export const TICK = 0.1;
@@ -36,52 +36,37 @@ const POWER_PER_RAIDER = 7;
 const RAIDERS_MIN = 3;
 const RAIDERS_MAX = 36;
 
-/*
- * Máu một con giặc là CỐ ĐỊNH, số con mới chạy theo sức đợt.
+/**
+ * Giặc dùng CHUNG bảng chỉ số với quân người chơi, chỉ nhân xuống.
  *
- * Thử cho máu lớn theo số đợt thì tổng máu của một đợt thành tích của hai đại lượng cùng
- * tăng, và đo ra là 56 trận thua trên 58: không thế trận nào theo kịp một đường bậc hai.
- * Giữ máu cố định thì tổng máu tỉ lệ thẳng với sức đợt, tức tỉ lệ thẳng với sức thủ mà
- * người chơi dựng được — hai bên mới cùng một thang.
+ * Dùng chung thì luật khắc chế đọc được hai chiều: cung thủ của giặc cũng sợ kỵ binh đúng
+ * như cung thủ của người chơi. Nhân xuống vì giặc đông hơn hẳn, và vì tổng máu một đợt phải
+ * tỉ lệ THẲNG với sức đợt — chỗ này từng sai một lần, cho máu tăng theo số đợt trong khi số
+ * lượng cũng tăng, và tổng máu thành một đường bậc hai mà không thế trận nào theo kịp.
  */
-/*
- * Máu một con giặc đủ để một chòi canh cấp 1 phải bắn ba phát, cấp 5 thì một phát. Để máu
- * thấp hơn sát thương một phát bắn thì mọi tháp đều giết-một-phát, và thế trận chỉ còn phụ
- * thuộc vào SỐ PHÁT BẮN MỖI GIÂY — nâng cấp chòi canh hoá ra vô nghĩa.
- */
-const RAIDER_HP = 24;
-const RAIDER_SPEED = 2.6;
-/** Đứng khuân hàng mất ngần này giây, và đứng thì ăn đạn. Đây là chỗ tháp gỡ lại được. */
-const LOOT_SECONDS = 2.5;
-/** Sát thương mỗi giây lên lính giữ làng. */
-const RAIDER_DPS = 4;
+const RAIDER_HP = 0.72;
+const RAIDER_DPS = 0.85;
+
 /** Tới cách thủ phủ ngần này là khuân được hàng. */
 const LOOT_RANGE = 3.2;
+/** Đứng khuân hàng mất ngần này giây, và đứng thì ăn đạn. */
+const LOOT_SECONDS = 2.5;
 /** Chạy ra khỏi vòng này là thoát, hàng mất thật. */
 const ESCAPE_DIST = 44;
 
-/** Lính đánh thuê: mua bằng vàng trong ba mươi giây báo động, tan sau trận. */
-const MERC_HP = 20;
-const MERC_DPS = 8;
-const MERC_SPEED = 3.2;
 /**
- * Lính chỉ đánh những tên đã vào trong vòng này QUANH THỦ PHỦ — không phải quanh chính nó.
- *
- * Đo bằng mắt ở bản đầu: lấy khoảng cách từ chỗ lính đứng thì cả tốp xông ra bốn chục đơn
- * vị đón đánh, tức ra ngoài hẳn tầm tháp, rồi chết lẻ tẻ ngoài đồng. Giữ vòng này nhỏ hơn
- * tầm bắn của tháp thì lính và tháp đánh CÙNG một chỗ, và đó mới là một thế trận.
+ * Quân giữ làng chỉ đánh những tên đã vào trong vòng này QUANH THỦ PHỦ — không phải quanh
+ * chính nó. Đo bằng mắt ở bản đầu: lấy khoảng cách từ chỗ lính đứng thì cả tốp xông ra bốn
+ * chục đơn vị đón đánh, tức ra ngoài hẳn tầm tháp, rồi chết lẻ tẻ ngoài đồng.
  */
-const MERC_LEASH = 14;
+const GUARD_LEASH = 14;
 
 /** Chòi canh. Tầm bắn là thứ khiến CHỖ ĐẶT có nghĩa. */
 export const TOWER_RANGE = 18;
 const TOWER_DMG_BASE = 4;
 const TOWER_DMG_PER_LEVEL = 4;
 const TOWER_RELOAD = 1.25;
-/**
- * Mưa bão thì cung nỏ ngắn lại. Đây là chỗ duy nhất "bão" còn khác "cướp": cùng một trận,
- * nhưng tầm bắn co lại một phần tư và hậu quả rơi vào công trình thay vì vào kho.
- */
+/** Mưa bão thì cung nỏ ngắn lại — chỗ duy nhất "bão" còn khác "cướp". */
 const STORM_RANGE_MULT = 0.74;
 
 /** Thủ phủ tự chống trả: dân ở nhà cầm gậy đứng trong sân. Không vẽ ra, chỉ là sát thương. */
@@ -93,6 +78,19 @@ const CORE_RELOAD = 1.4;
 /** Giặc đổ bộ cách thủ phủ ngần này, dọc theo trục đường. */
 const SPAWN_DIST = 46;
 
+/**
+ * Thành phần một đợt theo thời đại.
+ *
+ * Lên thời đại không chỉ mở thêm quân cho người chơi — giặc cũng có thêm loại mới. Nếu chỉ
+ * toàn cái được thì lên thời đại là một nút bấm cho không, và không ai cân nhắc một giây.
+ */
+const DOI_HINH: readonly (readonly [number, number])[] = [
+  [1, 0],
+  [0.7, 0.3],
+  [0.55, 0.3],
+  [0.45, 0.32],
+];
+
 // ------------------------------------------------------------------ kiểu
 
 export interface BattleSeed {
@@ -102,53 +100,59 @@ export interface BattleSeed {
   power: number;
   /** Chòi canh: toạ độ thật trên bản đồ. Đây là lý do chỗ đặt tháp có nghĩa. */
   towers: readonly { x: number; z: number; level: number }[];
-  /** Lính đánh thuê đã mua cho đúng đợt này. */
+  /** Lính đánh thuê mua cho đúng đợt này — bộ binh tạm, tan sau trận. */
   mercs: number;
   /** Dân đang ở nhà. Họ không ra trận, nhưng thủ phủ bắn mạnh hơn nhờ họ. */
   militia: number;
+  /** Quân thường trực. */
+  army: Troops;
+  /** Bậc rèn. */
+  smith: { attack: number; armour: number };
+  /** Thời đại, quyết định đội hình giặc. */
+  age: number;
 }
 
 export type RaiderState = 'march' | 'loot' | 'flee';
 
-export interface Raider {
+/** Một người trên chiến trường. Hai bên dùng chung kiểu — luật khắc chế đọc được hai chiều. */
+export interface Fighter {
   x: number; z: number; hp: number;
-  state: RaiderState;
-  /** Hướng mặt, để vẽ. */
+  kind: TroopKind;
   face: number;
-  /** Đã khuân được hàng chưa. Chết lúc đang ôm thì hàng rơi lại. */
+  /** Số bước còn lại tới đòn kế tiếp. */
+  cool: number;
+}
+
+export interface Raider extends Fighter {
+  state: RaiderState;
   loaded: boolean;
-  /** Số bước còn phải đứng khuân. */
   work: number;
 }
 
-export interface Merc {
-  x: number; z: number; hp: number; face: number;
-  /** Chỗ đứng gác của riêng người này. Không có nó thì cả tốp dồn về đúng một điểm. */
+export interface Guard extends Fighter {
+  /** Chỗ đứng gác của riêng người này; cả tốp quay về một điểm thì chồng khít lên nhau. */
   hx: number; hz: number;
 }
 
-/** Một phát bắn vừa nổ ra ở bước này. Thuần để vẽ, nhưng sinh ra trong cùng một dòng chảy. */
-export interface Shot { x0: number; z0: number; x1: number; z1: number; }
+/** Một phát đánh vừa nổ ra ở bước này. Thuần để vẽ, nhưng sinh trong cùng một dòng chảy. */
+export interface Shot { x0: number; z0: number; x1: number; z1: number }
 
 export interface BattleState {
   seed: BattleSeed;
   tick: number;
   raiders: Raider[];
-  mercs: Merc[];
+  guards: Guard[];
   /** Đồng hồ nạp đạn của từng tháp, tính bằng SỐ BƯỚC còn lại. */
   cool: number[];
   coreCool: number;
   shots: Shot[];
   done: boolean;
-  /** Số giặc đã hạ, và số giặc ôm hàng chạy thoát. */
   killed: number;
   escaped: number;
-  /** Số giặc tới được thủ phủ, dù sau đó có thoát hay không. */
   reached: number;
 }
 
 export interface BattleOutcome {
-  /** Tổng số giặc của đợt. */
   count: number;
   killed: number;
   escaped: number;
@@ -156,12 +160,25 @@ export interface BattleOutcome {
   ticks: number;
   /** Phần đợt lọt lưới, 0 tới 1. Hậu quả tính theo đúng con số này. */
   leak: number;
+  /** Thành phần đợt, để kể lại và để bảng đợt báo trước. */
+  mix: Troops;
+  /** Quân người chơi nằm lại, đếm từ chính bản diễn chứ không đoán. */
+  lost: Troops;
 }
 
 // ------------------------------------------------------------------ dựng trận
 
 export function raiderCount(power: number): number {
   return Math.max(RAIDERS_MIN, Math.min(RAIDERS_MAX, Math.round(power / POWER_PER_RAIDER)));
+}
+
+/** Đội hình một đợt: bao nhiêu giáo, bao nhiêu cung, bao nhiêu ngựa. */
+export function waveMix(power: number, age: number): Troops {
+  const n = raiderCount(power);
+  const [a, b] = DOI_HINH[Math.min(DOI_HINH.length - 1, Math.max(0, age - 1))];
+  const spear = Math.round(n * a);
+  const archer = Math.round(n * b);
+  return { spear, archer, horse: Math.max(0, n - spear - archer) };
 }
 
 /**
@@ -177,51 +194,71 @@ function lanesOf(wave: number): readonly (readonly [number, number])[] {
 }
 
 export function battleStart(seed: BattleSeed): BattleState {
-  const n = raiderCount(seed.power);
+  const mix = waveMix(seed.power, seed.age);
   const lanes = lanesOf(seed.wave);
   /*
-   * ĐỘI HÌNH, KHÔNG PHẢI HÀNG MỘT.
-   *
-   * Bản đầu rải mỗi con lùi thêm 2,4 đơn vị, nên một đợt ba sáu tên kéo dài một trăm ba
-   * chục đơn vị — chúng lũ lượt bước vào tầm bắn từng đứa một và bị bắn tỉa gọn ghẽ. Đo ra
-   * 100% bị hạ, 57 thắng trên 58 trận: không phải thế trận giỏi, mà là đội hình ngu. Mỗi
-   * tháp chỉ bắn được MỘT mục tiêu một lúc, nên sức mạnh thật của giặc nằm ở chỗ chúng tới
-   * CÙNG LÚC. Xếp sáu tên một hàng ngang thì cả toán gói gọn trong chừng mười lăm đơn vị.
+   * ĐỘI HÌNH, KHÔNG PHẢI HÀNG MỘT. Bản đầu rải mỗi con lùi thêm 2,4 đơn vị, nên một đợt ba
+   * sáu tên kéo dài một trăm ba chục đơn vị — chúng lũ lượt bước vào tầm bắn từng đứa một
+   * và bị bắn tỉa gọn ghẽ: đo ra 100% bị hạ, 57 thắng trên 58 trận. Mỗi tháp chỉ bắn được
+   * MỘT mục tiêu một lúc, nên sức mạnh thật của giặc nằm ở chỗ chúng tới CÙNG LÚC.
    */
   const HANG = 6;
-  const hp = RAIDER_HP;
   const raiders: Raider[] = [];
-  for (let i = 0; i < n; i += 1) {
+  const danh: TroopKind[] = [];
+  for (let i = 0; i < mix.spear; i += 1) danh.push('spear');
+  for (let i = 0; i < mix.archer; i += 1) danh.push('archer');
+  for (let i = 0; i < mix.horse; i += 1) danh.push('horse');
+  for (let i = 0; i < danh.length; i += 1) {
     const lane = lanes[i % lanes.length];
     const k = Math.floor(i / lanes.length);
     const [lx, lz] = lane;
     const doc = SPAWN_DIST + Math.floor(k / HANG) * 2.6;
     const ngang = ((k % HANG) - (HANG - 1) / 2) * 2.2
       + (hash2(seed.wave * 131 + i, 7, 0xba02) - 0.5) * 1.2;
+    const kind = danh[i];
     raiders.push({
       x: lx * doc + lz * ngang,
       z: lz * doc + lx * ngang,
-      hp, state: 'march', loaded: false, work: 0,
+      hp: TROOPS[kind].hp * RAIDER_HP,
+      kind,
+      state: 'march',
+      loaded: false,
+      work: 0,
+      cool: 0,
       face: Math.atan2(-lx, -lz),
     });
   }
-  const mercs: Merc[] = [];
-  for (let i = 0; i < seed.mercs; i += 1) {
-    // Mỗi người một chỗ gác riêng trên vòng quanh thủ phủ. Bản đầu cho tất cả cùng quay
-    // về (0,0) lúc rảnh, và sáu người chồng khít lên nhau thành một thân.
-    const g = (i / Math.max(1, seed.mercs)) * Math.PI * 2;
-    const r = 5.5 + (i % 2) * 1.6;
-    const hx = Math.sin(g) * r;
-    const hz = Math.cos(g) * r;
-    mercs.push({ x: hx, z: hz, hp: MERC_HP, face: g, hx, hz });
-  }
+
+  /*
+   * Quân giữ làng đứng thành ba vòng: cung thủ trong cùng (họ bắn xa nên không cần ra
+   * trước), bộ binh ở giữa, kỵ binh ngoài cùng vì họ xông ra đón đánh.
+   */
+  const guards: Guard[] = [];
+  const dat = (kind: TroopKind, n: number, r: number, lech: number): void => {
+    for (let i = 0; i < n; i += 1) {
+      const g = (i / Math.max(1, n)) * Math.PI * 2 + lech;
+      const rr = r + (i % 2) * 1.3;
+      const hx = Math.sin(g) * rr;
+      const hz = Math.cos(g) * rr;
+      guards.push({ x: hx, z: hz, hp: TROOPS[kind].hp, kind, face: g, hx, hz, cool: 0 });
+    }
+  };
+  dat('archer', seed.army.archer, 4.2, 0.4);
+  dat('spear', seed.army.spear + seed.mercs, 6.4, 0);
+  dat('horse', seed.army.horse, 8.6, 0.8);
+
   return {
-    seed, tick: 0, raiders, mercs,
+    seed,
+    tick: 0,
+    raiders,
+    guards,
     cool: seed.towers.map(() => 0),
     coreCool: 0,
     shots: [],
-    done: n === 0,
-    killed: 0, escaped: 0, reached: 0,
+    done: raiders.length === 0,
+    killed: 0,
+    escaped: 0,
+    reached: 0,
   };
 }
 
@@ -239,19 +276,8 @@ function nearestRaider(s: BattleState, x: number, z: number, range: number): num
   return best;
 }
 
-function nearestMerc(s: BattleState, x: number, z: number, range: number): number {
-  let best = -1;
-  let bd = range * range;
-  for (let i = 0; i < s.mercs.length; i += 1) {
-    const m = s.mercs[i];
-    const d = (m.x - x) * (m.x - x) + (m.z - z) * (m.z - z);
-    if (d < bd) { bd = d; best = i; }
-  }
-  return best;
-}
-
 /** Nhích một điểm về phía đích, trả về khoảng cách còn lại sau khi đi. */
-function toward(e: { x: number; z: number; face: number }, tx: number, tz: number, speed: number): number {
+function toward(e: Fighter, tx: number, tz: number, speed: number): number {
   const dx = tx - e.x;
   const dz = tz - e.z;
   const d = Math.hypot(dx, dz);
@@ -265,8 +291,35 @@ function toward(e: { x: number; z: number; face: number }, tx: number, tz: numbe
 }
 
 /**
+ * Sát thương một đòn, đã tính khắc chế và bậc rèn.
+ *
+ * Luật khắc chế áp CHO CẢ HAI BÊN: cung thủ của giặc cũng sợ kỵ binh đúng như cung thủ của
+ * người chơi. Một luật chỉ đúng một chiều thì người chơi không học được nó.
+ */
+function damage(s: BattleState, kind: TroopKind, target: TroopKind, ta: boolean): number {
+  const base = TROOPS[kind].dps * (ta ? 1 : RAIDER_DPS);
+  const d = base * KHAC[kind][target];
+  if (ta) return d * (1 + SMITH_ATTACK * s.seed.smith.attack);
+  return d * (1 - Math.min(0.6, SMITH_ARMOUR * s.seed.smith.armour));
+}
+
+/** Đánh một đòn theo nhịp: cung thủ dồn sát thương vào một phát, bộ binh rỉ đều. */
+function strike(s: BattleState, me: Fighter, you: Fighter, ta: boolean): void {
+  me.face = Math.atan2(you.x - me.x, you.z - me.z);
+  if (TROOPS[me.kind].range > 3) {
+    // Bắn xa: một phát mỗi 1,2 giây, và có vệt để nhìn thấy đường tên.
+    if (me.cool > 0) { me.cool -= 1; return; }
+    you.hp -= damage(s, me.kind, you.kind, ta) * 1.2;
+    s.shots.push({ x0: me.x, z0: me.z, x1: you.x, z1: you.z });
+    me.cool = Math.round(1.2 / TICK);
+    return;
+  }
+  you.hp -= damage(s, me.kind, you.kind, ta) * TICK;
+}
+
+/**
  * Một bước của trận. Thứ tự trong hàm này là một phần của luật chơi: tháp bắn trước, rồi
- * lính đánh, rồi giặc đi. Đổi thứ tự là đổi kết quả.
+ * quân giữ làng, rồi giặc đi. Đổi thứ tự là đổi kết quả.
  */
 export function battleStep(s: BattleState): void {
   if (s.done) return;
@@ -281,7 +334,8 @@ export function battleStep(s: BattleState): void {
     const k = nearestRaider(s, t.x, t.z, tam);
     if (k < 0) continue;
     const r = s.raiders[k];
-    r.hp -= TOWER_DMG_BASE + TOWER_DMG_PER_LEVEL * t.level;
+    r.hp -= (TOWER_DMG_BASE + TOWER_DMG_PER_LEVEL * t.level)
+      * (1 + SMITH_ATTACK * s.seed.smith.attack);
     s.shots.push({ x0: t.x, z0: t.z, x1: r.x, z1: r.z });
     s.cool[i] = Math.round(TOWER_RELOAD / TICK);
   }
@@ -297,51 +351,51 @@ export function battleStep(s: BattleState): void {
     }
   }
 
-  // --- lính đánh thuê chặn đường
-  for (let i = 0; i < s.mercs.length; i += 1) {
-    const m = s.mercs[i];
+  // --- quân giữ làng
+  for (let i = 0; i < s.guards.length; i += 1) {
+    const g = s.guards[i];
+    const spec = TROOPS[g.kind];
     // Chọn mục tiêu theo khoảng cách TỪ THỦ PHỦ, không theo khoảng cách từ chính mình.
     let k = -1;
     let bd = Infinity;
     for (let j = 0; j < s.raiders.length; j += 1) {
       const r = s.raiders[j];
-      if (Math.hypot(r.x, r.z) > MERC_LEASH) continue;
-      const d = (r.x - m.x) * (r.x - m.x) + (r.z - m.z) * (r.z - m.z);
+      if (Math.hypot(r.x, r.z) > GUARD_LEASH) continue;
+      const d = (r.x - g.x) * (r.x - g.x) + (r.z - g.z) * (r.z - g.z);
       if (d < bd) { bd = d; k = j; }
     }
-    if (k < 0) {
-      // Không có ai để đánh thì về đúng chỗ gác của mình.
-      toward(m, m.hx, m.hz, MERC_SPEED * 0.7);
-      continue;
-    }
+    if (k < 0) { toward(g, g.hx, g.hz, spec.speed * 0.7); continue; }
     const r = s.raiders[k];
-    const d = Math.hypot(r.x - m.x, r.z - m.z);
-    if (d > 1.3) { toward(m, r.x, r.z, MERC_SPEED); continue; }
-    m.face = Math.atan2(r.x - m.x, r.z - m.z);
-    r.hp -= MERC_DPS * TICK;
-    m.hp -= RAIDER_DPS * TICK;
+    if (Math.sqrt(bd) > spec.range) { toward(g, r.x, r.z, spec.speed); continue; }
+    strike(s, g, r, true);
   }
 
-  // --- giặc đi
+  // --- giặc
   for (let i = 0; i < s.raiders.length; i += 1) {
     const r = s.raiders[i];
+    const spec = TROOPS[r.kind];
     if (r.state === 'flee') {
       const d = Math.hypot(r.x, r.z);
-      // Chạy thẳng ra ngoài theo hướng đang đứng so với thủ phủ.
       const ux = d > 1e-4 ? r.x / d : 1;
       const uz = d > 1e-4 ? r.z / d : 0;
-      toward(r, r.x + ux * 10, r.z + uz * 10, RAIDER_SPEED);
+      toward(r, r.x + ux * 10, r.z + uz * 10, spec.speed);
       continue;
     }
-    // Đang bị lính chắn ngay trước mặt thì dừng lại mà đánh.
-    const km = nearestMerc(s, r.x, r.z, 1.3);
-    if (km >= 0) { r.face = Math.atan2(s.mercs[km].x - r.x, s.mercs[km].z - r.z); continue; }
+    // Có quân chắn trong tầm thì dừng lại mà đánh.
+    let k = -1;
+    let bd = Infinity;
+    for (let j = 0; j < s.guards.length; j += 1) {
+      const g = s.guards[j];
+      const d = (g.x - r.x) * (g.x - r.x) + (g.z - r.z) * (g.z - r.z);
+      if (d < bd) { bd = d; k = j; }
+    }
+    if (k >= 0 && Math.sqrt(bd) <= spec.range) { strike(s, r, s.guards[k], false); continue; }
     if (r.state === 'loot') {
       r.work -= 1;
       if (r.work <= 0) { r.state = 'flee'; r.loaded = true; }
       continue;
     }
-    const con = toward(r, 0, 0, RAIDER_SPEED);
+    const con = toward(r, 0, 0, spec.speed);
     if (con <= LOOT_RANGE) {
       r.state = 'loot';
       r.work = Math.round(LOOT_SECONDS / TICK);
@@ -352,18 +406,14 @@ export function battleStep(s: BattleState): void {
   // --- dọn xác, đếm sổ
   for (let i = s.raiders.length - 1; i >= 0; i -= 1) {
     const r = s.raiders[i];
-    if (r.hp <= 0) {
-      s.killed += 1;
-      s.raiders.splice(i, 1);
-      continue;
-    }
+    if (r.hp <= 0) { s.killed += 1; s.raiders.splice(i, 1); continue; }
     if (r.state === 'flee' && Math.hypot(r.x, r.z) >= ESCAPE_DIST) {
       if (r.loaded) s.escaped += 1;
       s.raiders.splice(i, 1);
     }
   }
-  for (let i = s.mercs.length - 1; i >= 0; i -= 1) {
-    if (s.mercs[i].hp <= 0) s.mercs.splice(i, 1);
+  for (let i = s.guards.length - 1; i >= 0; i -= 1) {
+    if (s.guards[i].hp <= 0) s.guards.splice(i, 1);
   }
 
   s.tick += 1;
@@ -375,16 +425,28 @@ export function battleStep(s: BattleState): void {
 /**
  * Chạy trọn một trận và trả về sổ sách. Đây là hàm Economy gọi — cả lúc người chơi đang
  * nhìn lẫn lúc bù giờ vắng mặt, nên hai đường không thể lệch nhau.
+ *
+ * Quân nằm lại đếm từ CHÍNH bản chạy này, không ước lượng: một con số đoán ra thì sớm muộn
+ * cũng lệch với cái người chơi vừa xem trên màn.
  */
 export function resolveBattle(seed: BattleSeed): BattleOutcome {
   const s = battleStart(seed);
   const count = s.raiders.length;
   while (!s.done) battleStep(s);
-  // Con nào còn sống lúc hết giờ mà đã ôm hàng thì cũng tính là thoát: hết chín chục giây
-  // mà chưa hạ được nó thì coi như nó đi mất.
   let con = 0;
   for (const r of s.raiders) if (r.loaded) con += 1;
   const escaped = s.escaped + con;
+
+  const song: Troops = { spear: 0, archer: 0, horse: 0 };
+  for (const g of s.guards) song[g.kind] += 1;
+  // Lính thuê tan sau trận dù sống hay chết, nên trừ chúng khỏi phần bộ binh còn lại.
+  song.spear = Math.max(0, song.spear - seed.mercs);
+  const lost: Troops = {
+    spear: Math.max(0, seed.army.spear - song.spear),
+    archer: Math.max(0, seed.army.archer - song.archer),
+    horse: Math.max(0, seed.army.horse - song.horse),
+  };
+
   return {
     count,
     killed: s.killed,
@@ -392,6 +454,8 @@ export function resolveBattle(seed: BattleSeed): BattleOutcome {
     reached: s.reached,
     ticks: s.tick,
     leak: count === 0 ? 0 : Math.min(1, escaped / count),
+    mix: waveMix(seed.power, seed.age),
+    lost,
   };
 }
 

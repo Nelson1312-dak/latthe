@@ -19,7 +19,7 @@ export type IconName =
   | 'boot' | 'pack' | 'compass' | 'basket'
   | 'crew' | 'broom' | 'robot' | 'hand' | 'medal' | 'warn' | 'pin'
   | 'sound' | 'mute' | 'pause' | 'play' | 'ring' | 'ringOn' | 'gear' | 'shuffle'
-  | 'hammer' | 'close';
+  | 'hammer' | 'close' | 'spear' | 'bow' | 'horse' | 'anvil' | 'age';
 
 /** Phần bên trong <svg>. Giữ mỗi icon trong vài nét, đừng thêm chi tiết. */
 const PATH: Record<IconName, string> = {
@@ -75,6 +75,12 @@ const PATH: Record<IconName, string> = {
   play: '<path d="M7.5 4.5l11.5 7.5-11.5 7.5z"/>',
   ring: '<circle cx="12" cy="12" r="8.5"/>',
   ringOn: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>',
+  spear: '<path d="M12 21V8"/><path d="M12 8l-2.6-5h5.2z"/><path d="M9.5 11h5"/>',
+  bow: '<path d="M7 3.5a13 13 0 010 17"/><path d="M7 3.5l12.5 8.5L7 20.5"/>',
+  horse: '<path d="M5.5 20.5v-5l3-4 1.5-4 3-2 1.5 2.5 3 1v4l-2.5 2v5.5"/>'
+    + '<path d="M13 5.5l2-2"/>',
+  anvil: '<path d="M4 9h11l3 3h2l-3 4H8L4 12z"/><path d="M9 16v4"/><path d="M6 20.5h7"/>',
+  age: '<path d="M12 3l2.4 5.2 5.6.7-4.2 3.9 1.2 5.7-5-2.9-5 2.9 1.2-5.7L4 8.9l5.6-.7z"/>',
   /** Bua: nut vao che do xay. */
   hammer: '<path d="M14.5 6.5l3-3 3 3-3 3z"/><path d="M14.5 9.5l-9 9"/>'
     + '<path d="M3.5 16.5l4 4"/><path d="M11 6l3 3"/><path d="M8 3l6 6"/>',

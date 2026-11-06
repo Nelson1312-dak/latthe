@@ -16,6 +16,8 @@
 import * as THREE from 'three';
 import { MAX_TICKS, TICK, battleStart, battleStep } from './battle';
 import type { BattleSeed, BattleState } from './battle';
+import type { TroopKind } from './types';
+import { TROOP_KINDS } from './types';
 import { PALETTE } from './config';
 import type { MapManager } from './MapManager';
 import { matte, tinted } from './materials';
@@ -41,7 +43,7 @@ export class ArmyManager {
   readonly group = new THREE.Group();
   private readonly map: MapManager;
 
-  private readonly bodies: THREE.InstancedMesh;
+  private readonly bodies: Record<TroopKind, THREE.InstancedMesh>;
   private readonly shots: THREE.InstancedMesh;
 
   private s: BattleState | null = null;
@@ -63,10 +65,14 @@ export class ArmyManager {
     this.map = map;
     const than = tinted(matte());
     than.vertexColors = true;
-    this.bodies = new THREE.InstancedMesh(this.fighterGeometry(), than, CAP);
+    this.bodies = {
+      spear: new THREE.InstancedMesh(this.fighterGeometry('spear'), than, CAP),
+      archer: new THREE.InstancedMesh(this.fighterGeometry('archer'), than, CAP),
+      horse: new THREE.InstancedMesh(this.fighterGeometry('horse'), than, CAP),
+    };
     this.shots = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.09, 0.09, 1), matte(PALETTE.wheat, true), SHOT_CAP);
-    for (const mesh of [this.bodies, this.shots]) {
+    for (const mesh of [...TROOP_KINDS.map((k) => this.bodies[k]), this.shots]) {
       mesh.count = 0;
       mesh.castShadow = true;
       mesh.frustumCulled = false;
@@ -75,23 +81,62 @@ export class ArmyManager {
   }
 
   /**
-   * Một người cầm giáo. Cùng khối lượng chi tiết với dân làng nhưng dáng khác hẳn: mũ chóp
-   * thay nón lá, và cây giáo chĩa lên — ở mức phóng này người chơi đọc dáng chứ không đọc
-   * mặt, nên khác dáng mới là khác phe.
+   * BA DÁNG NGƯỜI, một cho mỗi loại lính.
+   *
+   * Luật khắc chế chỉ có nghĩa khi nhìn vào là biết đang đánh nhau với cái gì. Ở mức phóng
+   * này người chơi đọc BÓNG DÁNG chứ không đọc chi tiết, nên ba dáng phải khác nhau ở
+   * đường viền ngoài: giáo chĩa thẳng lên, cung là một cánh cung cong trước mặt, kỵ binh
+   * thì thấp và dài vì có con ngựa.
    */
-  private fighterGeometry(): THREE.BufferGeometry {
+  private thanNguoi(parts: THREE.BufferGeometry[],
+    add: (g: THREE.BufferGeometry, x: number, y: number, z: number, hex: number | null) => void,
+    cao: number): void {
+    add(new THREE.CylinderGeometry(0.21, 0.28, 0.46 * cao, 8), 0, 0.23 * cao, 0, null);
+    add(new THREE.SphereGeometry(0.3, 12, 9), 0, 0.73 * cao, 0, PALETTE.skin);
+    for (const x of [-0.11, 0.11]) {
+      add(new THREE.BoxGeometry(0.055, 0.075, 0.04), x, 0.75 * cao, 0.28, PALETTE.eye);
+    }
+    for (const x of [-0.27, 0.27]) {
+      add(new THREE.SphereGeometry(0.075, 6, 5), x, 0.31 * cao, 0.05, PALETTE.skin);
+    }
+    add(new THREE.ConeGeometry(0.3, 0.34, 10), 0, 0.98 * cao, 0, PALETTE.granite);
+    void parts;
+  }
+
+  private fighterGeometry(kind: TroopKind): THREE.BufferGeometry {
     const parts: THREE.BufferGeometry[] = [];
     const add = (g: THREE.BufferGeometry, x: number, y: number, z: number, hex: number | null): void => {
       g.translate(x, y, z);
       parts.push(paint(g, hex));
     };
-    add(new THREE.CylinderGeometry(0.21, 0.28, 0.46, 8), 0, 0.23, 0, null);
-    add(new THREE.SphereGeometry(0.3, 12, 9), 0, 0.73, 0, PALETTE.skin);
-    for (const x of [-0.11, 0.11]) add(new THREE.BoxGeometry(0.055, 0.075, 0.04), x, 0.75, 0.28, PALETTE.eye);
-    for (const x of [-0.27, 0.27]) add(new THREE.SphereGeometry(0.075, 6, 5), x, 0.31, 0.05, PALETTE.skin);
-    // Mũ chóp sắt.
-    add(new THREE.ConeGeometry(0.3, 0.34, 10), 0, 0.98, 0, PALETTE.granite);
-    // Cây giáo trong tay phải, chĩa chếch lên trước.
+    if (kind === 'horse') {
+      // Con ngựa: thân dài, bốn chân, cổ chếch. Người ngồi cao hơn hẳn hai loại kia.
+      add(new THREE.BoxGeometry(0.46, 0.5, 1.25), 0, 0.72, 0, PALETTE.trunk);
+      for (const [x, z] of [[-0.17, 0.44], [0.17, 0.44], [-0.17, -0.44], [0.17, -0.44]] as const) {
+        add(new THREE.CylinderGeometry(0.075, 0.06, 0.66, 5), x, 0.33, z, PALETTE.trunk);
+      }
+      const co = new THREE.BoxGeometry(0.26, 0.6, 0.26);
+      co.rotateX(-0.5);
+      add(co, 0, 1.05, 0.52, PALETTE.trunk);
+      add(new THREE.BoxGeometry(0.24, 0.22, 0.4), 0, 1.3, 0.76, PALETTE.trunk);
+      this.thanNguoi(parts, add, 0.88);
+      // Người ngồi trên lưng: nhấc cả cụm vừa thêm lên cao.
+      for (let i = parts.length - 6; i < parts.length; i += 1) parts[i].translate(0, 1.0, 0);
+      const guom = new THREE.CylinderGeometry(0.035, 0.035, 0.95, 5);
+      guom.rotateZ(0.5);
+      add(guom, -0.4, 1.6, 0.1, PALETTE.granite);
+      return han(parts);
+    }
+    this.thanNguoi(parts, add, 1);
+    if (kind === 'archer') {
+      // Cánh cung: một vành cong dựng đứng trước mặt, đọc ra ngay từ xa.
+      const cung = new THREE.TorusGeometry(0.42, 0.045, 5, 10, Math.PI * 1.15);
+      cung.rotateY(Math.PI / 2);
+      add(cung, -0.3, 0.74, 0.16, PALETTE.trunk);
+      add(new THREE.CylinderGeometry(0.02, 0.02, 0.8, 4), -0.3, 0.74, 0.16, PALETTE.cloud);
+      return han(parts);
+    }
+    // Lính giáo: cây giáo chĩa chếch lên trước.
     const can = new THREE.CylinderGeometry(0.028, 0.028, 1.5, 5);
     can.rotateX(0.28);
     add(can, -0.3, 0.72, 0.1, PALETTE.trunk);
@@ -120,7 +165,7 @@ export class ArmyManager {
 
   stop(): void {
     this.s = null;
-    this.bodies.count = 0;
+    for (const k of TROOP_KINDS) this.bodies[k].count = 0;
     this.shots.count = 0;
     this.vet.length = 0;
   }
@@ -157,27 +202,32 @@ export class ArmyManager {
   private draw(): void {
     const s = this.s;
     if (!s) return;
-    let n = 0;
+    const n: Record<TroopKind, number> = { spear: 0, archer: 0, horse: 0 };
 
-    const than = (x: number, z: number, face: number, hex: number, cui: number): void => {
-      if (n >= CAP) return;
-      this.v.set(x, this.map.groundY(x, z), z);
-      this.q.setFromAxisAngle(this.axis, face);
+    const than = (f: { x: number; z: number; face: number; kind: TroopKind },
+      hex: number, cui: number): void => {
+      const i = n[f.kind];
+      if (i >= CAP) return;
+      this.v.set(f.x, this.map.groundY(f.x, f.z), f.z);
+      this.q.setFromAxisAngle(this.axis, f.face);
       this.sc.set(NGUOI, NGUOI * cui, NGUOI);
       this.m.compose(this.v, this.q, this.sc);
-      this.bodies.setMatrixAt(n, this.m);
-      this.bodies.setColorAt(n, this.color.setHex(hex));
-      n += 1;
+      this.bodies[f.kind].setMatrixAt(i, this.m);
+      this.bodies[f.kind].setColorAt(i, this.color.setHex(hex));
+      n[f.kind] = i + 1;
     };
 
     for (const r of s.raiders) {
       // Tên đang khuân hàng thì khom lưng xuống — nhìn một cái là biết đứa nào đang vơ vét.
-      than(r.x, r.z, r.face, MAU_GIAC, r.state === 'loot' ? 0.82 : 1);
+      than(r, MAU_GIAC, r.state === 'loot' ? 0.82 : 1);
     }
-    for (const m of s.mercs) than(m.x, m.z, m.face, MAU_LINH, 1);
-    this.bodies.count = n;
-    this.bodies.instanceMatrix.needsUpdate = true;
-    if (this.bodies.instanceColor) this.bodies.instanceColor.needsUpdate = true;
+    for (const g of s.guards) than(g, MAU_LINH, 1);
+    for (const kind of TROOP_KINDS) {
+      const mesh = this.bodies[kind];
+      mesh.count = n[kind];
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
 
     let k = 0;
     for (const t of this.vet) {

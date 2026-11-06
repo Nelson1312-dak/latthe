@@ -38,6 +38,12 @@ export const ROOF: Record<BuildingType, number> = {
   // Mái đá xám lam, lệch hẳn khỏi bốn mái ấm kia: chòi canh không phải chỗ ở, nó là thứ
   // người chơi phải nhận ra ngay giữa một làng toàn mái đỏ cam khi đợt bão sắp tới.
   watchtower: PALETTE.graniteDark,
+  // Ba trại quân cùng một tông đất nung sẫm, lệch hẳn khỏi mái ấm của nhà dân: liếc một
+  // cái là biết góc nào của làng là khu quân sự.
+  barracks: 0x8a4a3a,
+  archery: 0x7a5a38,
+  stable: 0x6b4a34,
+  smithy: 0x4a4440,
 };
 
 /** Mặt trên tấm bệ đất — mọi thân công trình đứng lên đây. */
@@ -45,7 +51,10 @@ const Y0 = 0.18;
 
 /** Mốc đổi dáng: 0 tới 3 (trạm trung chuyển chỉ tới 2, vì nó tối đa cấp 5). */
 function stage(type: BuildingType, level: number): number {
-  if (type === 'outpost' || type === 'watchtower') return level >= 5 ? 2 : level >= 3 ? 1 : 0;
+  if (type === 'smithy') return level >= 3 ? 2 : level >= 2 ? 1 : 0;
+  if (type === 'outpost' || type === 'watchtower' || type === 'stable') {
+    return level >= 5 ? 2 : level >= 3 ? 1 : 0;
+  }
   return level >= 10 ? 3 : level >= 6 ? 2 : level >= 3 ? 1 : 0;
 }
 
@@ -100,6 +109,11 @@ class Kit {
     const g = new THREE.ConeGeometry(r, h, seg);
     if (ry) g.rotateY(ry);
     g.translate(x, y + h / 2, z);
+    this.push(g, color);
+  }
+
+  /** Một mảnh đã dựng sẵn ở ngoài, chỉ còn việc tô màu và gộp vào. */
+  raw(g: THREE.BufferGeometry, color: number): void {
     this.push(g, color);
   }
 
@@ -369,6 +383,134 @@ const CACHE = new Map<string, THREE.BufferGeometry>();
 let MAT: THREE.MeshStandardMaterial | null = null;
 
 /** Hình học của một công trình ở một cấp. Dựng một lần, dùng lại cho mọi công trình giống nó. */
+
+// ------------------------------------------------------------------ trại quân
+
+/*
+ * BA TRẠI QUÂN VÀ MỘT LÒ RÈN.
+ *
+ * Chúng phải nhận ra được từ xa và phải khác hẳn nhà dân, vì khu quân sự là chỗ người chơi
+ * quay lại nhiều nhất trong ba mươi giây báo động. Nên cả ba cùng một tông đất nung sẫm,
+ * và mỗi cái mang đúng MỘT món đồ nói ra nó là gì: giá giáo, bia bắn, hàng rào ngựa, ống
+ * bễ. Ở mức phóng này người chơi đọc bóng dáng chứ không đọc chi tiết.
+ */
+
+/** Doanh trại: nhà dài mái dốc, một giá giáo dựng ngoài sân. */
+function barracks(level: number): THREE.BufferGeometry {
+  const k = new Kit();
+  nen(k, 2.4);
+  const st = stage('barracks', level);
+  const w = 2.9;
+  const d = 1.9;
+  const H = 1.15 + level * 0.04;
+  k.rbox(w, H, d, 0.12, 0.05, 0, Y0, -0.25, PALETTE.wall);
+  k.gable(w, d, 0.8, 0.16, 0, Y0 + H, -0.25, ROOF.barracks);
+  // Cửa lớn và hai khung cửa sổ hẹp — kiểu nhà lính, không phải nhà ở.
+  k.box(0.6, 0.85, 0.06, 0, Y0, -0.25 + d / 2, WOOD);
+  for (const x of [-0.95, 0.95]) k.box(0.22, 0.4, 0.06, x, Y0 + 0.5, -0.25 + d / 2, GLASS);
+  // Giá giáo: một thanh ngang trên hai cọc, cắm ba ngọn giáo.
+  for (const x of [-0.7, 0.7]) k.cyl(0.07, 0.07, 0.6, 5, x, Y0, 1.15, WOOD);
+  k.box(1.6, 0.1, 0.12, 0, Y0 + 0.6, 1.15, WOOD);
+  for (const x of [-0.5, 0, 0.5]) {
+    k.cyl(0.035, 0.035, 1.1, 5, x, Y0 + 0.2, 1.15, WOOD);
+    k.cone(0.09, 0.26, 6, x, Y0 + 1.3, 1.15, STONE);
+  }
+  if (st >= 1) {
+    // Cột cờ hiệu bên hông.
+    k.cyl(0.05, 0.05, 1.8, 5, -1.6, Y0, 0.3, WOOD);
+    k.box(0.5, 0.3, 0.04, -1.37, Y0 + 1.45, 0.3, ROOF.barracks);
+  }
+  if (st >= 2) {
+    k.rbox(1.1, H * 0.8, 1.1, 0.1, 0.04, 1.75, Y0, 0.6, PALETTE.wall);
+    k.gable(1.1, 1.1, 0.5, 0.12, 1.75, Y0 + H * 0.8, 0.6, ROOF.barracks, Math.PI / 2);
+  }
+  return k.build();
+}
+
+/** Trường bắn: mái che hở một bên, và hai tấm bia rơm ngoài bãi. */
+function archery(level: number): THREE.BufferGeometry {
+  const k = new Kit();
+  nen(k, 2.3);
+  const st = stage('archery', level);
+  const H = 1.0 + level * 0.03;
+  // Nhà hở: chỉ có vách sau và bốn cột, nên nhìn xuyên qua được — khác hẳn doanh trại kín.
+  k.rbox(2.6, H, 0.18, 0.06, 0.03, 0, Y0, -0.95, PALETTE.wall);
+  for (const x of [-1.2, 1.2]) {
+    for (const z of [-0.9, 0.35]) k.cyl(0.09, 0.09, H, 6, x, Y0, z, WOOD);
+  }
+  k.gable(2.8, 1.5, 0.55, 0.2, 0, Y0 + H, -0.3, ROOF.archery);
+  // Giá cung dựa vách sau.
+  for (const x of [-0.6, 0.6]) {
+    k.box(0.07, 0.75, 0.07, x, Y0, -0.78, WOOD);
+    k.box(0.5, 0.06, 0.06, x, Y0 + 0.75, -0.78, WOOD);
+  }
+  // Bia rơm: trụ tròn vàng, mặt đỏ quay về phía nhà.
+  const bia = (x: number, z: number) => {
+    k.cyl(0.42, 0.42, 0.16, 12, x, Y0 + 0.5, z, PALETTE.wheat);
+    k.disc(0.2, x, Y0 + 0.58, z + 0.1, ROOF.barracks);
+    for (const dx of [-0.3, 0.3]) k.cyl(0.06, 0.06, 0.55, 5, x + dx, Y0, z, WOOD);
+  };
+  bia(-0.7, 1.35);
+  if (st >= 1) bia(0.75, 1.35);
+  if (st >= 2) bia(0.05, 1.95);
+  return k.build();
+}
+
+/** Chuồng ngựa: nhà kho thấp, và một bãi quây rào. */
+function stable(level: number): THREE.BufferGeometry {
+  const k = new Kit();
+  nen(k, 2.6);
+  const st = stage('stable', level);
+  const H = 1.2 + level * 0.05;
+  k.rbox(2.4, H, 1.8, 0.12, 0.05, -0.5, Y0, -0.5, PALETTE.wall);
+  k.gable(2.4, 1.8, 0.75, 0.16, -0.5, Y0 + H, -0.5, ROOF.stable);
+  // Hai cánh cửa chuồng mở ra hai bên.
+  for (const x of [-0.95, -0.05]) k.box(0.42, 0.9, 0.06, x, Y0, 0.42, WOOD);
+  // Máng cỏ.
+  k.rbox(0.9, 0.22, 0.35, 0.06, 0.03, 1.1, Y0, -1.1, WOOD);
+  k.box(0.75, 0.12, 0.25, 1.1, Y0 + 0.22, -1.1, PALETTE.wheat);
+  // Hàng rào quây bãi: cọc và hai thanh ngang, chừa một lối vào.
+  const coc: [number, number][] = [[0.6, 1.5], [1.6, 1.2], [2.1, 0.3], [1.9, -0.7]];
+  for (const [x, z] of coc) k.cyl(0.08, 0.08, 0.62, 5, x, Y0, z, WOOD);
+  for (let i = 0; i < coc.length - 1; i += 1) {
+    const [x0, z0] = coc[i];
+    const [x1, z1] = coc[i + 1];
+    const mx = (x0 + x1) / 2;
+    const mz = (z0 + z1) / 2;
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const g = new THREE.BoxGeometry(len, 0.08, 0.07);
+    g.rotateY(-Math.atan2(z1 - z0, x1 - x0));
+    g.translate(mx, Y0 + 0.42, mz);
+    k.raw(g, WOOD);
+  }
+  if (st >= 1) k.rbox(1.0, 0.8, 0.9, 0.08, 0.04, -1.9, Y0, 0.5, PALETTE.wall);
+  if (st >= 2) k.gable(1.0, 0.9, 0.4, 0.1, -1.9, Y0 + 0.8, 0.5, ROOF.stable, Math.PI / 2);
+  return k.build();
+}
+
+/** Lò rèn: nhà nhỏ, một ống khói to, và cái đe ngoài sân. */
+function smithy(level: number): THREE.BufferGeometry {
+  const k = new Kit();
+  nen(k, 1.9);
+  const st = stage('smithy', level);
+  k.rbox(1.9, 1.15, 1.6, 0.1, 0.05, -0.15, Y0, -0.2, PALETTE.wall);
+  k.gable(1.9, 1.6, 0.6, 0.14, -0.15, Y0 + 1.15, -0.2, ROOF.smithy);
+  // Ống khói đá to quá cỡ: đó là thứ nhận ra lò rèn từ xa.
+  k.rbox(0.55, 2.1, 0.55, 0.06, 0.03, 0.72, Y0, -0.75, STONE);
+  k.rbox(0.68, 0.18, 0.68, 0.06, 0.03, 0.72, Y0 + 2.1, -0.75, STONE_DARK);
+  // Miệng lò đỏ lửa.
+  k.box(0.46, 0.38, 0.06, -0.15, Y0 + 0.12, 0.6, st >= 1 ? GOLD : WOOD);
+  // Cái đe trên một khúc gỗ.
+  k.cyl(0.22, 0.26, 0.3, 8, 0.95, Y0, 0.72, WOOD);
+  k.rbox(0.5, 0.16, 0.26, 0.05, 0.03, 0.95, Y0 + 0.3, 0.72, STONE_DARK);
+  if (st >= 2) {
+    // Giá treo đồ rèn xong.
+    for (const z of [-0.95, -0.15]) k.cyl(0.06, 0.06, 0.9, 5, -1.35, Y0, z, WOOD);
+    k.box(0.07, 0.07, 0.9, -1.35, Y0 + 0.9, -0.55, WOOD);
+  }
+  return k.build();
+}
+
 /**
  * Hình của một công trình. `co` là màu cờ của người chơi, chỉ thủ phủ dùng tới.
  *
@@ -380,11 +522,19 @@ export function buildingGeometry(type: BuildingType, level: number, co = 0): THR
   const key = type === 'townhall' ? `townhall:${level}:${co}` : `${type}:${level}`;
   let g = CACHE.get(key);
   if (!g) {
-    g = type === 'house' ? house(level)
-      : type === 'townhall' ? townhall(level, co || PALETTE.roofCore)
-        : type === 'granary' ? granary(level)
-          : type === 'watchtower' ? watchtower(level)
-            : outpost(level);
+    // Bảng thay cho chuỗi ba ngôi: chín loại rồi, và trình biên dịch tự bắt khi thiếu một.
+    const lam: Record<BuildingType, () => THREE.BufferGeometry> = {
+      house: () => house(level),
+      townhall: () => townhall(level, co || PALETTE.roofCore),
+      granary: () => granary(level),
+      watchtower: () => watchtower(level),
+      outpost: () => outpost(level),
+      barracks: () => barracks(level),
+      archery: () => archery(level),
+      stable: () => stable(level),
+      smithy: () => smithy(level),
+    };
+    g = lam[type]();
     CACHE.set(key, g);
   }
   return g;

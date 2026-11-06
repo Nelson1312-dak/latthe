@@ -126,7 +126,7 @@ html, body {
 }
 
 .ico svg, .tico svg, .pico svg, .insp-ico svg, .bico svg,
-.sea-ico svg, .sea-go .gico svg,
+.wave-ico svg, .wave-mix svg, .alert-ico svg, .row svg, .gico svg,
 .icon svg, .tile.farm svg {
   width: 1em; height: 1em; display: block;
   fill: none; stroke: currentColor;
@@ -183,7 +183,8 @@ html, body {
   font-variant-numeric: tabular-nums;
   transition: background 0.2s var(--ease);
 }
-.stat small { color: var(--ink-soft); font-size: 11.5px; font-weight: 600; }
+.stat small { color: var(--ink-soft); font-size: 11.5px; font-weight: 600;
+  white-space: nowrap; }
 .stat strong { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 .stat.reach strong { color: var(--amber); }
 .stat.reach.close { background: rgba(251, 191, 36, 0.14); }
@@ -249,75 +250,6 @@ html, body {
 .lang-mau button:hover { transform: scale(1.08); }
 .lang-mau button.on { border-color: var(--ink); transform: scale(1.08); }
 
-/* -------------------------------------------------------------- mùa bão */
-
-/*
- * Bảng mùa bão nằm GÓC TRÁI DƯỚI, ngay trên dock: góc duy nhất còn trống ở cả màn rộng lẫn
- * màn điện thoại, và sát tay cái phải — nút "Gọi dân về" phải bấm được trong hai giây cuối.
- */
-.storm {
-  position: fixed; left: 12px; bottom: calc(100px + env(safe-area-inset-bottom));
-  z-index: 6; width: 164px; display: grid; gap: 7px;
-  padding: 10px 11px; border-radius: var(--r-md);
-  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--hairline); box-shadow: var(--shadow);
-  transition: border-color 0.25s var(--ease), background 0.25s var(--ease);
-}
-.storm-head { display: flex; align-items: center; gap: 9px; }
-.storm-ico { display: flex; width: 22px; height: 22px; color: var(--ink-dim); flex: none; }
-.storm-ico svg { width: 100%; height: 100%; }
-.storm-what { display: grid; line-height: 1.15; min-width: 0; }
-.storm-what small { font-size: 11px; color: var(--ink-dim); font-weight: 600; }
-.storm-what strong { font-size: 17px; font-variant-numeric: tabular-nums; }
-
-.storm-num { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
-.storm-num .guard { color: var(--ink-dim); }
-.storm-num .power { color: var(--ink-dim); }
-.storm-num b { color: var(--ink); font-size: 13px; }
-/* Thủ không đủ thì con số giặc đỏ lên. Đây là thứ duy nhất trong bảng cần đọc trong một nháy. */
-.storm.weak .storm-num .power b { color: var(--rose); }
-.storm.safe .storm-num .guard b { color: var(--mint); }
-
-.storm-bar { height: 4px; border-radius: 2px; background: var(--glass-inner); overflow: hidden; }
-.storm-bar i { display: block; height: 100%; background: var(--ink-dim); transition: width 0.2s linear; }
-.storm.near .storm-bar i { background: var(--rose); }
-
-.storm-call {
-  border: 1px solid var(--hairline); background: var(--glass-inner);
-  color: var(--ink); font: inherit; font-size: 12px; font-weight: 700;
-  padding: 7px 0; border-radius: var(--r-sm); cursor: pointer;
-}
-.storm-call:hover { background: var(--glass-inner-hi); }
-.storm-call.on { background: var(--amber); color: #1b1407; border-color: transparent; }
-
-/* Sắp tới nơi: cả bảng đỏ lên và thở. Người chơi đang nhìn chỗ khác vẫn bắt được bằng đuôi mắt. */
-.storm.near {
-  border-color: var(--rose);
-  animation: storm-tho 1.1s var(--ease) infinite;
-}
-@keyframes storm-tho {
-  0%, 100% { box-shadow: var(--shadow); }
-  50% { box-shadow: var(--shadow), 0 0 0 3px rgba(251, 113, 133, 0.28); }
-}
-.storm.near .storm-ico { color: var(--rose); }
-
-.wave-banner {
-  position: fixed; left: 50%; top: 22%; transform: translateX(-50%);
-  z-index: 40; display: grid; gap: 4px; justify-items: center; text-align: center;
-  padding: 16px 26px; border-radius: var(--r-md); max-width: min(420px, 88vw);
-  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--hairline); box-shadow: var(--shadow);
-  animation: wave-vao 0.36s var(--ease);
-}
-.wave-banner strong { font-size: 21px; letter-spacing: -0.01em; }
-.wave-banner span { font-size: 13.5px; color: var(--ink-dim); font-weight: 600; }
-.wave-banner.lost { border-color: var(--rose); }
-.wave-banner.won { border-color: var(--mint); }
-@keyframes wave-vao {
-  from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.96); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-}
-
 /* --------------------------------------------------------------- chế độ xây */
 
 /* Chế độ xây là một CHẾ ĐỘ, không phải một bảng mới: màn hình đã có sáu mặt và không còn
@@ -355,48 +287,141 @@ body.xay .insp-cost { margin: 2px 0; }
 }
 .xay-huy:hover { background: var(--glass-inner-hi); }
 
-/* ------------------------------------------------------------------ đi biển */
+/* ----------------------------------------------------------------- dải đợt */
 
-/* Đối xứng với bảng mùa bão ở góc trái: một bên là thứ ập tới, một bên là thứ mình chủ
-   động làm. Hai cái cùng cỡ, cùng độ cao, nên mắt đọc chúng như một cặp. */
-.sea {
-  position: fixed; right: 12px; bottom: calc(100px + env(safe-area-inset-bottom));
-  z-index: 6; width: 176px; display: grid; gap: 7px;
-  padding: 10px 11px; border-radius: var(--r-md);
+/* Một cột duy nhất dưới thanh trên: dải đợt trước, dải báo xếp xuống dưới nó. */
+.topstack {
+  position: fixed; left: 50%; top: calc(var(--bar-h, 112px) + 8px);
+  transform: translateX(-50%); z-index: 8;
+  display: grid; gap: 8px; justify-items: center;
+  width: max-content; max-width: calc(100vw - 20px);
+  pointer-events: none;
+}
+.topstack > * { pointer-events: auto; }
+
+.wave {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 10px 8px 12px; border-radius: var(--r-md);
+  max-width: min(560px, calc(100vw - 20px));
   background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--hairline); box-shadow: var(--shadow);
+  transition: border-color 0.25s var(--ease);
 }
-.sea-head { display: flex; align-items: center; gap: 9px; }
-.sea-ico { display: flex; flex: none; font-size: 21px; color: var(--ink-dim); }
-.sea-what { display: grid; line-height: 1.15; min-width: 0; }
-.sea-what small { font-size: 11px; color: var(--ink-dim); font-weight: 600; }
-.sea-what strong { font-size: 13.5px; font-variant-numeric: tabular-nums; }
-.sea.di .sea-what strong { font-size: 17px; }
-.sea.di .sea-ico { color: var(--amber); }
+.wave-ico { display: flex; flex: none; font-size: 21px; color: var(--ink-dim); }
+.wave-when { display: grid; line-height: 1.12; flex: none; }
+.wave-when small { font-size: 10.5px; color: var(--ink-dim); font-weight: 600; }
+.wave-when strong { font-size: 17px; font-variant-numeric: tabular-nums; }
 
-.sea-bar { height: 4px; border-radius: 2px; background: var(--glass-inner); overflow: hidden; }
-.sea-bar i { display: block; height: 100%; background: var(--amber); transition: width 0.3s linear; }
+/* Thành phần đợt: biểu tượng kèm số. Không nói ra thì luật khắc chế thành trò may rủi. */
+.wave-mix { display: flex; gap: 7px; flex: none; }
+.wave-mix span { display: inline-flex; align-items: center; gap: 3px;
+  font-size: 12.5px; font-weight: 700; color: var(--ink-soft); }
+.wave-mix .gico { display: flex; font-size: 14px; color: var(--ink-dim); }
 
-.sea-list { display: grid; gap: 5px; }
-.sea-list[hidden] { display: none; }
-.sea-go {
-  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
-  border: 1px solid var(--hairline); background: var(--glass-inner);
-  color: var(--ink); font: inherit; padding: 6px 8px; border-radius: var(--r-sm);
-  cursor: pointer;
+.wave-read { display: grid; gap: 4px; min-width: 96px; flex: 1; }
+.wave-read strong { font-size: 12.5px; font-weight: 700; color: var(--mint); }
+.wave.thieu .wave-read strong { color: var(--rose); }
+.wave-bar { height: 4px; border-radius: 2px; background: var(--glass-inner); overflow: hidden; }
+.wave-bar i { display: block; height: 100%; background: var(--ink-dim); transition: width 0.2s linear; }
+.wave.gan .wave-bar i { background: var(--rose); }
+
+.wave-hire {
+  flex: none; border: 1px solid var(--hairline); background: var(--amber); color: #1b1407;
+  font: inherit; font-size: 12px; font-weight: 700; padding: 7px 12px;
+  border-radius: var(--r-sm); cursor: pointer; border-color: transparent;
 }
-.sea-go:hover:not(:disabled) { background: var(--glass-inner-hi); border-color: var(--hairline-hi); }
-.sea-go:disabled { opacity: 0.42; cursor: default; }
-.sea-go .gico { display: flex; flex: none; font-size: 16px; color: var(--ink-dim); }
-.sea-go .col { display: grid; min-width: 0; line-height: 1.2; }
-.sea-go b { font-size: 12.5px; font-weight: 700; }
-.sea-go small { font-size: 10.5px; color: var(--ink-dim); font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Tầm có thể mất người thì viền hồng — người chơi phải thấy cái giá TRƯỚC khi bấm. */
-.sea-go.lieu:not(:disabled) { border-color: rgba(251, 113, 133, 0.45); }
-.sea-go.lieu:not(:disabled) b { color: var(--rose); }
+.wave-hire[hidden] { display: none; }
 
-.sea-note { font-size: 10.5px; color: var(--ink-dim); font-weight: 600; line-height: 1.3; margin: 0; }
+/* Sắp tới nơi: cả dải đỏ lên và thở. Nhìn chỗ khác vẫn bắt được bằng đuôi mắt. */
+.wave.gan { border-color: var(--rose); animation: wave-tho 1.1s var(--ease) infinite; }
+@keyframes wave-tho {
+  0%, 100% { box-shadow: var(--shadow); }
+  50% { box-shadow: var(--shadow), 0 0 0 3px rgba(251, 113, 133, 0.28); }
+}
+
+/* -------------------------------------------------------------- báo sự kiện */
+
+.alert {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 10px 16px; border-radius: var(--r-md);
+  max-width: min(520px, calc(100vw - 20px));
+  background: var(--glass-deep); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--hairline); box-shadow: var(--shadow);
+  color: var(--ink); font: inherit; cursor: pointer;
+  animation: alert-vao 0.3s var(--ease);
+}
+.alert[hidden] { display: none; }
+.alert-ico { display: flex; flex: none; font-size: 20px; color: var(--ink-dim); }
+.alert-col { display: grid; gap: 1px; min-width: 0; }
+.alert-col strong { font-size: 14.5px; }
+.alert-col small { font-size: 12px; color: var(--ink-dim); font-weight: 600;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.3; }
+.alert.won { border-color: var(--mint); }
+.alert.won .alert-ico { color: var(--mint); }
+.alert.lost { border-color: var(--rose); }
+.alert.lost .alert-ico { color: var(--rose); }
+@keyframes alert-vao {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ------------------------------------------------------------- ngăn của dock */
+
+.sheet { display: grid; gap: 9px; }
+.sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sheet-head strong { font-size: 15px; }
+.sheet-head small { font-size: 11.5px; color: var(--ink-dim); font-weight: 600; }
+.sheet-note { margin: 0; font-size: 11.5px; color: var(--ink-dim); font-weight: 600; line-height: 1.35; }
+
+/* Một dòng trong ngăn: biểu tượng, tên + mô tả, giá, nút. */
+.row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  border: 1px solid var(--hairline); background: var(--glass-inner); color: var(--ink);
+  font: inherit; padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer;
+}
+.row:hover:not(:disabled) { background: var(--glass-inner-hi); border-color: var(--hairline-hi); }
+.row:disabled { opacity: 0.45; cursor: default; }
+.row .gico { display: flex; flex: none; font-size: 19px; color: var(--ink-dim); }
+.row .col { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.row b { font-size: 13px; font-weight: 700; }
+/* Hai dòng, không cắt một dòng: dòng này là chỗ nói VÌ SAO chưa bấm được, mà một lý do
+   bị cắt cụt thì tệ hơn là không nói gì. */
+.row small { font-size: 11px; color: var(--ink-dim); font-weight: 600; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row b { overflow-wrap: anywhere; }
+.row .go { flex: none; font-size: 12px; font-weight: 700; color: var(--amber); }
+.row.on { border-color: var(--amber); }
+.row.lieu:not(:disabled) { border-color: rgba(251, 113, 133, 0.45); }
+.row.lieu:not(:disabled) b { color: var(--rose); }
+
+
+/* Phụ đề dưới mỗi nút dock: trạng thái ngắn gọn, để không phải mở ngăn mới biết. */
+.tile .tsub { font-size: 10.5px; color: var(--ink-dim); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 84px; }
+
+/*
+ * KHUNG HẸP: BỎ DÒNG PHỤ, GIỮ TÊN.
+ *
+ * Đo trên khung 375: sáu nút cộng lại rộng 398 điểm ảnh trong khi dock chỉ còn 343 — nút
+ * tốc độ bị cắt mất một nửa, mà nó là nút duy nhất không có đường bấm nào khác. Cho chữ
+ * tự cắt bằng ba chấm thì tệ hơn: cả sáu nút teo lại thành sáu biểu tượng trần.
+ *
+ * Nên chỗ cắt là DÒNG PHỤ, không phải tên nút. Con số dưới mỗi nút ("2/14", "Rảnh") chỉ
+ * nhắc lại thứ nằm ngay trong chính cái ngăn mà nút ấy mở ra, còn cái tên thì không chỗ
+ * nào khác nói hộ.
+ */
+@media (max-width: 430px) {
+  .dock { gap: 4px; padding: 6px; max-width: calc(100vw - 16px); }
+  .tiles { gap: 4px; }
+  .tile { padding: 8px 10px; gap: 7px; }
+  .tile .tico { font-size: 18px; }
+  .tile .tsub { display: none; }
+}
+.tile.ready .tsub { color: var(--ink-soft); }
+
+/* Chế độ xây: mấy mặt khác lui đi, dock giữ nguyên vì nó là chỗ đổi loại công trình. */
+body.xay .map { display: none; }
 
 /* -------------------------------------------------------------- bảng đồ hoạ */
 
@@ -510,7 +535,7 @@ body.xay .insp-cost { margin: 2px 0; }
 .crewpill.focus small { color: var(--mint); font-weight: 600; }
 .crewpill.focus .pico { color: var(--mint); }
 
-.tiles { display: flex; gap: 6px; }
+.tiles { display: flex; gap: 6px; min-width: 0; }
 
 /*
  * MỌI NÚT CÙNG MỘT NỀN TỐI. Khác nhau chỉ ở viền và độ mờ.
@@ -869,13 +894,16 @@ button.primary:active { transform: scale(0.98); }
   .insp-note { font-size: 11.5px; }
 }
 @media (max-width: 620px) {
-  /* Hai bảng 176 + 164 cộng lề là 376 — vừa đúng tràn một màn 375. Thu cả hai lại. */
-  .sea { width: 164px; padding: 8px 9px; gap: 6px; }
-  .storm { width: 142px; padding: 8px 9px; }
-  .sea-go { padding: 5px 7px; gap: 6px; }
-  .sea-go b { font-size: 12px; }
-  .sea-note { display: none; }
-  .crewpill small { display: none; }
-  .tile .tcol { display: none; }
-  .tile { padding: 8px 10px; }
+  /*
+   * GIỮ CHỮ, BỎ PHỤ ĐỀ. Bản trước giấu luôn cả nhãn trên màn hẹp, và dock thành một dãy
+   * biểu tượng trần — không ai đoán ra cái com-pa là "đi biển". Nhãn một chữ thì vẫn vừa.
+   */
+  .tile { padding: 7px 8px; gap: 5px; }
+  .tile .tcol { display: grid; }
+  .tile .tsub { display: none; }
+  .tile .tname { font-size: 11px; }
+  .dock { gap: 4px; padding: 5px; }
+  .wave { gap: 8px; padding: 7px 9px; }
+  .wave-when strong { font-size: 15px; }
+}
 }

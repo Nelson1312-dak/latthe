@@ -4,7 +4,7 @@
  * Thế giới rộng 60×60 nên toạ độ chạy từ -30 tới 30, thủ phủ ở gốc. Bốn biến sinh thái toả
  * ra bốn phía; vùng giữa luôn là đồng cỏ để người chơi có chỗ đứng chân ngay từ đầu.
  */
-import type { Biome, BiomeId, Cost, ResourceKind, VoyageBand } from './types';
+import type { Biome, BiomeId, BuildingType, Cost, ResourceKind, TroopKind, VoyageBand } from './types';
 import type { IconName } from './icons';
 
 // Kich thuoc the gioi khong con y nghia: ban do la vo han, sinh theo khoi trong world.ts.
@@ -369,6 +369,22 @@ export const BUILDINGS = {
     label: 'Chòi canh', icon: 'tower', maxLevel: 5,
     describe: (l: number) => `Sức thủ +${l * GUARD_PER_TOWER}`,
   },
+  barracks: {
+    label: 'Doanh trại', icon: 'spear', maxLevel: 8,
+    describe: (l: number) => `Nuôi được ${l * 3} lính giáo`,
+  },
+  archery: {
+    label: 'Trường bắn', icon: 'bow', maxLevel: 8,
+    describe: (l: number) => `Nuôi được ${l * 3} cung thủ`,
+  },
+  stable: {
+    label: 'Chuồng ngựa', icon: 'horse', maxLevel: 6,
+    describe: (l: number) => `Nuôi được ${l * 2} kỵ binh`,
+  },
+  smithy: {
+    label: 'Lò rèn', icon: 'anvil', maxLevel: 3,
+    describe: () => 'Bán nâng cấp giáp và sát thương cho cả ba loại lính',
+  },
 } as const;
 
 /** Giá xây mới. Nâng cấp dùng cùng bảng này nhân theo cấp, xem Economy.costFor. */
@@ -385,6 +401,12 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   // KHONG doi da. Da chi dao duoc tu phut 13 (do bang npm run pace) con dot bao dau tien
   // ap toi o phut 7 — doi da la bat nguoi choi thua dot dau ma khong co cach nao khac.
   watchtower: { gold: 110, wood: 70 },
+  // Ba trại quân đắt dần theo thứ tự mở ra; lò rèn rẻ hơn vì nó không nuôi ai, chỉ bán
+  // nâng cấp, và bắt trả tiền hai lần cho cùng một thứ thì chẳng ai xây nó.
+  barracks: { gold: 220, wood: 150, stone: 60 },
+  archery: { gold: 320, wood: 240, stone: 90 },
+  stable: { gold: 600, wood: 320, stone: 180 },
+  smithy: { gold: 260, wood: 120, stone: 160 },
 };
 
 /**
@@ -466,6 +488,10 @@ export const FOOTPRINT: Record<keyof typeof BUILDINGS, number> = {
   granary: 2.0,
   outpost: 2.2,
   watchtower: 1.5,
+  barracks: 2.4,
+  archery: 2.3,
+  stable: 2.6,
+  smithy: 1.9,
 };
 
 export const BASE_RADIUS = 17;
@@ -494,6 +520,123 @@ export const WAVE_PER_WAVE = 1.8;
 // ------------------------------------------------------------------ màu sắc
 
 
+
+
+// ------------------------------------------------------------------ thời đại
+
+/**
+ * BỐN THỜI ĐẠI.
+ *
+ * Mỗi thời mở thêm công trình và thêm một loại lính, nhưng cũng làm GIẶC MẠNH LÊN và cho
+ * chúng thêm một loại quân mới. Nếu lên thời đại chỉ toàn cái được thì nó là một nút bấm
+ * cho không, và người chơi sẽ bấm mà không cân nhắc một giây nào.
+ *
+ * Chuyển thời đại mất thời gian chứ không xong ngay: đó phải là một sự kiện trong ván chơi,
+ * và là một khoảng người chơi biết mình đang hở sườn.
+ */
+export interface AgeSpec {
+  label: string;
+  /**
+   * Cấp căn cứ tối thiểu — con số "Cấp" trên thanh trên, không phải cấp riêng của thủ phủ.
+   *
+   * Lúc đầu dùng cấp của chính toà thủ phủ, và đo ra bản mô phỏng kẹt ở thời đại một suốt
+   * bốn tiếng: nó nâng cấp công trình thấp nhất trước, mà nó lại xây nhà mới liên tục nên
+   * thủ phủ không bao giờ được nâng. Cấp căn cứ thì người chơi nhìn thấy ngay trên đầu màn,
+   * và không phụ thuộc vào thứ tự nâng cấp của ai cả.
+   */
+  level: number;
+  /** Công trình bắt buộc phải có trước khi lên. */
+  need: BuildingType | null;
+  cost: Cost;
+  seconds: number;
+  /** Một dòng nói thời đại này mở ra cái gì. */
+  opens: string;
+}
+
+export const AGES: readonly AgeSpec[] = [
+  { label: 'Thời Dựng Làng', level: 1, need: null, cost: {}, seconds: 0,
+    opens: 'Nhà ở, kho lẫm, chòi canh, trạm trung chuyển' },
+  { label: 'Thời Mở Đất', level: 4, need: null, cost: { food: 400, wood: 300 }, seconds: 90,
+    opens: 'Doanh trại và lò rèn — bắt đầu nuôi quân' },
+  { label: 'Thời Thành Luỹ', level: 9, need: 'barracks',
+    cost: { food: 1200, gold: 900, stone: 400 }, seconds: 150,
+    opens: 'Trường bắn — cung thủ bắn xa' },
+  { label: 'Thời Biển Lớn', level: 16, need: 'smithy',
+    cost: { food: 2000, gold: 3000, stone: 700, relics: 20 }, seconds: 240,
+    opens: 'Chuồng ngựa — kỵ binh, và bậc rèn thứ hai' },
+];
+
+/** Thời đại tối thiểu để xây từng loại. Thiếu nghĩa là có từ đầu. */
+export const BUILD_MIN_AGE: Partial<Record<BuildingType, number>> = {
+  barracks: 2, smithy: 2, archery: 3, stable: 4,
+};
+
+// ------------------------------------------------------------------ quân đội
+
+/**
+ * BA LOẠI LÍNH KHẮC NHAU — cái tam giác của Age of Empires.
+ *
+ * Nó tồn tại để bắt người chơi NHÌN xem giặc đang tới bằng gì, chứ không chỉ đếm xem mình
+ * có bao nhiêu quân. Vì thế bảng đợt phải nói rõ thành phần ngay từ lúc báo động; giấu đi
+ * thì luật khắc chế thành một trò may rủi, và may rủi thì không ai học được.
+ */
+export interface TroopSpec {
+  label: string;
+  icon: IconName;
+  /** Công trình huấn luyện ra nó. */
+  from: BuildingType;
+  hp: number;
+  /** Sát thương mỗi giây. */
+  dps: number;
+  speed: number;
+  /** Tầm đánh. Bộ binh đánh giáp lá cà, cung thủ bắn xa. */
+  range: number;
+  cost: Cost;
+  seconds: number;
+  /** Lương ăn mỗi giây. */
+  upkeep: number;
+  /** Mỗi cấp công trình nuôi được bấy nhiêu người. */
+  perLevel: number;
+}
+
+export const TROOPS: Record<TroopKind, TroopSpec> = {
+  spear: {
+    label: 'Lính giáo', icon: 'spear', from: 'barracks',
+    hp: 34, dps: 7, speed: 2.7, range: 1.4,
+    cost: { food: 40, wood: 20 }, seconds: 12, upkeep: 0.028, perLevel: 3,
+  },
+  archer: {
+    label: 'Cung thủ', icon: 'bow', from: 'archery',
+    hp: 20, dps: 6, speed: 2.5, range: 9, cost: { food: 30, wood: 45 },
+    seconds: 16, upkeep: 0.034, perLevel: 3,
+  },
+  horse: {
+    label: 'Kỵ binh', icon: 'horse', from: 'stable',
+    hp: 58, dps: 10, speed: 4.4, range: 1.6, cost: { food: 80, gold: 60 },
+    seconds: 24, upkeep: 0.058, perLevel: 2,
+  },
+};
+
+/**
+ * Hệ số sát thương của hàng ĐÁNH lên hàng BỊ ĐÁNH. Vòng tròn khắc chế:
+ * giáo chống kỵ binh, cung bắn bộ binh, kỵ binh chém cung thủ.
+ */
+export const KHAC: Record<TroopKind, Record<TroopKind, number>> = {
+  spear: { spear: 1, archer: 0.6, horse: 2.0 },
+  archer: { spear: 1.8, archer: 1, horse: 0.6 },
+  horse: { spear: 0.55, archer: 2.0, horse: 1 },
+};
+
+/** Lò rèn: mỗi bậc cộng bấy nhiêu phần trăm sát thương, và giảm bấy nhiêu phần sát thương nhận. */
+export const SMITH_ATTACK = 0.18;
+export const SMITH_ARMOUR = 0.14;
+export const SMITH_MAX_AGE2 = 1;
+export const SMITH_MAX_AGE4 = 2;
+export const SMITH_COST: Cost = { gold: 400, stone: 200 };
+export const SMITH_GROWTH = 2.4;
+
+/** Hết lương thì lính bỏ đi — cứ bấy nhiêu giây mất một người. */
+export const DESERT_SECONDS = 12;
 
 // ------------------------------------------------------------------ đi biển
 

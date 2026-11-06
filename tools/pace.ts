@@ -50,9 +50,11 @@ const { Economy } = await import('../src/Economy');
 const { MapManager } = await import('../src/MapManager');
 const { FogOfWar } = await import('../src/FogOfWar');
 const { WorkerManager } = await import('../src/WorkerManager');
-const { RESOURCES, WAVE_WARN_SECONDS, VOYAGES, GUARD_PER_VILLAGER } = await import('../src/config');
+const { RESOURCES, WAVE_WARN_SECONDS, VOYAGES, GUARD_PER_VILLAGER, TROOPS } = await import('../src/config');
+const { TROOP_KINDS } = await import('../src/types');
 const { RESOURCE_KINDS } = await import('../src/types');
 type BuildingType = import('../src/types').BuildingType;
+type Cost = import('../src/types').Cost;
 type ResourceKind = import('../src/types').ResourceKind;
 
 const economy = Economy.load();
@@ -157,7 +159,54 @@ function oTrong(t: BuildingType): [number, number] | null {
   return null;
 }
 
-const XAY: BuildingType[] = ['house', 'granary', 'watchtower', 'outpost'];
+/*
+ * Thu tu xay. Doanh trai va lo ren dung NGAY SAU kho lam: mot nguoi choi biet luat se dung
+ * quan ngay khi len Thoi Mo Dat, va ban mo phong phai la nguoi choi biet luat.
+ */
+const XAY: BuildingType[] = ['house', 'granary', 'watchtower', 'barracks', 'smithy',
+  'archery', 'stable', 'outpost'];
+
+/*
+ * Len thoi dai va nuoi quan.
+ *
+ * Len thoi dai NGAY khi du: no mo cong trinh moi, va cai gia (giac manh len) thi dang
+ * tra vi khong len thi vinh vien khong co quan. Quan thi nuoi toi tran, nhung chua lai
+ * mot nua luong thuc cho chuyen di bien - het luong la linh bo di.
+ */
+/**
+ * Khoan cua dang de danh cho thoi dai sau, hoac null neu chua phai luc de danh.
+ *
+ * Chi de danh khi thoi dai sau CHI con thieu cua — con thieu cap hay thieu cong trinh thi
+ * cu xay tiep da. Khong co cai nay thi con bot tieu sach moi dong vao nang cap va dung mai
+ * o thoi dai hai du can cu len toi cap 54: do duoc, khong phai doan.
+ */
+function deDanh(): Cost | null {
+  const sau = economy.nextAge();
+  if (!sau || economy.ageBlock() !== 'Chưa đủ của') return null;
+  return sau.cost;
+}
+
+function quanDoi(): void {
+  if (!economy.ageBlock()) economy.advanceAge();
+  /*
+   * Thoi dai di truoc quan so.
+   *
+   * Nguoi choi tham linh thi tu khoa duong len cua chinh minh: moi thoi dai deu doi luong
+   * thuc, ma nuoi quan cung an luong thuc, nen con bot tham an se dung mai o thoi dai hai
+   * du can cu da len cap 54 — do duoc, khong phai doan. Nen khi thoi dai sau chi con thieu
+   * cua, dung tieu phan luong danh cho no.
+   */
+  const giuLuong = deDanh()?.food ?? 0;
+  for (const k of TROOP_KINDS) {
+    if (economy.trainBlock(k)) continue;
+    // Giu lai mot khoan luong that: nuoi quan ma de kho can thi linh bo di ngay sau do.
+    if (economy.state.inv.food < (TROOPS[k].cost.food ?? 0) * 3 + giuLuong) continue;
+    if (economy.train(k)) quan.nuoi += 1;
+  }
+  for (const w of ['attack', 'armour'] as const) {
+    if (!economy.smithBlock(w)) economy.buySmith(w);
+  }
+}
 const MOC = [300, 600, 1800, 3600, 7200, 14400];
 const DT = 0.25;
 let moc = 0;
@@ -174,6 +223,10 @@ const hang = (n: number, w: number) => String(Math.floor(n)).padStart(w);
 const dot = { thang: 0, thua: 0, cap: 0, mat: 0, thuong: 0, den: 0, ha: 0, thoat: 0 };
 const bien = { chuyen: 0, trung: 0, khong: 0, mat: 0, vang: 0, manh: 0 };
 const theoTam: Record<string, number> = {};
+/** Quan: ra lo bao nhieu, bo di bao nhieu. Quan cuoi van bang 0 co the la chua nuoi noi
+ *  mot nguoi, cung co the la nuoi roi chet doi het — hai chuyen khac han nhau. */
+const quan = { nuoi: 0, bo: 0 };
+economy.onDesert = () => { quan.bo += 1; };
 economy.onVoyage = (r) => {
   bien.chuyen += 1;
   theoTam[r.band] = (theoTam[r.band] ?? 0) + 1;
@@ -209,17 +262,26 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
   }
 
   if (sim % 2 < DT / 2) {
+    // Quan doi TRUOC di bien: ca hai an luong thuc, ma len thoi dai thi mo ra ca mot nhanh
+    // choi con chuyen di bien chi la mot mon lai. Ban dau de di bien truoc va do ra ban mo
+    // phong ket o Thoi Dung Lang suot bon tieng - khong bao gio gom noi 400 luong.
+    quanDoi();
     diBien();
     if (economy.canHire() && economy.canAfford(economy.hireCost())) {
       economy.hire((h) => workers.spawnVillager(h));
     } else {
       let xong = false;
+      // Dang de danh len thoi dai thi khong dong them cai gi tieu vao dung khoan ay.
+      const danh = deDanh();
+      const tieuDuoc = (c: Cost) => !danh || RESOURCE_KINDS.every(
+        (k) => economy.state.inv[k] - (c[k] ?? 0) >= (danh[k] ?? 0));
       for (const t of XAY) {
         // Choi canh xay THEO NHU CAU, khong xay cho vui: nguoi choi that nhin hai con so
         // thu/giac roi moi quyet. Xay bua thi con so nhip choi doc ra la "neu tieu tien
         // nham", chu khong phai "mua bao ton bao nhieu".
         if (t === 'watchtower' && economy.guard() >= economy.wavePower()) continue;
         if (!economy.canAfford(economy.buildCostFor(t))) continue;
+        if (!tieuDuoc(economy.buildCostFor(t))) continue;
         /*
          * Tu ban "dat tu do", cong trinh dung tren O LUC GIAC chu khong con tren nen dat
          * sinh san. Ban mo phong khong thiet ke duoc bo cuc, nhung no phai dong vai mot
@@ -231,6 +293,7 @@ for (; sim <= MOC[MOC.length - 1]; sim += DT) {
       }
       if (!xong) {
         for (const b of [...economy.state.buildings].sort((a, z) => a.level - z.level)) {
+          if (!tieuDuoc(economy.costFor(b.type, b.level))) continue;
           if (economy.upgrade(b)) break;
         }
       }
@@ -325,6 +388,14 @@ console.log(`  mất ${Math.round(dot.mat)} món hàng và ${dot.cap} cấp côn
   + ` · nhặt được ${Math.round(dot.thuong)} từ xác tàu`);
 console.log(`  giặc tới ${dot.den} tên · hạ ${dot.ha}`
   + ` (${(dot.ha / Math.max(1, dot.den) * 100).toFixed(0)}%) · ôm hàng chạy thoát ${dot.thoat}`);
+const q = economy.state.army;
+console.log(`  thời đại ${economy.state.age} · quân cuối ván:`
+  + ` ${q.spear} giáo, ${q.archer} cung, ${q.horse} ngựa`
+  + ` · rèn ${economy.state.smith.attack}/${economy.state.smith.armour}`);
+console.log(`  còn kẹt thời đại vì: ${economy.ageBlock() ?? 'không gì cả'}`
+  + ` · cần ${JSON.stringify(economy.nextAge()?.cost ?? {})}`);
+console.log(`  nuôi ra lò ${quan.nuoi} lính · bỏ đi vì đói ${quan.bo}`
+  + ` · lương quân ăn ${(economy.upkeep() * 60).toFixed(0)}/phút`);
 const choi = economy.state.buildings.filter((b) => b.type === 'watchtower');
 console.log(`  cuối ván: ${choi.length} chòi canh (${choi.map((b) => b.level).join('+') || '0'})`
   + ` · sức thủ ${economy.guard()} · đợt tới mạnh ${economy.wavePower()}`);

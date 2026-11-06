@@ -12,19 +12,21 @@ import {
   BASE_SPEED, BASE_STORAGE, BUILDINGS, BUILD_COST, CAPACITY_PER_LEVEL, COST_GROWTH,
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
   EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
-  BASE_RADIUS, BASE_RADIUS_PER_LEVEL, FOOTPRINT,
+  AGES, BASE_RADIUS, BASE_RADIUS_PER_LEVEL, BUILD_MIN_AGE, DESERT_SECONDS, FOOTPRINT,
+  SMITH_COST, SMITH_GROWTH, SMITH_MAX_AGE2, SMITH_MAX_AGE4, TROOPS,
   VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS, VOYAGES,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
 } from './config';
 import type {
   Building, BuildingType, Cost, GameState, Inventory, OfflineReport, ResourceKind, Threat,
-  Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
+  TroopKind, Troops, Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
 } from './types';
+import { TROOP_KINDS } from './types';
 import { biomeAt, onRoad } from './world';
 import { resolveVoyage, voyageSpec } from './voyage';
 import { guardOf, mercPrice, stormTargets, waveKind, waveOutcome, wavePower } from './raids';
-import { raiderCount, resolveBattle } from './battle';
+import { raiderCount, resolveBattle, waveMix } from './battle';
 import type { BattleSeed } from './battle';
 import { RESOURCE_KINDS } from './types';
 import { bonusesFor, milestoneAt, nextMilestone, reachedCount } from './milestones';
@@ -61,6 +63,11 @@ function freshState(): GameState {
     // Bốn khối quanh gốc mở sẵn, đủ thấy thủ phủ và vài mỏ; phần còn lại là mây.
     revealed: ['0,0', '-1,0', '0,-1', '-1,-1'],
     nextBuildingId: 1,
+    age: 1,
+    ageLeft: 0,
+    army: { spear: 0, archer: 0, horse: 0 },
+    train: [],
+    smith: { attack: 0, armour: 0 },
     lastSavedTimestamp: Date.now(),
     muted: false,
     totalGold: 0,
@@ -152,6 +159,23 @@ export class Economy {
             if (m) maxId = Math.max(maxId, Number(m[1]));
           }
           state.nextBuildingId = Math.max(Number(parsed.nextBuildingId) || 0, maxId + 1);
+          /*
+           * Bản lưu trước thời đại: ai cũng bắt đầu lại ở thời đại một, quân rỗng. Không
+           * đền bù gì — thời đại là thứ mở ra công trình mới chứ không lấy đi cái gì đang
+           * có, nên một người chơi cũ chỉ thấy có thêm việc để làm.
+           */
+          state.age = Math.min(AGES.length, Math.max(1, Math.floor(Number(parsed.age) || 1)));
+          state.ageLeft = Math.max(0, Number(parsed.ageLeft) || 0);
+          state.army = {
+            spear: Math.max(0, Math.floor(Number(parsed.army?.spear) || 0)),
+            archer: Math.max(0, Math.floor(Number(parsed.army?.archer) || 0)),
+            horse: Math.max(0, Math.floor(Number(parsed.army?.horse) || 0)),
+          };
+          state.train = Array.isArray(parsed.train) ? parsed.train.slice(0, 12) : [];
+          state.smith = {
+            attack: Math.max(0, Math.floor(Number(parsed.smith?.attack) || 0)),
+            armour: Math.max(0, Math.floor(Number(parsed.smith?.armour) || 0)),
+          };
           state.voyage = parsed.voyage ?? null;
           state.voyagesDone = Math.max(0, Math.floor(Number(parsed.voyagesDone) || 0));
           if (!state.voyage) {
@@ -244,6 +268,17 @@ export class Economy {
 
   private recomputeReserve(): void {
     const gia: Cost[] = [this.hireCost(), this.trainSpeedCost(), this.trainCapacityCost()];
+    /*
+     * GIÁ LÊN THỜI ĐẠI VÀ GIÁ LÍNH CŨNG PHẢI VÀO ĐÂY.
+     *
+     * Thiếu chúng là một cái bẫy kín: chợ bán sạch mọi thứ chất trên mức dự trữ, mà mức dự
+     * trữ chỉ tính theo giá công trình — nên một thời đại đòi 400 lương thực thì VĨNH VIỄN
+     * không gom nổi, vì chợ bán đi ngay khi vượt 150. Đo được bằng bản mô phỏng: bốn tiếng
+     * vẫn kẹt ở Thời Dựng Làng dù căn cứ đã lên cấp 40.
+     */
+    const sau = this.nextAge();
+    if (sau) gia.push(sau.cost);
+    for (const k of TROOP_KINDS) gia.push(TROOPS[k].cost);
     for (const t of Object.keys(BUILDINGS) as BuildingType[]) {
       if (t !== 'townhall') gia.push(this.buildCostFor(t));
     }
@@ -490,6 +525,8 @@ export class Economy {
     if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) {
       return `Cần căn cứ cấp ${BUILD_MIN_LEVEL[type]}`;
     }
+    const doi = BUILD_MIN_AGE[type] ?? 0;
+    if (this.state.age < doi) return `Cần ${AGES[doi - 1].label}`;
     if (!revealed) return 'Chưa vén tới đây';
     // Lòng đường để trống: đó là làn giặc đi, và cũng là đường bắn của chòi canh.
     if (onRoad(cx, cz)) return 'Không xây trên đường';
@@ -674,6 +711,9 @@ export class Economy {
       towers,
       mercs: this.state.threat.hired,
       militia: this.atHome() + this.sumLevels('townhall'),
+      army: { ...this.state.army },
+      smith: { ...this.state.smith },
+      age: this.state.age,
     };
   }
 
@@ -695,6 +735,10 @@ export class Economy {
     for (const id of stormTargets(this.state.buildings, levels)) {
       const b = this.state.buildings.find((x) => x.id === id);
       if (b && b.level > 1) { b.level -= 1; ha += 1; }
+    }
+    // Quân nằm lại trừ thẳng vào quân thường trực — đếm từ chính bản chạy trận.
+    for (const k of TROOP_KINDS) {
+      this.state.army[k] = Math.max(0, this.state.army[k] - (bat.lost[k] ?? 0));
     }
     result.levels = ha;
     for (const k of RESOURCE_KINDS) {
@@ -727,6 +771,8 @@ export class Economy {
   tick(dt: number): void {
     this.tickThreat(dt);
     this.tickVoyage(dt);
+    this.tickAge(dt);
+    this.tickArmy(dt);
     this.checkDemand();
     this.sellSurplus(dt);
     const k = Math.min(1, dt / RATE_TAU);
@@ -734,6 +780,176 @@ export class Economy {
       this.rates[kind] += (this.gained[kind] / Math.max(dt, 1e-6) - this.rates[kind]) * k;
       this.gained[kind] = 0;
     }
+  }
+
+
+  // ----------------------------------------------------------------- thời đại
+
+  /** Thời đại hiện tại. */
+  ageSpec(): typeof AGES[number] { return AGES[this.state.age - 1]; }
+
+  /** Thời đại kế tiếp, hoặc null nếu đã hết. */
+  nextAge(): typeof AGES[number] | null {
+    return this.state.age < AGES.length ? AGES[this.state.age] : null;
+  }
+
+  /** Vì sao chưa lên thời đại được, hoặc null nếu lên được ngay. */
+  ageBlock(): string | null {
+    const n = this.nextAge();
+    if (!n) return 'Đã tới thời đại cuối';
+    if (this.state.ageLeft > 0) return 'Đang chuyển thời đại';
+    if (this.state.level < n.level) return `Căn cứ phải cấp ${n.level}`;
+    if (n.need && !this.state.buildings.some((b) => b.type === n.need)) {
+      return `Phải có ${BUILDINGS[n.need].label.toLowerCase()}`;
+    }
+    if (!this.canAfford(n.cost)) return 'Chưa đủ của';
+    return null;
+  }
+
+  advanceAge(): boolean {
+    const n = this.nextAge();
+    if (!n || this.ageBlock()) return false;
+    if (!this.pay(n.cost)) return false;
+    this.state.ageLeft = n.seconds;
+    this.after();
+    return true;
+  }
+
+  private tickAge(dt: number): void {
+    if (this.state.ageLeft <= 0) return;
+    this.state.ageLeft -= dt;
+    if (this.state.ageLeft > 0) return;
+    this.state.ageLeft = 0;
+    this.state.age += 1;
+    this.onAge?.(AGES[this.state.age - 1].label);
+    this.after();
+  }
+
+  onAge: ((label: string) => void) | null = null;
+
+  // ----------------------------------------------------------------- quân đội
+
+  /** Trần quân của một loại, theo cấp công trình huấn luyện ra nó. */
+  troopCap(kind: TroopKind): number {
+    return this.sumLevels(TROOPS[kind].from) * TROOPS[kind].perLevel;
+  }
+
+  /** Đã có bao nhiêu, kể cả đang trong hàng đợi — không thì xếp hàng vượt trần được. */
+  troopHave(kind: TroopKind): number {
+    let n = this.state.army[kind];
+    for (const t of this.state.train) if (t.kind === kind) n += 1;
+    return n;
+  }
+
+  /** Vì sao chưa huấn luyện được, hoặc null. */
+  trainBlock(kind: TroopKind): string | null {
+    const spec = TROOPS[kind];
+    if (this.sumLevels(spec.from) === 0) return `Cần ${BUILDINGS[spec.from].label.toLowerCase()}`;
+    if (this.troopHave(kind) >= this.troopCap(kind)) {
+      return `Hết chỗ (${this.troopCap(kind)}) — nâng ${BUILDINGS[spec.from].label.toLowerCase()}`;
+    }
+    if (this.state.train.length >= 8) return 'Hàng đợi đã đầy';
+    if (!this.canAfford(spec.cost)) return 'Chưa đủ của';
+    return null;
+  }
+
+  train(kind: TroopKind): boolean {
+    if (this.trainBlock(kind)) return false;
+    if (!this.pay(TROOPS[kind].cost)) return false;
+    this.state.train.push({ kind, left: TROOPS[kind].seconds });
+    this.onChange?.();
+    return true;
+  }
+
+  /** Tổng quân thường trực. */
+  armySize(): number {
+    return TROOP_KINDS.reduce((n, k) => n + this.state.army[k], 0);
+  }
+
+  /** Lương quân ăn mỗi giây. */
+  upkeep(): number {
+    return TROOP_KINDS.reduce((n, k) => n + this.state.army[k] * TROOPS[k].upkeep, 0);
+  }
+
+  /** Giây còn lại của suất đang huấn luyện. */
+  trainLeft(): number {
+    return this.state.train.length ? Math.max(0, this.state.train[0].left) : 0;
+  }
+
+  private doiKhat = 0;
+
+  /**
+   * Huấn luyện và nuôi quân.
+   *
+   * HẾT LƯƠNG THÌ LÍNH BỎ ĐI. Không có cái đó thì nuôi quân là một quyết định chỉ có một
+   * lần — bấm xong là xong, và con số ấy không bao giờ phải nhìn lại. Có nó thì quân là
+   * một khoản chi chạy suốt ván, và nó tranh lương thực với chính chuyến đi biển.
+   */
+  private tickArmy(dt: number): void {
+    const q = this.state.train;
+    if (q.length) {
+      q[0].left -= dt;
+      if (q[0].left <= 0) {
+        const xong = q.shift();
+        if (xong) this.state.army[xong.kind] += 1;
+        this.onChange?.();
+      }
+    }
+
+    const an = this.upkeep() * dt;
+    if (an <= 0) { this.doiKhat = 0; return; }
+    if (this.state.inv.food >= an) {
+      this.state.inv.food -= an;
+      this.doiKhat = 0;
+      return;
+    }
+    this.state.inv.food = 0;
+    this.doiKhat += dt;
+    if (this.doiKhat < DESERT_SECONDS) return;
+    this.doiKhat = 0;
+    // Bỏ đi theo thứ tự đắt nhất trước: kỵ binh ăn nhiều nhất thì cũng đi trước nhất.
+    for (const k of ['horse', 'archer', 'spear'] as TroopKind[]) {
+      if (this.state.army[k] > 0) {
+        this.state.army[k] -= 1;
+        this.onDesert?.(TROOPS[k].label);
+        this.onChange?.();
+        return;
+      }
+    }
+  }
+
+  onDesert: ((label: string) => void) | null = null;
+
+  // ------------------------------------------------------------------ lò rèn
+
+  /** Trần bậc rèn theo thời đại: bậc hai chỉ mở ở thời đại cuối. */
+  smithCap(): number {
+    return this.state.age >= 4 ? SMITH_MAX_AGE4 : SMITH_MAX_AGE2;
+  }
+
+  smithCost(bac: number): Cost {
+    return this.scale(SMITH_COST, SMITH_GROWTH, bac);
+  }
+
+  smithBlock(which: 'attack' | 'armour'): string | null {
+    if (this.sumLevels('smithy') === 0) return 'Cần lò rèn';
+    const bac = this.state.smith[which];
+    if (bac >= this.smithCap()) return 'Hết bậc của thời đại này';
+    if (!this.canAfford(this.smithCost(bac))) return 'Chưa đủ của';
+    return null;
+  }
+
+  buySmith(which: 'attack' | 'armour'): boolean {
+    if (this.smithBlock(which)) return false;
+    if (!this.pay(this.smithCost(this.state.smith[which]))) return false;
+    this.state.smith[which] += 1;
+    this.after();
+    return true;
+  }
+
+  /** Thành phần đợt tới, để bảng đợt báo trước. */
+  waveMix(): Troops {
+    return waveMix(this.wavePower(), this.state.age);
   }
 
   // ----------------------------------------------------------------- đi biển

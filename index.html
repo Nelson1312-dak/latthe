@@ -31,7 +31,7 @@
       <i class="dot" id="lang-dot" aria-hidden="true"></i><strong id="lang-hud">Làng</strong>
     </button>
     <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
-    <div class="stat reach" id="reach"><small>Xa nhất</small><strong id="reach-val">0</strong></div>
+    <div class="stat reach" id="reach"><small>Xa</small><strong id="reach-val">0</strong></div>
     <button class="icon" id="gfx" title="Đồ hoạ" aria-label="Chất lượng đồ hoạ"
             aria-haspopup="dialog" aria-expanded="false" aria-controls="gfx-menu"></button>
     <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm"></button>
@@ -59,58 +59,59 @@
   <canvas id="minimap" width="168" height="168"></canvas>
 </aside>
 
-<!-- ------------------------------------------------------------------ mùa bão -->
-<aside class="storm" id="storm">
-  <div class="storm-head">
-    <i class="storm-ico" id="storm-ico" aria-hidden="true"></i>
-    <div class="storm-what">
-      <small id="storm-kind">Cướp biển</small>
-      <strong id="storm-when">—</strong>
+<!--
+  "Khi nào giặc tới, bằng gì, mình có đủ không" là ba con số phải thấy mà không đi tìm —
+  trong một game thủ thành thì đó là câu hỏi duy nhất. Bản trước giấu chúng trong một thẻ
+  ở góc dưới bên trái, dưới dạng "Thủ 68 · Giặc 32" mà không nói hai con số ấy nghĩa là gì.
+-->
+<!--
+  Dải đợt và dải báo xếp CHUNG MỘT CỘT. Lúc đầu mỗi cái tự neo vào dưới thanh trên,
+  và thế là chúng chồng đúng lên nhau — chữ của cái này đè lên chữ của cái kia, không
+  đọc được cái nào. Một cột thì không có cách nào chồng được nữa.
+-->
+<div class="topstack" id="topstack">
+  <aside class="wave" id="wave">
+    <i class="wave-ico" id="wave-ico" aria-hidden="true"></i>
+    <div class="wave-when">
+      <small id="wave-kind">Cướp biển</small>
+      <strong id="wave-clock">—</strong>
     </div>
-  </div>
-  <div class="storm-num">
-    <span class="guard">Thủ <b id="storm-guard">0</b></span>
-    <span class="power">Giặc <b id="storm-power">0</b></span>
-  </div>
-  <div class="storm-bar"><i id="storm-fill"></i></div>
-  <button class="storm-call" id="storm-call">Gọi dân về</button>
-</aside>
-
-<!-- ------------------------------------------------------------------ đi biển -->
-<aside class="sea" id="sea">
-  <div class="sea-head">
-    <i class="sea-ico" id="sea-ico" aria-hidden="true"></i>
-    <div class="sea-what">
-      <small id="sea-kind">Đi biển</small>
-      <strong id="sea-when">Chọn một chuyến</strong>
+    <div class="wave-mix" id="wave-mix"></div>
+    <div class="wave-read">
+      <strong id="wave-verdict">—</strong>
+      <div class="wave-bar"><i id="wave-fill"></i></div>
     </div>
-  </div>
-  <div class="sea-bar" id="sea-bar" hidden><i id="sea-fill"></i></div>
-  <div class="sea-list" id="sea-list"></div>
-  <p class="sea-note" id="sea-note"></p>
-</aside>
+    <button class="wave-hire" id="wave-hire" hidden>Thuê lính</button>
+  </aside>
 
-<!-- Bảng kết đợt: to, giữa màn, tự tắt. Không phải hộp thoại — bốn phút một lần mà bắt bấm
-     xác nhận thì thành ra phiền, nhưng phải đủ to để không ai bỏ lỡ việc mình vừa mất gì. -->
-<div class="wave-banner" id="wave-banner" hidden>
-  <strong id="wave-title"></strong>
-  <span id="wave-text"></span>
+  <!-- ------------------------------------------------------------- báo sự kiện -->
+  <!--
+    Một dải mảnh trượt xuống dưới thanh trên rồi tự tắt, bấm vào là tắt ngay. Bản trước là
+    một thẻ to đặt giữa màn hình — che đúng chỗ đang chơi, và nếu bộ đếm giờ lỡ một nhịp thì
+    nó nằm lì ở đó. Giờ `refresh()` tự kiểm theo đồng hồ thật nên không có đường nào kẹt lại.
+  -->
+  <button class="alert" id="alert" hidden>
+    <i class="alert-ico" id="alert-ico" aria-hidden="true"></i>
+    <span class="alert-col">
+      <strong id="alert-title"></strong>
+      <small id="alert-text"></small>
+    </span>
+  </button>
 </div>
 
-<!-- Khung ngắm giữa màn: chỗ mô hình mờ đứng trong chế độ xây. Người chơi kéo bản đồ cho
-     ô cần xây vào đây, nên phải có một cái đích nhìn thấy được. -->
+<!-- Khung ngắm giữa màn: chỗ mô hình mờ đứng trong chế độ xây. -->
 <div class="aim" id="aim" hidden></div>
 
-<!-- ------------------------------------- thẻ công trình, trượt lên trên dock -->
+<!-- Ngăn kéo: thẻ công trình, hoặc một trong bốn ngăn của dock. Một chỗ duy nhất. -->
 <section class="inspector" id="inspector" hidden></section>
 
 <!-- ------------------------------------------------------------------ dock nổi -->
+<!--
+  Sáu mặt rời rạc gom lại thành MỘT thanh. Mỗi nút mở một ngăn kéo ở ngay trên nó, nên mắt
+  chỉ phải nhìn hai chỗ: dải đợt trên đầu, và thanh này.
+-->
 <nav class="dock" id="dock">
-  <div class="crewpill" id="crewpill"></div>
   <div class="tiles" id="tiles"></div>
-  <button class="tile build" id="build" title="Xây công trình"></button>
-  <button class="tile farm" id="farm" title="Tự farm"></button>
-  <button class="tile speed" id="speed" title="Tốc độ game">1×</button>
 </nav>
 
 <!-- --------------------------------------------------------- bảng quay lại -->
