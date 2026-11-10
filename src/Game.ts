@@ -22,7 +22,7 @@ import {
   BUILDINGS, CAMERA_OFFSET, CAM_DIST, FOOTPRINT, MAX_FRAME_DELTA, PALETTE, WAVE_WARN_SECONDS,
 } from './config';
 import { OpaqueGTAOPass, finishPass } from './post';
-import { AutoTune, TIERS, loadGfx, pixelRatioFor, saveGfx, stepDown, tierOf } from './quality';
+import { AutoTune, TIERS, firstAutoTier, loadGfx, pixelRatioFor, saveGfx, stepDown, tierOf } from './quality';
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
 import type { Economy } from './Economy';
 import { ArmyManager } from './ArmyManager';
@@ -68,6 +68,43 @@ const FOCUS_ZOOM = 12;
 const PX_PER_UNIT = 20;
 /** Mức phóng tạm lúc chưa đo được HUD; resize() đầu tiên thay bằng mức theo tỉ lệ trên. */
 const SEED_ZOOM = 26;
+/*
+ * NẮNG CHIẾU XIÊN TỪ BÊN TRÁI MÀN HÌNH, không còn từ sau lưng người chơi.
+ *
+ * Camera đứng ở (60, 70, 60) nhìn về gốc. Hướng nắng cũ (18, 28, 14) lệch khỏi trục nhìn
+ * chưa tới bảy độ — tức là đèn gắn trên máy ảnh. Mọi mặt mà người chơi thấy đều quay về
+ * phía đèn nên sáng bằng nhau, còn bóng đổ thì rơi ra SAU vật thể, khuất hẳn. Đo được dải
+ * sáng tối của cả khung hình chỉ từ 87 tới 208 trên 255: không có mặt tối nào, và một khối
+ * không có mặt tối thì mắt đọc ra là một miếng nhựa đúc chứ không phải một ngôi nhà.
+ *
+ * Phải của màn hình là (+x, −z), nên nắng mang (−x, +z) là nắng từ bên trái, hơi ngả về
+ * phía người chơi. Mỗi ngôi nhà giờ có đủ ba tông: mái sáng, một mặt tường nắng, một mặt
+ * tường râm — và bóng đổ nằm dài sang phải, nơi nhìn thấy được.
+ */
+const HUONG_NANG: readonly [number, number, number] = [-0.45, 0.6, 0.66];
+/** Nắng mạnh, bóng đậm: nắng xiên mà bóng nhạt thì vẫn là một cảnh không có mặt trời. */
+const NANG = 2.6;
+const BONG = 0.9;
+/**
+ * Ánh sáng nền. Hạ xuống vì nó là thứ LẤP mặt râm: để ở mức cũ (trời 0,7 + môi trường 0,4)
+ * thì mặt tường quay lưng với nắng vẫn sáng gần bằng mặt hứng nắng.
+ */
+const NEN_TROI = 0.4;
+const NEN_MOI_TRUONG = 0.3;
+/** Bậc Thấp không có bản đồ môi trường, nên hemisphere gánh cả phần ấy. */
+const NEN_TROI_TRAN = 0.95;
+/*
+ * Màu trời của hemisphere. Bậc Thấp không có lớp hậu kỳ chỉnh màu ấm, mà ở đó hemisphere lại
+ * là gần hết ánh sáng nền — để nguyên màu xanh nhạt thì cả cảnh ngả lạnh và xám so với hai
+ * bậc trên. Đổi sang kem ấm là cách rẻ nhất để ba bậc trông cùng một buổi chiều.
+ */
+const MAU_TROI = 0xdceef5;
+const MAU_TROI_TRAN = 0xf6ecd4;
+/*
+ * Phơi sáng đi với ánh xạ tông Neutral, xem chỗ đặt toneMapping. Neutral giữ nguyên độ
+ * sáng dưới 0,8 nên cảnh tối hơn ACES một chút ở cùng mức đèn; 1,2 bù lại đúng chỗ ấy.
+ */
+const PHOI_SANG = 1.2;
 /** Hệ số trượt: càng lớn càng bám sát, càng nhỏ càng trôi. */
 const GLIDE = 9;
 /** Cú bật của một công trình vừa đặt xong kéo dài bấy nhiêu giây. */
@@ -101,7 +138,7 @@ export class Game {
   private builtVersion = -1;
   private readonly tmpD = new THREE.Vector3();
   /** Hướng nắng và hai trục của camera bóng — hằng số, tính một lần. */
-  private readonly sunDir = new THREE.Vector3(18, 28, 14).normalize();
+  private readonly sunDir = new THREE.Vector3(...HUONG_NANG).normalize();
   private readonly sunRight = new THREE.Vector3();
   private readonly sunUp = new THREE.Vector3();
   /** Chuỗi hậu kỳ. Null ở bậc Thấp — khi đó vẽ thẳng ra màn hình. */
@@ -141,7 +178,7 @@ export class Game {
   /** Biên độ rung camera còn lại sau cú đập của một đợt. */
   private rung = 0;
   /** Cường độ hemisphere mà bậc đồ hoạ đang đặt — trời bão nhân vào con số này. */
-  private hemiBase = 0.7;
+  private hemiBase = NEN_TROI;
   private readonly troi = new THREE.Color();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
@@ -213,8 +250,17 @@ export class Game {
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'low-power' });
     this.renderer.setClearColor(PALETTE.sky, 1);
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
+    /*
+     * Neutral chứ không ACES.
+     *
+     * ACES là đường cong của phim nhựa: nó bẻ vai từ rất sớm và kéo mọi màu sáng về phía
+     * trắng. Trên một bảng màu vốn đã nhạt thì kết quả là sữa — đo được độ bão hoà trung
+     * bình 0,33, cỏ thành xanh bạc hà, và đó là nửa còn lại của cái nhìn "đồ nhựa". Neutral
+     * (Khronos PBR Neutral) để nguyên màu cho tới 0,8 rồi mới nén, nên màu trên màn hình là
+     * màu đã chọn trong bảng: cùng cảnh ấy đo ra 0,41.
+     */
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = PHOI_SANG;
     this.renderer.shadowMap.enabled = true;
     /*
      * PCF có bán kính, KHÔNG phải PCFSoft.
@@ -254,8 +300,8 @@ export class Game {
      */
     this.env = new THREE.PMREMGenerator(this.renderer)
       .fromEquirectangular(skyEnvTexture(this.sunDir)).texture;
-    this.scene.environmentIntensity = 0.4;
-    this.hemi = new THREE.HemisphereLight(0xdceef5, 0xbfae95, 0.7);
+    this.scene.environmentIntensity = NEN_MOI_TRUONG;
+    this.hemi = new THREE.HemisphereLight(MAU_TROI, 0xbfae95, NEN_TROI);
     this.scene.add(this.hemi);
 
     /*
@@ -273,7 +319,12 @@ export class Game {
      * lên là trời đang nắng. Ánh sáng nền giờ tới từ bản đồ môi trường nên nó đã lo phần dịu;
      * nắng được rảnh tay làm đúng việc của nắng.
      */
-    this.sun = new THREE.DirectionalLight(0xffeccd, 1.5);
+    /*
+     * Và giờ lên 2,6 với bóng 0,9, cùng lúc nắng xoay sang bên — xem HUONG_NANG. Nắng xiên
+     * rọi lên mặt đất yếu hơn nắng đứng bóng (cos của góc tới), nên cùng một con số thì cảnh
+     * tối đi; và bóng đổ giờ nằm ngay trong tầm mắt, nó phải đủ đậm để đọc ra là bóng.
+     */
+    this.sun = new THREE.DirectionalLight(0xffeccd, NANG);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const d = 30;
@@ -285,10 +336,9 @@ export class Game {
     this.sun.shadow.camera.far = 160;
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.02;
-    // Bóng nhạt hẳn: nó chỉ còn để nói hướng nắng, còn hình khối thì AO lo.
-    this.sun.shadow.intensity = 0.62;
-    // Mềm tới mức gần như chỉ còn một vệt tối dưới chân vật thể.
-    this.sun.shadow.radius = 5;
+    this.sun.shadow.intensity = BONG;
+    // Bán kính lọc do bậc đồ hoạ đặt, xem applyQuality.
+    this.sun.shadow.radius = 3;
     this.scene.add(this.sun, this.sun.target);
     // Camera bóng nhìn dọc hướng nắng với up = +Y, nên hai trục ngang của nó là hằng số.
     this.sunRight.crossVectors(new THREE.Vector3(0, 1, 0), this.sunDir).normalize();
@@ -445,7 +495,9 @@ export class Game {
     this.sun.shadow.map = null;
     this.scene.environment = q.env ? this.env : null;
     // Không có bản đồ môi trường thì ánh sáng nền phải quay về trông cậy cả vào hemisphere.
-    this.hemiBase = q.env ? 0.7 : 1.55;
+    this.hemiBase = q.env ? NEN_TROI : NEN_TROI_TRAN;
+    this.hemi.color.setHex(q.env ? MAU_TROI : MAU_TROI_TRAN);
+    this.datDen(this.baoLuc);
     if (this.scene.fog) (this.scene.fog as THREE.Fog).far = q.haze ? this.hazeFar : 1e6;
     GRAIN_ON.value = q.grain ? 1 : 0;
     this.map.setQuality(q);
@@ -468,7 +520,7 @@ export class Game {
   setQuality(choice: Choice): void {
     this.gfx.choice = choice;
     if (choice === 'auto') {
-      this.gfx.autoTier = 'high';
+      this.gfx.autoTier = firstAutoTier();
       this.tune.start();
     } else {
       this.tune.stop();
@@ -1591,16 +1643,29 @@ export class Game {
     this.rung = Math.max(0, this.rung - dt * 1.8);
     const k = this.baoLuc;
     if (k < 0.002 && this.rung <= 0) return;
-    this.sun.intensity = 1.5 * (1 - 0.74 * k);
-    this.sun.shadow.intensity = 0.62 * (1 - 0.8 * k);
-    this.hemi.intensity = this.hemiBase * (1 - 0.26 * k);
-    this.scene.environmentIntensity = 0.4 * (1 - 0.6 * k);
+    this.datDen(k);
     // Cả nền trời sau mép bản đồ cũng phải tối theo, nếu không thì đất xám dưới một bầu
     // trời xanh trong đọc ra là lỗi dựng hình.
     this.troi.copy(TROI_THUONG).lerp(TROI_BAO, k);
     this.renderer.setClearColor(this.troi, 1);
     const f = this.scene.fog as THREE.Fog | null;
     if (f) f.color.copy(this.troi);
+  }
+
+  /**
+   * Đặt cả bốn nguồn sáng theo mức bão `k` (0 là trời quang).
+   *
+   * MỘT chỗ duy nhất ghi các con số này. Trước đây chúng nằm rải ở ba nơi, và updateWeather
+   * thoát sớm khi trời quang — nên `hemiBase` của bậc Thấp (bậc không có bản đồ môi trường)
+   * KHÔNG BAO GIỜ được áp cho tới ba mươi giây trước một đợt giặc. Cả bậc Thấp vì thế chạy
+   * với nửa lượng ánh sáng nền nó được thiết kế, tối và xám: đo được độ sáng giữa 139 so
+   * với 167 của hai bậc kia. Mà bậc Thấp chính là bậc của điện thoại yếu.
+   */
+  private datDen(k: number): void {
+    this.sun.intensity = NANG * (1 - 0.74 * k);
+    this.sun.shadow.intensity = BONG * (1 - 0.8 * k);
+    this.hemi.intensity = this.hemiBase * (1 - 0.26 * k);
+    this.scene.environmentIntensity = NEN_MOI_TRUONG * (1 - 0.6 * k);
   }
 
   /** Cú đập lúc một đợt nổ ra. Rung mạnh hay nhẹ tuỳ thiệt hại. */
@@ -1645,7 +1710,13 @@ export class Game {
     const f = this.scene.fog as THREE.Fog | null;
     if (f) {
       this.hazeFar = CAM_DIST + this.zoom * 3.4;
-      f.near = CAM_DIST + this.zoom * 0.9;
+      /*
+       * Sương bắt đầu ở 1,6 lần mức phóng sau tâm ngắm, không phải 0,9. Ở 0,9 thì lớp sương
+       * đã phủ lên từ ngay sau giữa màn hình — nửa trên của khung hình bị rửa trắng dần, và
+       * đó là một phần lý do cả cảnh thiếu tương phản. Điểm kết (3,4) giữ nguyên, nên mép
+       * vùng nạp vẫn chìm hẳn như cũ.
+       */
+      f.near = CAM_DIST + this.zoom * 1.6;
       if (this.spec.haze) f.far = this.hazeFar;
     }
     this.camera.position.set(

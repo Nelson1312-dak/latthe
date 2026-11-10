@@ -11,15 +11,21 @@
  *   kim  — chỉ những phần thật sự là kim loại, tức quặng vàng
  *   ngọc — pha lê: nhám vừa phải và tự phát sáng, nên nó nổi trong vùng cao nguyên tối
  *
- * Nhám cao (0,82) là thứ giữ cho cảnh vật ở dạng low-poly phẳng: bề mặt bóng sẽ sinh ra
+ * Nhám cao (0,94) là thứ giữ cho cảnh vật ở dạng low-poly phẳng: bề mặt bóng sẽ sinh ra
  * điểm loé chạy theo camera, và trên một bản đồ toàn khối sáu mặt thì những điểm loé ấy đọc
  * ra như lỗi dựng hình chứ không ra chất liệu.
  */
 import * as THREE from 'three';
 import { ROAD_SPACING } from './world';
 
-/** Nhám tối thiểu của mọi bề mặt không phải kim loại. */
-export const ROUGHNESS = 0.82;
+/**
+ * Nhám tối thiểu của mọi bề mặt không phải kim loại.
+ *
+ * Lên từ 0,82. Ở 0,82 thì bầu trời vẫn còn in một lớp bóng mờ lên mái ngói và tường vôi —
+ * không đủ thành điểm loé, nhưng đủ để mọi thứ trông như cùng đúc từ một mẻ nhựa. Ngói nung,
+ * vôi, gỗ, đất đều là chất liệu lì; 0,94 thì lớp bóng ấy tắt hẳn và màu trở về đúng màu sơn.
+ */
+export const ROUGHNESS = 0.94;
 /** Kim loại tối đa của mọi bề mặt không phải kim loại. */
 export const METALNESS = 0.04;
 
@@ -315,12 +321,20 @@ export function grain<T extends THREE.Material>(mat: T, co: number, manh: number
  * đường phập phồng rộng hẹp theo từng ô và nhoè ra hai bên cả một ô. Trong fragment thì mép
  * sắc đúng một điểm ảnh, bề rộng muốn bao nhiêu cũng được, và không tốn một tam giác nào.
  *
- * PHẢI bọc NGOÀI `grain`: varying toạ độ thế giới `vVanXZ` do `grain` khai báo.
+ * PHẢI bọc NGOÀI `grain`: varying toạ độ thế giới `vVanXZ` và tấm vân `uVan` do `grain`
+ * khai báo.
+ *
+ * `nua` là nửa bề rộng, `mem` là bề rộng dải chuyển ở mép, `lech` là biên độ mép đường xô
+ * ra xô vào. Bản đầu để dải chuyển 0,9 đơn vị — hơn một phần ba nửa bề rộng — nên con đường
+ * không có MÉP: nó là một vệt màu nâu nhoè dần vào cỏ, thứ mờ nhất trong khung hình mà lại
+ * chạy ngang qua đúng thủ phủ. Giờ mép gọn (0,25), và thay vì thẳng như kẻ thước thì nó xô
+ * lệch theo tấm vân lát rất thưa — một lối mòn đất nện chứ không phải một dải băng dính.
+ * `nua + lech` không được vượt ROAD_HALF (2,6), không thì đường lấn vào chỗ cây cỏ mọc.
  */
 export function roadPaint<T extends THREE.Material>(
-  mat: T, mau: number, nua: number, mem: number,
+  mat: T, mau: number, nua: number, mem: number, lech = 0,
 ): T {
-  const u = { value: new THREE.Vector3(ROAD_SPACING, nua, mem) };
+  const u = { value: new THREE.Vector4(ROAD_SPACING, nua, mem, lech) };
   const c = { value: new THREE.Color(mau) };
   const khoaTruoc = mat.customProgramCacheKey();
   const truoc = mat.onBeforeCompile;
@@ -328,14 +342,21 @@ export function roadPaint<T extends THREE.Material>(
     truoc?.call(mat, shader, renderer);
     shader.uniforms.uDuong = u;
     shader.uniforms.uDuongMau = c;
-    shader.fragmentShader = 'uniform vec3 uDuong;\nuniform vec3 uDuongMau;\n'
+    shader.fragmentShader = 'uniform vec4 uDuong;\nuniform vec3 uDuongMau;\n'
       + shader.fragmentShader.replace(
         '#include <color_fragment>',
         `#include <color_fragment>
       {
         vec2 dd = abs(vVanXZ - uDuong.x * floor(vVanXZ / uDuong.x + 0.5));
-        float kd = 1.0 - smoothstep(uDuong.y - uDuong.z, uDuong.y, min(dd.x, dd.y));
-        diffuseColor.rgb = mix(diffuseColor.rgb, uDuongMau, kd);
+        // Lát vân 32 đơn vị một lần: hai tầng nhiễu của nó thành 4 và 1 đơn vị, vừa cỡ một
+        // mép đường mòn. 32 không chia hết khoảng cách trục đường nên không đoạn nào lặp lại.
+        float mep = uDuong.y + (texture2D(uVan, vVanXZ * 0.03125).r - 0.5) * 2.0 * uDuong.w;
+        float xa = mep - min(dd.x, dd.y);
+        float kd = smoothstep(0.0, uDuong.z, xa);
+        // Sát mép đường sẫm đi một chút: đất bị dồn ra hai bên lối đi. Chính vệt sẫm này,
+        // chứ không phải độ gắt của mép, là thứ cho mắt một ĐƯỜNG VIỀN để bám.
+        float vien = 1.0 - 0.14 * (1.0 - smoothstep(0.1, 0.75, xa));
+        diffuseColor.rgb = mix(diffuseColor.rgb, uDuongMau * vien, kd);
       }`);
   };
   mat.customProgramCacheKey = () => `${khoaTruoc}|duong`;
@@ -370,11 +391,18 @@ export function fogPaint<T extends THREE.Material>(
       + shader.fragmentShader.replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-      {
-        vec2 su = (vVanXZ - uSuongGoc) * uSuongTi;
-        float kv = texture2D(uSuong, su).r;
-        diffuseColor.rgb = mix(uSuongMau, diffuseColor.rgb, kv);
-      }`);
+      float kvSuong = texture2D(uSuong, (vVanXZ - uSuongGoc) * uSuongTi).r;
+      diffuseColor.rgb = mix(uSuongMau, diffuseColor.rgb, kvSuong);`)
+        /*
+         * Đất chưa vén còn phải thôi ĂN NẮNG nữa. Chỉ pha màu trước khi chiếu sáng thì nắng
+         * xiên vẫn tô từng mặt tam giác lên lớp sương, và "giấy bản đồ chưa vẽ" hiện ra là
+         * một bãi đất xám nâu lổn nhổn. Kéo kết quả SAU chiếu sáng về một màu phẳng, đúng
+         * theo phần sương còn phủ, thì chỗ chưa vén đọc ra là sương chứ không phải là đất.
+         */
+        .replace(
+          '#include <opaque_fragment>',
+          `#include <opaque_fragment>
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, uSuongMau * 0.6, (1.0 - kvSuong) * 0.8);`);
   };
   mat.customProgramCacheKey = () => `${khoaTruoc}|suong`;
   return mat;

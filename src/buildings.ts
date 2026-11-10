@@ -167,9 +167,15 @@ class Kit {
  * Và nó THỤT XUỐNG dưới mặt đất gần một đơn vị: mặt đất liền có dốc thật, không còn là
  * những mặt phẳng từng ô, nên một tấm bệ mỏng đặt trên sườn sẽ hở một bên. Cái váy này
  * chôn xuống đủ sâu để không bao giờ hở, và không ai nhìn thấy phần chôn.
+ *
+ * Dáng là một MÔ ĐẤT ĐẮP, chân choãi ra, chứ không phải một cái đĩa. Bản trước mặt trên
+ * rộng hơn đáy nên vành dựng đứng, và dưới nắng xiên nó đọc ra là một đồng xu đặt trên cỏ.
+ * Chân choãi thì vành thành một con dốc 45 độ bắt nắng một bên, râm một bên — đất được
+ * đắp lên, không phải vật lạ rơi xuống. Ở ngang mặt đất bán kính vẫn xấp xỉ r, nên diện
+ * tích nhìn thấy không lấn sang phần đất của công trình bên cạnh.
  */
 function nen(k: Kit, r = 1.7): void {
-  k.cyl(r, r * 0.94, 1.1, 14, 0, -0.88, 0, PALETTE.plotDirt);
+  k.cyl(r * 0.86, r * 1.46, 1.1, 12, 0, -0.88, 0, PALETTE.plotDirt);
 }
 
 // ------------------------------------------------------------------ nhà ở
@@ -234,7 +240,8 @@ function townhall(level: number, co: number): THREE.BufferGeometry {
   // Bệ lục giác, xoay 30° cho khớp với lưới ô — thủ phủ ngồi đúng trên một ô.
   // Bệ đá tròn, thụt xuống như mọi bệ khác. Bản cũ là lục giác xoay 30 độ cho khớp
   // lưới ô — mà lưới ô thì không còn.
-  k.cyl(2.6, 2.45, 1.3, 16, 0, -1.0, 0, STONE_DARK);
+  // Chân choãi như kè đá, cùng lý do với mô đất ở `nen`: vành dựng đứng là một đồng xu.
+  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE_DARK);
   const y0 = 0.4;
   const w = 2.6;
   const d = 2.3;

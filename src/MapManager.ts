@@ -104,7 +104,8 @@ export class MapManager {
       mesh.castShadow = shadow;
       mesh.receiveShadow = false;
       mesh.frustumCulled = false;
-      mesh.renderOrder = key === 'halo' ? 1 : key === 'glow' ? 2 : 0;
+      // Quầng bãi vẽ ngay sau mặt đất (−2, xem ground.ts) và trước mọi thứ đứng trên đất.
+      mesh.renderOrder = key === 'halo' ? -1 : key === 'glow' ? 2 : 0;
       mesh.count = 0;
       this.meshes[key] = mesh;
       this.group.add(mesh);
@@ -135,10 +136,27 @@ export class MapManager {
     // đọc được ngay từ mức phóng xa nhất, khi props đã nhỏ như hạt vừng.
     const halo = new THREE.PlaneGeometry(2, 2);
     halo.rotateX(-Math.PI / 2);
+    /*
+     * Quầng là một miếng DÁN lên mặt đất, không phải một tấm phẳng đặt trong không gian.
+     *
+     * Hồi mặt đất còn là ô lục giác phẳng thì một tấm phẳng nhấc lên 0,06 là đủ. Giờ đất là
+     * lưới tam giác nhấp nhô, và quầng rộng hơn khoảnh đã san 16% — phần vành ấy cắm vào
+     * sườn dốc, mép đất cắt ngang quầng thành một đường răng cưa, lệch đi mỗi lần xoay máy.
+     *
+     * Nên nó bỏ phép thử độ sâu, và phải được vẽ đúng lúc: SAU mặt đất, TRƯỚC cây cối và
+     * nhà cửa — không thì nó phủ lên cả ngọn cây. Vật trong suốt luôn bị three.js xếp sau
+     * mọi vật đục, nên quầng khai là vật ĐỤC và tự mang phép hoà màu (CustomBlending với hệ
+     * số mặc định chính là hoà alpha thường); thứ tự trong hàng vật đục do renderOrder quyết.
+     *
+     * `blendSrcAlpha: One` không phải cho đẹp. Hệ số mặc định nhân alpha nguồn với chính nó,
+     * nên kênh alpha của KHUNG HÌNH tụt xuống dưới 1 ở mọi chỗ có quầng — mà canvas WebGL
+     * thì có kênh alpha thật, trình duyệt sẽ hoà nó với nền trang: ở bậc Thấp (vẽ thẳng ra
+     * canvas) vành quầng loé trắng. Đây đúng là hệ số mà NormalBlending vẫn dùng.
+     */
     make('halo', halo, new THREE.MeshBasicMaterial({
       map: haloTexture(),
-      transparent: true, depthWrite: false, opacity: 0.85,
-      blending: THREE.NormalBlending,
+      transparent: false, depthTest: false, depthWrite: false, opacity: 0.85,
+      blending: THREE.CustomBlending, blendSrcAlpha: THREE.OneFactor,
     }), false);
 
     /*

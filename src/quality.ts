@@ -5,7 +5,8 @@
  * hỏi "máy này mạnh không". Thêm một hiệu ứng mới thì thêm một cột vào bảng, rồi quyết bậc
  * nào được dùng nó.
  *
- * Tự động bắt đầu ở bậc lần trước dừng lại (lần đầu là Cao), đo nhịp khung hình trong năm
+ * Tự động bắt đầu ở bậc lần trước dừng lại (lần đầu là Cao, trên máy cảm ứng là Vừa — xem
+ * firstAutoTier), đo nhịp khung hình trong năm
  * giây đầu và hạ một bậc nếu chậm; hạ xong thì đo lại. KHÔNG bao giờ tự nâng: nhịp khung bị
  * khoá theo tần số màn hình — ở 60 Hz là 16,7 ms dù máy đang rảnh hay sắp đuối — nên không
  * có cách nào đọc ra là "còn dư sức". Muốn thử lại từ Cao thì chọn lại Tự động trong bảng.
@@ -28,8 +29,13 @@ export interface TierSpec {
   shadowMap: number;
   /**
    * Bán kính lọc bóng, tính bằng texel. Bản đồ bóng to gấp đôi thì texel nhỏ đi một nửa, nên
-   * cùng bán kính ấy cho bóng sắc gấp đôi — 4096 với 6 vẫn sắc hơn 2048 với 5 một chút, và
+   * cùng bán kính ấy cho bóng sắc gấp đôi — 4096 với 3 vẫn sắc hơn 2048 với 2 một chút, và
    * đó là chủ ý: bậc Cao là bậc bóng gọn.
+   *
+   * Cả ba con số đều hạ chừng một nửa so với bản trước (6 / 5 / 3). Hồi ấy nắng chiếu từ
+   * sau lưng người chơi nên bóng đổ khuất sau vật thể, mềm bao nhiêu cũng được. Giờ nắng
+   * xiên và bóng nằm dài ngay trong tầm mắt: lọc rộng như cũ thì bóng một ngôi nhà thành
+   * một vệt khói, và cái nhìn "không sắc nét" quay lại bằng đường khác.
    */
   shadowRadius: number;
   /** Ô lục giác vát mép (30 tam giác) hay phẳng (18). */
@@ -56,7 +62,7 @@ export const TIERS: Record<Tier, TierSpec> = {
     // 1,54 → 2,39 ms, tức đắt thêm hơn nửa, chỉ vì phải cấp một target đa mẫu rồi phân giải
     // nó. Quá nhiều cho một bậc mà cả lý do tồn tại là chạy được trên máy yếu.
     label: 'Thấp', dpr: 1, dprMax: 2, post: false, aoScale: 0, aoSamples: 0,
-    shadowMap: 1024, shadowRadius: 3,
+    shadowMap: 1024, shadowRadius: 1.5,
     // Không có bầu trời làm nguồn sáng: đo ở 1920x1080, phóng xa nhất, GTX 1660 SUPER thì nó
     // tốn 0,84 trên tổng 2,4 ms — hơn một phần ba cả khung hình, cho một bậc mà cả lý do tồn
     // tại là chạy được trên máy yếu. Hemisphere nhận lại phần việc, xem applyQuality.
@@ -65,7 +71,7 @@ export const TIERS: Record<Tier, TierSpec> = {
   },
   medium: {
     label: 'Vừa', dpr: 1.5, dprMax: 2.5, post: true, aoScale: 0.5, aoSamples: 8,
-    shadowMap: 2048, shadowRadius: 5,
+    shadowMap: 2048, shadowRadius: 2,
     env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: false, tilt: false,
   },
@@ -77,7 +83,7 @@ export const TIERS: Record<Tier, TierSpec> = {
    */
   high: {
     label: 'Cao', dpr: 2, dprMax: 3, post: true, aoScale: 0.75, aoSamples: 12,
-    shadowMap: 4096, shadowRadius: 6,
+    shadowMap: 4096, shadowRadius: 3,
     env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: true, tilt: true,
   },
@@ -115,6 +121,37 @@ export interface GfxSettings {
   tilt: boolean;
   /** Bậc mà Tự động dừng lại lần trước. */
   autoTier: Tier;
+  /** Đời của bộ thiết lập — xem DOI. */
+  v: number;
+}
+
+/*
+ * Đời 2: mô hình thu nhỏ thành thứ PHẢI BẬT mới có, không còn mặc định.
+ *
+ * Nó giữ nét một dải ngang giữa màn hình và làm mờ phần còn lại — đo được chừng sáu phần
+ * mười khung hình bị mờ. Đẹp trong một tấm ảnh chụp, nhưng người chơi nhìn nó suốt cả ván,
+ * và điều họ nói ra là "không đủ sắc nét". Bản lưu thiết lập đời cũ mang `tilt: true` chỉ
+ * vì đó là mặc định chứ không ai chọn, nên lên đời thì tắt MỘT lần; từ đó trở đi ai bật thì
+ * được giữ.
+ */
+const DOI = 2;
+
+/**
+ * Bậc mà Tự động thử đầu tiên.
+ *
+ * Máy cảm ứng bắt đầu từ Vừa chứ không phải Cao. Bộ đo chỉ chạy năm giây đầu, lúc máy còn
+ * nguội; một chiếc điện thoại qua được năm giây ấy ở bậc Cao — 2,7 triệu điểm ảnh, bóng
+ * 4096, AO 12 mẫu — rồi nóng dần và tụt khung ở phút thứ ba, khi không còn ai đo nữa. Bậc
+ * Vừa trên màn điện thoại vẫn vẽ dày 2,5 lần, nên cái mất đi là quầng sáng và bóng 4096,
+ * không phải độ nét. Ai muốn Cao thì chọn tay trong bảng.
+ */
+export function firstAutoTier(): Tier {
+  try {
+    if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) return 'medium';
+  } catch {
+    /* trình duyệt cổ — coi như máy bàn */
+  }
+  return 'high';
 }
 
 /*
@@ -126,15 +163,16 @@ const KEY = 'quandao-gfx';
 const TIER_IDS: readonly string[] = ['low', 'medium', 'high'];
 
 export function loadGfx(): GfxSettings {
-  const def: GfxSettings = { choice: 'auto', tilt: true, autoTier: 'high' };
+  const def: GfxSettings = { choice: 'auto', tilt: false, autoTier: firstAutoTier(), v: DOI };
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return def;
     const p = JSON.parse(raw) as Partial<GfxSettings>;
     return {
       choice: p.choice === 'auto' || TIER_IDS.includes(String(p.choice)) ? p.choice as Choice : def.choice,
-      tilt: p.tilt !== false,
+      tilt: p.v === DOI && p.tilt === true,
       autoTier: TIER_IDS.includes(String(p.autoTier)) ? p.autoTier as Tier : def.autoTier,
+      v: DOI,
     };
   } catch {
     return def;

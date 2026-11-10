@@ -12,13 +12,21 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
  * đều được vẽ vào bộ đệm độ sâu như một tấm đặc. Quầng bãi nằm sát đất nên chưa lộ ra gì,
  * nhưng quầng sáng của pha lê là những tấm đứng giữa không trung — AO sẽ coi chúng là vách và
  * tô một vệt tối lên mặt đất phía sau.
+ *
+ * SPRITE cũng vậy, và nó lọt lưới suốt từ đầu vì luật cũ chỉ hỏi `isMesh`: tấm tên làng là
+ * một Sprite, lượt pháp tuyến vẽ nó thành một tấm ván đặc lơ lửng trên thủ phủ, và AO tô
+ * hẳn một khung chữ nhật xám quanh dòng chữ — đúng chỗ người chơi nhìn nhiều nhất. Luật giờ
+ * hỏi thẳng điều cần hỏi: vật này có GHI ĐỘ SÂU như một khối đặc không.
  */
 export class OpaqueGTAOPass extends GTAOPass {
   override overrideVisibility(): void {
     super.overrideVisibility();
     this.scene.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (m.isMesh && (m.material as THREE.Material).transparent) m.visible = false;
+      const m = o as THREE.Mesh | THREE.Sprite;
+      if (!(m as THREE.Mesh).isMesh && !(m as THREE.Sprite).isSprite) return;
+      const mat = m.material as THREE.Material | THREE.Material[];
+      const dau = Array.isArray(mat) ? mat[0] : mat;
+      if (!dau || dau.transparent || !dau.depthWrite) m.visible = false;
     });
   }
 }
@@ -29,8 +37,8 @@ export class OpaqueGTAOPass extends GTAOPass {
  *
  * Ba việc trong một lượt vẽ:
  *
- * 1. Lọc màu ẤM. ACES kéo vùng tối về xám lạnh; cảnh đất nặn cần bóng râm màu nâu ấm, không
- *    phải màu xi măng. Ấm nhiều nhất ở vùng tối và vùng giữa, nhạt dần ở vùng sáng để mây và
+ * 1. Lọc màu ẤM. Bóng râm lấy màu từ bầu trời nên ngả xám lạnh; cảnh đất nặn cần bóng râm
+ *    màu nâu ấm, không phải màu xi măng. Ấm nhiều nhất ở vùng tối và vùng giữa, nhạt dần ở vùng sáng để mây và
  *    tường kem không ngả vàng.
  * 2. Tối GÓC rất nhẹ. Bốn góc là chỗ HUD đứng; tối đi một chút thì kính mờ tách khỏi nền rõ
  *    hơn, và mắt tự dồn về giữa.

@@ -13,10 +13,10 @@
  *
  * BA ĐIỀU DỄ LÀM SAI, ghi lại vì cái nào cũng mất một vòng mới nhận ra:
  *
- *   — `flatShading` KHÔNG cần tách đỉnh. three.js tính pháp tuyến phẳng bằng đạo hàm màn
- *     hình và bỏ qua hẳn thuộc tính normal, nên lưới CÓ CHỈ SỐ vẫn phẳng từng mặt, mà ít
- *     hơn sáu lần số đỉnh. Vẫn phải ghi `normal` vì mặt đất NHẬN bóng và `shadow.normalBias`
- *     đọc nó; thiếu thì WebGL đưa (0,0,0) và bias lặng lẽ thành không.
+ *   — `flatShading` tính pháp tuyến phẳng bằng đạo hàm màn hình và BỎ QUA hẳn thuộc tính
+ *     normal — tức là bật nó lên thì không còn cách nào chỉnh được mặt nào sáng mặt nào
+ *     tối. Mặt đất vì thế tắt flatShading và tự ghi pháp tuyến cho từng mặt (xem
+ *     MAT_NGHIENG); thuộc tính ấy cũng là thứ `shadow.normalBias` đọc.
  *   — Ô chia chéo SO LE theo (i+j). Một chiều chéo duy nhất tạo ra một dải xương cá chạy
  *     khắp bản đồ, dấu hiệu "lưới máy sinh" dễ nhận nhất.
  *   — Đường và sương KHÔNG vẽ bằng màu đỉnh. Một con đường rộng 5,2 đơn vị trên lưới 3 đơn
@@ -36,6 +36,16 @@ const TILE = 90;
 const N = TILE / GRID_STEP;
 /** Số đỉnh mỗi cạnh. */
 const V = N + 1;
+/**
+ * Phần pháp tuyến THẬT của mỗi mặt được giữ lại; phần còn lại lấy từ pháp tuyến mượt.
+ *
+ * Nắng giờ chiếu xiên ở độ cao chừng 37 độ. Hai mặt đất cạnh nhau nghiêng lệch nhau tới
+ * mười sáu độ, và ở góc nắng ấy thì chừng đó đổi độ sáng tới một phần ba: cả bãi cỏ thành
+ * một bàn cờ hình thoi sáng tối, lấn át luôn những ngôi nhà đứng trên nó. Giữ 0,3 thì mỗi
+ * mặt vẫn bắt sáng khác nhau chừng một phần mười — đủ đọc ra là đất nặn có mặt phẳng, mà
+ * hình khối lớn (sườn đồi, bậc vách đá) vẫn nguyên vì nó nằm ở phần mượt.
+ */
+const MAT_NGHIENG = 0.3;
 /** Bán kính giữ mảnh, tính bằng mảnh. 2 phủ 450×450, rộng hơn vùng nạp 330×330. */
 const KEEP = 2;
 
@@ -71,11 +81,13 @@ export class Ground {
 
     const m = matte(0xffffff);
     m.vertexColors = true;
-    m.flatShading = true;
+    // KHÔNG flatShading: pháp tuyến do buildTile tự ghi, mỗi mặt một hướng nhưng đã ghìm
+    // bớt độ nghiêng — xem MAT_NGHIENG.
+    m.flatShading = false;
     // Thứ tự bọc có nghĩa: `grain` khai báo varying toạ độ thế giới mà hai lớp sau dùng lại,
     // nên nó phải ở trong cùng.
     this.mat = fogPaint(
-      roadPaint(grain(m, 6, 0.18), PALETTE.road, 2.4, 0.9),
+      roadPaint(grain(m, 6, 0.18), PALETTE.road, 2.25, 0.12, 0.35),
       this.fogTex, this.fogOrigin, FOG_SPAN, PALETTE.fogLand);
   }
 
@@ -100,6 +112,10 @@ export class Ground {
   /**
    * Dựng một mảnh. KHÔNG dùng chỉ số: mỗi tam giác có ba đỉnh riêng.
    *
+   * (Đoạn dưới viết hồi nắng còn treo cao sau lưng người chơi. Từ khi nắng chiếu xiên thì
+   * bài toán lật ngược: pháp tuyến mặt giờ đổi độ sáng tới một phần ba chứ không còn bốn
+   * phần trăm, nên nó phải bị GHÌM lại — xem MAT_NGHIENG. Màu riêng từng mặt vẫn giữ.)
+   *
    * Lưới có chỉ số nhẹ hơn sáu lần và `flatShading` vẫn chạy được trên nó — nhưng thử xong
    * rồi mới thấy cái bẫy: mặt đất hoá ra PHẲNG LÌ. Lý do không nằm ở hình học (đo được hai
    * đỉnh cạnh nhau chênh tới 0,87 trên 3 đơn vị, tức mười sáu độ) mà ở ÁNH SÁNG: mặt trời
@@ -122,10 +138,24 @@ export class Ground {
     const hs = new Float32Array(V * V);
     const cs = new Float32Array(V * V * 3);
     const c = new THREE.Color();
+    // Cao độ có thêm một vành đỉnh bao ngoài mảnh, để pháp tuyến ở mép mảnh tính bằng đúng
+    // phép mà mảnh bên cạnh sẽ tính — không thì mỗi đường nối mảnh là một nếp gấp.
+    const W = V + 2;
+    const hr = new Float32Array(W * W);
+    for (let j = 0; j < W; j += 1) {
+      for (let i = 0; i < W; i += 1) hr[j * W + i] = nodeHeight(i0 + i - 1, j0 + j - 1);
+    }
+    // Pháp tuyến MƯỢT ở từng đỉnh: sai phân trung tâm của cao độ.
+    const ns = new Float32Array(V * V * 3);
     for (let j = 0; j < V; j += 1) {
       for (let i = 0; i < V; i += 1) {
         const n = j * V + i;
-        hs[n] = nodeHeight(i0 + i, j0 + j);
+        const o = (j + 1) * W + i + 1;
+        hs[n] = hr[o];
+        const dx = (hr[o + 1] - hr[o - 1]) / (2 * GRID_STEP);
+        const dz = (hr[o + W] - hr[o - W]) / (2 * GRID_STEP);
+        const l = 1 / Math.hypot(dx, 1, dz);
+        ns[n * 3] = -dx * l; ns[n * 3 + 1] = l; ns[n * 3 + 2] = -dz * l;
         this.nodeColor(i0 + i, j0 + j, c);
         cs[n * 3] = c.r; cs[n * 3 + 1] = c.g; cs[n * 3 + 2] = c.b;
       }
@@ -145,6 +175,14 @@ export class Ground {
       ax.set(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
       bx.set(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]);
       nv.crossVectors(ax, bx).normalize();
+      // Ghìm mặt: kéo pháp tuyến của mặt về phía pháp tuyến mượt của vùng đất quanh nó.
+      // Vẫn MỘT hướng cho cả mặt, nên cạnh giữa hai mặt vẫn là một đường gãy sắc.
+      const t = 1 - MAT_NGHIENG;
+      nv.set(
+        nv.x * MAT_NGHIENG + (ns[n0 * 3] + ns[n1 * 3] + ns[n2 * 3]) / 3 * t,
+        nv.y * MAT_NGHIENG + (ns[n0 * 3 + 1] + ns[n1 * 3 + 1] + ns[n2 * 3 + 1]) / 3 * t,
+        nv.z * MAT_NGHIENG + (ns[n0 * 3 + 2] + ns[n1 * 3 + 2] + ns[n2 * 3 + 2]) / 3 * t,
+      ).normalize();
       const r = (cs[n0 * 3] + cs[n1 * 3] + cs[n2 * 3]) / 3 * rung;
       const g = (cs[n0 * 3 + 1] + cs[n1 * 3 + 1] + cs[n2 * 3 + 1]) / 3 * rung;
       const b = (cs[n0 * 3 + 2] + cs[n1 * 3 + 2] + cs[n2 * 3 + 2]) / 3 * rung;
@@ -188,6 +226,8 @@ export class Ground {
     const mesh = new THREE.Mesh(geo, this.mat);
     mesh.position.set(i0 * GRID_STEP, 0, j0 * GRID_STEP);
     mesh.receiveShadow = true;
+    // Vẽ trước tiên, để quầng bãi (−1) dán được lên mặt đất mà vẫn nằm dưới mọi thứ khác.
+    mesh.renderOrder = -2;
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
     return mesh;
