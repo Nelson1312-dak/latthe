@@ -19,7 +19,9 @@ export type IconName =
   | 'boot' | 'pack' | 'compass' | 'basket'
   | 'crew' | 'broom' | 'robot' | 'hand' | 'medal' | 'warn' | 'pin'
   | 'sound' | 'mute' | 'pause' | 'play' | 'ring' | 'ringOn' | 'gear' | 'shuffle'
-  | 'hammer' | 'close' | 'spear' | 'bow' | 'horse' | 'anvil' | 'age';
+  | 'hammer' | 'close' | 'spear' | 'bow' | 'horse' | 'anvil' | 'age'
+  | 'farm' | 'well' | 'market' | 'lookout' | 'dock'
+  | 'move' | 'flag' | 'paw' | 'sword' | 'check' | 'map' | 'up' | 'people' | 'stop';
 
 /** Phần bên trong <svg>. Giữ mỗi icon trong vài nét, đừng thêm chi tiết. */
 const PATH: Record<IconName, string> = {
@@ -86,6 +88,41 @@ const PATH: Record<IconName, string> = {
     + '<path d="M3.5 16.5l4 4"/><path d="M11 6l3 3"/><path d="M8 3l6 6"/>',
   /** Dau nhan: thoat che do. */
   close: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
+  // --- hạ tầng
+  /** Ba khóm lúa trên một vạch đất. */
+  farm: '<path d="M3 21h18"/><path d="M6.5 21v-8M12 21V9M17.5 21v-8"/>'
+    + '<path d="M6.5 16l-2.5-2M6.5 16l2.5-2M12 13l-3-2.5M12 13l3-2.5M17.5 16l-2.5-2M17.5 16l2.5-2"/>',
+  /** Giếng có mái và gàu. */
+  well: '<path d="M5 21v-6h14v6z"/><path d="M6.5 15V7.5M17.5 15V7.5"/><path d="M4 8.5l8-5 8 5"/>'
+    + '<path d="M12 8v3.5"/><path d="M10.4 11.5h3.2V14h-3.2z"/>',
+  /** Sạp hàng có mái bạt. */
+  market: '<path d="M3.5 9.5l1.6-5h13.8l1.6 5z"/><path d="M5 9.5v11h14v-11"/>'
+    + '<path d="M9.2 4.5l-.6 5M14.8 4.5l.6 5"/><path d="M10 20.5v-5.5h4v5.5"/>',
+  /** Con mắt: nhìn xa. */
+  lookout: '<circle cx="12" cy="12" r="3"/>'
+    + '<path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/>',
+  /** Mỏ neo. */
+  dock: '<circle cx="12" cy="5.5" r="2"/><path d="M12 7.5V21"/><path d="M8 11h8"/>'
+    + '<path d="M4.5 14.5c0 3.6 3.4 6.5 7.5 6.5s7.5-2.9 7.5-6.5"/>',
+  // --- thao tác
+  /** Bốn mũi tên: dời chỗ. */
+  move: '<path d="M12 3v18M3 12h18"/>'
+    + '<path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
+  flag: '<path d="M6 21V3.5"/><path d="M6 4.5h11.5l-2.5 4 2.5 4H6"/>',
+  /** Dấu chân thú. */
+  paw: '<circle cx="6.5" cy="10" r="1.7"/><circle cx="17.5" cy="10" r="1.7"/>'
+    + '<circle cx="10" cy="5.8" r="1.7"/><circle cx="14" cy="5.8" r="1.7"/>'
+    + '<path d="M12 11.5c-3 0-5.3 2.9-5.3 5.3 0 1.7 1.3 2.7 2.9 2.7 1 0 1.5-.5 2.4-.5s1.4.5 2.4.5'
+    + 'c1.6 0 2.9-1 2.9-2.7 0-2.4-2.3-5.3-5.3-5.3z"/>',
+  sword: '<path d="M20 4l-9 9"/><path d="M20 4v3.6L11.6 16 8 12.4 16.4 4z"/>'
+    + '<path d="M6.5 11l6.5 6.5"/><path d="M8.5 15.5L4 20"/>',
+  check: '<path d="M4.5 12.5l5 5 10-11"/>',
+  map: '<path d="M3.5 6l5.5-2 6 2 5.5-2v14l-5.5 2-6-2-5.5 2z"/><path d="M9 4v14M15 6v14"/>',
+  up: '<path d="M12 20V5"/><path d="M5.5 11.5L12 5l6.5 6.5"/>',
+  /** Hai người: chọn cả nhóm. */
+  people: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/>'
+    + '<circle cx="17.2" cy="9" r="2.3"/><path d="M16.5 14.2c2.6.2 4.5 2.4 4.5 5.3"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="1.5"/>',
   shuffle: '<path d="M3 7h3.5l3 5M21 7h-4l-6 10H3"/><path d="M21 17h-4"/>'
     + '<path d="M18.5 4.5L21 7l-2.5 2.5"/><path d="M18.5 14.5L21 17l-2.5 2.5"/>',
   tower: '<path d="M8 21V9l4-5 4 5v12"/><path d="M5 9h14"/><path d="M12 13v3"/>',

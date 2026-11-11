@@ -57,11 +57,26 @@ export const chunkOf = (v: number): number => Math.floor(v / CHUNK);
  */
 export function biomeAt(x: number, z: number): BiomeId {
   if (Math.hypot(x, z) < 26) return 'meadow';
-  const pick = hash2(Math.floor(x / 90), Math.floor(z / 90), 7);
-  if (pick < 0.34) return 'meadow';
-  if (pick < 0.56) return 'crags';
-  if (pick < 0.78) return 'desert';
-  return 'highlands';
+  return pickBiome(Math.floor(x / 90), Math.floor(z / 90));
+}
+
+/**
+ * Biến sinh thái của MỘT Ô LƯỚI 90×90 — phép bốc DUY NHẤT, dùng chung cho `biomeAt` và cho
+ * phép hoà cao độ. Hai bản sao của cùng một phép bốc là hai chỗ để lệch nhau.
+ *
+ * Bốc hai lần: lần đầu ra vùng gốc đúng như trước nay (muối 7 — không được đổi, bãi tài
+ * nguyên của mọi bản lưu đứng trên nó), lần hai (muối 71) quyết vùng ấy có hoá biến thể hay
+ * không. Bốn ô quanh thủ phủ không bao giờ hoá: làng của người chơi cũ không tự dưng ngập.
+ */
+function pickBiome(ci: number, cj: number): BiomeId {
+  const pick = hash2(ci, cj, 7);
+  const goc: BiomeId = pick < 0.34 ? 'meadow' : pick < 0.56 ? 'crags' : pick < 0.78 ? 'desert' : 'highlands';
+  if (ci >= -1 && ci <= 0 && cj >= -1 && cj <= 0) return goc;
+  const v = hash2(ci, cj, 71);
+  if (goc === 'meadow') return v < 0.45 ? 'swamp' : goc;
+  if (goc === 'crags') return v < 0.5 ? 'snow' : goc;
+  if (goc === 'desert') return v < 0.45 ? 'ashland' : goc;
+  return goc;
 }
 
 /**
@@ -77,6 +92,13 @@ export function heightAt(x: number, z: number, biome: BiomeId): number {
   if (biome === 'crags') h += Math.abs(Math.sin(x * 0.18 + z * 0.14)) * 2.1;
   else if (biome === 'desert') h += Math.sin(x * 0.055 + z * 0.045) * 1.1;
   else if (biome === 'highlands') h += Math.cos(x * 0.12) * 0.6 + 0.3;
+  // Đầm lầy: trũng và bẹt, gợn sóng ngắn — phần dưới mực nước thành vũng (xem POOL_Y).
+  else if (biome === 'swamp') h = h * 0.4 - 0.75 + Math.sin(x * 0.21 + z * 0.17) * 0.45;
+  // Đỉnh tuyết: sống núi chạy chéo NGƯỢC chiều vách đá, nên hai vùng nằm cạnh nhau không
+  // nối thành một dãy.
+  else if (biome === 'snow') h += Math.abs(Math.sin(x * 0.13 - z * 0.11)) * 2.0 + 0.2;
+  // Đất núi lửa: cồn thoải bị khoét những rãnh sâu — đáy rãnh là dung nham.
+  else if (biome === 'ashland') h += Math.sin(x * 0.07 + z * 0.05) * 0.7 - Math.abs(Math.cos(x * 0.16 - z * 0.12)) * 0.8;
   return h;
 }
 
@@ -287,17 +309,14 @@ const CRAG_STEP = 0.45;
  * Biên trên và dưới của cao độ. Dùng để kẹp tia lúc bấm chọn — tia bắt đầu từ dưới lòng đất
  * thì phép dò trả về rác mà không báo gì.
  */
-export const GROUND_MAX = 3.8;
+export const GROUND_MAX = 4.4;
 export const GROUND_MIN = -2.8;
 
-/** Biến sinh thái của MỘT Ô LƯỚI, không có luật đĩa gốc. Phải trùng phép bốc của biomeAt. */
-function cellBiome(ci: number, cj: number): BiomeId {
-  const pick = hash2(ci, cj, 7);
-  if (pick < 0.34) return 'meadow';
-  if (pick < 0.56) return 'crags';
-  if (pick < 0.78) return 'desert';
-  return 'highlands';
-}
+/**
+ * Mực nước đầm và mực dung nham. Là bội của STEP_Y, nên mọi đỉnh bị dâng lên đều rơi đúng
+ * một cao độ và mặt vũng phẳng tuyệt đối — lệch một bậc là mặt nước có nếp gấp.
+ */
+const POOL_Y = -1.0;
 
 const muot = (t: number): number => t * t * (3 - 2 * t);
 
@@ -336,20 +355,25 @@ export function biomeWeights(x: number, z: number): [BiomeId, number][] {
   for (let k = 0; k < 4; k += 1) {
     const g = w[k] * (1 - dia);
     if (g < 1e-6) continue;
-    out.push([cellBiome(ci + o[k][0], cj + o[k][1]), g]);
+    out.push([pickBiome(ci + o[k][0], cj + o[k][1]), g]);
   }
   return out;
 }
 
 /** Cao độ đã hoà giữa các biến sinh thái, kèm trọng số vách đá để biết chỗ nào cần thềm. */
-export function heightBlended(x: number, z: number): { h: number; crags: number } {
+export function heightBlended(x: number, z: number): { h: number; crags: number; dam: number; lua: number } {
   let h = 0;
   let crags = 0;
+  let dam = 0;
+  let lua = 0;
   for (const [b, w] of biomeWeights(x, z)) {
     h += w * heightAt(x, z, b);
-    if (b === 'crags') crags += w;
+    // Đỉnh tuyết cũng xếp thềm như vách đá: nó là vách đá phủ tuyết.
+    if (b === 'crags' || b === 'snow') crags += w;
+    else if (b === 'swamp') dam += w;
+    else if (b === 'ashland') lua += w;
   }
-  return { h, crags };
+  return { h, crags, dam, lua };
 }
 
 /** Mức "đang là lòng đường" ở một điểm, 0 tới 1. Mép mềm nửa đơn vị. */
@@ -366,9 +390,25 @@ export function roadMask(x: number, z: number): number {
  * giữa ba đỉnh, nên hình vẽ ra và cao độ tra được không bao giờ lệch nhau.
  */
 export function nodeHeight(i: number, j: number): number {
+  return nodeCalc(i, j);
+}
+
+/**
+ * Đỉnh này ngập tới đâu: 0 là khô, dương là NƯỚC đầm, âm là DUNG NHAM; độ lớn 0–1 theo độ
+ * sâu. Mặt đất dùng nó để tô màu, trang trí dùng nó để biết chỗ nào mọc sậy, chỗ nào bốc lửa.
+ */
+export function nodePool(i: number, j: number): number {
+  nodeCalc(i, j);
+  return uot;
+}
+
+/** Kênh phụ của nodeCalc — độ ngập của đỉnh vừa tính. */
+let uot = 0;
+
+function nodeCalc(i: number, j: number): number {
   const x = i * GRID_STEP;
   const z = j * GRID_STEP;
-  const { h: nen, crags } = heightBlended(x, z);
+  const { h: nen, crags, dam, lua } = heightBlended(x, z);
   const h = nen + (valueNoise(x, z, ROLL_CELL, 41) - 0.5) * 2 * ROLL_AMP;
   // Thềm ở vách đá, mạnh dần theo trọng số vách đá: một thềm cứng đâm vào đồng cỏ đã hoà
   // thì đọc ra như lỗi, nên nó phải tan dần đúng ở chỗ hai biến sinh thái gặp nhau.
@@ -379,7 +419,21 @@ export function nodeHeight(i: number, j: number): number {
   y += (hash2(i, j, 23) - 0.5) * (FACET + (FACET_CRAGS - FACET) * crags) * (1 - duong);
   // Ghim vào bậc, trừ lòng đường — đường phải phẳng chứ không giật từng bậc.
   const ghim = Math.round(y / STEP_Y) * STEP_Y;
-  return y * duong + ghim * (1 - duong);
+  const y0 = y * duong + ghim * (1 - duong);
+  /*
+   * VŨNG. Không dựng một mặt nước riêng: đỉnh nào nằm dưới mực thì DÂNG lên đúng mực, thế là
+   * cả đáy trũng thành một mặt phẳng, và mặt đất tô nó màu nước. Một mặt nước rời sẽ phải
+   * biết bờ ở đâu, phải xếp lớp với sương, với đường, với bóng — còn cách này thì vũng chỉ
+   * là đất, mọi thứ đang chạy trên đất đều chạy trên nó: dân đi qua, bóng đổ lên, sương phủ.
+   *
+   * Độ dâng tan dần theo trọng số vùng, nên ở ranh giới vũng cạn dần chứ không dựng vách.
+   */
+  uot = 0;
+  const vung = dam + lua;
+  if (vung < 0.15 || y0 >= POOL_Y) return y0;
+  const m = muot(Math.min(1, (vung - 0.15) / 0.35));
+  uot = Math.min(1, (POOL_Y - y0) / 0.5) * m * (lua > dam ? -1 : 1);
+  return y0 + (POOL_Y - y0) * m;
 }
 
 /**
@@ -471,6 +525,11 @@ const BIOME_MIX: Record<BiomeId, [ResourceKind, number][]> = {
   // Cao nguyên là nơi DUY NHẤT có pha lê, nên phần của nó phải đủ lớn: với 0,4 thì cả vùng
   // nạp chỉ có 5 rừng pha lê so với 63 rừng gỗ, và cái gần nhất nằm cách nhà 122 đơn vị.
   highlands: [['relics', 0.6], ['wood', 0.8], ['stone', 1]],
+  // Ba biến thể CHÉP NGUYÊN bảng của vùng gốc. Không phải lười: `kindFor` rút cùng một số
+  // với cùng các ngưỡng, nên mọi bãi tài nguyên ra đúng loại cũ ở đúng chỗ cũ.
+  swamp: [['wood', 0.45], ['food', 0.85], ['stone', 1]],
+  snow: [['stone', 0.5], ['gold', 0.75], ['wood', 1]],
+  ashland: [['gold', 0.45], ['stone', 0.7], ['food', 1]],
 };
 
 function kindFor(biome: BiomeId, roll: number): ResourceKind {

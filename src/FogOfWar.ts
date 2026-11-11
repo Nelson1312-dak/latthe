@@ -264,7 +264,8 @@ export class FogOfWar {
    * `ve = false` khi tua nhanh lúc người chơi quay lại: khảo sát và vén vẫn chạy đủ (đó là
    * gameplay), nhưng không dựng ma trận cho hàng trăm đám mây ở mỗi bước không ai nhìn thấy.
    */
-  update(dt: number, units: Unit[], center: THREE.Vector3, surveySpeed = 1, ve = true): void {
+  update(dt: number, units: Unit[], center: THREE.Vector3, surveySpeed = 1, ve = true,
+    dai: readonly { x: number; z: number; r: number }[] = []): void {
     this.restream(center);
     this.elapsed += dt;
 
@@ -280,6 +281,11 @@ export class FogOfWar {
           const dx = Math.max(0, Math.abs(u.position[0] - cx) - CHUNK / 2);
           const dz = Math.max(0, Math.abs(u.position[2] - cz) - CHUNK / 2);
           return Math.hypot(dx, dz) <= REVEAL_RADIUS;
+        // Đài quan sát vén như một người đứng yên có tầm nhìn dài: cùng phép đo tới CẠNH ô.
+        }) || dai.some((d) => {
+          const dx = Math.max(0, Math.abs(d.x - cx) - CHUNK / 2);
+          const dz = Math.max(0, Math.abs(d.z - cz) - CHUNK / 2);
+          return Math.hypot(dx, dz) <= d.r;
         });
         if (!near) {
           if (slot.survey > 0) slot.survey = Math.max(0, slot.survey - dt * 0.5);

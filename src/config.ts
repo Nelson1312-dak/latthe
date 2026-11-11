@@ -123,6 +123,12 @@ export const REVEAL_RADIUS = 1.5;
 
 /** Dưới ngần này dân thì không ai được cắt đi thám hiểm — còn phải lo cái ăn đã. */
 export const SCOUT_MIN_VILLAGERS = 3;
+/**
+ * Người được điều tới một điểm thì đứng lại đó bấy nhiêu giây rồi mới tự đi làm tiếp.
+ * Phải dài hơn `SURVEY_SECONDS` một khoảng thoải mái: điều dân đi khám phá mà họ quay đầu
+ * trước khi mây kịp tan thì lệnh ấy vô nghĩa.
+ */
+export const ORDER_HOLD_SECONDS = 45;
 /** Người thám hiểm chỉ đi xa thủ phủ tới chừng này, và chân trời nở ra theo số dân. */
 export const SCOUT_RANGE_BASE = 80;
 export const SCOUT_RANGE_PER_VILLAGER = 22;
@@ -335,6 +341,89 @@ export const BIOMES: Record<BiomeId, Biome> = {
     ground: [0x4a4070, 0x5b4f80], minimap: '#4a4070',
     yields: ['relics'],
   },
+  swamp: {
+    id: 'swamp', label: 'Đầm Lầy Sậy Cao',
+    // Xanh ô-liu ngả nâu: đủ khác đồng cỏ để nhìn minimap là biết, mà vẫn cùng họ rêu.
+    ground: [0x7c8f5a, 0x66794c], minimap: '#5f7d58',
+    yields: ['wood', 'food'],
+  },
+  snow: {
+    id: 'snow', label: 'Đỉnh Tuyết',
+    // Không trắng hẳn: trắng tinh qua bloom là cháy thành một mảng, mất hết các mặt thềm.
+    ground: [0xd3dde4, 0xb9c8d4], minimap: '#dbe5ec',
+    yields: ['stone'],
+  },
+  ashland: {
+    id: 'ashland', label: 'Đất Núi Lửa',
+    // Tro than ấm chứ không đen: đen thì AO nuốt mất hình khối, và dung nham cần một cái
+    // nền tối để nổi chứ không cần một cái hố.
+    ground: [0x5a5150, 0x4a4342], minimap: '#4d4544',
+    yields: ['gold'],
+  },
+};
+
+/** Hai sắc của mặt vũng, trộn theo cùng phép nhiễu với nền đất. */
+export const POOL_COLORS = {
+  water: [0x4f9296, 0x3a7786],
+  lava: [0xff8f2e, 0xe9521f],
+} as const;
+
+/*
+ * Màu cây đá RIÊNG của ba vùng biến thể. Cây đá trong bãi vẫn là đúng những cây đá ấy, đúng
+ * chỗ ấy — chỉ nhuộm lại: thông phủ tuyết, đá bazan, sậy đầm. Không thêm hình mới nào.
+ */
+export const BIOME_TINT = {
+  swamp: {
+    pine: [0x3f5a3c, 0x4b6a41, 0x577548], leaf: [0x6c8440, 0x7f9650, 0x5b7a3e],
+    reed: 0x8fa85a, lotus: 0xd58aa8, rock: [0x6d7d62, 0x5a6b55], bush: 0x4a6238, tuft: 0x55803f,
+  },
+  snow: {
+    pine: [0xdfe9ee, 0xb9cfd6, 0x8fb0b3], rock: [0xd5e1e8, 0xb3c4d0], iron: 0x8fa3b5,
+  },
+  ashland: {
+    pine: 0x35302e, rock: [0x4c4543, 0x3d3836], iron: 0x7a3b2c, wheat: 0xb8a25e, ember: 0xffcf6a,
+  },
+} as const;
+
+// ------------------------------------------------------------------ hạ tầng
+
+/*
+ * NĂM CÔNG TRÌNH HẠ TẦNG.
+ *
+ * Trước bản này mọi công trình đều thuộc một trong hai việc: chứa (nhà, kho) hoặc đánh
+ * (chòi, trại). Không có cái nào làm cho CÁI LÀNG chạy khác đi, nên xây cái thứ năm cũng
+ * giống hệt xây cái thứ nhất. Mỗi công trình dưới đây đổi đúng một con số mà người chơi
+ * đã nhìn thấy sẵn trên màn hình — lương thực, tốc độ dân, sức bán của chợ, vùng sương đã
+ * vén, giờ đi biển — để xây xong là thấy ngay nó làm gì.
+ */
+
+/** Ruộng lúa: lương thực mỗi giây cho mỗi cấp. */
+export const FARM_FOOD_PER_LEVEL = 0.2;
+/** Giếng làng: dân đi nhanh thêm bấy nhiêu mỗi cấp, cộng dồn mọi giếng, có trần. */
+export const WELL_SPEED_PER_LEVEL = 0.04;
+export const WELL_SPEED_CAP = 0.32;
+/** Chợ phiên: bán thêm bấy nhiêu món mỗi giây, và mỗi món được thêm giá. */
+export const MARKET_RATE_PER_LEVEL = 0.8;
+export const MARKET_PRICE_PER_LEVEL = 0.02;
+export const MARKET_PRICE_CAP = 0.2;
+/** Đài quan sát: tự vén sương trong bán kính này, không cần ai đứng đó. */
+export const LOOKOUT_RANGE_BASE = 20;
+export const LOOKOUT_RANGE_PER_LEVEL = 10;
+/** Xưởng thuyền: chuyến biển về sớm hơn bấy nhiêu mỗi cấp, có trần. */
+export const DOCK_VOYAGE_PER_LEVEL = 0.12;
+export const DOCK_VOYAGE_CAP = 0.6;
+
+/*
+ * MỖI LOẠI HẠ TẦNG CHỈ ĐƯỢC BẤY NHIÊU CÁI.
+ *
+ * Không có trần thì bản mô phỏng dựng mười một ruộng lúa và mười cái giếng: lúa thừa chảy
+ * hết ra chợ (vàng bốn tiếng nhảy từ 128 nghìn lên 244 nghìn), còn cấp căn cứ — tổng cấp
+ * mọi công trình chia ba — phồng từ 54 lên 114 và kéo sức giặc lên theo. Giếng thứ ba vốn
+ * đã vô dụng vì phần cộng tốc độ có trần; trần số lượng chỉ nói thẳng điều đó ra, để người
+ * chơi khỏi trả tiền cho một cái giếng không làm gì.
+ */
+export const BUILD_LIMIT: Partial<Record<BuildingType, number>> = {
+  farm: 4, well: 2, market: 2, lookout: 4, dock: 1,
 };
 
 // ------------------------------------------------------------------ công trình
@@ -385,7 +474,40 @@ export const BUILDINGS = {
     label: 'Lò rèn', icon: 'anvil', maxLevel: 3,
     describe: () => 'Bán nâng cấp giáp và sát thương cho cả ba loại lính',
   },
+  farm: {
+    label: 'Ruộng lúa', icon: 'farm', maxLevel: 5,
+    describe: (l: number) => `Tự ra ${(FARM_FOOD_PER_LEVEL * l).toFixed(1)} lương thực mỗi giây`,
+  },
+  well: {
+    label: 'Giếng làng', icon: 'well', maxLevel: 5,
+    describe: (l: number) => `Dân đi nhanh thêm ${Math.round(WELL_SPEED_PER_LEVEL * l * 100)}%`,
+  },
+  market: {
+    label: 'Chợ phiên', icon: 'market', maxLevel: 5,
+    describe: (l: number) => `Bán thêm ${(MARKET_RATE_PER_LEVEL * l).toFixed(1)} món mỗi giây`
+      + ` · giá +${Math.round(MARKET_PRICE_PER_LEVEL * l * 100)}%`,
+  },
+  lookout: {
+    label: 'Đài quan sát', icon: 'lookout', maxLevel: 5,
+    describe: (l: number) =>
+      `Tự vén sương trong ${LOOKOUT_RANGE_BASE + LOOKOUT_RANGE_PER_LEVEL * l} bước quanh nó`,
+  },
+  dock: {
+    label: 'Xưởng thuyền', icon: 'dock', maxLevel: 5,
+    describe: (l: number) => `Chuyến biển về nhanh hơn ${
+      Math.round(Math.min(DOCK_VOYAGE_CAP, DOCK_VOYAGE_PER_LEVEL * l) * 100)}%`,
+  },
 } as const;
+
+/**
+ * Ba nhóm của bảng xây. Mười ba loại xếp thành một cột thì dài hơn cả màn hình điện thoại
+ * — đo được ở 375×812 — nên chia theo VIỆC người chơi đang muốn làm, không theo thời đại.
+ */
+export const BUILD_GROUPS = [
+  { id: 'dan', label: 'Dân sinh', types: ['house', 'farm', 'well', 'granary'] },
+  { id: 'kinhte', label: 'Kinh tế', types: ['market', 'outpost', 'dock', 'lookout'] },
+  { id: 'quan', label: 'Quân sự', types: ['watchtower', 'barracks', 'archery', 'stable', 'smithy'] },
+] as const;
 
 /** Giá xây mới. Nâng cấp dùng cùng bảng này nhân theo cấp, xem Economy.costFor. */
 export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
@@ -407,6 +529,13 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   archery: { gold: 320, wood: 240, stone: 90 },
   stable: { gold: 600, wood: 320, stone: 180 },
   smithy: { gold: 260, wood: 120, stone: 160 },
+  // Hạ tầng. Ruộng và giếng KHÔNG đòi đá, cùng lý do với chòi canh: đá chỉ đào được từ
+  // phút 13, mà hai thứ này là để mở đầu ván.
+  farm: { gold: 50, wood: 60 },
+  well: { gold: 80, wood: 40 },
+  market: { gold: 200, wood: 120, stone: 40 },
+  lookout: { gold: 120, wood: 140 },
+  dock: { gold: 400, wood: 300, stone: 80 },
 };
 
 /**
@@ -492,6 +621,11 @@ export const FOOTPRINT: Record<keyof typeof BUILDINGS, number> = {
   archery: 2.3,
   stable: 2.6,
   smithy: 1.9,
+  farm: 2.4,
+  well: 1.4,
+  market: 2.3,
+  lookout: 1.5,
+  dock: 2.5,
 };
 
 export const BASE_RADIUS = 17;
@@ -568,12 +702,12 @@ export interface AgeSpec {
 
 export const AGES: readonly AgeSpec[] = [
   { label: 'Thời Dựng Làng', level: 1, need: null, cost: {}, seconds: 0,
-    opens: 'Nhà ở, kho lẫm, chòi canh, trạm trung chuyển' },
+    opens: 'Nhà ở, ruộng lúa, giếng làng, kho lẫm, chòi canh' },
   { label: 'Thời Mở Đất', level: 4, need: null, cost: { food: 400, wood: 300 }, seconds: 90,
-    opens: 'Doanh trại và lò rèn — bắt đầu nuôi quân' },
+    opens: 'Doanh trại, lò rèn, chợ phiên và đài quan sát' },
   { label: 'Thời Thành Luỹ', level: 9, need: 'barracks',
     cost: { food: 1200, gold: 900, stone: 400 }, seconds: 150,
-    opens: 'Trường bắn — cung thủ bắn xa' },
+    opens: 'Trường bắn cho cung thủ, xưởng thuyền cho chuyến biển' },
   { label: 'Thời Biển Lớn', level: 16, need: 'smithy',
     cost: { food: 2000, gold: 3000, stone: 700, relics: 20 }, seconds: 240,
     opens: 'Chuồng ngựa — kỵ binh, và bậc rèn thứ hai' },
@@ -582,6 +716,7 @@ export const AGES: readonly AgeSpec[] = [
 /** Thời đại tối thiểu để xây từng loại. Thiếu nghĩa là có từ đầu. */
 export const BUILD_MIN_AGE: Partial<Record<BuildingType, number>> = {
   barracks: 2, smithy: 2, archery: 3, stable: 4,
+  market: 2, lookout: 2, dock: 3,
 };
 
 // ------------------------------------------------------------------ quân đội
@@ -711,3 +846,61 @@ export const VOYAGE_PLACES = [
   'Hòn Mực', 'Bãi Xương Cá', 'Đá Bảy Chị Em', 'Vụng Tàu Chìm', 'Cồn Chim Lạc',
   'Mũi Sóng Thần', 'Rạn Gãy', 'Đảo Không Tên', 'Vịnh Đèn Cũ', 'Bãi Neo Hoang',
 ] as const;
+
+// ------------------------------------------------------------------ thú dữ
+
+/*
+ * THÚ DỮ SỐNG TRÊN BẢN ĐỒ.
+ *
+ * Trước bản này mối nguy duy nhất là đợt giặc: nó tới theo đồng hồ, đánh ở cổng làng, và
+ * phần bản đồ còn lại chỉ là một cái kho đợi người tới lấy. Hang thú đặt một cái giá lên
+ * chính việc ĐI XA: bãi nằm gần hang cho ít hàng hơn cho tới khi có người mang quân tới dẹp,
+ * và dẹp xong thì được một món. Nó cũng là việc đầu tiên trong game mà quân đội làm ngoài
+ * lúc có báo động.
+ */
+export type BeastKind = 'wolf' | 'boar' | 'bear' | 'panther' | 'croc' | 'polar' | 'salamander';
+
+export interface BeastSpec {
+  /** Tên bầy thú. */
+  label: string;
+  /** Tên cái hang. */
+  den: string;
+  color: number;
+  /** Cỡ thân so với một con sói. */
+  size: number;
+  /** Số con lượn quanh hang ở cấp một. */
+  pack: number;
+  /** Kéo dãn thân [ngang, cao, dài]. Loài bò sát là con sói bị ép dẹt và kéo dài. */
+  shape?: readonly [number, number, number];
+}
+
+export const BEASTS: Record<BeastKind, BeastSpec> = {
+  wolf: { label: 'Bầy sói', den: 'Hang sói', color: 0x8d96a3, size: 0.95, pack: 4 },
+  boar: { label: 'Lợn lòi', den: 'Ổ lợn lòi', color: 0x80604a, size: 1.05, pack: 3 },
+  bear: { label: 'Gấu núi', den: 'Hang gấu', color: 0x54423a, size: 1.5, pack: 2 },
+  panther: { label: 'Báo cát', den: 'Ổ báo cát', color: 0xd2a55e, size: 1.1, pack: 3 },
+  croc: { label: 'Cá sấu đầm', den: 'Vũng cá sấu', color: 0x5d7a45, size: 1.15, pack: 3, shape: [1.35, 0.55, 1.6] },
+  polar: { label: 'Gấu tuyết', den: 'Hang gấu tuyết', color: 0xe8eef2, size: 1.55, pack: 2 },
+  salamander: { label: 'Kỳ nhông lửa', den: 'Ổ kỳ nhông lửa', color: 0xe8552c, size: 1.0, pack: 4, shape: [1.2, 0.6, 1.5] },
+};
+
+/** Mỗi vùng đất nuôi một loài. Kiểu `Record<BiomeId, …>` để thêm vùng mới mà quên loài là lỗi biên dịch. */
+export const BEAST_BY_BIOME: Record<BiomeId, BeastKind> = {
+  meadow: 'wolf', crags: 'bear', desert: 'panther', highlands: 'boar',
+  swamp: 'croc', snow: 'polar', ashland: 'salamander',
+};
+
+/** Trong bán kính này quanh thủ phủ không bao giờ có hang: ván mới không mở đầu bằng một bầy sói. */
+export const DEN_MIN_DIST = 50;
+/** Xác suất một khối đất có hang. */
+export const DEN_CHANCE = 0.3;
+/** Bãi nằm trong tầm này của một hang còn sống thì bị quấy. */
+export const DEN_FEAR = 18;
+/** Phần hàng còn lại mỗi chuyến ở bãi bị quấy. */
+export const DEN_YIELD = 0.6;
+export const DEN_POWER = 5;
+export const DEN_MAX_LEVEL = 6;
+/** Mỗi người lính đáng bấy nhiêu điểm khi đi săn. */
+export const HUNT_POWER: Record<TroopKind, number> = { spear: 2, archer: 2, horse: 4 };
+/** Vừa đủ sức thì ngã ngần này phần quân; đông gấp đôi thì ngã một nửa số ấy. */
+export const HUNT_LOSS = 0.45;

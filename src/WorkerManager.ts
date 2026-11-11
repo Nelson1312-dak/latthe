@@ -18,16 +18,26 @@ import * as THREE from 'three';
 import { matte, tinted } from './materials';
 import { han, paint } from './shapes';
 import {
-  CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, GATHER_SECONDS, OUTPOST_RANGE, PALETTE, RESOURCES,
-  SCOUT_MIN_VILLAGERS, SCOUT_RANGE_BASE, SCOUT_RANGE_PER_VILLAGER,
+  CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, DEN_YIELD, GATHER_SECONDS, ORDER_HOLD_SECONDS, OUTPOST_RANGE,
+  PALETTE, RESOURCES, SCOUT_MIN_VILLAGERS, SCOUT_RANGE_BASE, SCOUT_RANGE_PER_VILLAGER,
 } from './config';
 import type { Economy } from './Economy';
 import type { FogOfWar } from './FogOfWar';
 import type { MapManager } from './MapManager';
 import type { Building, Patch, ResourceKind, Unit, Vec3 } from './types';
 import { RESOURCE_KINDS } from './types';
+import { denNearPatch } from './dens';
 
 const ARRIVE = 0.35;
+/*
+ * Hai mã đích dành cho lệnh của người chơi. Chúng đi nhờ `targetId` như 'scout' đã đi nhờ,
+ * nên không cần thêm trạng thái nào vào `UnitState` — mà thêm trạng thái thì mọi `switch`
+ * trong bản lưu cũ, trong giao diện và trong bot chạy thử đều phải biết tới.
+ */
+/** Đang đi tới điểm người chơi chỉ. */
+export const LENH = 'lenh';
+/** Đã tới điểm ấy, đang đứng chờ (đếm bằng `gatherTimer`). */
+export const CHO = 'cho';
 /** Duoi ngan nay don thi chua bo mot chuyen cho hang. */
 const CARRY_WORTH_IT = 0.5;
 const MAX_UNITS = 220;
@@ -198,7 +208,9 @@ export class WorkerManager {
 
   /** Việc của một người: theo hàng đang mang, không thì theo bãi đang nhắm tới. */
   private roleOf(u: Unit): Role {
-    if (u.targetId === 'scout') return 'scout';
+    // Người đang theo lệnh mặc cùng màu áo với người thám hiểm: cả hai đều "đang đi đâu đó
+    // chứ không đi làm", và người chơi cần nhìn ra họ giữa một đám thợ.
+    if (u.targetId === 'scout' || u.targetId === LENH || u.targetId === CHO) return 'scout';
     if (u.carryingKind) return u.carryingKind;
     if (!u.targetId) return null;
     const c = this.roles.get(u.id);
@@ -296,13 +308,70 @@ export class WorkerManager {
     if (ve) this.draw(dt);
   }
 
+  // ------------------------------------------------------- lệnh của người chơi
+
+  /** Điều một người tới một điểm. Lệnh mới xoá lệnh cũ, kể cả cái ghim bãi. */
+  order(u: Unit, x: number, z: number): void {
+    if (u.kind !== 'villager' || u.state === 'voyage') return;
+    u.pin = null;
+    u.targetId = LENH;
+    u.targetPos = [x, 0, z];
+    u.state = 'moving';
+  }
+
+  /** Bảo một người làm ở một bãi, và cứ quay lại đó cho tới khi được thả. */
+  orderPatch(u: Unit, patch: Patch, cho: number): void {
+    if (u.kind !== 'villager' || u.state === 'voyage') return;
+    u.pin = patch.id;
+    // Đang vác hàng về thì để họ đổ xong đã: quay ngoắt lại bãi là mất trắng chuyến hàng,
+    // vì lúc bắt đầu đào chuyến mới thì thứ đang vác bị ghi đè.
+    if (u.carrying > 0) { if (u.state !== 'delivering') this.veKho(u); return; }
+    u.targetId = patch.id;
+    u.targetPos = patch.spots[cho % patch.spots.length];
+    u.state = 'moving';
+  }
+
+  /** Thả một người về cho máy tự chia việc. */
+  release(u: Unit): void {
+    if (u.kind !== 'villager' || u.state === 'voyage') return;
+    u.pin = null;
+    if (u.targetId === LENH || u.targetId === CHO) this.xongLenh(u);
+  }
+
+  /** Hết lệnh: đang vác gì thì mang về kho trước, không thì rảnh tay chờ việc. */
+  private xongLenh(u: Unit): void {
+    if (u.carrying > 0 && u.carryingKind) { this.veKho(u); return; }
+    u.state = 'idle';
+    u.targetId = null;
+  }
+
+  private veKho(u: Unit): void {
+    const drop = this.dropPoint(u.position);
+    u.homeId = drop.id;
+    u.targetId = drop.id;
+    u.targetPos = [drop.position[0], 0, drop.position[2]];
+    u.state = 'delivering';
+  }
+
   private villager(u: Unit, dt: number): void {
     switch (u.state) {
       case 'idle':
+        if (u.targetId === CHO) {
+          u.gatherTimer -= dt;
+          if (u.gatherTimer > 0) break;
+          this.xongLenh(u);
+          if (u.state !== 'idle') break;
+        }
         this.dispatch(u);
         break;
       case 'moving':
         if (this.step(u, dt)) {
+          if (u.targetId === LENH) {
+            u.state = 'idle';
+            u.targetId = CHO;
+            u.gatherTimer = ORDER_HOLD_SECONDS;
+            break;
+          }
           if (u.targetId === 'scout') { u.state = 'idle'; u.targetId = null; break; }
           u.state = 'gathering';
           u.gatherTimer = GATHER_SECONDS;
@@ -312,7 +381,10 @@ export class WorkerManager {
         u.gatherTimer -= dt;
         if (u.gatherTimer <= 0) {
           const node = u.targetId ? this.map.patchById(u.targetId) : undefined;
-          u.carrying = Math.max(1, Math.round(u.capacity * (node?.richness ?? 1)));
+          // Bãi nằm trong tầm một hang thú còn sống: đào vội, mang về được ít.
+          const thu = node ? denNearPatch(node) : null;
+          const he = thu && !this.economy.isHunted(thu.id) ? DEN_YIELD : 1;
+          u.carrying = Math.max(1, Math.round(u.capacity * (node?.richness ?? 1) * he));
           u.carryingKind = node?.kind ?? 'wood';
           const drop = this.dropPoint(u.position);
           u.homeId = drop.id;
@@ -365,6 +437,16 @@ export class WorkerManager {
    * chẳng bao giờ mở, vì dân chỉ chạy tới những mỏ mà họ đã nhìn thấy.
    */
   private dispatch(u: Unit): void {
+    // Cái ghim của người chơi đứng trên mọi phép chia việc của máy. Chỉ nhường khi kho của
+    // món ấy đã đầy — lúc đó đào thêm là đổ đi, và người chơi cũng không muốn thế.
+    const ghim = u.pin ? this.map.patchById(u.pin) : undefined;
+    if (ghim && !this.economy.isFull(ghim.kind)) {
+      u.targetId = ghim.id;
+      u.targetPos = ghim.spots[Math.max(0, this.economy.villagers().indexOf(u)) % ghim.spots.length];
+      u.state = 'moving';
+      return;
+    }
+
     const shop = this.neediestProcessor(u);
     if (shop) {
       u.targetId = shop.id;

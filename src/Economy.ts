@@ -17,6 +17,9 @@ import {
   VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS, VOYAGES,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
+  DOCK_VOYAGE_CAP, DOCK_VOYAGE_PER_LEVEL, FARM_FOOD_PER_LEVEL, LOOKOUT_RANGE_BASE,
+  LOOKOUT_RANGE_PER_LEVEL, MARKET_PRICE_CAP, MARKET_PRICE_PER_LEVEL, MARKET_RATE_PER_LEVEL,
+  WELL_SPEED_CAP, WELL_SPEED_PER_LEVEL, BUILD_LIMIT,
 } from './config';
 import type {
   Building, BuildingType, Cost, GameState, Inventory, OfflineReport, ResourceKind, Threat,
@@ -25,6 +28,8 @@ import type {
 import { TROOP_KINDS } from './types';
 import { biomeAt, onRoad } from './world';
 import { resolveVoyage, voyageSpec } from './voyage';
+import { denLoot, denPower, huntLosses, huntPower } from './dens';
+import type { Den } from './dens';
 import { guardOf, mercPrice, stormTargets, waveKind, waveOutcome, wavePower } from './raids';
 import { raiderCount, resolveBattle, waveMix } from './battle';
 import type { BattleSeed } from './battle';
@@ -62,6 +67,7 @@ function freshState(): GameState {
     // Bốn ô giữa mở sẵn, đủ để nhìn thấy thủ phủ và vài mỏ quanh đó; phần còn lại là mây.
     // Bốn khối quanh gốc mở sẵn, đủ thấy thủ phủ và vài mỏ; phần còn lại là mây.
     revealed: ['0,0', '-1,0', '0,-1', '-1,-1'],
+    hunted: [],
     nextBuildingId: 1,
     age: 1,
     ageLeft: 0,
@@ -178,6 +184,9 @@ export class Economy {
           };
           state.voyage = parsed.voyage ?? null;
           state.voyagesDone = Math.max(0, Math.floor(Number(parsed.voyagesDone) || 0));
+          // Bản lưu trước khi có thú dữ: chưa dẹp hang nào, và mọi hang đều còn đó.
+          state.hunted = Array.isArray(parsed.hunted)
+            ? parsed.hunted.filter((x): x is string => typeof x === 'string') : [];
           if (!state.voyage) {
             for (const u of state.units) if (u.state === 'voyage') u.state = 'idle';
           }
@@ -369,7 +378,48 @@ export class Economy {
   }
 
   speed(): number {
-    return BASE_SPEED * (1 + (this.state.speedLevel - 1) * SPEED_PER_LEVEL) * (1 + this.bonus.speed);
+    return BASE_SPEED * (1 + (this.state.speedLevel - 1) * SPEED_PER_LEVEL) * (1 + this.bonus.speed)
+      * (1 + this.wellBonus());
+  }
+
+  // ------------------------------------------------------------------ hạ tầng
+
+  /** Giếng làng: phần cộng vào tốc độ đi của dân, đã chặn trần. */
+  wellBonus(): number {
+    return Math.min(WELL_SPEED_CAP, WELL_SPEED_PER_LEVEL * this.sumLevels('well'));
+  }
+
+  /** Chợ phiên: phần cộng vào giá mỗi món bán ra, đã chặn trần. */
+  marketBonus(): number {
+    return Math.min(MARKET_PRICE_CAP, MARKET_PRICE_PER_LEVEL * this.sumLevels('market'));
+  }
+
+  /** Ruộng lúa: lương thực tự ra mỗi giây. */
+  farmRate(): number {
+    return FARM_FOOD_PER_LEVEL * this.sumLevels('farm');
+  }
+
+  /**
+   * Xưởng thuyền: đồng hồ chuyến biển chạy nhanh gấp bấy nhiêu lần.
+   *
+   * Nhân vào NHỊP TRỪ chứ không sửa `voyage.left` lúc ra khơi: xây thêm xưởng giữa chuyến
+   * thì chuyến đang đi cũng về sớm hơn, và bản lưu không phải nhớ thêm con số nào.
+   */
+  voyageSpeed(): number {
+    return 1 + Math.min(DOCK_VOYAGE_CAP, DOCK_VOYAGE_PER_LEVEL * this.sumLevels('dock'));
+  }
+
+  /** Các đài quan sát và tầm nhìn của từng cái — màn sương đọc danh sách này mỗi nhịp. */
+  lookouts(): { x: number; z: number; r: number }[] {
+    const ra: { x: number; z: number; r: number }[] = [];
+    for (const b of this.state.buildings) {
+      if (b.type !== 'lookout') continue;
+      ra.push({
+        x: b.position[0], z: b.position[2],
+        r: LOOKOUT_RANGE_BASE + LOOKOUT_RANGE_PER_LEVEL * b.level,
+      });
+    }
+    return ra;
   }
 
   capacity(): number {
@@ -387,8 +437,10 @@ export class Economy {
   }
 
   /** Công trình nào đang chiếm chỗ quanh điểm này, nếu có. */
-  buildingNear(x: number, z: number, r: number): Building | undefined {
+  buildingNear(x: number, z: number, r: number, boQua?: string): Building | undefined {
     for (const b of this.state.buildings) {
+      // Đang dời một công trình thì chính nó không được tính là vật cản của nó.
+      if (b.id === boQua) continue;
       const d = Math.hypot(b.position[0] - x, b.position[2] - z);
       if (d < r + FOOTPRINT[b.type]) return b;
     }
@@ -519,9 +571,16 @@ export class Economy {
    * true/false: một ô đỏ không nói gì cả, còn "ngoài vành căn cứ" thì vừa từ chối vừa chỉ
    * đường. Hàm này cũng là thứ chế độ đặt gọi mỗi khung để tô màu ô dưới ngón tay.
    */
-  placeBlock(cx: number, cz: number, type: BuildingType, revealed: boolean): string | null {
+  placeBlock(cx: number, cz: number, type: BuildingType, revealed: boolean,
+    boQua?: string): string | null {
     const r = FOOTPRINT[type];
-    if (this.buildingNear(cx, cz, r)) return 'Chồng lên công trình khác';
+    // Trần số lượng xét TRƯỚC chỗ đứng: đã đủ thì kéo đi đâu cũng không đặt được, và lý
+    // do phải là lý do thật chứ không phải "chồng lên công trình khác". Đang dời thì bỏ qua.
+    const tran = BUILD_LIMIT[type];
+    if (tran && !boQua && this.countOf(type) >= tran) {
+      return `Đã đủ ${tran} ${BUILDINGS[type].label.toLowerCase()}`;
+    }
+    if (this.buildingNear(cx, cz, r, boQua)) return 'Chồng lên công trình khác';
     if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) {
       return `Cần căn cứ cấp ${BUILD_MIN_LEVEL[type]}`;
     }
@@ -530,9 +589,35 @@ export class Economy {
     if (!revealed) return 'Chưa vén tới đây';
     // Lòng đường để trống: đó là làn giặc đi, và cũng là đường bắn của chòi canh.
     if (onRoad(cx, cz)) return 'Không xây trên đường';
-    // Trạm trung chuyển sống bằng việc đứng xa; mọi thứ khác phải nằm trong vành căn cứ.
-    if (type !== 'outpost' && Math.hypot(cx, cz) > this.baseRadius()) return 'Ngoài vành căn cứ';
+    // Trạm trung chuyển và đài quan sát sống bằng việc đứng xa; mọi thứ khác phải nằm
+    // trong vành căn cứ.
+    if (type !== 'outpost' && type !== 'lookout' && Math.hypot(cx, cz) > this.baseRadius()) {
+      return 'Ngoài vành căn cứ';
+    }
     return null;
+  }
+
+  /**
+   * Vì sao chưa dời được công trình này tới đây, hoặc null nếu dời được.
+   *
+   * Ba thứ đứng yên: thủ phủ (mọi vành và mọi đường đều đo từ nó), trạm trung chuyển (xe
+   * hàng đang chạy tuyến của nó) và đài quan sát (giá trị của nó CHÍNH LÀ chỗ đứng — dời
+   * miễn phí thì một đài vén được cả bản đồ).
+   */
+  moveBlock(b: Building, cx: number, cz: number, revealed: boolean): string | null {
+    if (b.type === 'townhall') return 'Thủ phủ không dời được';
+    if (b.type === 'outpost' || b.type === 'lookout') return 'Công trình này không dời được';
+    return this.placeBlock(cx, cz, b.type, revealed, b.id);
+  }
+
+  /** Dời một công trình sang chỗ khác. Không tốn gì: đặt nhầm chỗ không phải là một cái tội. */
+  moveBuilding(id: string, cx: number, cz: number, revealed = true): boolean {
+    const b = this.buildingById(id);
+    if (!b || this.moveBlock(b, cx, cz, revealed)) return false;
+    b.position = [cx, 0, cz];
+    b.biome = biomeAt(cx, cz);
+    this.after();
+    return true;
   }
 
   build(cx: number, cz: number, type: BuildingType, revealed = true): boolean {
@@ -600,7 +685,11 @@ export class Economy {
   /** Số món chợ bán được mỗi giây lúc này. 0 khi chưa có thủ phủ. */
   marketRate(): number {
     const hall = this.state.buildings.find((b) => b.type === 'townhall');
-    return hall ? SURPLUS_RATE_PER_LEVEL * hall.level : 0;
+    // Chợ phiên cộng thêm sức bán, nhưng không thay được thủ phủ: không có thủ phủ thì
+    // không có ai đứng ra bán.
+    return hall
+      ? SURPLUS_RATE_PER_LEVEL * hall.level + MARKET_RATE_PER_LEVEL * this.sumLevels('market')
+      : 0;
   }
 
   /**
@@ -614,7 +703,8 @@ export class Economy {
   private sellSurplus(dt: number): void {
     const hall = this.state.buildings.find((b) => b.type === 'townhall');
     if (!hall) return;
-    const budget = SURPLUS_RATE_PER_LEVEL * hall.level * dt;
+    const budget = this.marketRate() * dt;
+    const gia = 1 + this.marketBonus();
     let left = budget;
     // Bán thứ đáng tiền trước, và không bao giờ bán chính vàng.
     for (const kind of ['relics', 'stone', 'food', 'wood'] as ResourceKind[]) {
@@ -622,7 +712,7 @@ export class Economy {
       const take = Math.min(left, this.state.inv[kind] - this.reserve[kind]);
       if (take <= 0) continue;
       this.state.inv[kind] -= take;
-      this.deposit('gold', take * RESOURCES[kind].value);
+      this.deposit('gold', take * RESOURCES[kind].value * gia);
       left -= take;
       this.fullKinds.delete(kind);
     }
@@ -646,6 +736,49 @@ export class Economy {
   /** Sức thủ lúc này, đã gồm lính vừa thuê và số dân đang ở nhà. */
   guard(): number {
     return guardOf(this.state.buildings, this.state.threat.hired, this.atHome());
+  }
+
+  // ------------------------------------------------------------------ săn thú
+
+  isHunted(id: string): boolean {
+    return this.state.hunted.includes(id);
+  }
+
+  /** Sức quân mang đi săn: chỉ quân thường trực, không tính dân và lính thuê. */
+  huntPower(): number {
+    return huntPower(this.state.army, this.state.smith.attack);
+  }
+
+  /** Vì sao chưa săn được hang này; null là săn được. */
+  huntBlock(d: Den): string | null {
+    if (this.isHunted(d.id)) return 'Hang này đã dẹp xong';
+    const co = this.huntPower();
+    if (co <= 0) return 'Chưa có quân — nuôi lính ở doanh trại trước';
+    const can = denPower(d);
+    if (co < can) return `Cần ${can} sức quân, mới có ${co}`;
+    return null;
+  }
+
+  /**
+   * Mang quân đi dẹp một hang. Thắng chắc — luật đã chặn từ trước khi không đủ sức — và cái
+   * giá là số người ngã, tính được trước khi bấm. Không có xúc xắc: người chơi nhìn thẻ là
+   * biết đi bây giờ thì mất ai, đợi thêm một lứa lính thì không mất ai.
+   */
+  hunt(d: Den): { lost: Troops; loot: Cost } | null {
+    if (this.huntBlock(d)) return null;
+    const lost = huntLosses(this.state.army, this.huntPower(), denPower(d));
+    for (const k of TROOP_KINDS) this.state.army[k] -= lost[k];
+    const loot: Cost = {};
+    const thuong = denLoot(d);
+    for (const k of RESOURCE_KINDS) {
+      const n = thuong[k];
+      if (!n) continue;
+      const lay = this.deposit(k, n);
+      if (lay > 0) loot[k] = lay;
+    }
+    this.state.hunted.push(d.id);
+    this.onChange?.();
+    return { lost, loot };
   }
 
   /** Giá vàng mỗi điểm sức thủ thuê thêm cho đợt đang tới. */
@@ -769,6 +902,10 @@ export class Economy {
   }
 
   tick(dt: number): void {
+    // Ruộng ra lúa TRƯỚC khi lính ăn: thứ tự ngược lại thì một nhịp nào đó kho về 0 và
+    // lính bỏ đi, dù trong cùng nhịp ấy ruộng đã kịp bù.
+    const lua = this.farmRate();
+    if (lua > 0) this.deposit('food', lua * dt);
     this.tickThreat(dt);
     this.tickVoyage(dt);
     this.tickAge(dt);
@@ -801,6 +938,11 @@ export class Economy {
     if (this.state.level < n.level) return `Căn cứ phải cấp ${n.level}`;
     if (n.need && !this.state.buildings.some((b) => b.type === n.need)) {
       return `Phải có ${BUILDINGS[n.need].label.toLowerCase()}`;
+    }
+    // Kho nhỏ hơn cái giá thì gom tới bao giờ cũng không đủ. Nói thẳng ra, không thì người
+    // chơi ngồi nhìn kho đầy mà nút vẫn xám — bản mô phỏng kẹt đúng chỗ này suốt hai tiếng.
+    for (const k of RESOURCE_KINDS) {
+      if ((n.cost[k] ?? 0) > this.state.storageLimit) return 'Kho chưa đủ chứa — nâng kho lẫm';
     }
     if (!this.canAfford(n.cost)) return 'Chưa đủ của';
     return null;
@@ -1002,7 +1144,7 @@ export class Economy {
   private tickVoyage(dt: number): void {
     const v = this.state.voyage;
     if (!v) return;
-    v.left -= dt;
+    v.left -= dt * this.voyageSpeed();
     if (v.left > 0) return;
     const r = this.landVoyage(v);   // chạy trước, báo sau — xem tickThreat
     this.onVoyage?.(r);
@@ -1095,7 +1237,7 @@ export class Economy {
     let voyage: VoyageResult | null = null;
     const vo = this.state.voyage;
     if (vo) {
-      vo.left -= elapsedSeconds;
+      vo.left -= elapsedSeconds * this.voyageSpeed();
       if (vo.left <= 0) voyage = this.landVoyage(vo);
     }
 

@@ -906,4 +906,193 @@ button.primary:active { transform: scale(0.98); }
   .wave { gap: 8px; padding: 7px 9px; }
   .wave-when strong { font-size: 15px; }
 }
+
+/* ==========================================================================
+ * LUỒNG XÂY HAI BƯỚC VÀ HUD GỌN
+ *
+ * Khối này nằm CUỐI tệp có chủ ý: nó sửa lại vài luật ở trên (dock, thanh trên, ngăn kéo),
+ * và đứng sau thì thắng bằng thứ tự chứ không phải bằng cách nâng độ ưu tiên từng dòng.
+ * ========================================================================== */
+
+/* Ô tài nguyên giờ là nút bấm được (bấm để đọc kho), nên phải gỡ kiểu nút mặc định. */
+button.chip { border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
+  text-align: left; }
+.chip .cap {
+  position: absolute; left: 12px; right: 12px; bottom: 1px; height: 2px;
+  border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden;
 }
+.chip .cap i { display: block; height: 100%; width: var(--p, 0%);
+  background: var(--mint); opacity: 0.75; transition: width 0.3s linear; }
+.chip.gan .cap i { background: var(--amber); opacity: 1; }
+.chip.full .cap i { background: var(--rose); opacity: 1; }
+
+/* Nút bản đồ chỉ có nghĩa ở chỗ bản đồ nhỏ đang bị giấu (màn hẹp hoặc thấp). */
+#map-btn { display: none; }
+#map-btn[aria-pressed="true"] { color: var(--mint); border-color: rgba(94, 234, 212, 0.45); }
+
+/* Bảng cài đặt: phần dọn từ thanh trên vào, chỉ hiện ở màn hẹp. */
+.gfx-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  padding-bottom: 9px; border-bottom: 1px solid var(--hairline); }
+.gfx-extra[hidden] { display: none; }
+.gfx-extra .stat { background: var(--glass-inner); }
+.gfx-extra .icon { margin-left: auto; }
+.gfx-moc { flex-basis: 100%; margin: 3px 2px 0; font-size: 11.5px; line-height: 1.35;
+  color: var(--ink-dim); font-weight: 600; }
+
+/* ---------------------------------------------------------------- ngăn kéo */
+
+/* Ngăn không bao giờ cao hơn phần màn hình còn lại: quá thì cuộn BÊN TRONG, không tràn. */
+.inspector {
+  max-height: min(64dvh, calc(100dvh - var(--bar-h, 112px) - 150px));
+  overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--hairline-hi) transparent;
+}
+.sheet-head { align-items: center; }
+.sheet-head small { flex: 1; text-align: right; min-width: 0; }
+.sheet-head .insp-close { width: 34px; height: 34px; }
+
+/* Giá gọn: không viền, không nền — chỉ biểu tượng và con số, đỏ khi chưa đủ. */
+.insp-cost.gon { gap: 3px 9px; }
+.insp-cost.gon .bit { background: none; border: 0; padding: 0; gap: 3px;
+  font-size: 11.5px; font-weight: 700; color: var(--ink-soft); }
+.insp-cost.gon .bit .ico { font-size: 12.5px; }
+.insp-cost.gon .bit.lack { color: var(--rose); }
+.row .insp-cost { flex: none; max-width: 44%; justify-content: flex-end; }
+.row { min-height: 48px; }
+
+/* Ba nhóm của bảng xây. */
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;
+  border-radius: var(--r-sm); background: var(--glass-inner); }
+.tab { border: 0; background: transparent; color: var(--ink-dim); font: inherit;
+  font-size: 12.5px; font-weight: 700; padding: 0 4px; min-height: 38px;
+  border-radius: 8px; cursor: pointer;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease); }
+.tab:hover { color: var(--ink); }
+.tab.on { background: var(--glass-inner-hi); color: var(--amber);
+  box-shadow: inset 0 0 0 1px var(--hairline-hi); }
+
+/* Thẻ loại nhà: hai cột trên điện thoại, ba trên màn rộng. */
+.nha-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; }
+.nha { display: grid; gap: 5px; align-content: start; text-align: left; min-width: 0;
+  border: 1px solid var(--hairline); background: var(--glass-inner); color: var(--ink);
+  font: inherit; padding: 9px 10px 10px; border-radius: var(--r-sm); cursor: pointer;
+  transition: background 0.18s var(--ease), border-color 0.18s var(--ease),
+              transform 0.12s var(--ease); }
+.nha:hover:not(:disabled) { background: var(--glass-inner-hi); border-color: rgba(251, 191, 36, 0.55); }
+.nha:active:not(:disabled) { transform: scale(0.97); }
+.nha-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.nha-top .gico { display: flex; flex: none; font-size: 20px; color: var(--amber); }
+.nha-top b { flex: 1; min-width: 0; font-size: 13px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nha .dem { flex: none; font-size: 10.5px; font-weight: 700; color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.07); padding: 1px 6px; border-radius: var(--r-pill);
+  font-variant-numeric: tabular-nums; }
+.nha small { font-size: 11px; color: var(--ink-dim); font-weight: 600; line-height: 1.3;
+  min-height: 2.6em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nha.khoa { cursor: default; opacity: 0.55; }
+.nha.khoa .gico { color: var(--ink-dim); }
+.nha.khoa small { color: var(--amber); min-height: 0; }
+
+/* Thanh đặt: thấp, vì chỗ nó che đúng là chỗ đang cần nhìn. */
+.dat { display: flex; align-items: center; gap: 10px; }
+.dat .gico { display: flex; flex: none; font-size: 24px; color: var(--amber); }
+.dat .col { display: grid; gap: 1px; min-width: 0; flex: 1; }
+.dat b { font-size: 14px; font-weight: 700; }
+.dat small { font-size: 11.5px; font-weight: 600; color: var(--mint); line-height: 1.3; }
+.dat small.do { color: var(--rose); }
+.dat .insp-cost { flex: none; max-width: 42%; justify-content: flex-end; }
+.xay-huy { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; white-space: nowrap; }
+.xay-huy .bico { margin: 0; }
+.xay-row .insp-go { min-height: 44px; padding-top: 0; padding-bottom: 0; }
+/* Đang cầm mô hình mờ thì khung ngắm rõ hơn: nó là thứ duy nhất nói "sẽ đặt ở đây". */
+body.dat .aim { border-color: rgba(251, 191, 36, 0.85); box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.25); }
+
+/* Dòng "nâng cấp thì được gì". */
+.insp-next { display: flex; align-items: flex-start; gap: 7px; margin: 0;
+  font-size: 12.5px; font-weight: 600; color: var(--mint); line-height: 1.35; }
+.insp-next .bico { margin-top: 1px; font-size: 15px; }
+
+/* Bản đồ nhỏ bật tay ở màn hẹp/thấp, treo dưới dải đợt. */
+@media (max-width: 880px), (max-height: 620px) {
+  #map-btn { display: grid; }
+  body.map-mo:not(.xay) .map {
+    display: block; top: calc(var(--bar-h, 112px) + 66px); right: 12px;
+    width: 138px; height: 138px;
+  }
+}
+
+/* ------------------------------------------------------------ điện thoại */
+@media (max-width: 620px) {
+  /* Thanh trên: MỘT dòng, chỉ tài nguyên. */
+  .bar { flex-wrap: nowrap; padding: 8px 8px; gap: 0; }
+  .bar .spacer { display: none; }
+  .res { flex: 1; min-width: 0; padding: 3px; }
+  .chip { flex: 1 1 0; min-width: 0; justify-content: center; gap: 4px; padding: 6px 4px 7px; }
+  .chip .ico { font-size: 15px; }
+  .chip .amt { font-size: 13.5px; }
+  .chip .cap { left: 9px; right: 9px; }
+
+  /* Ba nút hay bấm thành một cột mảnh bên phải, dưới thanh trên. */
+  .group {
+    position: fixed; right: 8px; top: calc(var(--bar-h, 56px) + 8px);
+    flex-direction: column; gap: 5px; padding: 5px; border-radius: 26px;
+  }
+  .icon { width: 40px; height: 40px; }
+  .icon svg { font-size: 18px; }
+
+  /* Dải đợt dạt sang trái, chừa cột nút. */
+  .topstack { left: 8px; transform: none; justify-items: start;
+    max-width: calc(100vw - 16px - 58px); }
+  .wave { max-width: 100%; }
+  .wave-read { min-width: 64px; }
+  .toast { top: calc(var(--bar-h, 56px) + 66px); max-width: calc(100vw - 24px);
+    white-space: normal; text-align: center; }
+  body.map-mo:not(.xay) .map { right: 66px; }
+
+  /*
+   * DOCK: biểu tượng trên, tên dưới, và CÓ dòng phụ.
+   * Bản trước xếp ngang nên phải giấu dòng phụ ("2/14", "Rảnh") cho vừa 375 điểm ảnh —
+   * tức là giấu đúng cái trạng thái khiến người chơi biết có nên mở ngăn hay không. Xếp
+   * dọc thì mỗi nút chỉ cần rộng bằng cái tên, nên đủ chỗ cho cả ba dòng.
+   */
+  .dock { left: 8px; right: 8px; transform: none; max-width: none; padding: 5px; gap: 4px; }
+  .tiles { flex: 1; gap: 4px; }
+  .tile { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center;
+    gap: 2px; padding: 7px 2px 6px; min-height: 56px; }
+  .tile .tico { font-size: 20px; }
+  .tile .tcol { display: flex; align-items: center; min-width: 0; max-width: 100%; }
+  .tile .tname { font-size: 11.5px; }
+  .tile .tsub { display: block; font-size: 10px; max-width: 100%; }
+  .tile.speed { flex: 0 0 44px; font-size: 14px; }
+
+  .inspector {
+    left: 8px; right: 8px; width: auto; transform: none;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 76px);
+    padding: 12px 12px; animation-name: rise-hep;
+  }
+  body.xay .inspector { padding: 11px 11px; }
+  .nha-luoi { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .insp-close { width: 36px; height: 36px; }
+}
+@keyframes rise-hep {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------ điều dân */
+.insp-lenh { display: flex; align-items: flex-start; gap: 7px; margin: 0;
+  font-size: 12px; font-weight: 600; color: var(--ink-soft); line-height: 1.35; }
+.insp-lenh .bico { margin-top: 1px; font-size: 15px; color: #7fd8ff; flex: none; }
+.lenh-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.lenh-row:empty { display: none; }
+.lenh-row .xay-huy { flex: 1 1 auto; }
+
+/* ------------------------------------------------------------ hang thú */
+.den-loot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.den-cap { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.insp-body > .insp-go { width: 100%; min-height: 46px; display: inline-flex;
+  align-items: center; justify-content: center; gap: 8px; }
+.insp-go:disabled { opacity: 0.55; cursor: not-allowed; }
+.insp-next.chan { color: var(--rose); }

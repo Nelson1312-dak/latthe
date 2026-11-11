@@ -28,7 +28,15 @@ export type Cost = Partial<Inventory>;
 
 // ------------------------------------------------------------- biến sinh thái
 
-export type BiomeId = 'meadow' | 'crags' | 'desert' | 'highlands';
+/*
+ * Bốn vùng GỐC và ba vùng BIẾN THỂ. Mỗi biến thể là một vùng gốc mang hình hài khác — đầm
+ * lầy của đồng cỏ, đỉnh tuyết của vách đá, đất núi lửa của sa mạc — và giữ nguyên bảng tài
+ * nguyên của vùng gốc. Nhờ thế thêm địa hình không xê dịch một bãi tài nguyên nào: bản lưu
+ * cũ, mã bãi và cân bằng kinh tế đều đứng yên, chỉ có cái nhìn thấy là đổi.
+ */
+export type BiomeId =
+  | 'meadow' | 'crags' | 'desert' | 'highlands'
+  | 'swamp' | 'snow' | 'ashland';
 
 export interface Biome {
   id: BiomeId;
@@ -67,7 +75,8 @@ export interface Patch {
 // ------------------------------------------------------------------ công trình
 
 export type BuildingType = 'townhall' | 'house' | 'granary' | 'outpost' | 'watchtower'
-  | 'barracks' | 'archery' | 'stable' | 'smithy';
+  | 'barracks' | 'archery' | 'stable' | 'smithy'
+  | 'farm' | 'well' | 'market' | 'lookout' | 'dock';
 
 /** Ba loại lính, khắc nhau theo vòng tròn — xem KHAC trong config. */
 export type TroopKind = 'spear' | 'archer' | 'horse';
@@ -186,6 +195,11 @@ export interface Unit {
   gatherTimer: number;
   /** Trạm sẽ giao hàng về — null nghĩa là về thẳng thủ phủ. */
   homeId: string;
+  /**
+   * Bãi mà NGƯỜI CHƠI đã chỉ tay bảo người này làm. Còn ghim thì họ quay lại đúng bãi ấy
+   * sau mỗi chuyến, thay vì để máy chia việc. Bản lưu cũ không có trường này = không ghim.
+   */
+  pin?: string | null;
 }
 
 // ------------------------------------------------------------------ màn mây
@@ -222,6 +236,8 @@ export interface GameState {
   voyagesDone: number;
   /** Mã các ô sương đã vén. Chỉ lưu mã, còn hình dạng thế giới thì sinh lại được. */
   revealed: string[];
+  /** Mã các hang thú đã dẹp. Hang ở đâu thì sinh lại được từ toạ độ khối; chỉ cần nhớ cái nào đã xong. */
+  hunted: string[];
 
   /** Số thứ tự cho mã công trình mới. Mã cũ (`core`, `p_…`) giữ nguyên mãi mãi. */
   nextBuildingId: number;

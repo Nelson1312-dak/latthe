@@ -24,10 +24,10 @@
  *     đỉnh là mỗi lần vén một khối lại phải ghi lại cả một mảng. Cả hai nằm trong shader.
  */
 import * as THREE from 'three';
-import { BIOMES, PALETTE } from './config';
+import { BIOMES, PALETTE, POOL_COLORS } from './config';
 import { fogPaint, grain, matte, roadPaint } from './materials';
 import {
-  CHUNK, GRID_STEP, biomeWeights, chunkOf, hash2, nodeHeight, valueNoise,
+  CHUNK, GRID_STEP, biomeWeights, chunkOf, hash2, nodeHeight, nodePool, valueNoise,
 } from './world';
 
 /** Cạnh một mảnh đất, bằng ba khối bản đồ. */
@@ -101,12 +101,23 @@ export class Ground {
     const z = j * GRID_STEP;
     const k = valueNoise(x, z, 14, 31) * 0.75 + hash2(i, j, 11) * 0.25;
     this.acc.setRGB(0, 0, 0);
+    let coVung = false;
     for (const [b, w] of biomeWeights(x, z)) {
       const [a, c] = BIOMES[b].ground;
       this.c0.setHex(a).lerp(this.c1.setHex(c), k);
       this.acc.add(this.c0.multiplyScalar(w));
+      if (b === 'swamp' || b === 'ashland') coVung = true;
     }
     out.copy(this.acc);
+    // Vũng nước và dung nham. Chỉ hỏi độ ngập ở nơi có thể có vũng: phép hỏi tính lại cả
+    // cao độ, mà ba phần tư bản đồ không bao giờ cần tới nó.
+    if (!coVung) return;
+    const ngap = nodePool(i, j);
+    if (ngap === 0) return;
+    const [a, c] = ngap > 0 ? POOL_COLORS.water : POOL_COLORS.lava;
+    this.c0.setHex(a).lerp(this.c1.setHex(c), k);
+    // Mép vũng còn lẫn màu đất — bùn, hay đá đang nguội — rồi mới tới màu vũng thật.
+    out.lerp(this.c0, Math.min(1, 0.55 + Math.abs(ngap) * 0.6));
   }
 
   /**

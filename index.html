@@ -32,7 +32,9 @@
     </button>
     <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
     <div class="stat reach" id="reach"><small>Xa</small><strong id="reach-val">0</strong></div>
-    <button class="icon" id="gfx" title="Đồ hoạ" aria-label="Chất lượng đồ hoạ"
+    <button class="icon" id="map-btn" title="Bản đồ nhỏ" aria-label="Bật hoặc tắt bản đồ nhỏ"
+            aria-pressed="false"></button>
+    <button class="icon" id="gfx" title="Cài đặt" aria-label="Cài đặt và đồ hoạ"
             aria-haspopup="dialog" aria-expanded="false" aria-controls="gfx-menu"></button>
     <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm"></button>
     <button class="icon" id="pause" title="Tạm dừng (Esc)" aria-label="Tạm dừng"></button>
@@ -40,7 +42,9 @@
 </header>
 
 <!-- ------------------------------------------------------------------ bảng đồ hoạ -->
-<div class="gfx glass" id="gfx-menu" role="dialog" aria-label="Chất lượng đồ hoạ" hidden>
+<div class="gfx glass" id="gfx-menu" role="dialog" aria-label="Cài đặt và đồ hoạ" hidden>
+  <!-- Màn hẹp: tên làng, cấp, quãng xa và nút âm dọn vào đây (xem UIManager.xepHud). -->
+  <div class="gfx-extra" id="gfx-extra" hidden></div>
   <div class="gfx-head"><small>Đồ hoạ</small><span id="gfx-now"></span></div>
   <div class="seg" id="gfx-seg" role="radiogroup" aria-label="Bậc đồ hoạ">
     <button data-q="auto" role="radio">Tự động</button>

@@ -12,7 +12,7 @@
  */
 import * as THREE from 'three';
 import { matte, haloTexture, labelTexture, skyEnvTexture, GRAIN_ON } from './materials';
-import { buildingGeometry, buildingMaterial, chimneyTop } from './buildings';
+import { buildingGeometry, buildingMaterial, chimneyTop, kieuOf } from './buildings';
 import { Smoke } from './Smoke';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -26,14 +26,15 @@ import { AutoTune, TIERS, firstAutoTier, loadGfx, pixelRatioFor, saveGfx, stepDo
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
 import type { Economy } from './Economy';
 import { ArmyManager } from './ArmyManager';
+import { Beasts } from './Beasts';
 import { TOWER_RANGE } from './battle';
 import { BATTLE_RADIUS } from './battle';
 import type { BattleSeed } from './battle';
 import { FogOfWar, chime } from './FogOfWar';
 import { Ground } from './ground';
 import { MapManager } from './MapManager';
-import type { Building, BuildingType } from './types';
-import { WorkerManager } from './WorkerManager';
+import type { Building, BuildingType, Unit } from './types';
+import { LENH, WorkerManager } from './WorkerManager';
 import { CHUNK } from './world';
 
 /** Màu sương ngày thường và lúc trời sắp đổ. Xám lam, không phải xám chì: vẫn là bảng màu này. */
@@ -110,6 +111,17 @@ const GLIDE = 9;
 /** Cú bật của một công trình vừa đặt xong kéo dài bấy nhiêu giây. */
 const POP_SECONDS = 0.42;
 
+
+/** Lý do "đặt được nhưng chưa đủ tiền". Giao diện so đúng chuỗi này để đổi nút thành GOM. */
+export const THIEU_VAT_LIEU = 'Chưa đủ vật liệu';
+
+/**
+ * Loại nào nhấc lên đặt lại được. Thủ phủ là gốc của vành căn cứ; trạm trung chuyển và đài
+ * quan sát thì giá trị của chúng CHÍNH LÀ chỗ đứng — dời được thì thành vén sương miễn phí.
+ */
+export function doiDuoc(t: BuildingType): boolean {
+  return t !== 'townhall' && t !== 'outpost' && t !== 'lookout';
+}
 
 export class Game {
   readonly scene = new THREE.Scene();
@@ -241,7 +253,23 @@ export class Game {
   private selectK = 0;
   private punch = 0;
   private selectedUnitId: string | null = null;
+  /**
+   * Cả nhóm đang chọn, GỒM cả người chính (`selectedUnitId`). Thẻ vẫn nói về người chính;
+   * nhóm chỉ quyết định lệnh đi tới bao nhiêu người.
+   */
+  private readonly doi = new Set<string>();
+  /** Vòng chọn cho những người trong nhóm ngoài người chính. Dựng dần, không bao giờ huỷ. */
+  private readonly doiRings: THREE.Mesh[] = [];
+  /** Lá cờ cắm ở chỗ vừa điều dân tới. */
+  private co!: THREE.Group;
+  /** Người chơi vừa ra một lệnh: 'di' = tới một điểm, 'bai' = làm ở một bãi. */
+  onLenh: ((loai: 'di' | 'bai', soNguoi: number, baiId: string | null) => void) | null = null;
   private selectedPatchId: string | null = null;
+  /** Hang thú đang chọn. */
+  private selectedDenId: string | null = null;
+  private denRing!: THREE.Mesh;
+  onSelectDen: ((denId: string | null) => void) | null = null;
+  readonly beasts: Beasts;
   /** Đang bám theo ai. Khác với "đang chọn ai": chọn rồi vẫn có thể không bám. */
   private followId: string | null = null;
 
@@ -376,6 +404,11 @@ export class Game {
 
     this.army = new ArmyManager(this.map);
     this.army.onDone = () => this.endBattle();
+    // Thú chỉ hiện ở chỗ mây đã tan: hang lộ ra dưới mây là mất luôn cái công đi khám phá.
+    this.beasts = new Beasts(
+      (x, z) => this.map.groundY(x, z),
+      (d) => this.fog.isRevealed(d.x, d.z) && !this.economy.isHunted(d.id));
+    this.scene.add(this.beasts.group);
     this.scene.add(this.map.group, this.fog.group, this.workers.group, this.plotGroup,
       this.smoke.mesh, this.army.group, this.dat.group);
 
@@ -653,6 +686,22 @@ export class Game {
     this.selectRing = ring(0xffc766, 1, 2.7);
     this.hoverRing = ring(0xffffff, 0.7, 2.55);
     this.unitRing = ring(0x7fd8ff, 1, 0.72);
+    this.denRing = ring(0xff6b5e, 1, 3.6);
+
+    // Lá cờ lệnh: một cái cọc và một tam giác vải. Vật liệu không nhận sáng, để nó nổi
+    // hẳn lên khỏi cảnh — nó là giao diện cắm xuống đất, không phải một đồ vật của làng.
+    this.co = new THREE.Group();
+    const coc = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.5, 5),
+      new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
+    coc.position.y = 0.75;
+    const vai = new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position',
+      new THREE.Float32BufferAttribute([0, 1.5, 0, 0, 1.0, 0, 0.62, 1.25, 0], 3)),
+      new THREE.MeshBasicMaterial({ color: 0x7fd8ff, side: THREE.DoubleSide }));
+    this.co.add(coc, vai);
+    // To gấp đôi cỡ một người dân: đo trên màn 375 điểm, cờ cao bằng người thì lẫn vào cỏ.
+    this.co.scale.setScalar(2.1);
+    this.co.visible = false;
+    this.scene.add(this.co);
 
     /*
      * Vòng chọn bãi dùng CHÍNH ảnh quầng của bãi, chỉ sáng hơn.
@@ -736,8 +785,10 @@ export class Game {
       const sig = this.signatureOf(building);
       const cu = this.structures.get(building.id);
       if (cu && cu.sig === sig) {
-        // Dat duoi chan co the doi cao do khi khoi ban do nap lai; bam theo.
+        // Dat duoi chan co the doi cao do khi khoi ban do nap lai; bam theo. Ca toa do
+        // ngang nua: cong trinh gio DOI DUOC, ma chu ky thi khong mang toa do.
         cu.g.userData.baseY = y;
+        cu.g.position.set(x, y, z);
         continue;
       }
       if (cu && cu.sig.split(':').slice(0, 2).join(':') !== sig.split(':').slice(0, 2).join(':')) {
@@ -812,7 +863,8 @@ export class Game {
   private buildStructure(g: THREE.Group, b: Building, id: string): void {
     // Cả công trình là MỘT khối đã hàn, tô bằng màu đỉnh — xem buildings.ts.
     const mesh = new THREE.Mesh(
-      buildingGeometry(b.type, b.level, this.economy.state.village.color), buildingMaterial());
+      buildingGeometry(b.type, b.level, this.economy.state.village.color, kieuOf(id)),
+      buildingMaterial());
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.bid = id;
@@ -932,6 +984,25 @@ export class Game {
     // Đã kéo thì đừng coi là bấm chọn — ngưỡng nhỏ để bấm nhanh vẫn ăn.
     if (this.dragged > 6) return;
 
+    /*
+     * ĐANG ĐẶT NHÀ: BẤM VÀO ĐÂU, KHUNG NGẮM TRƯỢT TỚI ĐÓ.
+     *
+     * Trước bản này cách duy nhất để chọn chỗ là kéo cả bản đồ cho tới khi chỗ ấy chui vào
+     * dưới khung ngắm — trên điện thoại là ba, bốn lần vuốt cho một căn nhà. Ai cũng thử
+     * bấm thẳng vào chỗ mình muốn trước, và cú bấm ấy lại đi chọn một người dân đứng gần.
+     * Giờ cú bấm dời camera đúng bằng độ lệch giữa điểm bấm và điểm ngắm, nên mô hình mờ
+     * tới đúng chỗ ngón tay vừa chạm. Kéo vẫn dùng được như cũ.
+     */
+    if (this.ghostType) {
+      if (this.groundPoint(e)) {
+        this.wanted.x = this.target.x + this.hitPoint.x - this.aimRaw.x;
+        this.wanted.z = this.target.z + this.hitPoint.z - this.aimRaw.z;
+      }
+      return;
+    }
+
+    // Cú bấm nào cũng bỏ hang đang chọn trước; bấm lại đúng hang ấy thì nhánh dưới chọn lại.
+    this.pickDen(null);
     // Trúng thẳng hình khối của một nền đất thì nền đất thắng, không bàn thêm.
     const hit = this.pickMesh(e);
     if (hit) {
@@ -955,11 +1026,13 @@ export class Game {
      */
     const px = this.hitPoint.x;
     const pz = this.hitPoint.z;
-    let bestKind: 'unit' | 'build' | 'node' | null = null;
+    let bestKind: 'unit' | 'build' | 'node' | 'den' | null = null;
     let bestId: string | null = null;
     let bestScore = 1;
 
-    const consider = (kind: 'unit' | 'build' | 'node', id: string, dist: number, radius: number) => {
+    const consider = (
+      kind: 'unit' | 'build' | 'node' | 'den', id: string, dist: number, radius: number,
+    ) => {
       const score = dist / radius;
       if (score < bestScore) { bestScore = score; bestKind = kind; bestId = id; }
     };
@@ -978,6 +1051,20 @@ export class Game {
     for (const b of this.map.patches) {
       if (!this.fog.isRevealed(b.center[0], b.center[2])) continue;
       consider('node', b.id, Math.hypot(b.center[0] - px, b.center[2] - pz), b.radius);
+    }
+    for (const d of this.beasts.living) {
+      consider('den', d.id, Math.hypot(d.x - px, d.z - pz), 3.4);
+    }
+
+    // Hang thú: luôn là CHỌN, kể cả lúc đang cầm dân — không ai muốn lỡ tay lùa dân vào hang.
+    if (bestKind === 'den' && bestId) {
+      this.chooseUnit(null);
+      this.pickPatch(null);
+      this.selectedId = null;
+      this.updateMarkers();
+      this.onSelect?.(null);
+      this.pickDen(bestId);
+      return;
     }
 
     if (bestKind === 'unit' && bestId) {
@@ -998,6 +1085,25 @@ export class Game {
       this.onSelect?.(bestId);
       return;
     }
+    /*
+     * ĐANG CHỌN DÂN THÌ CÚ BẤM TIẾP THEO LÀ MỘT MỆNH LỆNH.
+     *
+     * Trước bản này người chơi chỉ điều dân được qua con số +/− trên thẻ bãi — "cho ba
+     * người tới đây" — và không có cách nào bảo một người đi tới một chỗ KHÔNG có bãi, tức
+     * là không tự đi khám phá được: mây chỉ tan theo ý của một người thám hiểm do máy cắt
+     * cử. Giờ chọn người rồi bấm vào đất là họ đi tới đó (và đứng đủ lâu cho mây tan), bấm
+     * vào bãi là họ làm ở bãi ấy. Cú bấm trúng một người khác hay một công trình vẫn là
+     * chọn, như cũ — nên bỏ chọn bằng nút × trên thẻ chứ không bằng cách bấm ra đất trống.
+     */
+    const quan = this.dieuDuoc();
+    if (quan.length > 0 && bestKind !== 'unit' && bestKind !== 'build') {
+      if (bestKind === 'node' && bestId) {
+        this.onLenh?.('bai', this.lenhBai(bestId), bestId);
+      } else {
+        this.onLenh?.('di', this.lenhDi(px, pz), null);
+      }
+      return;
+    }
     if (bestKind === 'node' && bestId) {
       this.chooseUnit(null);
       this.selectedId = null;
@@ -1007,12 +1113,51 @@ export class Game {
       return;
     }
     this.clearSelection();
+    this.onTapEmpty?.();
   };
+
+  /** Vòng chọn của những người trong nhóm, và lá cờ ở đích của lệnh đang chạy. */
+  private veDoi(): void {
+    let k = 0;
+    let dich: Unit | null = null;
+    if (this.doi.size > 0) {
+      for (const u of this.economy.state.units) {
+        if (!this.doi.has(u.id)) continue;
+        if (!dich && u.targetId === LENH && u.state === 'moving' && u.targetPos) dich = u;
+        if (u.id === this.selectedUnitId || u.state === 'voyage') continue;
+        let m = this.doiRings[k];
+        if (!m) {
+          m = new THREE.Mesh(this.unitRing.geometry, this.unitRing.material);
+          m.rotation.x = -Math.PI / 2;
+          m.renderOrder = 2;
+          this.scene.add(m);
+          this.doiRings[k] = m;
+        }
+        m.visible = true;
+        m.position.set(
+          u.position[0], this.map.groundY(u.position[0], u.position[2]) + 0.3, u.position[2]);
+        k += 1;
+      }
+    }
+    for (let i = k; i < this.doiRings.length; i += 1) this.doiRings[i].visible = false;
+
+    // Cờ cắm ở đích của người ĐẦU TIÊN còn đang trên đường; cả nhóm tới nơi thì cờ rút.
+    const p = dich?.targetPos;
+    this.co.visible = !!p;
+    if (p) {
+      this.co.position.set(p[0], this.map.groundY(p[0], p[2]), p[2]);
+      this.co.rotation.y = Math.PI * 0.25 + Math.sin(this.elapsed * 2.2) * 0.3;
+    }
+  }
+
+  /** Bỏ mọi thứ đang chọn. Giao diện gọi khi mở một ngăn: hai thẻ không đứng chung được. */
+  boChon(): void { this.clearSelection(); }
 
   private clearSelection(): void {
     this.followId = null;
     this.chooseUnit(null);
     this.pickPatch(null);
+    this.pickDen(null);
     this.selectedId = null;
     this.updateMarkers();
     this.wantedZoom = Math.max(this.wantedZoom, this.mucNghi);
@@ -1020,8 +1165,10 @@ export class Game {
   }
 
   private chooseUnit(id: string | null): void {
-    if (this.selectedUnitId === id) return;
+    if (this.selectedUnitId === id && this.doi.size <= 1) return;
     this.selectedUnitId = id;
+    this.doi.clear();
+    if (id) this.doi.add(id);
     if (id === null) this.followId = null;
     this.unitRing.visible = id !== null;
     this.onSelectUnit?.(id);
@@ -1029,6 +1176,75 @@ export class Game {
 
   get selectedUnit(): string | null {
     return this.selectedUnitId;
+  }
+
+  get selectedDen(): string | null {
+    return this.selectedDenId;
+  }
+
+  /** Chọn một hang thú (null = bỏ chọn). Vòng đỏ nằm yên ở chân hang. */
+  pickDen(id: string | null): void {
+    if (this.selectedDenId === id) return;
+    const d = id ? this.beasts.living.find((x) => x.id === id) : undefined;
+    this.selectedDenId = d ? d.id : null;
+    this.denRing.visible = !!d;
+    if (d) this.denRing.position.set(d.x, this.map.groundY(d.x, d.z) + 0.3, d.z);
+    this.onSelectDen?.(this.selectedDenId);
+  }
+
+  /** Bao nhiêu người đang được chọn (một người chính cộng nhóm của họ). */
+  get soChon(): number { return this.doi.size; }
+
+  /** Những người trong nhóm nhận được lệnh: dân làng đang có mặt trên bản đồ. */
+  private dieuDuoc(): Unit[] {
+    if (this.doi.size === 0) return [];
+    return this.economy.state.units.filter(
+      (u) => this.doi.has(u.id) && u.kind === 'villager' && u.state !== 'voyage');
+  }
+
+  /**
+   * Nới nhóm ra quanh người chính: `tat` = cả làng, không thì những người trong 18 bước.
+   * Không có kéo khung chọn như đế chế: trên màn cảm ứng một ngón kéo đã là kéo bản đồ.
+   */
+  chonNhom(tat: boolean): number {
+    const chinh = this.economy.state.units.find((u) => u.id === this.selectedUnitId);
+    if (!chinh) return 0;
+    for (const u of this.economy.villagers()) {
+      if (u.state === 'voyage') continue;
+      const d = Math.hypot(u.position[0] - chinh.position[0], u.position[2] - chinh.position[2]);
+      if (tat || d <= 18) this.doi.add(u.id);
+    }
+    this.onSelectUnit?.(this.selectedUnitId);
+    return this.doi.size;
+  }
+
+  /** Điều cả nhóm tới một điểm. Mỗi người một chỗ đứng riêng quanh điểm ấy, xếp xoắn ốc. */
+  lenhDi(x: number, z: number): number {
+    const quan = this.dieuDuoc();
+    quan.forEach((u, i) => {
+      // Góc vàng: rải đều mà không cần biết trước nhóm có bao nhiêu người.
+      const r = i === 0 ? 0 : 0.95 * Math.sqrt(i);
+      const g = i * 2.399963;
+      this.workers.order(u, x + Math.cos(g) * r, z + Math.sin(g) * r);
+    });
+    return quan.length;
+  }
+
+  /** Bảo cả nhóm làm ở một bãi. */
+  lenhBai(id: string): number {
+    const bai = this.map.patchById(id);
+    if (!bai) return 0;
+    const quan = this.dieuDuoc();
+    const ca = this.economy.villagers();
+    for (const u of quan) this.workers.orderPatch(u, bai, Math.max(0, ca.indexOf(u)));
+    return quan.length;
+  }
+
+  /** Thả cả nhóm về cho máy tự chia việc. */
+  thaDan(): number {
+    const quan = this.dieuDuoc();
+    for (const u of quan) this.workers.release(u);
+    return quan.length;
   }
 
   get selectedPatch(): string | null {
@@ -1258,6 +1474,8 @@ export class Game {
   private ghostType: BuildingType | null = null;
   private ghostCell: [number, number] | null = null;
   private ghostWhy: string | null = 'Chưa chọn';
+  /** Điểm khung ngắm chạm đất, CHƯA làm tròn — để bấm-tới-đâu-trượt-tới-đó tính độ lệch. */
+  private readonly aimRaw = new THREE.Vector3();
   private baseRing: THREE.Mesh | null = null;
   private rangeRings: THREE.Mesh[] = [];
 
@@ -1276,8 +1494,25 @@ export class Game {
    * có lúc ô đã đỏ mà nút vẫn còn ghi ĐẶT — một phần năm giây nói sai cũng là nói sai.
    */
   onGhost: (() => void) | null = null;
+  /** Bấm xuống chỗ đất trống, không trúng ai. Giao diện dùng nó để đóng ngăn đang mở. */
+  onTapEmpty: (() => void) | null = null;
 
   get placing(): BuildingType | null { return this.ghostType; }
+  /**
+   * Mã của công trình ĐANG ĐƯỢC DỜI, hoặc null khi chế độ đặt đang dựng cái mới. Dời dùng
+   * lại nguyên chế độ đặt — cùng mô hình mờ, cùng vành, cùng nút — vì với người chơi đó là
+   * một thao tác: "cái này đứng ở đâu".
+   */
+  private movingId: string | null = null;
+  get moving(): string | null { return this.movingId; }
+
+  /** Nhấc một công trình lên để đặt lại. Trả false khi loại ấy không dời được. */
+  startMove(id: string): boolean {
+    const b = this.economy.buildingById(id);
+    if (!b || !doiDuoc(b.type)) return false;
+    this.setPlacing(b.type, id);
+    return true;
+  }
   /** null nghĩa là đặt được; khác null là lý do chưa đặt được, hiện thẳng lên nút. */
   get placeWhy(): string | null { return this.ghostWhy; }
 
@@ -1297,7 +1532,8 @@ export class Game {
   }
 
   /** Bật/tắt chế độ đặt. Truyền null là thoát. */
-  setPlacing(type: BuildingType | null): void {
+  setPlacing(type: BuildingType | null, doi: string | null = null): void {
+    this.movingId = type ? doi : null;
     // KHÔNG dispose hình học của mô hình mờ: `buildingGeometry` trả về một hình học DÙNG
     // CHUNG, có cache theo loại và cấp. Huỷ nó ở đây là huỷ luôn cái mà mọi căn nhà cùng
     // loại đang vẽ bằng — và lỗi ấy chỉ lộ ra ở lần dựng sau, xa chỗ gây ra nó.
@@ -1312,7 +1548,12 @@ export class Game {
     if (this.ghostCellMesh) this.ghostCellMesh.visible = type !== null;
     if (!type) { this.updateMarkers(); return; }
 
-    this.ghost = new THREE.Mesh(buildingGeometry(type, 1, this.economy.state.village.color),
+    // Mô hình mờ phải là ĐÚNG căn sắp mọc lên: cùng kiểu nhà (kiểu đi theo mã), và khi
+    // đang dời thì cùng cấp — không thì nhấc một căn nhà ngói cấp 5 lên lại thấy cái lều.
+    const dang = doi ? this.economy.buildingById(doi) : undefined;
+    const ma = dang ? dang.id : `b_${this.economy.state.nextBuildingId}`;
+    this.ghost = new THREE.Mesh(
+      buildingGeometry(type, dang ? dang.level : 1, this.economy.state.village.color, kieuOf(ma)),
       this.ghostMat);
     this.ghost.renderOrder = 5;
     this.scene.add(this.ghost);
@@ -1362,15 +1603,22 @@ export class Game {
       if (this.ghostCellMesh) this.ghostCellMesh.visible = false;
       return;
     }
+    this.aimRaw.copy(this.hitPoint);
     // Làm tròn về lưới nửa đơn vị: đặt tự do không có nghĩa là toạ độ lẻ tới bảy chữ số,
     // và một con số gọn thì bản lưu cũng gọn.
     const cx = Math.round(this.hitPoint.x * 2) / 2;
     const cz = Math.round(this.hitPoint.z * 2) / 2;
     this.ghostCell = [cx, cz];
     const truoc = this.ghostWhy;
-    this.ghostWhy = this.economy.placeBlock(cx, cz, type, this.fog.isRevealed(cx, cz));
-    const du = this.economy.canAfford(this.economy.buildCostFor(type));
-    if (!this.ghostWhy && !du) this.ghostWhy = 'Chưa đủ vật liệu';
+    const dang = this.movingId ? this.economy.buildingById(this.movingId) : undefined;
+    if (dang) {
+      // Dời thì không tốn gì, nên không có chuyện "chưa đủ vật liệu".
+      this.ghostWhy = this.economy.moveBlock(dang, cx, cz, this.fog.isRevealed(cx, cz));
+    } else {
+      this.ghostWhy = this.economy.placeBlock(cx, cz, type, this.fog.isRevealed(cx, cz));
+      const du = this.economy.canAfford(this.economy.buildCostFor(type));
+      if (!this.ghostWhy && !du) this.ghostWhy = THIEU_VAT_LIEU;
+    }
     if (truoc !== this.ghostWhy) this.onGhost?.();
     this.ghost.visible = true;
     const gy = this.map.groundY(cx, cz);
@@ -1388,6 +1636,12 @@ export class Game {
   placeNow(): boolean {
     if (!this.ghostType || !this.ghostCell || this.ghostWhy) return false;
     const [cx, cz] = this.ghostCell;
+    if (this.movingId) {
+      const xong = this.economy.moveBuilding(this.movingId, cx, cz, true);
+      // Dời xong là thoát: dời là việc làm MỘT lần, khác với xây là việc làm liền tay.
+      if (xong) { this.punch = 1; this.setPlacing(null); }
+      return xong;
+    }
     const ok = this.economy.build(cx, cz, this.ghostType, true);
     if (ok) {
       this.punch = 1;
@@ -1520,6 +1774,7 @@ export class Game {
     // hiện ra theo.
     this.map.update(this.target);
     this.updateGround();
+    this.beasts.update(this.elapsed, dt, this.target);
     // Mô hình mờ bám ô giữa màn, nên phải tính SAU khi camera đã trôi xong trong khung này.
     if (this.ghostType) this.updateGhost();
     // So voi phien ban DA DUNG chu khong so truoc/sau trong cung mot khung: ai khac goi
@@ -1537,7 +1792,7 @@ export class Game {
       this.workers.update(sim);
       this.army.update(sim);
       this.fog.update(sim, this.economy.state.units, this.target,
-        1 / (1 - this.economy.bonus.survey));
+        1 / (1 - this.economy.bonus.survey), true, this.economy.lookouts());
       this.economy.tick(sim);
       this.map.animate(sim);
       this.smoke.update(sim);
@@ -1549,6 +1804,7 @@ export class Game {
         else this.unitRing.position.set(
           u.position[0], this.map.groundY(u.position[0], u.position[2]) + 0.3, u.position[2]);
       }
+      this.veDoi();
       // Vòng chọn thở nhẹ để mắt bắt được ngay giữa một bản đồ dày đặc.
       if (this.selectRing.visible) {
         const k = 1 + Math.sin(this.elapsed * 3.4) * 0.05;

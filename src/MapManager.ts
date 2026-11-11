@@ -18,13 +18,13 @@
 import * as THREE from 'three';
 import { gem, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
+import { BIOME_TINT, CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
 import { han, paint } from './shapes';
-import type { Patch, Plot, Vec3 } from './types';
+import type { BiomeId, Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
-  biomeAt, chunkKey, chunkOf, chunkRng, groundAt, hash2, levelAtCenter,
-  onRoad, patchesOf,
+  GRID_STEP, biomeAt, chunkKey, chunkOf, chunkRng, groundAt, hash2, levelAtCenter,
+  nodePool, onRoad, patchesOf,
 } from './world';
 
 /*
@@ -37,11 +37,36 @@ import {
  */
 const CAP = {
   halo: 300,
-  pine: 1100, wheat: 900, rock: 1400, ore: 800, spire: 500, palm: 300, tuft: 2300,
-  leaf: 520, bush: 350, flower: 900, glow: 750,
+  pine: 1300, wheat: 1400, rock: 1700, ore: 800, spire: 500, palm: 300, tuft: 2300,
+  leaf: 620, bush: 450, flower: 1000, glow: 950,
 } as const;
 
 type PropKey = keyof typeof CAP;
+
+/**
+ * Nhuộm lại một cây hay một tảng đá theo vùng nó đứng. Màu gốc đã được chọn bằng chuỗi ngẫu
+ * nhiên của bãi; hàm này chỉ ĐỔI màu ấy sang màu tương ứng của vùng, không rút thêm số nào —
+ * nên cây đá vẫn đúng chỗ cũ và bản lưu không biết gì về chuyện này.
+ */
+function mauVung(b: BiomeId, key: PropKey, color: number): number {
+  const thu = (ds: readonly number[], goc: readonly number[]) => ds[goc.indexOf(color)] ?? ds[0];
+  if (b === 'snow') {
+    const t = BIOME_TINT.snow;
+    if (key === 'pine') return thu(t.pine, PALETTE.pine);
+    if (key === 'rock') return color === PALETTE.iron ? t.iron : color === PALETTE.granite ? t.rock[0] : t.rock[1];
+  } else if (b === 'swamp') {
+    const t = BIOME_TINT.swamp;
+    if (key === 'pine') return thu(t.pine, PALETTE.pine);
+    if (key === 'leaf') return thu(t.leaf, PALETTE.leaf);
+    if (key === 'wheat') return color === PALETTE.berry ? t.lotus : t.reed;
+    if (key === 'rock') return color === PALETTE.granite ? t.rock[0] : color === PALETTE.iron ? color : t.rock[1];
+  } else if (b === 'ashland') {
+    const t = BIOME_TINT.ashland;
+    if (key === 'wheat') return color === PALETTE.berry ? color : t.wheat;
+    if (key === 'rock') return color === PALETTE.iron ? t.iron : color === PALETTE.granite ? t.rock[0] : t.rock[1];
+  }
+  return color;
+}
 
 /** Hướng từ tâm ngắm về phía camera — hằng số, vì camera không bao giờ xoay. */
 const VIEW = new THREE.Vector3(...CAMERA_OFFSET).normalize();
@@ -463,12 +488,29 @@ export class MapManager {
       if (layout.patches.some((p) =>
         Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 2)) continue;
       const b = biomeAt(x, z);
-      if (b === 'desert') {
-        if (r() < 0.3) layout.props.push({ key: 'palm', pos: [x, 0, z], scale: 0.8 + r() * 0.5, rot: r() * 6, color: r() < 0.5 ? PALETTE.palm : PALETTE.cactus });
-      } else if (b === 'crags') {
-        if (r() < 0.5) layout.props.push({ key: 'rock', pos: [x, 0.15, z], scale: 0.18 + r() * 0.2, rot: r() * 6, color: PALETTE.graniteDark });
+      /*
+       * Ba vùng biến thể đi CHUNG nhánh với vùng gốc của nó và rút đúng ngần ấy số theo đúng
+       * thứ tự ấy (cỡ, hướng, màu) — chỉ khác cái được đặt xuống. Tách nhánh riêng mà rút lệch
+       * một số là mọi bụi cỏ phía sau trong khối xê dịch.
+       */
+      if (b === 'desert' || b === 'ashland') {
+        if (r() < 0.3) {
+          const sc = r();
+          const rot = r() * 6;
+          const m = r() < 0.5;
+          if (b === 'desert') {
+            layout.props.push({ key: 'palm', pos: [x, 0, z], scale: 0.8 + sc * 0.5, rot, color: m ? PALETTE.palm : PALETTE.cactus });
+          } else if (m) {
+            // Thông cháy: vẫn là cây thông, nhuộm màu than.
+            layout.props.push({ key: 'pine', pos: [x, 0, z], scale: 0.6 + sc * 0.4, rot, color: BIOME_TINT.ashland.pine });
+          } else {
+            layout.props.push({ key: 'rock', pos: [x, 0.2, z], scale: 0.3 + sc * 0.35, rot, color: BIOME_TINT.ashland.rock[1] });
+          }
+        }
+      } else if (b === 'crags' || b === 'snow') {
+        if (r() < 0.5) layout.props.push({ key: 'rock', pos: [x, 0.15, z], scale: 0.18 + r() * 0.2, rot: r() * 6, color: b === 'snow' ? BIOME_TINT.snow.rock[0] : PALETTE.graniteDark });
       } else {
-        layout.props.push({ key: 'tuft', pos: [x, 0.1, z], scale: 0.55 + r() * 0.7, rot: r() * 6, color: biome === 'highlands' ? 0x6f5fd0 : 0x62aa4e });
+        layout.props.push({ key: 'tuft', pos: [x, 0.1, z], scale: 0.55 + r() * 0.7, rot: r() * 6, color: b === 'swamp' ? BIOME_TINT.swamp.tuft : biome === 'highlands' ? 0x6f5fd0 : 0x62aa4e });
       }
     }
 
@@ -504,11 +546,45 @@ export class MapManager {
       const sc = rr();
       const rot = rr() * 6;
       const mau = rr();
-      if (biomeAt(x, z) !== 'meadow' || onRoad(x, z)) continue;
+      const vung = biomeAt(x, z);
+      if (vung === 'crags' || vung === 'desert' || vung === 'highlands' || onRoad(x, z)) continue;
       if (bai.some((p) => Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 1.5)) continue;
       if (layout.plots.some((q) => Math.hypot(q.position[0] - x, q.position[2] - z) < PLOT_FLAT_R)) continue;
       if (Math.hypot(x, z) < PLOT_FLAT_R + 1) continue;
       if (CORE_PLOTS.some(([px, pz]) => Math.hypot(px - x, pz - z) < PLOT_FLAT_R)) continue;
+      if (vung !== 'meadow') {
+        // Sáu số đã rút xong ở trên, nên ba vùng mới muốn đặt gì cũng không đụng tới chuỗi.
+        const ngap = nodePool(Math.round(x / GRID_STEP), Math.round(z / GRID_STEP));
+        if (vung === 'swamp') {
+          const t = BIOME_TINT.swamp;
+          if (ngap > 0) {
+            // Dưới nước: sậy mọc thành khóm, thỉnh thoảng một đoá sen.
+            if (loai < 0.6) layout.props.push({ key: 'wheat', pos: [x, -0.05, z], scale: 0.9 + sc * 0.55, rot, color: t.reed });
+            else if (loai < 0.8) layout.props.push({ key: 'flower', pos: [x, 0, z], scale: 1.2 + sc * 0.5, rot, color: mau < 0.6 ? t.lotus : 0xf2ead8 });
+          } else if (loai < 0.2) {
+            layout.props.push({ key: 'leaf', pos: [x, 0, z], scale: 0.7 + sc * 0.4, rot, color: t.leaf[Math.floor(mau * 3)] });
+          } else if (loai < 0.5) {
+            layout.props.push({ key: 'bush', pos: [x, 0, z], scale: 0.8 + sc * 0.6, rot, color: t.bush });
+          } else if (loai < 0.8) {
+            layout.props.push({ key: 'wheat', pos: [x, 0, z], scale: 0.8 + sc * 0.4, rot, color: t.reed });
+          }
+        } else if (vung === 'snow') {
+          const t = BIOME_TINT.snow;
+          if (loai < 0.22) layout.props.push({ key: 'pine', pos: [x, 0, z], scale: 0.7 + sc * 0.5, rot, color: t.pine[Math.floor(mau * 3)] });
+          else if (loai < 0.5) layout.props.push({ key: 'rock', pos: [x, 0.15, z], scale: 0.2 + sc * 0.28, rot, color: t.rock[mau < 0.5 ? 0 : 1] });
+        } else {
+          const t = BIOME_TINT.ashland;
+          if (ngap < 0) {
+            // Trên dung nham: một quầng sáng, thứ duy nhất làm nó đọc ra là NÓNG chứ không phải sơn cam.
+            if (loai < 0.5) layout.props.push({ key: 'glow', pos: [x, 0.35, z], scale: 1.3 + sc * 1.1, rot: 0, color: t.ember });
+          } else if (loai < 0.16) {
+            layout.props.push({ key: 'pine', pos: [x, 0, z], scale: 0.55 + sc * 0.45, rot, color: t.pine });
+          } else if (loai < 0.45) {
+            layout.props.push({ key: 'rock', pos: [x, 0.18, z], scale: 0.22 + sc * 0.35, rot, color: t.rock[mau < 0.5 ? 0 : 1] });
+          }
+        }
+        continue;
+      }
       if (loai < 0.1) {
         layout.props.push({ key: 'leaf', pos: [x, 0, z], scale: 0.7 + sc * 0.35, rot, color: PALETTE.leaf[Math.floor(mau * 3)] });
       } else if (loai < 0.36) {
@@ -523,7 +599,7 @@ export class MapManager {
   private dressPatch(layout: Layout, p: Patch, r: () => number): void {
     const [x, , z] = p.center;
     const put = (key: PropKey, dx: number, dy: number, dz: number, scale: number, color: number) => {
-      layout.props.push({ key, pos: [x + dx, dy, z + dz], scale, rot: r() * 6, color });
+      layout.props.push({ key, pos: [x + dx, dy, z + dz], scale, rot: r() * 6, color: mauVung(p.biome, key, color) });
       /*
        * Quầng sáng đi kèm pha lê và quặng. Không rút số nào: chuỗi ngẫu nhiên giữ nguyên.
        *
@@ -559,8 +635,9 @@ export class MapManager {
           const ci = Math.floor(r() * 3);
           const dx = Math.cos(a) * d;
           const dz = Math.sin(a) * d;
-          const tron = p.biome === 'meadow'
-            && hash2(Math.round((x + dx) * 7), Math.round((z + dz) * 7), 41) < 0.34;
+          // Rừng đầm lầy thì ngược lại: phần lớn là cây tán tròn, thông chỉ điểm xuyết.
+          const tron = (p.biome === 'meadow' || p.biome === 'swamp')
+            && hash2(Math.round((x + dx) * 7), Math.round((z + dz) * 7), 41) < (p.biome === 'swamp' ? 0.7 : 0.34);
           put(tron ? 'leaf' : 'pine', dx, 0, dz, tron ? sc * 0.92 : sc, (tron ? PALETTE.leaf : PALETTE.pine)[ci]);
         });
         break;
