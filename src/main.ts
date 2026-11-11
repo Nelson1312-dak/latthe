@@ -12,7 +12,7 @@ import { Game } from './Game';
 import { UIManager } from './UIManager';
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement | null;
-if (!canvas) throw new Error('Thiếu <canvas id="scene"> trong index.html');
+if (!canvas) throw new Error('Missing <canvas id="scene"> in index.html');
 
 const economy = Economy.load();
 const game = new Game(canvas, economy);

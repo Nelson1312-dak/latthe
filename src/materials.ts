@@ -16,7 +16,6 @@
  * ra như lỗi dựng hình chứ không ra chất liệu.
  */
 import * as THREE from 'three';
-import { ROAD_SPACING } from './world';
 
 /**
  * Nhám tối thiểu của mọi bề mặt không phải kim loại.
@@ -314,54 +313,6 @@ export function grain<T extends THREE.Material>(mat: T, co: number, manh: number
 }
 
 
-/**
- * Sơn đường thẳng trong fragment, không sơn vào màu đỉnh.
- *
- * Con đường rộng chừng năm đơn vị, mà lưới đất thì ba đơn vị một đỉnh — tô vào đỉnh là mép
- * đường phập phồng rộng hẹp theo từng ô và nhoè ra hai bên cả một ô. Trong fragment thì mép
- * sắc đúng một điểm ảnh, bề rộng muốn bao nhiêu cũng được, và không tốn một tam giác nào.
- *
- * PHẢI bọc NGOÀI `grain`: varying toạ độ thế giới `vVanXZ` và tấm vân `uVan` do `grain`
- * khai báo.
- *
- * `nua` là nửa bề rộng, `mem` là bề rộng dải chuyển ở mép, `lech` là biên độ mép đường xô
- * ra xô vào. Bản đầu để dải chuyển 0,9 đơn vị — hơn một phần ba nửa bề rộng — nên con đường
- * không có MÉP: nó là một vệt màu nâu nhoè dần vào cỏ, thứ mờ nhất trong khung hình mà lại
- * chạy ngang qua đúng thủ phủ. Giờ mép gọn (0,25), và thay vì thẳng như kẻ thước thì nó xô
- * lệch theo tấm vân lát rất thưa — một lối mòn đất nện chứ không phải một dải băng dính.
- * `nua + lech` không được vượt ROAD_HALF (2,6), không thì đường lấn vào chỗ cây cỏ mọc.
- */
-export function roadPaint<T extends THREE.Material>(
-  mat: T, mau: number, nua: number, mem: number, lech = 0,
-): T {
-  const u = { value: new THREE.Vector4(ROAD_SPACING, nua, mem, lech) };
-  const c = { value: new THREE.Color(mau) };
-  const khoaTruoc = mat.customProgramCacheKey();
-  const truoc = mat.onBeforeCompile;
-  mat.onBeforeCompile = (shader, renderer) => {
-    truoc?.call(mat, shader, renderer);
-    shader.uniforms.uDuong = u;
-    shader.uniforms.uDuongMau = c;
-    shader.fragmentShader = 'uniform vec4 uDuong;\nuniform vec3 uDuongMau;\n'
-      + shader.fragmentShader.replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-      {
-        vec2 dd = abs(vVanXZ - uDuong.x * floor(vVanXZ / uDuong.x + 0.5));
-        // Lát vân 32 đơn vị một lần: hai tầng nhiễu của nó thành 4 và 1 đơn vị, vừa cỡ một
-        // mép đường mòn. 32 không chia hết khoảng cách trục đường nên không đoạn nào lặp lại.
-        float mep = uDuong.y + (texture2D(uVan, vVanXZ * 0.03125).r - 0.5) * 2.0 * uDuong.w;
-        float xa = mep - min(dd.x, dd.y);
-        float kd = smoothstep(0.0, uDuong.z, xa);
-        // Sát mép đường sẫm đi một chút: đất bị dồn ra hai bên lối đi. Chính vệt sẫm này,
-        // chứ không phải độ gắt của mép, là thứ cho mắt một ĐƯỜNG VIỀN để bám.
-        float vien = 1.0 - 0.14 * (1.0 - smoothstep(0.1, 0.75, xa));
-        diffuseColor.rgb = mix(diffuseColor.rgb, uDuongMau * vien, kd);
-      }`);
-  };
-  mat.customProgramCacheKey = () => `${khoaTruoc}|duong`;
-  return mat;
-}
 
 /**
  * Pha màu sương theo một tấm texture một texel một khối.

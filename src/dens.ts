@@ -13,7 +13,7 @@ import {
 import type { BeastKind } from './config';
 import type { BiomeId, Cost, Patch, Troops } from './types';
 import { TROOP_KINDS } from './types';
-import { CHUNK, ROAD_SPACING, biomeAt, chunkOf, hash2 } from './world';
+import { CHUNK, LANE_SPACING, biomeAt, chunkOf, hash2 } from './world';
 
 export interface Den {
   id: string;
@@ -29,9 +29,12 @@ export interface Den {
 
 const nho = new Map<string, Den | null>();
 
-/** Cách trục đường gần nhất bao xa. Hang không nằm chắn lối đi của xe thồ. */
+/**
+ * Cách trục gần nhất bao xa. Các trục này từng là đường; đường đã bỏ, nhưng hang thì đã
+ * sinh ra né chúng — giữ phép né để không hang nào xê chỗ so với bản lưu của người chơi.
+ */
 function cachDuong(v: number): number {
-  return Math.abs(v - Math.round(v / ROAD_SPACING) * ROAD_SPACING);
+  return Math.abs(v - Math.round(v / LANE_SPACING) * LANE_SPACING);
 }
 
 export function denOf(cx: number, cz: number): Den | null {
@@ -43,7 +46,7 @@ export function denOf(cx: number, cz: number): Den | null {
   let den: Den | null = null;
   const xa = Math.hypot((cx + 0.5) * CHUNK, (cz + 0.5) * CHUNK);
   if (xa >= DEN_MIN_DIST && hash2(cx, cz, 61) < DEN_CHANCE) {
-    // Bốn lần thử chỗ; khối nào cả bốn đều rơi lên đường thì thôi không có hang.
+    // Bốn lần thử chỗ; khối nào cả bốn đều rơi sát một trục thì thôi không có hang.
     for (let t = 0; t < 4 && !den; t += 1) {
       const x = (cx + 0.2 + 0.6 * hash2(cx, cz, 62 + t * 2)) * CHUNK;
       const z = (cz + 0.2 + 0.6 * hash2(cx, cz, 63 + t * 2)) * CHUNK;

@@ -10,7 +10,7 @@
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
 import {
-  AGES, BIOMES, BUILDINGS, BUILD_GROUPS, BUILD_LIMIT, BUILD_MIN_AGE, BUILD_MIN_LEVEL, KHAC,
+  AGES, BIOMES, BUILDINGS, BUILD_GROUPS, BUILD_LIMIT, BUILD_MIN_AGE, BUILD_MIN_LEVEL, FOOTPRINT, KHAC,
   MINIMAP_SPAN, ORDER_HOLD_SECONDS, RESOURCES, BEASTS, DEN_FEAR, DEN_YIELD,
   SMITH_ARMOUR, SMITH_ATTACK, TROOPS, VILLAGE_COLORS, VOYAGES, WAVE_WARN_SECONDS,
   tenLangNgauNhien,
@@ -39,7 +39,7 @@ const MAP_MS = 200;
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
-  if (!el) throw new Error(`Thiếu phần tử #${id} trong index.html`);
+  if (!el) throw new Error(`Missing #${id} in index.html`);
   return el as T;
 }
 
@@ -56,18 +56,18 @@ function el<K extends keyof HTMLElementTagNameMap>(
 export function fmt(n: number): string {
   const v = Math.floor(Number.isFinite(n) ? n : 0);
   if (v < 1000) return String(v);
-  if (v < 1e6) return `${(v / 1e3).toFixed(1).replace('.0', '')}N`;
-  return `${(v / 1e6).toFixed(1).replace('.0', '')}Tr`;
+  if (v < 1e6) return `${(v / 1e3).toFixed(1).replace('.0', '')}K`;
+  return `${(v / 1e6).toFixed(1).replace('.0', '')}M`;
 }
 
 function dur(seconds: number): string {
   const s = Math.floor(seconds);
-  if (s < 60) return `${s} giây`;
+  if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} phút`;
+  if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60);
   const r = m % 60;
-  return r ? `${h} giờ ${r} phút` : `${h} giờ`;
+  return r ? `${h} h ${r} min` : `${h} h`;
 }
 
 export class UIManager {
@@ -124,18 +124,18 @@ export class UIManager {
     };
     game.onLenh = (loai, n, baiId) => {
       if (n <= 0) return;
-      const ai = n === 1 ? 'Một người' : `${n} người`;
+      const ai = n === 1 ? '1 villager' : `${n} villagers`;
       const bai = baiId ? this.game.map.patchById(baiId) : null;
       this.toast(loai === 'bai' && bai
-        ? `${ai} tới làm ở ${bai.label.toLowerCase()}`
-        : `${ai} lên đường · tới nơi sẽ đứng gác ${ORDER_HOLD_SECONDS} giây`, 'flag');
+        ? `${ai} sent to the ${bai.label.toLowerCase()}`
+        : `${ai} on the way · will hold ${ORDER_HOLD_SECONDS}s on arrival`, 'flag');
       this.renderInspector();
     };
     // Bấm ra đất trống đóng ngăn — trừ lúc đang đặt nhà, khi cú bấm là để chọn chỗ.
     game.onTapEmpty = () => { if (this.ngan && !this.game.placing) this.moNgan(null); };
     game.onMilestone = (label) => {
       const { next } = this.economy.milestoneInfo();
-      this.toast(`${label} · mốc sau ở ${Math.round(next.at)}`, 'medal');
+      this.toast(`${label} · next at ${Math.round(next.at)}`, 'medal');
       this.el.reach.classList.add('pop');
       window.setTimeout(() => this.el.reach.classList.remove('pop'), 900);
       this.renderDock();
@@ -152,8 +152,8 @@ export class UIManager {
       const hang = denOf(cx, cz);
       this.game.beasts.dirty();
       if (hang && !this.economy.isHunted(hang.id)) {
-        this.toast(`Vùng mới · ${b.label} · có ${BEASTS[hang.kind].den.toLowerCase()} cấp ${hang.level}`, 'paw');
-      } else this.toast(`Đã vén được vùng mới · ${b.label}`);
+        this.toast(`New land · ${b.label} · level ${hang.level} ${BEASTS[hang.kind].den.toLowerCase()}`, 'paw');
+      } else this.toast(`New land · ${b.label}`);
     };
     economy.onChange = () => {
       game.rebuildPlots();
@@ -180,16 +180,16 @@ export class UIManager {
     economy.onVoyage = (r) => this.showVoyage(r);
     this.el.waveHire.addEventListener('click', () => {
       const mua = this.economy.hireGuards();
-      if (mua > 0) this.toast(`Thuê thêm ${mua} lính cho đợt này`, 'shield');
-      else this.toast('Không đủ vàng để thuê lính', 'warn');
+      if (mua > 0) this.toast(`Hired ${mua} guards for this wave`, 'shield');
+      else this.toast('Not enough gold to hire guards', 'warn');
       this.renderWave();
     });
     // Bấm vào dải báo là tắt ngay — không ai muốn đợi hết sáu giây.
     this.el.alert.addEventListener('click', () => { this.el.alert.hidden = true; });
-    economy.onAge = (ten) => this.bao('age', `Bước sang ${ten}`,
+    economy.onAge = (ten) => this.bao('age', `${ten} begins`,
       this.economy.ageSpec().opens, 'won');
-    economy.onDesert = (ten) => this.bao('warn', 'Hết lương, lính bỏ đi',
-      `Một ${ten.toLowerCase()} rời làng. Nuôi quân phải có lương thực.`, 'lost');
+    economy.onDesert = (ten) => this.bao('warn', 'Out of food — troops deserting',
+      `One of your ${ten.toLowerCase()} left. Troops need food.`, 'lost');
     this.el.mute.addEventListener('click', () => this.toggleMute());
     this.buildLang();
     this.el.gfx.addEventListener('click', () => this.toggleGfx());
@@ -232,6 +232,10 @@ export class UIManager {
 
     this.buildDock();
     game.onGhost = () => { if (this.xayMo) this.renderInspector(); };
+    game.onPlaceClick = () => this.datNgay?.(true);
+    game.onPlaceCancel = () => {
+      if (this.game.moving !== null) this.moNgan(null); else this.chonXay(null);
+    };
     this.el.minimap.addEventListener('pointerdown', (e) => this.mapClick(e));
 
     this.applyMute();
@@ -274,7 +278,7 @@ export class UIManager {
     const e = this.el;
 
     e.waveIco.innerHTML = iconSvg(kind === 'storm' ? 'storm' : 'raid');
-    e.waveKind.textContent = kind === 'storm' ? 'Bão tới' : 'Cướp biển tới';
+    e.waveKind.textContent = kind === 'storm' ? 'Storm' : 'Raid';
     const giay = Math.max(0, Math.ceil(t.next));
     e.waveClock.textContent = `${Math.floor(giay / 60)}:${String(giay % 60).padStart(2, '0')}`;
 
@@ -290,7 +294,7 @@ export class UIManager {
     }
 
     const thieu = power - guard;
-    e.waveVerdict.textContent = thieu <= 0 ? 'Đủ sức giữ' : `Còn thiếu ${thieu} sức thủ`;
+    e.waveVerdict.textContent = thieu <= 0 ? 'Safe' : `Short ${thieu}`;
     e.waveFill.style.width = `${Math.round(100 - (t.next / this.economy.waveGap()) * 100)}%`;
     e.wave.classList.toggle('gan', gan);
     e.wave.classList.toggle('thieu', thieu > 0);
@@ -303,8 +307,8 @@ export class UIManager {
     const du = this.economy.state.inv.gold >= gia;
     e.waveHire.hidden = !gan || thieu <= 0;
     e.waveHire.textContent = du
-      ? `Thuê lính · ${fmt(gia)}`
-      : `Thuê tạm · ${fmt(Math.floor(this.economy.state.inv.gold))}`;
+      ? `Hire guards · ${fmt(gia)}`
+      : `Hire some · ${fmt(Math.floor(this.economy.state.inv.gold))}`;
   }
 
   // ------------------------------------------------------------ báo sự kiện
@@ -344,27 +348,26 @@ export class UIManager {
       .map((k) => `${fmt(inv[k] ?? 0)} ${RESOURCES[k].label.toLowerCase()}`)
       .join(', ');
     const con = co.length - toiDa;
-    return con > 0 ? `${chu} và ${con} món nữa` : chu;
+    return con > 0 ? `${chu} +${con} more` : chu;
   }
 
   private showWave(r: WaveResult): void {
-    const ten = r.kind === 'storm' ? 'Bão' : 'Cướp biển';
     const mat = this.lootText(r.lost);
     let title: string;
-    const bits: string[] = [`Hạ ${r.killed}/${r.count} tên`];
+    const bits: string[] = [`${r.killed}/${r.count} downed`];
     if (r.won) {
-      title = `Đẩy lui ${ten.toLowerCase()}`;
+      title = r.kind === 'storm' ? 'Storm weathered' : 'Raid repelled';
       const thu = this.lootText(r.reward);
-      if (thu) bits.push(`nhặt được ${thu}`);
+      if (thu) bits.push(`looted ${thu}`);
     } else if (r.kind === 'storm') {
-      title = r.levels > 0 ? `Bão đánh sập ${r.levels} cấp công trình` : 'Bão càn qua làng';
-      if (mat) bits.push(`cuốn đi ${mat}`);
+      title = r.levels > 0 ? `Storm knocked off ${r.levels} building levels` : 'Storm swept the village';
+      if (mat) bits.push(`lost ${mat}`);
     } else {
-      title = mat ? 'Cướp biển khoắng kho' : 'Cướp biển tới, chẳng vơ được gì';
-      if (mat) bits.push(`mất ${mat}`);
+      title = mat ? 'Raiders looted the stores' : 'Raiders left empty-handed';
+      if (mat) bits.push(`lost ${mat}`);
     }
-    if (r.escaped > 0) bits.push(`${r.escaped} tên chạy thoát`);
-    if (r.away) bits.push('lúc bạn đi vắng');
+    if (r.escaped > 0) bits.push(`${r.escaped} escaped`);
+    if (r.away) bits.push('while you were away');
     this.bao(r.kind === 'storm' ? 'storm' : 'raid', title, bits.join(' · '),
       r.won ? 'won' : 'lost');
     // Cú đập: thua bão rung mạnh nhất, đẩy lui được thì chỉ giật một cái cho biết.
@@ -381,19 +384,19 @@ export class UIManager {
     if (vi) { this.toast(vi, 'warn'); return; }
     const sp = voyageSpec(band);
     if (!this.economy.startVoyage(band)) return;
-    this.toast(`${sp.crew} người lên thuyền · ${sp.label}`, sp.icon);
+    this.toast(`${sp.crew} set sail · ${sp.label}`, sp.icon);
     this.renderInspector();
   }
 
   private showVoyage(r: VoyageResult): void {
     const sp = voyageSpec(r.band);
     if (r.outcome === 'lost') {
-      this.bao(sp.icon, 'Thiếu một người về', `${sp.label} · ${r.where}`, 'lost');
+      this.bao(sp.icon, 'One crew member lost', `${sp.label} · ${r.where}`, 'lost');
     } else if (r.outcome === 'empty') {
-      this.bao(sp.icon, 'Thuyền về tay không', `${r.where} · đã có người tới trước`, 'lost');
+      this.bao(sp.icon, 'Boat came back empty', `${r.where} · someone got there first`, 'lost');
     } else {
-      const thu = this.lootText({ gold: r.gold, relics: r.relics }) || 'không có gì đáng kể';
-      this.bao(sp.icon, 'Thuyền về', `${r.where} · ${thu}`, 'won');
+      const thu = this.lootText({ gold: r.gold, relics: r.relics }) || 'nothing much';
+      this.bao(sp.icon, 'Boat is back', `${r.where} · ${thu}`, 'won');
     }
     this.renderAll();
   }
@@ -414,7 +417,9 @@ export class UIManager {
       chip.dataset.kind = kind;
       chip.append(ico(RESOURCES[kind].icon, 'ico', RESOURCES[kind].color));
       const col = el('span', 'col');
-      col.append(el('strong', 'amt', '0'), el('small', 'rate', ''));
+      // Chỉ một con số. Tốc độ thu nhảy liên tục mà không đổi quyết định nào; nó vẫn nằm
+      // trong chú thích khi rê chuột và trong dòng báo khi bấm vào ô.
+      col.append(el('strong', 'amt', '0'));
       // Vạch sức chứa: con số "1.2N" không nói nó đang ở 20% hay 99% kho, mà hai trường hợp
       // ấy đòi hai việc khác hẳn nhau — cứ gom tiếp, hay đi xây kho lẫm.
       const cap = el('span', 'cap');
@@ -443,8 +448,6 @@ export class UIManager {
       const kind = chip.dataset.kind as ResourceKind;
       (chip.querySelector('.amt') as HTMLElement).textContent = fmt(s.inv[kind]);
       const r = this.economy.rates[kind];
-      (chip.querySelector('.rate') as HTMLElement).textContent =
-        `+${(Number.isFinite(r) ? r : 0).toFixed(1)}/s`;
       const full = this.economy.isFull(kind);
       chip.classList.toggle('full', full);
       // Ùn: còn chỗ chứa nhưng chợ bán không kịp. Khác hẳn kho đầy, và cách chữa cũng khác
@@ -459,7 +462,7 @@ export class UIManager {
       chip.style.setProperty('--p', `${Math.round(day * 100)}%`);
       chip.classList.toggle('gan', !full && day >= 0.85);
       chip.title = `${RESOURCES[kind].label}: ${Math.floor(s.inv[kind])}/${Math.floor(s.storageLimit)}`
-        + ` — thu ${(Number.isFinite(r) ? r : 0).toFixed(2)} mỗi giây${full ? ' · KHO ĐẦY' : ''}`;
+        + ` · +${(Number.isFinite(r) ? r : 0).toFixed(2)}/s${full ? ' · STORAGE FULL' : ''}`;
     }
     this.el.level.textContent = String(s.level);
 
@@ -468,13 +471,11 @@ export class UIManager {
     const { reached, next } = this.economy.milestoneInfo();
     this.el.reachVal.textContent = String(Math.floor(s.maxReach));
     const thieu = Math.max(0, Math.round(next.at - s.maxReach));
-    this.el.reach.title = `Đã đạt ${reached} mốc.\nMốc kế tiếp: ${next.label} ở ${next.at}`
-      + ` (còn ${thieu}) — ${rewardText(next)}`;
+    this.el.reach.title = `${reached} milestones reached.\nNext: ${next.label} at ${next.at}`
+      + ` (${thieu} to go) — ${rewardText(next)}`;
     this.el.reach.classList.toggle('close', thieu <= 25);
-    if (this.hep) {
-      this.mocNote.textContent = `Mốc kế: ${next.label} ở ${Math.round(next.at)}`
-        + ` (còn ${thieu}) — ${rewardText(next)}`;
-    }
+    this.mocNote.textContent = `Next milestone: ${next.label} at ${Math.round(next.at)}`
+      + ` (${thieu} to go) — ${rewardText(next)}`;
 
     /*
      * GIÁ SỐNG. Trước bản này ô giá chỉ đúng tại lúc thẻ được vẽ: gom đủ gỗ rồi mà nút vẫn
@@ -548,10 +549,10 @@ export class UIManager {
     };
     this.el.tiles.innerHTML = '';
     this.el.tiles.append(
-      nut('dan', 'crew', 'Dân'),
-      nut('xay', 'hammer', 'Xây'),
-      nut('quan', 'spear', 'Quân'),
-      nut('bien', 'compass', 'Biển'),
+      nut('dan', 'crew', 'People'),
+      nut('xay', 'hammer', 'Build'),
+      nut('quan', 'spear', 'Army'),
+      nut('bien', 'compass', 'Sea'),
     );
     /*
      * NÚT "DÂN TỰ CHỌN VIỆC" KHÔNG CÒN Ở DOCK.
@@ -623,7 +624,7 @@ export class UIManager {
     if (!b) return;
     this.selected = null;
     this.game.boChon();
-    if (!this.game.startMove(id)) { this.toast('Công trình này không dời được', 'warn'); return; }
+    if (!this.game.startMove(id)) { this.toast('This building cannot move', 'warn'); return; }
     this.ngan = 'xay';
     this.xayType = b.type;
     this.datLop();
@@ -636,11 +637,11 @@ export class UIManager {
     const e = this.economy;
     const s = e.state;
     const r = e.rates[kind];
-    const them = e.isFull(kind) ? ' · KHO ĐẦY, xây thêm kho lẫm'
+    const them = e.isFull(kind) ? ' · FULL — build granaries'
       : kind !== 'gold' && e.marketBusy && s.inv[kind] > e.reserveOf(kind) * 1.5
-        ? ' · chợ bán không kịp' : '';
+        ? ' · market is backed up' : '';
     this.toast(`${RESOURCES[kind].label} ${fmt(s.inv[kind])}/${fmt(s.storageLimit)}`
-      + ` · +${(Number.isFinite(r) ? r : 0).toFixed(1)}/giây${them}`);
+      + ` · +${(Number.isFinite(r) ? r : 0).toFixed(1)}/s${them}`);
   }
 
   /**
@@ -649,8 +650,9 @@ export class UIManager {
    * Đo trên khung 375: thanh trên xuống HAI dòng (tài nguyên, rồi tên làng + cấp + xa + ba
    * nút tròn), cộng dải đợt là ba tầng — 170 điểm ảnh, hơn một phần năm màn hình, cho những
    * thứ phần lớn không bấm tới một lần mỗi ván. Màn hẹp thì dòng một chỉ còn tài nguyên;
-   * ba nút hay bấm (bản đồ, cài đặt, tạm dừng) thành một cột mảnh bên phải; còn tên làng,
-   * cấp, quãng xa và nút âm dọn vào bảng cài đặt. Dời THẺ chứ không dựng thẻ thứ hai, để
+   * ba nút hay bấm (bản đồ, cài đặt, tạm dừng) thành một cột mảnh bên phải; còn tên làng
+   * và cấp dọn vào bảng cài đặt. Quãng xa, mốc kế và nút âm thì nằm trong bảng ấy ở mọi bề
+   * rộng (xem dưới). Dời THẺ chứ không dựng thẻ thứ hai, để
    * mọi chỗ đang ghi vào `#level`, `#reach-val`… không phải biết mình đang ở đâu.
    */
   private xepHud(): void {
@@ -661,13 +663,12 @@ export class UIManager {
     const group = this.el.gfx.parentElement as HTMLElement;
     const cap = this.el.level.closest('.stat') as HTMLElement;
     const x = this.el.gfxExtra;
-    if (hep) {
-      x.append(this.el.langChip, cap, this.el.reach, this.el.mute, this.mocNote);
-    } else {
-      group.prepend(this.el.langChip, cap, this.el.reach);
-      this.el.gfx.after(this.el.mute);
-    }
-    x.hidden = !hep;
+    if (hep) x.append(this.el.langChip, cap);
+    else group.prepend(this.el.langChip, cap);
+    // Quãng xa, mốc kế và nút âm nằm trong bảng cài đặt ở MỌI bề rộng: đó là thứ xem thỉnh
+    // thoảng chứ không phải thứ quyết định nước đi kế tiếp, nên không chiếm chỗ thanh trên.
+    x.append(this.el.reach, this.el.mute, this.mocNote);
+    x.hidden = false;
     this.closeGfx();
   }
 
@@ -675,9 +676,10 @@ export class UIManager {
     const e = this.economy;
     const sub: Record<string, string> = {
       dan: `${e.villagers().length}/${e.housing()}`,
-      xay: this.xayType ? BUILDINGS[this.xayType].label : `${e.state.buildings.length} nhà`,
-      quan: `${e.armySize()}${e.trainLeft() > 0 ? ' · đang rèn' : ''}`,
-      bien: e.state.voyage ? `${Math.ceil(e.state.voyage.left / e.voyageSpeed())}s` : 'Rảnh',
+      xay: this.xayType ? BUILDINGS[this.xayType].label : '',
+      quan: e.armySize() > 0 || e.trainLeft() > 0
+        ? `${e.armySize()}${e.trainLeft() > 0 ? ' · training' : ''}` : '',
+      bien: e.state.voyage ? `${Math.ceil(e.state.voyage.left / e.voyageSpeed())}s` : '',
     };
     for (const b of Array.from(this.el.tiles.children) as HTMLElement[]) {
       const k = b.dataset.ngan;
@@ -696,7 +698,7 @@ export class UIManager {
     const e = this.economy;
     e.state.autoFarm = !e.state.autoFarm;
     e.save();
-    this.toast(e.state.autoFarm ? 'Dân tự chọn việc' : 'Dân chỉ làm chỗ bạn ghim', 'robot');
+    this.toast(e.state.autoFarm ? 'Auto-assign on' : 'Manual: only pinned sites', 'robot');
     this.renderDock();
     this.renderInspector();
   }
@@ -731,8 +733,8 @@ export class UIManager {
     // Nút đóng ngay trên ngăn. Bấm lại nút dock cũng đóng được, nhưng nút dock lúc ấy nằm
     // DƯỚI ngăn và trông y như lúc chưa mở — không ai đoán ra.
     const dong = el('button', 'insp-close', '×') as HTMLButtonElement;
-    dong.title = 'Đóng';
-    dong.setAttribute('aria-label', 'Đóng');
+    dong.title = 'Close';
+    dong.setAttribute('aria-label', 'Close');
     dong.addEventListener('click', () => this.moNgan(null));
     h.append(el('strong', undefined, ten), el('small', undefined, phu), dong);
     return h;
@@ -747,27 +749,24 @@ export class UIManager {
     const e = this.economy;
 
     if (this.ngan === 'dan') {
-      sheet.append(this.sheetHead('Dân làng',
-        `${e.villagers().length} người · chỗ ở cho ${e.housing()}`));
-      sheet.append(this.row('crew', 'Thuê thêm một người', 'Thêm một người đi gom hàng',
-        e.hireCost(), e.canHire() ? null : 'Hết chỗ ở — xây thêm nhà',
+      sheet.append(this.sheetHead('Villagers',
+        `${e.villagers().length} villagers · room for ${e.housing()}`));
+      sheet.append(this.row('crew', 'Hire a villager', 'One more pair of hands',
+        e.hireCost(), e.canHire() ? null : 'No room — build a house',
         () => { e.hire((h) => this.game.workers.spawnVillager(h)); this.renderInspector(); }));
-      sheet.append(this.row('boot', `Chạy nhanh hơn · bậc ${e.state.speedLevel}`,
-        'Cả làng đi lại nhanh hơn 10%', e.trainSpeedCost(), null,
+      sheet.append(this.row('boot', `Faster feet · tier ${e.state.speedLevel}`,
+        'Everyone moves 10% faster', e.trainSpeedCost(), null,
         () => { e.trainSpeed(); this.renderInspector(); }));
-      sheet.append(this.row('pack', `Mang nặng hơn · bậc ${e.state.capacityLevel}`,
-        'Mỗi chuyến cõng thêm 25%', e.trainCapacityCost(), null,
+      sheet.append(this.row('pack', `Bigger packs · tier ${e.state.capacityLevel}`,
+        'Carry 25% more per trip', e.trainCapacityCost(), null,
         () => { e.trainCapacity(); this.renderInspector(); }));
       const tu = e.state.autoFarm;
       const nutTu = this.row(tu ? 'robot' : 'hand',
-        tu ? 'Dân đang tự chọn việc' : 'Bạn đang tự điều dân',
-        tu ? 'Bấm để chỉ làm những bãi bạn ghim' : 'Bấm để dân tự chọn bãi',
+        tu ? 'Auto-assign: on' : 'Auto-assign: off',
+        tu ? 'Villagers pick the nearest, emptiest sites' : 'Villagers only work sites you assign',
         null, null, () => { this.toggleFarm(); this.renderInspector(); });
       nutTu.classList.toggle('on', tu);
       sheet.append(nutTu);
-      sheet.append(el('p', 'sheet-note', tu
-        ? 'Dân đang tự chọn bãi gần và đang vơi nhất. Ghim một bãi thì họ ưu tiên chỗ đó.'
-        : 'Dân chỉ tới những bãi bạn đã ghim.'));
       return;
     }
 
@@ -776,21 +775,21 @@ export class UIManager {
       if (v) {
         const sp = voyageSpec(v.band);
         const con = Math.max(0, Math.ceil(v.left / e.voyageSpeed()));
-        sheet.append(this.sheetHead('Đang ngoài khơi',
-          `${sp.label} · ${v.crew.length} người · còn ${Math.floor(con / 60)}:${String(con % 60).padStart(2, '0')}`));
+        sheet.append(this.sheetHead('At sea',
+          `${sp.label} · ${v.crew.length} crew · ${Math.floor(con / 60)}:${String(con % 60).padStart(2, '0')} left`));
         sheet.append(el('p', 'sheet-note',
-          'Về rồi mới đi chuyến khác được. Người đi biển không gác làng.'));
+          'One voyage at a time. Crew at sea do not defend.'));
         return;
       }
-      sheet.append(this.sheetHead('Đi biển', 'Đổi người lấy của, mỗi lúc một chuyến'));
+      sheet.append(this.sheetHead('Voyages', 'Send crew for gold and relics'));
       for (const sp of VOYAGES) {
         const chan = e.voyageBlock(sp.id);
-        const phut = String(Math.round(sp.seconds / 60 * 10) / 10).replace('.', ',');
+        const phut = String(Math.round(sp.seconds / 60 * 10) / 10);
         sheet.append(this.row(sp.icon, sp.label,
-          `${sp.crew} người · ${phut} phút · ${sp.blurb}`,
+          `${sp.crew} crew · ${phut} min · ${sp.blurb}`,
           { food: sp.food }, chan, () => this.goSea(sp.id), sp.lost > 0));
       }
-      sheet.append(el('p', 'sheet-note', 'Người đi biển không gác làng.'));
+      sheet.append(el('p', 'sheet-note', 'Crew at sea do not defend.'));
       return;
     }
 
@@ -807,17 +806,17 @@ export class UIManager {
   /** Vì sao loại này chưa xây được, hoặc null. Cùng một câu cho thẻ và cho thanh đặt. */
   private khoaNha(t: BuildingType): string | null {
     const e = this.economy;
-    if (e.state.age < (BUILD_MIN_AGE[t] ?? 0)) return `Cần ${AGES[(BUILD_MIN_AGE[t] ?? 1) - 1].label}`;
-    if (e.state.level < (BUILD_MIN_LEVEL[t] ?? 0)) return `Cần căn cứ cấp ${BUILD_MIN_LEVEL[t]}`;
+    if (e.state.age < (BUILD_MIN_AGE[t] ?? 0)) return `Needs ${AGES[(BUILD_MIN_AGE[t] ?? 1) - 1].label}`;
+    if (e.state.level < (BUILD_MIN_LEVEL[t] ?? 0)) return `Needs base level ${BUILD_MIN_LEVEL[t]}`;
     const tran = BUILD_LIMIT[t];
-    if (tran !== undefined && e.countOf(t) >= tran) return `Đã đủ ${tran} cái — nâng cấp cái đang có`;
+    if (tran !== undefined && e.countOf(t) >= tran) return `Limit ${tran} — upgrade the ones you have`;
     return null;
   }
 
   /** Bước một: chọn CÁI GÌ. Ba nhóm, mỗi loại một thẻ có tên, tác dụng, đã có mấy cái, giá. */
   private renderChonNha(sheet: HTMLElement): void {
     const e = this.economy;
-    sheet.append(this.sheetHead('Xây công trình', 'Chọn loại, rồi chọn chỗ'));
+    sheet.append(this.sheetHead('Build', 'Pick a building, then a spot'));
     const tabs = el('div', 'tabs');
     tabs.setAttribute('role', 'tablist');
     for (const g of BUILD_GROUPS) {
@@ -842,7 +841,10 @@ export class UIManager {
       top.append(ico(spec.icon, 'gico'), el('b', undefined, spec.label));
       const dem = tran !== undefined ? `${co}/${tran}` : co ? `×${co}` : '';
       if (dem) top.append(el('span', 'dem', dem));
-      c.append(top, el('small', undefined, chan ?? spec.describe(1)));
+      // Kèm đường kính chiếm đất: mỗi loại nhà một cỡ, biết trước thì khỏi cầm lên mới hay
+      // là không vừa chỗ.
+      c.append(top, el('small', undefined,
+        chan ?? `${spec.describe(1)} · ⌀${Math.round(FOOTPRINT[t] * 2)}`));
       if (!chan) c.append(this.costRow(e.buildCostFor(t), true));
       c.disabled = chan !== null;
       c.addEventListener('click', () => this.chonXay(t));
@@ -855,6 +857,9 @@ export class UIManager {
    * Bước hai: chọn Ở ĐÂU. Một thanh thấp — tên, câu trả lời "chỗ này được không", giá, và
    * hai nút. Thấp là cố ý: phần màn hình bị che đúng là phần người chơi đang cần nhìn.
    */
+  /** Việc "đặt xuống chỗ đang ngắm" của thanh đặt đang hiện; null khi không cầm gì. */
+  private datNgay: ((tuBanDo?: boolean) => void) | null = null;
+
   private renderDat(sheet: HTMLElement, t: BuildingType): void {
     const e = this.economy;
     const spec = BUILDINGS[t];
@@ -866,34 +871,42 @@ export class UIManager {
     const bar = el('div', 'dat');
     bar.append(ico(spec.icon, 'gico'));
     const col = el('div', 'col');
-    col.append(el('b', undefined, doi ? `Dời ${spec.label}` : spec.label),
+    col.append(el('b', undefined, doi ? `Move ${spec.label}` : spec.label),
       el('small', ly ? 'do' : undefined,
-        ly ?? 'Chỗ này được · bấm vào bản đồ để đổi chỗ'));
+        ly ?? (this.game.aimByMouse ? 'Click to place · right-click to cancel'
+          : 'Good spot · tap the map to move it')));
     bar.append(col);
     if (!doi) bar.append(this.costRow(cost, true));
     sheet.append(bar);
 
     const nut = el('div', 'xay-row');
-    const lui = el('button', 'xay-huy', doi ? 'Huỷ' : '‹ Loại khác') as HTMLButtonElement;
+    const lui = el('button', 'xay-huy', doi ? 'Cancel' : '‹ Back') as HTMLButtonElement;
     lui.addEventListener('click', () => { if (doi) this.moNgan(null); else this.chonXay(null); });
     const go = el('button', 'insp-go' + (ly ? ' want' : ' pulse')) as HTMLButtonElement;
-    go.textContent = thieu ? 'GOM VẬT LIỆU' : ly ? 'CHƯA ĐẶT ĐƯỢC' : doi ? 'ĐẶT Ở ĐÂY' : 'XÂY Ở ĐÂY';
-    go.addEventListener('click', () => {
+    go.textContent = thieu ? 'GATHER' : ly ? 'BLOCKED' : doi ? 'PLACE HERE' : 'BUILD HERE';
+    /*
+     * Một đường đặt cho cả hai lối vào: nút trên thanh, và cú bấm chuột thẳng xuống bản đồ.
+     * Bấm xuống bản đồ lúc chưa đủ vật liệu thì CHỈ báo — biến một cú bấm ngắm chỗ thành
+     * lệnh "cả làng đi gom" là làm một việc người chơi không hề yêu cầu.
+     */
+    this.datNgay = (tuBanDo = false) => {
+      if (thieu && tuBanDo) { this.toast(THIEU_VAT_LIEU, 'warn'); return; }
       if (thieu) {
         e.setDemand(cost, spec.label);
-        this.toast(`Cả làng đi gom vật liệu cho ${spec.label.toLowerCase()}`, 'hammer');
+        this.toast(`Gathering materials for the ${spec.label.toLowerCase()}`, 'hammer');
         return;
       }
       if (!this.game.placeNow()) {
-        this.toast(this.game.placeWhy ?? 'Chưa đặt được', 'warn');
+        this.toast(this.game.placeWhy ?? 'Blocked', 'warn');
         return;
       }
-      this.toast(doi ? 'Đã dời xong' : `Đã xây ${spec.label.toLowerCase()}`, 'hammer');
+      this.toast(doi ? 'Moved' : `${spec.label} built`, 'hammer');
       // Dời là việc làm một lần nên xong là đóng. Xây thì ở lại: nhà thường xây liền mấy cái.
       if (doi) this.moNgan(null);
       else if (this.khoaNha(t)) this.chonXay(null);
       else this.renderInspector();
-    });
+    };
+    go.addEventListener('click', () => this.datNgay?.());
     nut.append(lui, go);
     sheet.append(nut);
   }
@@ -911,15 +924,15 @@ export class UIManager {
      */
     const an = Math.round(e.upkeep() * 60);
     sheet.append(this.sheetHead(e.ageSpec().label,
-      e.armySize() > 0 ? `${e.armySize()} quân · ăn ${an} lương/phút` : 'Chưa có quân'));
+      e.armySize() > 0 ? `${e.armySize()} troops · ${an} food/min` : 'No troops yet'));
 
     // --- thời đại
     const sau = e.nextAge();
     if (s.ageLeft > 0) {
       sheet.append(el('p', 'sheet-note',
-        `Đang chuyển sang ${AGES[s.age].label} — còn ${Math.ceil(s.ageLeft)} giây.`));
+        `Advancing to ${AGES[s.age].label} — ${Math.ceil(s.ageLeft)}s left.`));
     } else if (sau) {
-      sheet.append(this.row('age', `Lên ${sau.label}`, sau.opens, sau.cost,
+      sheet.append(this.row('age', `Advance to ${sau.label}`, sau.opens, sau.cost,
         e.ageBlock(), () => { e.advanceAge(); this.renderInspector(); }));
     }
 
@@ -930,27 +943,24 @@ export class UIManager {
       const dang = s.train.filter((x) => x.kind === k).length;
       const khac = TROOP_KINDS.filter((o) => KHAC[k][o] > 1.2).map((o) => TROOPS[o].label.toLowerCase());
       sheet.append(this.row(sp.icon, `${sp.label} · ${s.army[k]}/${cap}`,
-        `Khắc ${khac.join(' và ') || 'không ai'}${dang ? ` · đang rèn ${dang}` : ''}`,
+        `Beats ${khac.join(' and ') || 'no one'}${dang ? ` · training ${dang}` : ''}`,
         sp.cost, e.trainBlock(k), () => { e.train(k); this.renderInspector(); }));
     }
     if (e.trainLeft() > 0) {
-      sheet.append(el('p', 'sheet-note', `Suất kế tiếp xong sau ${Math.ceil(e.trainLeft())} giây.`));
+      sheet.append(el('p', 'sheet-note', `Next soldier in ${Math.ceil(e.trainLeft())}s.`));
     }
 
     // --- lò rèn
     if (e.sumLevels('smithy') > 0) {
-      sheet.append(this.row('anvil', `Rèn vũ khí · bậc ${s.smith.attack}`,
-        `Cả ba loại lính đánh mạnh thêm ${Math.round(SMITH_ATTACK * 100)}%`,
+      sheet.append(this.row('anvil', `Weapons · tier ${s.smith.attack}`,
+        `All troops hit ${Math.round(SMITH_ATTACK * 100)}% harder`,
         e.smithCost(s.smith.attack), e.smithBlock('attack'),
         () => { e.buySmith('attack'); this.renderInspector(); }));
-      sheet.append(this.row('shield', `Rèn giáp · bậc ${s.smith.armour}`,
-        `Cả ba loại lính chịu đòn nhẹ đi ${Math.round(SMITH_ARMOUR * 100)}%`,
+      sheet.append(this.row('shield', `Armour · tier ${s.smith.armour}`,
+        `All troops take ${Math.round(SMITH_ARMOUR * 100)}% less damage`,
         e.smithCost(s.smith.armour), e.smithBlock('armour'),
         () => { e.buySmith('armour'); this.renderInspector(); }));
     }
-    sheet.append(el('p', 'sheet-note',
-      'Giáo chống kỵ binh, cung bắn bộ binh, kỵ binh ăn cung thủ. Nhìn thành phần đợt trên'
-      + ' đầu màn rồi hãy rèn.'));
   }
 
   /**
@@ -973,8 +983,8 @@ export class UIManager {
     const vai = this.roleOf(u);
     const icon: IconName = { cart: 'cart', miner: 'pick', carrier: 'box',
       forester: 'axe', idle: 'villager' }[vai] as IconName;
-    const name = { cart: 'Xe thồ', miner: 'Thợ mỏ', carrier: 'Thợ chở hàng',
-      forester: 'Thợ rừng', idle: 'Dân làng' }[vai];
+    const name = { cart: 'Cart', miner: 'Miner', carrier: 'Carrier',
+      forester: 'Forester', idle: 'Villager' }[vai];
 
     const laDan = u.kind === 'villager' && u.state !== 'voyage';
     const nhom = laDan ? this.game.soChon : 1;
@@ -982,13 +992,13 @@ export class UIManager {
     head.append(ico(nhom > 1 ? 'people' : icon, 'insp-ico'));
     const t = el('div', 'insp-title');
     const trangThai = this.statusOf(u)
-      + (this.game.following === u.id ? ' · camera đang bám' : '');
-    t.append(el('strong', undefined, nhom > 1 ? `${nhom} người đang chọn` : name),
+      + (this.game.following === u.id ? ' · camera following' : '');
+    t.append(el('strong', undefined, nhom > 1 ? `${nhom} selected` : name),
       el('small', 'live', trangThai));
     head.append(t);
     const close = el('button', 'insp-close', '×') as HTMLButtonElement;
-    close.title = 'Bỏ chọn';
-    close.setAttribute('aria-label', 'Bỏ chọn');
+    close.title = 'Deselect';
+    close.setAttribute('aria-label', 'Deselect');
     close.addEventListener('click', () => {
       // Bỏ chọn cả trong game, không chỉ đóng thẻ: để nguyên thì vòng chọn vẫn sáng và cú
       // bấm kế tiếp xuống đất vẫn là một mệnh lệnh cho người mà thẻ đã đóng.
@@ -1011,12 +1021,12 @@ export class UIManager {
       // ma "13/10" thi doc nhu mot con so hong.
       row.append(bit(RESOURCES[u.carryingKind].icon, fmt(u.carrying)));
     } else {
-      row.append(bit('basket', 'tay không'));
+      row.append(bit('basket', 'empty-handed'));
     }
     row.append(bit('boot', u.speed.toFixed(1)));
     row.append(bit('pack', String(Math.floor(u.capacity))));
     const xa = Math.round(Math.hypot(u.position[0], u.position[2]));
-    row.append(bit('compass', `cách thủ phủ ${xa}`));
+    row.append(bit('compass', `${xa} from Town Hall`));
     body.append(row);
 
     /*
@@ -1027,7 +1037,7 @@ export class UIManager {
     if (laDan) {
       const mach = el('p', 'insp-lenh');
       mach.append(ico('flag', 'bico'), el('span', undefined,
-        'Bấm vào bản đồ để điều đi tới đó (kể cả vùng mây) · bấm vào một bãi để làm ở đó'));
+        'Tap the map to send them there (fog too) · tap a site to work it'));
       body.append(mach);
 
       const lenh = el('div', 'lenh-row');
@@ -1041,8 +1051,8 @@ export class UIManager {
       };
       const caLang = this.economy.villagers().filter((v) => v.state !== 'voyage').length;
       if (nhom < caLang) {
-        nut('people', nhom > 1 ? 'Cả làng' : 'Thêm người gần đây',
-          nhom > 1 ? 'Chọn mọi người dân đang ở nhà' : 'Chọn thêm những người đứng quanh đây',
+        nut('people', nhom > 1 ? 'Everyone' : 'Add nearby',
+          nhom > 1 ? 'Select every villager at home' : 'Also select villagers standing nearby',
           () => {
             const truoc = this.game.soChon;
             // Quanh đây không có ai thì nới thẳng ra cả làng, đừng để nút bấm mà như không.
@@ -1051,9 +1061,9 @@ export class UIManager {
       }
       const dangLenh = u.targetId === LENH || u.targetId === CHO || !!u.pin;
       if (dangLenh || nhom > 1) {
-        nut('stop', 'Thả tự làm', 'Bỏ lệnh và cái ghim, để làng tự chia việc', () => {
+        nut('stop', 'Release', 'Drop the order and pin; back to auto', () => {
           const n = this.game.thaDan();
-          this.toast(n > 1 ? `${n} người quay về tự chọn việc` : 'Quay về tự chọn việc');
+          this.toast(n > 1 ? `${n} back to auto` : 'Back to auto');
           this.renderInspector();
         });
       }
@@ -1066,10 +1076,10 @@ export class UIManager {
     const dangBam = this.game.following === u.id;
     const follow = el('button', 'insp-go' + (dangBam ? '' : ' want')) as HTMLButtonElement;
     follow.append(ico(dangBam ? 'ringOn' : 'ring', 'bico'),
-      el('span', undefined, dangBam ? 'ĐANG BÁM THEO' : 'BÁM THEO'));
+      el('span', undefined, dangBam ? 'FOLLOWING' : 'FOLLOW'));
     follow.title = dangBam
-      ? 'Bấm để thôi bám. Kéo bản đồ hoặc gõ WASD cũng thôi bám.'
-      : 'Camera đi theo người này cho tới khi bạn tự kéo bản đồ';
+      ? 'Click to stop. Dragging the map or WASD also stops.'
+      : 'Camera follows until you drag the map';
     follow.addEventListener('click', () => {
       this.game.setFollow(dangBam ? null : u.id);
       this.renderInspector();
@@ -1081,7 +1091,7 @@ export class UIManager {
     const patch = u.targetId ? this.game.map.patchById(u.targetId) : null;
     if (patch) {
       const go = el('button', 'insp-go want') as HTMLButtonElement;
-      go.append(ico('pin', 'bico'), el('span', undefined, `XEM ${patch.label.toUpperCase()}`));
+      go.append(ico('pin', 'bico'), el('span', undefined, `VIEW ${patch.label.toUpperCase()}`));
       go.addEventListener('click', () => {
         this.selectedUnit = null;
         this.game.select(null);
@@ -1119,11 +1129,11 @@ export class UIManager {
     const head = el('div', 'insp-head');
     head.append(ico('paw', 'insp-ico', 0xff8a7a));
     const t = el('div', 'insp-title');
-    t.append(el('strong', undefined, `${spec.den} · cấp ${d.level}`),
+    t.append(el('strong', undefined, `${spec.den} · level ${d.level}`),
       el('small', undefined, `${spec.label} · ${BIOMES[d.biome].label}`));
     head.append(t);
     const close = el('button', 'insp-close', '×') as HTMLButtonElement;
-    close.title = 'Đóng';
+    close.title = 'Close';
     close.addEventListener('click', () => this.game.pickDen(null));
     head.append(close);
 
@@ -1136,10 +1146,10 @@ export class UIManager {
       s.append(ico(ten), el('span', undefined, text));
       return s;
     };
-    row.append(bit('paw', `sức thú ${can}`), bit('sword', `sức quân ${co}`, co < can ? 'lack' : ''));
+    row.append(bit('paw', `den ${can}`), bit('sword', `army ${co}`, co < can ? 'lack' : ''));
     body.append(row);
     body.append(el('p', 'insp-note',
-      `Bãi trong ${DEN_FEAR} bước quanh hang chỉ cho ${Math.round(DEN_YIELD * 100)}% mỗi chuyến cho tới khi dẹp xong.`));
+      `Sites within ${DEN_FEAR} steps yield only ${Math.round(DEN_YIELD * 100)}% until the den is cleared.`));
 
     const thuong = el('div', 'den-loot');
     // Không dùng `costRow`: hàng ấy tô đỏ thứ nào kho đang thiếu, mà đây là thứ ĐƯỢC chứ không phải giá.
@@ -1152,7 +1162,7 @@ export class UIManager {
       b.append(ico(RESOURCES[k].icon, 'ico', RESOURCES[k].color), el('span', undefined, `+${fmt(n)}`));
       mon.append(b);
     }
-    thuong.append(el('span', 'den-cap', 'Dẹp xong được'), mon);
+    thuong.append(el('span', 'den-cap', 'Reward'), mon);
     body.append(thuong);
 
     const vi = e.huntBlock(d);
@@ -1160,11 +1170,11 @@ export class UIManager {
     const nga = TROOP_KINDS.filter((k) => mat[k] > 0)
       .map((k) => `${mat[k]} ${TROOPS[k].label.toLowerCase()}`).join(', ');
     body.append(el('p', 'insp-next' + (vi ? ' chan' : ''), vi ?? (nga
-      ? `Đi bây giờ sẽ ngã ${nga}. Quân càng đông càng ít người ngã.`
-      : 'Quân đủ đông: không ai ngã.')));
+      ? `Expected losses: ${nga}. A bigger army loses fewer.`
+      : 'No losses expected.')));
 
     const go = el('button', 'insp-go') as HTMLButtonElement;
-    go.append(ico('sword', 'bico'), el('span', undefined, vi ? 'CHƯA ĐỦ SỨC' : 'MANG QUÂN ĐI SĂN'));
+    go.append(ico('sword', 'bico'), el('span', undefined, vi ? 'TOO WEAK' : 'HUNT'));
     go.disabled = !!vi;
     go.addEventListener('click', () => {
       const r = e.hunt(d);
@@ -1172,8 +1182,8 @@ export class UIManager {
       const duoc = RESOURCE_KINDS.filter((k) => r.loot[k])
         .map((k) => `+${r.loot[k]} ${RESOURCES[k].label.toLowerCase()}`).join(' · ');
       const ngaThat = TROOP_KINDS.reduce((n, k) => n + r.lost[k], 0);
-      this.toast(`Dẹp xong ${spec.den.toLowerCase()}${duoc ? ' · ' + duoc : ''}`
-        + (ngaThat ? ` · ngã ${ngaThat} lính` : ''), 'sword');
+      this.toast(`${spec.den} cleared${duoc ? ' · ' + duoc : ''}`
+        + (ngaThat ? ` · ${ngaThat} lost` : ''), 'sword');
       this.game.beasts.dirty();
       this.game.pickDen(null);
       this.refresh();
@@ -1197,7 +1207,7 @@ export class UIManager {
     t.append(el('strong', undefined, b.label), live);
     head.append(t);
     const close = el('button', 'insp-close', '×') as HTMLButtonElement;
-    close.title = 'Đóng';
+    close.title = 'Close';
     close.addEventListener('click', () => this.game.pickPatch(null));
     head.append(close);
 
@@ -1222,17 +1232,17 @@ export class UIManager {
     const biQuay = !!thu && !e.isHunted(thu.id);
     const moiChuyen = Math.floor(
       Math.max(1, e.capacity() * b.richness * (biQuay ? DEN_YIELD : 1)) * RESOURCES[b.kind].value);
-    const chuyen = bit('gold', `${fmt(moiChuyen)} mỗi chuyến`);
-    chuyen.title = `Mỗi chuyến mang về chừng ${Math.floor(e.capacity() * b.richness)}`
-      + ` ${res.label.toLowerCase()} (giàu ×${b.richness.toFixed(2)}),`
-      + ` bán ở thủ phủ được chừng ${fmt(moiChuyen)} vàng`;
+    const chuyen = bit('gold', `${fmt(moiChuyen)} per trip`);
+    chuyen.title = `Each trip brings about ${Math.floor(e.capacity() * b.richness)}`
+      + ` ${res.label.toLowerCase()} (richness ×${b.richness.toFixed(2)}),`
+      + ` worth about ${fmt(moiChuyen)} gold at the Town Hall`;
     row.append(chuyen);
     const xa = Math.round(Math.hypot(b.center[0], b.center[2]));
-    row.append(bit('compass', `cách thủ phủ ${xa}`));
-    if (e.isFull(b.kind)) row.append(bit('basket', 'kho đã đầy', 'lack'));
+    row.append(bit('compass', `${xa} from Town Hall`));
+    if (e.isFull(b.kind)) row.append(bit('basket', 'storage full', 'lack'));
     if (thu && biQuay) {
       row.append(bit('paw',
-        `${BEASTS[thu.kind].label.toLowerCase()} quấy · chỉ còn ${Math.round(DEN_YIELD * 100)}% mỗi chuyến`, 'lack'));
+        `${BEASTS[thu.kind].label.toLowerCase()} nearby · only ${Math.round(DEN_YIELD * 100)}% per trip`, 'lack'));
     }
     body.append(row);
 
@@ -1245,12 +1255,12 @@ export class UIManager {
     const note = el('small', undefined, '');
     const sayLeft = () => {
       const ranh = Math.max(0, tong - tongGiao());
-      note.textContent = tong === 0 ? 'Chưa thuê ai cả'
-        : ranh > 0 ? `Còn ${ranh} người chưa được giao chỗ nào`
-        : 'Đã giao hết người cho các bãi';
+      note.textContent = tong === 0 ? 'No villagers yet'
+        : ranh > 0 ? `${ranh} unassigned`
+        : 'Everyone is assigned';
     };
     sayLeft();
-    lab.append(el('strong', undefined, 'Điều dân tới đây'), note);
+    lab.append(el('strong', undefined, 'Assign villagers'), note);
     crew.append(lab);
 
     const step = el('div', 'insp-step');
@@ -1279,8 +1289,8 @@ export class UIManager {
     const acts = el('div', 'insp-choice');
     // Nut chinh cua the bai: ho phach. "BO HET" ben canh la nut phu nen de kieu mo.
     const all = el('button', 'insp-go') as HTMLButtonElement;
-    all.append(ico('crew', 'bico'), el('span', undefined, 'DỒN CẢ LÀNG'));
-    all.title = 'Giao hết người cho riêng bãi này, bỏ mọi chỗ đã giao trước đó';
+    all.append(ico('crew', 'bico'), el('span', undefined, 'SEND ALL'));
+    all.title = 'Assign everyone here and clear other assignments';
     all.addEventListener('click', () => {
       e.state.assignments = tong > 0 ? { [b.id]: tong } : {};
       e.save();
@@ -1291,8 +1301,8 @@ export class UIManager {
 
     if (tongGiao() > 0) {
       const clear = el('button', 'insp-go want') as HTMLButtonElement;
-      clear.append(ico('broom', 'bico'), el('span', undefined, 'BỎ HẾT'));
-      clear.title = 'Xoá mọi chỗ đã giao, trả dân về cho máy tự lo';
+      clear.append(ico('broom', 'bico'), el('span', undefined, 'CLEAR ALL'));
+      clear.title = 'Clear every assignment; back to auto';
       clear.addEventListener('click', () => {
         e.state.assignments = {};
         e.save();
@@ -1306,8 +1316,8 @@ export class UIManager {
     // Giao người mà để tự farm bật thì vẫn chạy, chỉ là phần còn lại do máy lo. Tắt đi mới
     // là "chỉ làm đúng những gì tôi bảo" — nói thẳng ra, vì đó là chỗ dễ hiểu nhầm nhất.
     body.append(el('p', 'insp-note', e.state.autoFarm
-      ? 'Tự farm đang BẬT: số bạn giao được ưu tiên trước, ai thừa ra thì máy tự xếp việc.'
-      : 'Tự farm đang TẮT: dân chỉ tới những bãi bạn đã giao.'));
+      ? 'Auto-assign ON: your assignments come first, the rest pick their own work.'
+      : 'Auto-assign OFF: villagers only work assigned sites.'));
 
     box.append(head, body);
   }
@@ -1334,31 +1344,31 @@ export class UIManager {
   private statusOf(u: Unit): string {
     const kindLabel = u.carryingKind ? RESOURCES[u.carryingKind].label.toLowerCase() : '';
     if (u.kind === 'cart') {
-      return `Đang chở ${fmt(u.carrying)} ${kindLabel} về thủ phủ`;
+      return `Hauling ${fmt(u.carrying)} ${kindLabel} to the Town Hall`;
     }
     switch (u.state) {
       case 'voyage':
-        return 'Đang lênh đênh ngoài khơi';
+        return 'Out at sea';
       case 'idle':
         if (u.targetId === CHO) {
-          return `Đứng gác theo lệnh · ${Math.ceil(Math.max(0, u.gatherTimer))}s nữa tự đi làm`;
+          return `Holding position · back to work in ${Math.ceil(Math.max(0, u.gatherTimer))}s`;
         }
-        return 'Đang chờ việc';
+        return 'Idle';
       case 'moving': {
-        if (u.targetId === LENH) return 'Đang đi tới chỗ bạn chỉ';
-        if (u.targetId === 'scout') return 'Đang đi thám hiểm vùng chưa vén';
+        if (u.targetId === LENH) return 'Heading where you pointed';
+        if (u.targetId === 'scout') return 'Scouting the fog';
         const n = u.targetId ? this.game.map.patchById(u.targetId) : null;
-        return n ? `Đang tới ${n.label.toLowerCase()}` : 'Đang trên đường';
+        return n ? `Heading to the ${n.label.toLowerCase()}` : 'On the way';
       }
       case 'gathering': {
         const n = u.targetId ? this.game.map.patchById(u.targetId) : null;
         const con = Math.max(0, u.gatherTimer).toFixed(1);
-        return `Đang làm ở ${n ? n.label.toLowerCase() : 'bãi'} · còn ${con}s`;
+        return `Working the ${n ? n.label.toLowerCase() : 'site'} · ${con}s left`;
       }
       case 'delivering': {
         const b = this.economy.state.buildings.find((x) => x.id === u.targetId);
-        const noi = !b ? 'kho' : b.type === 'townhall' ? 'thủ phủ' : 'trạm trung chuyển';
-        return `Đang chở ${fmt(u.carrying)} ${kindLabel} về ${noi}`;
+        const noi = !b ? 'storage' : b.type === 'townhall' ? 'the Town Hall' : 'the outpost';
+        return `Hauling ${fmt(u.carrying)} ${kindLabel} to ${noi}`;
       }
     }
   }
@@ -1370,10 +1380,10 @@ export class UIManager {
     const dao = toi.filter((v) => v.state === 'gathering').length;
     if (toi.length === 0) {
       return this.economy.isFull(b.kind)
-        ? 'Kho loại này đã đầy · chưa ai tới'
-        : 'Chưa có ai làm ở đây';
+        ? 'Storage full · nobody here'
+        : 'Nobody working here';
     }
-    return `${toi.length} người ở đây · ${dao} đang khai thác`;
+    return `${toi.length} here · ${dao} gathering`;
   }
 
 
@@ -1413,7 +1423,7 @@ export class UIManager {
     // Nut dong ro rang. Bam ra cho trong cung dong duoc, nhung khong ai doan ra dieu do neu
     // khong co gi noi.
     const close = el('button', 'insp-close', '×') as HTMLButtonElement;
-    close.title = 'Dong';
+    close.title = 'Close';
     close.addEventListener('click', () => {
       this.selected = null;
       this.game.select(null);
@@ -1424,7 +1434,7 @@ export class UIManager {
     head.append(ico(BUILDINGS[b.type].icon, 'insp-ico'));
     const t = el('div', 'insp-title');
     t.append(el('strong', undefined, BUILDINGS[b.type].label),
-      el('small', undefined, `Cấp ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
+      el('small', undefined, `Level ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
     head.append(t);
 
     /*
@@ -1434,9 +1444,9 @@ export class UIManager {
      */
     if (b.type === 'townhall' && this.economy.marketBusy) {
       const canh = el('p', 'insp-warn');
-      canh.append(ico('warn', 'bico'), el('strong', undefined, 'Chợ đang quá tải'),
-        el('span', undefined, ' — hàng về nhanh hơn mức bán được, nên phần thừa'
-          + ' nằm chết trong kho. Nâng cấp thủ phủ để bán nhanh gấp đôi.'));
+      canh.append(ico('warn', 'bico'), el('strong', undefined, 'Market is backed up'),
+        el('span', undefined, ' — goods arrive faster than they sell.'
+          + ' Upgrade the Town Hall to sell faster.'));
       body.append(canh);
     }
 
@@ -1444,13 +1454,13 @@ export class UIManager {
     const hang = el('div', 'xay-row');
     if (doiDuoc(b.type)) {
       const doi = el('button', 'xay-huy') as HTMLButtonElement;
-      doi.append(ico('move', 'bico'), el('span', undefined, 'Dời'));
-      doi.title = 'Nhấc lên đặt chỗ khác, không tốn gì';
+      doi.append(ico('move', 'bico'), el('span', undefined, 'Move'));
+      doi.title = 'Pick up and place elsewhere, free';
       doi.addEventListener('click', () => this.doiNha(b.id));
       hang.append(doi);
     }
     if (b.level >= BUILDINGS[b.type].maxLevel) {
-      body.append(el('p', 'insp-note', 'Đã kịch cấp.'));
+      body.append(el('p', 'insp-note', 'Max level.'));
     } else {
       const cost = this.economy.costFor(b.type, b.level);
       // Nói trước nâng cấp thì ĐƯỢC GÌ. Bản trước chỉ có giá và một cái nút, nên người chơi
@@ -1459,11 +1469,11 @@ export class UIManager {
       const sau = BUILDINGS[b.type].describe(b.level + 1);
       if (sau !== nay) {
         const ke = el('p', 'insp-next');
-        ke.append(ico('up', 'bico'), el('span', undefined, `Cấp ${b.level + 1}: ${sau}`));
+        ke.append(ico('up', 'bico'), el('span', undefined, `Level ${b.level + 1}: ${sau}`));
         body.append(ke);
       }
       body.append(this.costRow(cost));
-      hang.append(this.bigButton('NÂNG CẤP', cost, `${BUILDINGS[b.type].label} cấp ${b.level + 1}`,
+      hang.append(this.bigButton('UPGRADE', cost, `${BUILDINGS[b.type].label} level ${b.level + 1}`,
         () => this.economy.upgrade(b)));
     }
     if (hang.childElementCount) body.append(hang);
@@ -1495,8 +1505,8 @@ export class UIManager {
   private bigButton(label: string, cost: Cost, what: string, run: () => boolean): HTMLButtonElement {
     const ok = this.economy.canAfford(cost);
     const b = el('button', 'insp-go' + (ok ? ' pulse' : ' want')) as HTMLButtonElement;
-    b.textContent = ok ? label : 'GOM VẬT LIỆU';
-    b.title = ok ? '' : 'Cả làng sẽ quay sang gom đúng thứ còn thiếu';
+    b.textContent = ok ? label : 'GATHER';
+    b.title = ok ? '' : 'The village will gather what is missing';
     b.addEventListener('click', () => {
       if (ok) run();
       else this.economy.setDemand(cost, what);
@@ -1606,7 +1616,7 @@ export class UIManager {
     this.waveCho = r.wave;
     this.voyageCho = r.voyage;
     this.el.awayTime.textContent =
-      `Bạn đi ${dur(r.elapsedSeconds)}, được tính ${dur(r.creditedSeconds)}.`;
+      `Away ${dur(r.elapsedSeconds)} · credited ${dur(r.creditedSeconds)}.`;
     this.el.awayLoot.innerHTML = '';
     for (const k of kinds) {
       const li = el('li');
@@ -1615,13 +1625,13 @@ export class UIManager {
       this.el.awayLoot.append(li);
     }
     const notes: string[] = [];
-    if (r.capped) notes.push('Đã chạm trần tích luỹ 2 giờ.');
+    if (r.capped) notes.push('Hit the 2-hour offline cap.');
     if (r.waveSkipped > 0) {
-      notes.push(`Còn ${r.waveSkipped} đợt nữa đi qua trong lúc bạn vắng mặt, nhưng đi vắng`
-        + ' bao lâu thì cũng chỉ một đợt được tính.');
+      notes.push(`${r.waveSkipped} more waves passed while you were away;`
+        + ' only one is ever counted.');
     }
     if (r.full.length) {
-      notes.push(`Kho đầy ${r.full.map((k) => RESOURCES[k].label.toLowerCase()).join(', ')} nên dân phải dừng — xây thêm Kho lẫm.`);
+      notes.push(`Storage filled with ${r.full.map((k) => RESOURCES[k].label.toLowerCase()).join(', ')}, so work stopped — build granaries.`);
     }
     this.el.awayCapped.textContent = notes.join(' ');
     this.el.awayCapped.hidden = notes.length === 0;
@@ -1649,7 +1659,7 @@ export class UIManager {
       const b = document.createElement('button');
       b.type = 'button';
       b.setAttribute('role', 'radio');
-      b.setAttribute('aria-label', `Màu cờ #${mau.toString(16)}`);
+      b.setAttribute('aria-label', `Flag colour #${mau.toString(16)}`);
       b.style.background = `#${mau.toString(16).padStart(6, '0')}`;
       b.addEventListener('click', () => { this.mauDangChon = mau; this.renderLangMau(); });
       this.el.langMau.append(b);
@@ -1670,7 +1680,7 @@ export class UIManager {
     // Lần đầu thì điền sẵn một cái tên: màn hình trống bắt người ta nghĩ, còn một cái tên có
     // sẵn thì chỉ cần bấm tiếp — và ai muốn tên riêng vẫn xoá đi gõ lại được.
     this.el.langTen.value = v.name || tenLangNgauNhien();
-    this.el.langOk.textContent = batBuoc ? 'Vào đảo' : 'Xong';
+    this.el.langOk.textContent = batBuoc ? 'Start' : 'Done';
     this.renderLangMau();
     this.el.lapLang.hidden = false;
     this.el.langTen.focus();
@@ -1698,9 +1708,9 @@ export class UIManager {
 
   private renderLangChip(): void {
     const v = this.economy.state.village;
-    this.el.langHud.textContent = v.name || 'Lập làng';
+    this.el.langHud.textContent = v.name || 'Name village';
     this.el.langDot.style.background = `#${v.color.toString(16).padStart(6, '0')}`;
-    document.title = v.name ? `${v.name} · Quần Đảo Vô Tận` : 'Quần Đảo Vô Tận';
+    document.title = v.name ? `${v.name} · Endless Archipelago` : 'Endless Archipelago';
   }
 
   // ----------------------------------------------------------- bảng đồ hoạ
@@ -1755,12 +1765,12 @@ export class UIManager {
       b.setAttribute('aria-checked', String(on));
     }
     // Tự động thì nói rõ nó đang chạy bậc nào — không thì người chơi không biết máy mình ra sao.
-    this.el.gfxNow.textContent = q.choice === 'auto' ? `đang ở ${q.label}` : '';
+    this.el.gfxNow.textContent = q.choice === 'auto' ? `now ${q.label}` : '';
     const bat = q.tilt && q.tiltAllowed;
     this.el.gfxTilt.disabled = !q.tiltAllowed;
     this.el.gfxTilt.classList.toggle('on', bat);
     this.el.gfxTilt.setAttribute('aria-checked', String(bat));
-    this.el.gfxNote.textContent = q.tiltAllowed ? '' : 'Mô hình thu nhỏ chỉ có ở bậc Cao.';
+    this.el.gfxNote.textContent = q.tiltAllowed ? '' : 'Tilt-shift needs High quality.';
   }
 
   private toggleMute(): void {

@@ -21,11 +21,11 @@ export interface Milestone {
 }
 
 const REWARD_TEXT: Record<RewardKind, (a: number) => string> = {
-  speed: (a) => `Dân đi nhanh hơn ${Math.round(a * 100)}%`,
-  capacity: (a) => `Mang thêm ${Math.round(a * 100)}% mỗi chuyến`,
-  storage: (a) => `Kho chứa thêm ${Math.round(a * 100)}%`,
-  cart: (a) => `Xe thồ chở thêm ${Math.round(a * 100)}%`,
-  survey: (a) => `Khảo sát nhanh hơn ${Math.round(a * 100)}%`,
+  speed: (a) => `Villagers move ${Math.round(a * 100)}% faster`,
+  capacity: (a) => `Carry ${Math.round(a * 100)}% more per trip`,
+  storage: (a) => `Storage +${Math.round(a * 100)}%`,
+  cart: (a) => `Carts carry ${Math.round(a * 100)}% more`,
+  survey: (a) => `Scouting ${Math.round(a * 100)}% faster`,
 };
 
 export function rewardText(m: Milestone): string {
@@ -37,16 +37,16 @@ export function rewardText(m: Milestone): string {
  * có một mốc nữa, xoay vòng năm loại phần thưởng — nên danh sách cũng vô hạn như bản đồ.
  */
 const NAMED: Milestone[] = [
-  { at: 40, label: 'Rìa làng', kind: 'speed', amount: 0.06 },
-  { at: 80, label: 'Bên kia đồi', kind: 'capacity', amount: 0.1 },
-  { at: 130, label: 'Người mở đường', kind: 'survey', amount: 0.1 },
-  { at: 190, label: 'Đất lạ', kind: 'storage', amount: 0.15 },
-  { at: 260, label: 'Đoàn xe đầu tiên', kind: 'cart', amount: 0.25 },
-  { at: 340, label: 'Chân trời thứ hai', kind: 'speed', amount: 0.08 },
-  { at: 430, label: 'Vùng biên', kind: 'capacity', amount: 0.12 },
-  { at: 530, label: 'Bản đồ không rìa', kind: 'storage', amount: 0.2 },
-  { at: 640, label: 'Kẻ lang thang', kind: 'cart', amount: 0.3 },
-  { at: 760, label: 'Xa khỏi mọi con đường', kind: 'survey', amount: 0.12 },
+  { at: 40, label: 'Village Edge', kind: 'speed', amount: 0.06 },
+  { at: 80, label: 'Over the Hill', kind: 'capacity', amount: 0.1 },
+  { at: 130, label: 'Pathfinder', kind: 'survey', amount: 0.1 },
+  { at: 190, label: 'Strange Land', kind: 'storage', amount: 0.15 },
+  { at: 260, label: 'First Caravan', kind: 'cart', amount: 0.25 },
+  { at: 340, label: 'Second Horizon', kind: 'speed', amount: 0.08 },
+  { at: 430, label: 'Borderlands', kind: 'capacity', amount: 0.12 },
+  { at: 530, label: 'Edgeless Map', kind: 'storage', amount: 0.2 },
+  { at: 640, label: 'Wanderer', kind: 'cart', amount: 0.3 },
+  { at: 760, label: 'Far From Home', kind: 'survey', amount: 0.12 },
 ];
 
 const STEP = 200;
@@ -64,7 +64,7 @@ export function milestoneAt(n: number): Milestone {
   const k = n - NAMED.length;
   const c = CYCLE[k % CYCLE.length];
   const at = NAMED[NAMED.length - 1].at + STEP * (k + 1);
-  return { at, label: `Cột mốc ${Math.round(at)}`, kind: c.kind, amount: c.amount };
+  return { at, label: `Milestone ${Math.round(at)}`, kind: c.kind, amount: c.amount };
 }
 
 /** Số mốc đã đạt với quãng xa nhất đã đi. */

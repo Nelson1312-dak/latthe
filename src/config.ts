@@ -220,9 +220,6 @@ export const PALETTE = {
   cliffMid: DAT_TOI,
   cliffLow: DAT_RAT_TOI,
   water: 0x7fa0b5,
-  // Đậm hơn cát sa mạc (0xcfa877) hẳn một bậc, nếu không thì đường xuyên qua sa mạc biến
-  // mất — hai thứ cùng là đất nên rất dễ trùng tông.
-  road: 0xb08a5e,
 
   trunk: DAT_RAT_TOI,
   // Cây lấy ba bậc TỐI của hệ rêu, vì nền đồng cỏ đã chiếm hai bậc sáng.
@@ -287,17 +284,17 @@ export const VILLAGE_COLORS = [
 ] as const;
 
 /** Hai nửa của một cái tên gợi ý. Ghép lại ra 96 cái tên, đủ để không ai bấm hai lần ra một. */
-const TEN_DAU = ['Đảo', 'Vịnh', 'Làng', 'Bến', 'Cồn', 'Mũi', 'Xóm', 'Bãi'] as const;
+const TEN_DAU = ['Isle', 'Bay', 'Village', 'Harbour', 'Sandbar', 'Cape', 'Hamlet', 'Beach'] as const;
 const TEN_SAU = [
-  'Mây Trắng', 'Gió Nồm', 'Sương Sớm', 'Cát Vàng', 'Rừng Thông', 'Đá Dựng',
-  'Trăng Non', 'Sóng Bạc', 'Nắng Hạ', 'Cỏ May', 'Lửa Ấm', 'Chim Sẻ',
+  'White Cloud', 'South Wind', 'Morning Mist', 'Gold Sand', 'Pinewood', 'Standing Stone',
+  'New Moon', 'Silver Wave', 'Summer Sun', 'Tall Grass', 'Warm Fire', 'Sparrow',
 ] as const;
 
 /** Một cái tên làng bốc ngẫu nhiên. */
 export function tenLangNgauNhien(): string {
   const a = TEN_DAU[Math.floor(Math.random() * TEN_DAU.length)];
   const b = TEN_SAU[Math.floor(Math.random() * TEN_SAU.length)];
-  return `${a} ${b}`;
+  return `${b} ${a}`;
 }
 
 // ------------------------------------------------------------- tài nguyên
@@ -305,11 +302,11 @@ export function tenLangNgauNhien(): string {
 export const RESOURCES: Record<ResourceKind, {
   label: string; icon: IconName; color: number; value: number;
 }> = {
-  food: { label: 'Lương thực', icon: 'food', color: PALETTE.wheat, value: 1 },
-  wood: { label: 'Gỗ', icon: 'wood', color: PALETTE.pine[1], value: 1 },
-  gold: { label: 'Vàng', icon: 'gold', color: PALETTE.goldOre, value: 1 },
-  stone: { label: 'Đá', icon: 'stone', color: PALETTE.granite, value: 2 },
-  relics: { label: 'Mảnh cổ vật', icon: 'relics', color: PALETTE.crystal, value: 7 },
+  food: { label: 'Food', icon: 'food', color: PALETTE.wheat, value: 1 },
+  wood: { label: 'Wood', icon: 'wood', color: PALETTE.pine[1], value: 1 },
+  gold: { label: 'Gold', icon: 'gold', color: PALETTE.goldOre, value: 1 },
+  stone: { label: 'Stone', icon: 'stone', color: PALETTE.granite, value: 2 },
+  relics: { label: 'Relics', icon: 'relics', color: PALETTE.crystal, value: 7 },
 };
 
 // ------------------------------------------------------------- biến sinh thái
@@ -317,44 +314,44 @@ export const RESOURCES: Record<ResourceKind, {
 
 export const BIOMES: Record<BiomeId, Biome> = {
   meadow: {
-    id: 'meadow', label: 'Đồng Cỏ Khởi Đầu',
+    id: 'meadow', label: 'Home Meadow',
     // Nền lấy hai bậc SÁNG, cây lấy ba bậc tối — nên rừng nổi hẳn trên cỏ. Và nhạt hơn
     // chính hệ rêu một chút nữa, để màu còn chỗ cho mái nhà.
     ground: [REU_SANG, REU_NHAT], minimap: '#9ab393',
     yields: ['wood', 'food'],
   },
   crags: {
-    id: 'crags', label: 'Vách Đá Granit',
+    id: 'crags', label: 'Granite Crags',
     // Vách đá ngược lại: nền tối, tảng đá sáng. Sáng hơn hệ lam một nửa bậc: với AO phủ lên
     // thì hai bậc tối nhất gần như thành đen, và cả vùng vách đá đọc ra như một lỗ thủng.
     ground: [0x728391, 0x63747f], minimap: '#63747f',
     yields: ['stone'],
   },
   desert: {
-    id: 'desert', label: 'Sa Mạc Chìm',
+    id: 'desert', label: 'Sunken Desert',
     ground: [0xcfa877, 0xbe9868], minimap: '#cfa877',
     yields: ['gold'],
   },
   highlands: {
-    id: 'highlands', label: 'Cao Nguyên Huyền Bí',
+    id: 'highlands', label: 'Mystic Highlands',
     // Cũng sáng lên nửa bậc vì cùng lý do; pha lê vẫn nổi nhờ tự phát sáng.
     ground: [0x4a4070, 0x5b4f80], minimap: '#4a4070',
     yields: ['relics'],
   },
   swamp: {
-    id: 'swamp', label: 'Đầm Lầy Sậy Cao',
+    id: 'swamp', label: 'Reed Swamp',
     // Xanh ô-liu ngả nâu: đủ khác đồng cỏ để nhìn minimap là biết, mà vẫn cùng họ rêu.
     ground: [0x7c8f5a, 0x66794c], minimap: '#5f7d58',
     yields: ['wood', 'food'],
   },
   snow: {
-    id: 'snow', label: 'Đỉnh Tuyết',
+    id: 'snow', label: 'Snow Peaks',
     // Không trắng hẳn: trắng tinh qua bloom là cháy thành một mảng, mất hết các mặt thềm.
     ground: [0xd3dde4, 0xb9c8d4], minimap: '#dbe5ec',
     yields: ['stone'],
   },
   ashland: {
-    id: 'ashland', label: 'Đất Núi Lửa',
+    id: 'ashland', label: 'Ashlands',
     // Tro than ấm chứ không đen: đen thì AO nuốt mất hình khối, và dung nham cần một cái
     // nền tối để nổi chứ không cần một cái hố.
     ground: [0x5a5150, 0x4a4342], minimap: '#4d4544',
@@ -437,65 +434,65 @@ export const BUILDINGS = {
    * nằm chết trong kho. Nâng cấp quan trọng nhất của game lại là cái duy nhất không ai hiểu.
    */
   townhall: {
-    label: 'Thủ phủ', icon: 'townhall', maxLevel: 10,
-    describe: (l: number) => `Chợ bán ${(SURPLUS_RATE_PER_LEVEL * l).toFixed(1)} món mỗi giây`
-      + ` · chỗ ở cho ${l * HOUSING_FROM_TOWNHALL} dân`,
+    label: 'Town Hall', icon: 'townhall', maxLevel: 10,
+    describe: (l: number) => `Sells ${(SURPLUS_RATE_PER_LEVEL * l).toFixed(1)} goods/s`
+      + ` · houses ${l * HOUSING_FROM_TOWNHALL}`,
   },
   house: {
-    label: 'Nhà ở', icon: 'house', maxLevel: 10,
-    describe: (l: number) => `Chỗ ở cho ${l * HOUSING_PER_HOUSE} dân`,
+    label: 'House', icon: 'house', maxLevel: 10,
+    describe: (l: number) => `Houses ${l * HOUSING_PER_HOUSE}`,
   },
   granary: {
-    label: 'Kho lẫm', icon: 'granary', maxLevel: 10,
-    describe: (l: number) => `Chứa thêm ${l * STORAGE_PER_GRANARY} mỗi loại`,
+    label: 'Granary', icon: 'granary', maxLevel: 10,
+    describe: (l: number) => `+${l * STORAGE_PER_GRANARY} storage per resource`,
   },
   outpost: {
-    label: 'Trạm trung chuyển', icon: 'outpost', maxLevel: 5,
+    label: 'Outpost', icon: 'outpost', maxLevel: 5,
     describe: (l: number) =>
-      `Gom hàng trong vùng, ${CART_INTERVAL_SECONDS}s một chuyến xe · sức chở ×${CART_CAPACITY_MULT * l}`,
+      `Collects nearby goods · cart every ${CART_INTERVAL_SECONDS}s · load ×${CART_CAPACITY_MULT * l}`,
   },
   watchtower: {
-    label: 'Chòi canh', icon: 'tower', maxLevel: 5,
-    describe: (l: number) => `Sức thủ +${l * GUARD_PER_TOWER}`,
+    label: 'Watchtower', icon: 'tower', maxLevel: 5,
+    describe: (l: number) => `Defence +${l * GUARD_PER_TOWER}`,
   },
   barracks: {
-    label: 'Doanh trại', icon: 'spear', maxLevel: 8,
-    describe: (l: number) => `Nuôi được ${l * 3} lính giáo`,
+    label: 'Barracks', icon: 'spear', maxLevel: 8,
+    describe: (l: number) => `Holds ${l * 3} spearmen`,
   },
   archery: {
-    label: 'Trường bắn', icon: 'bow', maxLevel: 8,
-    describe: (l: number) => `Nuôi được ${l * 3} cung thủ`,
+    label: 'Archery Range', icon: 'bow', maxLevel: 8,
+    describe: (l: number) => `Holds ${l * 3} archers`,
   },
   stable: {
-    label: 'Chuồng ngựa', icon: 'horse', maxLevel: 6,
-    describe: (l: number) => `Nuôi được ${l * 2} kỵ binh`,
+    label: 'Stable', icon: 'horse', maxLevel: 6,
+    describe: (l: number) => `Holds ${l * 2} cavalry`,
   },
   smithy: {
-    label: 'Lò rèn', icon: 'anvil', maxLevel: 3,
-    describe: () => 'Bán nâng cấp giáp và sát thương cho cả ba loại lính',
+    label: 'Smithy', icon: 'anvil', maxLevel: 3,
+    describe: () => 'Attack and armour upgrades for all troops',
   },
   farm: {
-    label: 'Ruộng lúa', icon: 'farm', maxLevel: 5,
-    describe: (l: number) => `Tự ra ${(FARM_FOOD_PER_LEVEL * l).toFixed(1)} lương thực mỗi giây`,
+    label: 'Farm', icon: 'farm', maxLevel: 5,
+    describe: (l: number) => `Grows ${(FARM_FOOD_PER_LEVEL * l).toFixed(1)} food/s`,
   },
   well: {
-    label: 'Giếng làng', icon: 'well', maxLevel: 5,
-    describe: (l: number) => `Dân đi nhanh thêm ${Math.round(WELL_SPEED_PER_LEVEL * l * 100)}%`,
+    label: 'Well', icon: 'well', maxLevel: 5,
+    describe: (l: number) => `Villagers move ${Math.round(WELL_SPEED_PER_LEVEL * l * 100)}% faster`,
   },
   market: {
-    label: 'Chợ phiên', icon: 'market', maxLevel: 5,
-    describe: (l: number) => `Bán thêm ${(MARKET_RATE_PER_LEVEL * l).toFixed(1)} món mỗi giây`
-      + ` · giá +${Math.round(MARKET_PRICE_PER_LEVEL * l * 100)}%`,
+    label: 'Market', icon: 'market', maxLevel: 5,
+    describe: (l: number) => `Sells ${(MARKET_RATE_PER_LEVEL * l).toFixed(1)} more goods/s`
+      + ` · prices +${Math.round(MARKET_PRICE_PER_LEVEL * l * 100)}%`,
   },
   lookout: {
-    label: 'Đài quan sát', icon: 'lookout', maxLevel: 5,
+    label: 'Lookout', icon: 'lookout', maxLevel: 5,
     describe: (l: number) =>
-      `Tự vén sương trong ${LOOKOUT_RANGE_BASE + LOOKOUT_RANGE_PER_LEVEL * l} bước quanh nó`,
+      `Clears fog within ${LOOKOUT_RANGE_BASE + LOOKOUT_RANGE_PER_LEVEL * l} steps`,
   },
   dock: {
-    label: 'Xưởng thuyền', icon: 'dock', maxLevel: 5,
-    describe: (l: number) => `Chuyến biển về nhanh hơn ${
-      Math.round(Math.min(DOCK_VOYAGE_CAP, DOCK_VOYAGE_PER_LEVEL * l) * 100)}%`,
+    label: 'Dock', icon: 'dock', maxLevel: 5,
+    describe: (l: number) => `Voyages return ${
+      Math.round(Math.min(DOCK_VOYAGE_CAP, DOCK_VOYAGE_PER_LEVEL * l) * 100)}% faster`,
   },
 } as const;
 
@@ -504,9 +501,9 @@ export const BUILDINGS = {
  * — đo được ở 375×812 — nên chia theo VIỆC người chơi đang muốn làm, không theo thời đại.
  */
 export const BUILD_GROUPS = [
-  { id: 'dan', label: 'Dân sinh', types: ['house', 'farm', 'well', 'granary'] },
-  { id: 'kinhte', label: 'Kinh tế', types: ['market', 'outpost', 'dock', 'lookout'] },
-  { id: 'quan', label: 'Quân sự', types: ['watchtower', 'barracks', 'archery', 'stable', 'smithy'] },
+  { id: 'dan', label: 'Village', types: ['house', 'farm', 'well', 'granary'] },
+  { id: 'kinhte', label: 'Economy', types: ['market', 'outpost', 'dock', 'lookout'] },
+  { id: 'quan', label: 'Military', types: ['watchtower', 'barracks', 'archery', 'stable', 'smithy'] },
 ] as const;
 
 /** Giá xây mới. Nâng cấp dùng cùng bảng này nhân theo cấp, xem Economy.costFor. */
@@ -607,25 +604,53 @@ export const GUARD_PER_VILLAGER = 1;
 /**
  * DIỆN TÍCH CHIẾM ĐẤT của từng loại công trình, tính bằng bán kính.
  *
- * Từ bản "đặt tự do" không còn ô lưới nào: đặt được ở đâu mà không đè lên cái khác là đặt,
- * đúng kiểu đế chế. Con số lấy từ chính bề ngang của mô hình trong src/buildings.ts cộng
- * một lề nhỏ, nên hai công trình sát nhau vẫn còn một khe nhìn thấy được.
+ * Không có ô lưới nào: đặt được ở đâu đất đủ bằng mà không đè lên cái khác là đặt, đúng
+ * kiểu đế chế. Bản trước mười bốn loại nằm gọn trong khoảng 1,4 tới 2,6 — cái giếng và
+ * thủ phủ chênh nhau chưa tới hai lần bề ngang, nên "diện tích" có trên giấy mà không ai
+ * cảm thấy. Giờ trải ra 1,4 tới 3,6: giếng và chòi len vào khe nào cũng được, còn ruộng,
+ * chuồng ngựa, doanh trại phải có một khoảng đất bằng thật sự — và chính luật đất bằng
+ * (world.ts, `siteOf`) làm cho con số này thành một lựa chọn chứ không phải một nhãn.
  */
 export const FOOTPRINT: Record<keyof typeof BUILDINGS, number> = {
-  townhall: 2.6,
-  house: 1.8,
-  granary: 2.0,
-  outpost: 2.2,
-  watchtower: 1.5,
-  barracks: 2.4,
-  archery: 2.3,
-  stable: 2.6,
-  smithy: 1.9,
-  farm: 2.4,
   well: 1.4,
-  market: 2.3,
+  watchtower: 1.5,
   lookout: 1.5,
-  dock: 2.5,
+  house: 1.8,
+  smithy: 2.0,
+  granary: 2.4,
+  outpost: 2.5,
+  archery: 2.7,
+  market: 2.8,
+  dock: 3.0,
+  barracks: 3.1,
+  stable: 3.2,
+  farm: 3.3,
+  townhall: 3.6,
+};
+
+/**
+ * Mô hình to lên theo diện tích.
+ *
+ * Diện tích rộng ra mà mô hình giữ nguyên thì công trình lớn chỉ là một căn nhà cỡ thường
+ * đứng giữa một bãi đất trống. Hệ số nhân thẳng vào hình khối (kể cả mô đất dưới chân), nên
+ * mô đất luôn vừa khít vòng diện tích trừ một khe nhỏ. Nhà ở, giếng, chòi giữ nguyên cỡ:
+ * chúng là thước đo để mắt so ra thứ khác to tới đâu.
+ */
+export const MODEL_SCALE: Record<keyof typeof BUILDINGS, number> = {
+  well: 1,
+  watchtower: 1,
+  lookout: 1,
+  house: 1,
+  smithy: 1,
+  granary: 1.15,
+  outpost: 1.1,
+  archery: 1.15,
+  market: 1.2,
+  dock: 1.15,
+  barracks: 1.25,
+  stable: 1.2,
+  farm: 1.35,
+  townhall: 1.3,
 };
 
 export const BASE_RADIUS = 17;
@@ -701,16 +726,16 @@ export interface AgeSpec {
 }
 
 export const AGES: readonly AgeSpec[] = [
-  { label: 'Thời Dựng Làng', level: 1, need: null, cost: {}, seconds: 0,
-    opens: 'Nhà ở, ruộng lúa, giếng làng, kho lẫm, chòi canh' },
-  { label: 'Thời Mở Đất', level: 4, need: null, cost: { food: 400, wood: 300 }, seconds: 90,
-    opens: 'Doanh trại, lò rèn, chợ phiên và đài quan sát' },
-  { label: 'Thời Thành Luỹ', level: 9, need: 'barracks',
+  { label: 'Settler Age', level: 1, need: null, cost: {}, seconds: 0,
+    opens: 'House, farm, well, granary, watchtower' },
+  { label: 'Frontier Age', level: 4, need: null, cost: { food: 400, wood: 300 }, seconds: 90,
+    opens: 'Barracks, smithy, market and lookout' },
+  { label: 'Fortress Age', level: 9, need: 'barracks',
     cost: { food: 1200, gold: 900, stone: 400 }, seconds: 150,
-    opens: 'Trường bắn cho cung thủ, xưởng thuyền cho chuyến biển' },
-  { label: 'Thời Biển Lớn', level: 16, need: 'smithy',
+    opens: 'Archery range and dock' },
+  { label: 'Seafaring Age', level: 16, need: 'smithy',
     cost: { food: 2000, gold: 3000, stone: 700, relics: 20 }, seconds: 240,
-    opens: 'Chuồng ngựa — kỵ binh, và bậc rèn thứ hai' },
+    opens: 'Stable, cavalry and tier-two smithing' },
 ];
 
 /** Thời đại tối thiểu để xây từng loại. Thiếu nghĩa là có từ đầu. */
@@ -749,17 +774,17 @@ export interface TroopSpec {
 
 export const TROOPS: Record<TroopKind, TroopSpec> = {
   spear: {
-    label: 'Lính giáo', icon: 'spear', from: 'barracks',
+    label: 'Spearmen', icon: 'spear', from: 'barracks',
     hp: 34, dps: 7, speed: 2.7, range: 1.4,
     cost: { food: 40, wood: 20 }, seconds: 12, upkeep: 0.028, perLevel: 3,
   },
   archer: {
-    label: 'Cung thủ', icon: 'bow', from: 'archery',
+    label: 'Archers', icon: 'bow', from: 'archery',
     hp: 20, dps: 6, speed: 2.5, range: 9, cost: { food: 30, wood: 45 },
     seconds: 16, upkeep: 0.034, perLevel: 3,
   },
   horse: {
-    label: 'Kỵ binh', icon: 'horse', from: 'stable',
+    label: 'Cavalry', icon: 'horse', from: 'stable',
     hp: 58, dps: 10, speed: 4.4, range: 1.6, cost: { food: 80, gold: 60 },
     seconds: 24, upkeep: 0.058, perLevel: 2,
   },
@@ -825,17 +850,17 @@ export interface VoyageSpec {
 
 export const VOYAGES: readonly VoyageSpec[] = [
   {
-    id: 'coast', label: 'Ven bờ', blurb: 'Một người, một phút. Chắc chắn có hàng.',
+    id: 'coast', label: 'Coast', blurb: 'Always pays',
     icon: 'boot', crew: 1, seconds: 60, food: 18,
     gold: [70, 120], relics: [0, 1], empty: 0, lost: 0,
   },
   {
-    id: 'reef', label: 'Rạn ngầm', blurb: 'Hai người. Một phần năm số chuyến về tay không.',
+    id: 'reef', label: 'Reef', blurb: '1 in 5 comes back empty',
     icon: 'compass', crew: 2, seconds: 210, food: 70,
     gold: [360, 620], relics: [4, 9], empty: 0.2, lost: 0,
   },
   {
-    id: 'deep', label: 'Biển sâu', blurb: 'Ba người, bảy phút. Có chuyến thiếu một người về.',
+    id: 'deep', label: 'Deep sea', blurb: 'May lose a crew member',
     icon: 'relics', crew: 3, seconds: 420, food: 160,
     gold: [1500, 2600], relics: [22, 40], empty: 0.24, lost: 0.12,
   },
@@ -843,8 +868,8 @@ export const VOYAGES: readonly VoyageSpec[] = [
 
 /** Tên hòn đảo đoàn vừa ghé. Thuần kể chuyện — nhưng thiếu nó thì mọi chuyến giống hệt nhau. */
 export const VOYAGE_PLACES = [
-  'Hòn Mực', 'Bãi Xương Cá', 'Đá Bảy Chị Em', 'Vụng Tàu Chìm', 'Cồn Chim Lạc',
-  'Mũi Sóng Thần', 'Rạn Gãy', 'Đảo Không Tên', 'Vịnh Đèn Cũ', 'Bãi Neo Hoang',
+  'Squid Rock', 'Fishbone Shoal', 'Seven Sisters', 'Wreck Cove', 'Lost Bird Bar',
+  'Tidal Cape', 'Broken Reef', 'Nameless Isle', 'Old Lantern Bay', 'Lonely Anchorage',
 ] as const;
 
 // ------------------------------------------------------------------ thú dữ
@@ -875,13 +900,13 @@ export interface BeastSpec {
 }
 
 export const BEASTS: Record<BeastKind, BeastSpec> = {
-  wolf: { label: 'Bầy sói', den: 'Hang sói', color: 0x8d96a3, size: 0.95, pack: 4 },
-  boar: { label: 'Lợn lòi', den: 'Ổ lợn lòi', color: 0x80604a, size: 1.05, pack: 3 },
-  bear: { label: 'Gấu núi', den: 'Hang gấu', color: 0x54423a, size: 1.5, pack: 2 },
-  panther: { label: 'Báo cát', den: 'Ổ báo cát', color: 0xd2a55e, size: 1.1, pack: 3 },
-  croc: { label: 'Cá sấu đầm', den: 'Vũng cá sấu', color: 0x5d7a45, size: 1.15, pack: 3, shape: [1.35, 0.55, 1.6] },
-  polar: { label: 'Gấu tuyết', den: 'Hang gấu tuyết', color: 0xe8eef2, size: 1.55, pack: 2 },
-  salamander: { label: 'Kỳ nhông lửa', den: 'Ổ kỳ nhông lửa', color: 0xe8552c, size: 1.0, pack: 4, shape: [1.2, 0.6, 1.5] },
+  wolf: { label: 'Wolves', den: 'Wolf den', color: 0x8d96a3, size: 0.95, pack: 4 },
+  boar: { label: 'Boars', den: 'Boar wallow', color: 0x80604a, size: 1.05, pack: 3 },
+  bear: { label: 'Bears', den: 'Bear cave', color: 0x54423a, size: 1.5, pack: 2 },
+  panther: { label: 'Sand cats', den: 'Sand cat lair', color: 0xd2a55e, size: 1.1, pack: 3 },
+  croc: { label: 'Crocodiles', den: 'Crocodile pool', color: 0x5d7a45, size: 1.15, pack: 3, shape: [1.35, 0.55, 1.6] },
+  polar: { label: 'Snow bears', den: 'Snow bear cave', color: 0xe8eef2, size: 1.55, pack: 2 },
+  salamander: { label: 'Fire lizards', den: 'Fire lizard nest', color: 0xe8552c, size: 1.0, pack: 4, shape: [1.2, 0.6, 1.5] },
 };
 
 /** Mỗi vùng đất nuôi một loài. Kiểu `Record<BiomeId, …>` để thêm vùng mới mà quên loài là lỗi biên dịch. */

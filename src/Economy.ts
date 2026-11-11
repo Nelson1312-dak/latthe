@@ -26,7 +26,7 @@ import type {
   TroopKind, Troops, Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
 } from './types';
 import { TROOP_KINDS } from './types';
-import { biomeAt, onRoad } from './world';
+import { biomeAt, siteOf } from './world';
 import { resolveVoyage, voyageSpec } from './voyage';
 import { denLoot, denPower, huntLosses, huntPower } from './dens';
 import type { Den } from './dens';
@@ -578,22 +578,26 @@ export class Economy {
     // do phải là lý do thật chứ không phải "chồng lên công trình khác". Đang dời thì bỏ qua.
     const tran = BUILD_LIMIT[type];
     if (tran && !boQua && this.countOf(type) >= tran) {
-      return `Đã đủ ${tran} ${BUILDINGS[type].label.toLowerCase()}`;
+      return `Limit of ${tran} reached`;
     }
-    if (this.buildingNear(cx, cz, r, boQua)) return 'Chồng lên công trình khác';
+    if (this.buildingNear(cx, cz, r, boQua)) return 'Overlaps another building';
     if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) {
-      return `Cần căn cứ cấp ${BUILD_MIN_LEVEL[type]}`;
+      return `Needs base level ${BUILD_MIN_LEVEL[type]}`;
     }
     const doi = BUILD_MIN_AGE[type] ?? 0;
-    if (this.state.age < doi) return `Cần ${AGES[doi - 1].label}`;
-    if (!revealed) return 'Chưa vén tới đây';
-    // Lòng đường để trống: đó là làn giặc đi, và cũng là đường bắn của chòi canh.
-    if (onRoad(cx, cz)) return 'Không xây trên đường';
+    if (this.state.age < doi) return `Needs ${AGES[doi - 1].label}`;
+    if (!revealed) return 'Still under fog';
     // Trạm trung chuyển và đài quan sát sống bằng việc đứng xa; mọi thứ khác phải nằm
     // trong vành căn cứ.
     if (type !== 'outpost' && type !== 'lookout' && Math.hypot(cx, cz) > this.baseRadius()) {
-      return 'Ngoài vành căn cứ';
+      return 'Outside the base ring';
     }
+    // Đất bằng xét SAU CÙNG: nó là phép thử đắt nhất (đọc cao độ cả chục đỉnh lưới), và
+    // con bot dò chỗ thì gọi hàm này hàng nghìn lần cho một căn nhà.
+    const dat = siteOf(cx, cz, r);
+    if (dat === 1) return 'Ground too steep';
+    if (dat === 2) return 'Too close to water';
+    if (dat === 3) return 'Too close to lava';
     return null;
   }
 
@@ -605,8 +609,8 @@ export class Economy {
    * miễn phí thì một đài vén được cả bản đồ).
    */
   moveBlock(b: Building, cx: number, cz: number, revealed: boolean): string | null {
-    if (b.type === 'townhall') return 'Thủ phủ không dời được';
-    if (b.type === 'outpost' || b.type === 'lookout') return 'Công trình này không dời được';
+    if (b.type === 'townhall') return 'The Town Hall stays put';
+    if (b.type === 'outpost' || b.type === 'lookout') return 'This building cannot move';
     return this.placeBlock(cx, cz, b.type, revealed, b.id);
   }
 
@@ -751,11 +755,11 @@ export class Economy {
 
   /** Vì sao chưa săn được hang này; null là săn được. */
   huntBlock(d: Den): string | null {
-    if (this.isHunted(d.id)) return 'Hang này đã dẹp xong';
+    if (this.isHunted(d.id)) return 'Den already cleared';
     const co = this.huntPower();
-    if (co <= 0) return 'Chưa có quân — nuôi lính ở doanh trại trước';
+    if (co <= 0) return 'No army — train troops first';
     const can = denPower(d);
-    if (co < can) return `Cần ${can} sức quân, mới có ${co}`;
+    if (co < can) return `Needs ${can} army power — you have ${co}`;
     return null;
   }
 
@@ -933,18 +937,18 @@ export class Economy {
   /** Vì sao chưa lên thời đại được, hoặc null nếu lên được ngay. */
   ageBlock(): string | null {
     const n = this.nextAge();
-    if (!n) return 'Đã tới thời đại cuối';
-    if (this.state.ageLeft > 0) return 'Đang chuyển thời đại';
-    if (this.state.level < n.level) return `Căn cứ phải cấp ${n.level}`;
+    if (!n) return 'Final age reached';
+    if (this.state.ageLeft > 0) return 'Advancing…';
+    if (this.state.level < n.level) return `Needs base level ${n.level}`;
     if (n.need && !this.state.buildings.some((b) => b.type === n.need)) {
-      return `Phải có ${BUILDINGS[n.need].label.toLowerCase()}`;
+      return `Requires ${BUILDINGS[n.need].label.toLowerCase()}`;
     }
     // Kho nhỏ hơn cái giá thì gom tới bao giờ cũng không đủ. Nói thẳng ra, không thì người
     // chơi ngồi nhìn kho đầy mà nút vẫn xám — bản mô phỏng kẹt đúng chỗ này suốt hai tiếng.
     for (const k of RESOURCE_KINDS) {
-      if ((n.cost[k] ?? 0) > this.state.storageLimit) return 'Kho chưa đủ chứa — nâng kho lẫm';
+      if ((n.cost[k] ?? 0) > this.state.storageLimit) return 'Storage too small — upgrade granaries';
     }
-    if (!this.canAfford(n.cost)) return 'Chưa đủ của';
+    if (!this.canAfford(n.cost)) return 'Not enough resources';
     return null;
   }
 
@@ -986,12 +990,12 @@ export class Economy {
   /** Vì sao chưa huấn luyện được, hoặc null. */
   trainBlock(kind: TroopKind): string | null {
     const spec = TROOPS[kind];
-    if (this.sumLevels(spec.from) === 0) return `Cần ${BUILDINGS[spec.from].label.toLowerCase()}`;
+    if (this.sumLevels(spec.from) === 0) return `Requires ${BUILDINGS[spec.from].label.toLowerCase()}`;
     if (this.troopHave(kind) >= this.troopCap(kind)) {
-      return `Hết chỗ (${this.troopCap(kind)}) — nâng ${BUILDINGS[spec.from].label.toLowerCase()}`;
+      return `Full (${this.troopCap(kind)}) — upgrade ${BUILDINGS[spec.from].label.toLowerCase()}`;
     }
-    if (this.state.train.length >= 8) return 'Hàng đợi đã đầy';
-    if (!this.canAfford(spec.cost)) return 'Chưa đủ của';
+    if (this.state.train.length >= 8) return 'Queue is full';
+    if (!this.canAfford(spec.cost)) return 'Not enough resources';
     return null;
   }
 
@@ -1074,10 +1078,10 @@ export class Economy {
   }
 
   smithBlock(which: 'attack' | 'armour'): string | null {
-    if (this.sumLevels('smithy') === 0) return 'Cần lò rèn';
+    if (this.sumLevels('smithy') === 0) return 'Requires smithy';
     const bac = this.state.smith[which];
-    if (bac >= this.smithCap()) return 'Hết bậc của thời đại này';
-    if (!this.canAfford(this.smithCost(bac))) return 'Chưa đủ của';
+    if (bac >= this.smithCap()) return 'Maxed for this age';
+    if (!this.canAfford(this.smithCost(bac))) return 'Not enough resources';
     return null;
   }
 
@@ -1103,15 +1107,15 @@ export class Economy {
    * nút xám không nói gì cả, còn "cần 3 người ở nhà" thì vừa là lời từ chối vừa là chỉ dẫn.
    */
   voyageBlock(band: VoyageBand): string | null {
-    if (this.state.voyage) return 'Đang có một chuyến ngoài khơi';
+    if (this.state.voyage) return 'A voyage is already out';
     const s = voyageSpec(band);
     const co = this.atHome();
     // Phải chừa lại một người. Làng trống không thì sản xuất đứng hẳn và sức thủ tụt
     // xuống đáy — đó không còn là một canh bạc, đó là một cái bẫy.
     // Câu phải NGẮN: nó in vừa một dòng rộng chừng 120 điểm ảnh dưới tên chuyến, dài hơn
     // là bị cắt mất đúng cái con số người chơi cần đọc.
-    if (co - s.crew < 1) return `Cần ${s.crew + 1} người ở nhà`;
-    if (this.state.inv.food < s.food) return `Thiếu ${Math.ceil(s.food - this.state.inv.food)} lương`;
+    if (co - s.crew < 1) return `Needs ${s.crew + 1} villagers at home`;
+    if (this.state.inv.food < s.food) return `Short ${Math.ceil(s.food - this.state.inv.food)} food`;
     return null;
   }
 

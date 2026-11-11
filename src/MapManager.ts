@@ -24,7 +24,7 @@ import type { BiomeId, Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
   GRID_STEP, biomeAt, chunkKey, chunkOf, chunkRng, groundAt, hash2, levelAtCenter,
-  nodePool, onRoad, patchesOf,
+  nodePool, oldAxis, patchesOf,
 } from './world';
 
 /*
@@ -470,7 +470,8 @@ export class MapManager {
       for (let k = 0; k < soNen; k += 1) {
         const x = Math.round(ox + 5 + r() * (CHUNK - 10));
         const z = Math.round(oz + 5 + r() * (CHUNK - 10));
-        if (onRoad(x, z)) continue;
+        // Đường đã bỏ, nhưng nền sinh sẵn vẫn né trục cũ: mã nền nằm trong bản lưu.
+        if (oldAxis(x, z)) continue;
         if (layout.patches.some((p) =>
           Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 4)) continue;
         // Hai nền chồng lên nhau thì bấm vào không biết trúng cái nào.
@@ -484,7 +485,12 @@ export class MapManager {
     for (let i = 0; i < 14; i += 1) {
       const x = ox + r() * CHUNK;
       const z = oz + r() * CHUNK;
-      if (onRoad(x, z)) continue;
+      /*
+       * Chỗ từng là lòng đường giờ cũng mọc cỏ — nhưng món mọc ở đó rút số từ một chuỗi
+       * RIÊNG. Bản cũ gặp lòng đường là bỏ qua trước khi rút cỡ, hướng, màu; rút những số ấy
+       * từ chuỗi chính bây giờ thì mọi bụi cỏ phía sau trong khối xê dịch.
+       */
+      const q = oldAxis(x, z) ? chunkRng(cx, cz, 73 + i) : r;
       if (layout.patches.some((p) =>
         Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 2)) continue;
       const b = biomeAt(x, z);
@@ -494,10 +500,10 @@ export class MapManager {
        * một số là mọi bụi cỏ phía sau trong khối xê dịch.
        */
       if (b === 'desert' || b === 'ashland') {
-        if (r() < 0.3) {
-          const sc = r();
-          const rot = r() * 6;
-          const m = r() < 0.5;
+        if (q() < 0.3) {
+          const sc = q();
+          const rot = q() * 6;
+          const m = q() < 0.5;
           if (b === 'desert') {
             layout.props.push({ key: 'palm', pos: [x, 0, z], scale: 0.8 + sc * 0.5, rot, color: m ? PALETTE.palm : PALETTE.cactus });
           } else if (m) {
@@ -508,9 +514,9 @@ export class MapManager {
           }
         }
       } else if (b === 'crags' || b === 'snow') {
-        if (r() < 0.5) layout.props.push({ key: 'rock', pos: [x, 0.15, z], scale: 0.18 + r() * 0.2, rot: r() * 6, color: b === 'snow' ? BIOME_TINT.snow.rock[0] : PALETTE.graniteDark });
+        if (q() < 0.5) layout.props.push({ key: 'rock', pos: [x, 0.15, z], scale: 0.18 + q() * 0.2, rot: q() * 6, color: b === 'snow' ? BIOME_TINT.snow.rock[0] : PALETTE.graniteDark });
       } else {
-        layout.props.push({ key: 'tuft', pos: [x, 0.1, z], scale: 0.55 + r() * 0.7, rot: r() * 6, color: b === 'swamp' ? BIOME_TINT.swamp.tuft : biome === 'highlands' ? 0x6f5fd0 : 0x62aa4e });
+        layout.props.push({ key: 'tuft', pos: [x, 0.1, z], scale: 0.55 + q() * 0.7, rot: q() * 6, color: b === 'swamp' ? BIOME_TINT.swamp.tuft : biome === 'highlands' ? 0x6f5fd0 : 0x62aa4e });
       }
     }
 
@@ -547,7 +553,7 @@ export class MapManager {
       const rot = rr() * 6;
       const mau = rr();
       const vung = biomeAt(x, z);
-      if (vung === 'crags' || vung === 'desert' || vung === 'highlands' || onRoad(x, z)) continue;
+      if (vung === 'crags' || vung === 'desert' || vung === 'highlands') continue;
       if (bai.some((p) => Math.hypot(p.center[0] - x, p.center[2] - z) < p.radius + 1.5)) continue;
       if (layout.plots.some((q) => Math.hypot(q.position[0] - x, q.position[2] - z) < PLOT_FLAT_R)) continue;
       if (Math.hypot(x, z) < PLOT_FLAT_R + 1) continue;

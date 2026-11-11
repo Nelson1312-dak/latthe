@@ -18,7 +18,7 @@
  *     chỉ số trong mảng.
  */
 import { KHAC, SMITH_ARMOUR, SMITH_ATTACK, TROOPS } from './config';
-import { ROAD_SPACING, hash2 } from './world';
+import { hash2 } from './world';
 import type { TroopKind, Troops, WaveKind } from './types';
 
 /** Một bước mô phỏng. Nhỏ hơn thì mượt hơn mà cũng tốn hơn; 0,1 giây là đủ cho tốc độ này. */
@@ -466,6 +466,3 @@ export function laneDirs(wave: number): readonly (readonly [number, number])[] {
 
 /** Khoảng cách đổ bộ — camera vào trận phải khung được chừng này. */
 export const BATTLE_RADIUS = SPAWN_DIST;
-
-/** Giữ ROAD_SPACING được tham chiếu: làn giặc đi bám đúng trục đường của thế giới. */
-export const LANE_SPACING = ROAD_SPACING;

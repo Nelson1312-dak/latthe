@@ -113,7 +113,7 @@ const POP_SECONDS = 0.42;
 
 
 /** Lý do "đặt được nhưng chưa đủ tiền". Giao diện so đúng chuỗi này để đổi nút thành GOM. */
-export const THIEU_VAT_LIEU = 'Chưa đủ vật liệu';
+export const THIEU_VAT_LIEU = 'Not enough materials';
 
 /**
  * Loại nào nhấc lên đặt lại được. Thủ phủ là gốc của vành căn cứ; trạm trung chuyển và đài
@@ -429,6 +429,8 @@ export class Game {
     canvas.addEventListener('pointerup', this.onPointerUp);
     canvas.addEventListener('pointercancel', this.onPointerCancel);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    // Chuột phải giờ là "bỏ mô hình đang cầm" — bảng chọn của trình duyệt không được chen vào.
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
   /**
@@ -902,7 +904,31 @@ export class Game {
     return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   }
 
+  /**
+   * Ghi chỗ con trỏ CHUỘT trên khung vẽ; ngón tay thì xoá đi.
+   *
+   * Hai kiểu ngắm cho hai kiểu tay. Chuột có một con trỏ luôn hiện và rê không tốn gì, nên
+   * mô hình mờ đi theo nó và bấm là đặt — đúng như đế chế. Ngón tay thì che mất đúng chỗ nó
+   * chỉ, và không có "rê": ở đó khung ngắm đứng yên giữa màn, bản đồ trượt bên dưới.
+   */
+  private ghiChuot(e: PointerEvent): void {
+    const la = e.pointerType === 'mouse';
+    if (la) {
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      (this.chuot ??= new THREE.Vector2()).set(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    } else {
+      this.chuot = null;
+    }
+    if (la !== this.laChuot) {
+      this.laChuot = la;
+      document.body.classList.toggle('chuot', la);
+    }
+  }
+
   private onPointerDown = (e: PointerEvent): void => {
+    this.ghiChuot(e);
     this.ngon.set(e.pointerId, { x: e.clientX, y: e.clientY });
     // Bắt con trỏ SAU khi đã ghi xong trạng thái: setPointerCapture ném lỗi khi id không
     // còn sống, và ném giữa chừng là cả cử chỉ chụm chết theo.
@@ -927,6 +953,7 @@ export class Game {
   };
 
   private onPointerMove = (e: PointerEvent): void => {
+    this.ghiChuot(e);
     const ghi = this.ngon.get(e.pointerId);
     if (ghi) { ghi.x = e.clientX; ghi.y = e.clientY; }
     // Chụm hai ngón: tỉ lệ khoảng cách đổi bao nhiêu thì khung nhìn đổi bấy nhiêu, nên
@@ -942,6 +969,11 @@ export class Game {
       return;
     }
     if (!this.dragging) {
+      // Đang cầm mô hình mờ bằng chuột: con trỏ là điểm ngắm, không phải thứ để chọn nhà.
+      if (this.ghostType && this.chuot) {
+        this.renderer.domElement.style.cursor = 'crosshair';
+        return;
+      }
       // Rê tới đâu sáng tới đó. Con trỏ đổi hình là tín hiệu rẻ nhất cho biết "bấm được".
       const id = this.pickBuilding(e);
       if (id !== this.hoveredId) {
@@ -994,6 +1026,15 @@ export class Game {
      * tới đúng chỗ ngón tay vừa chạm. Kéo vẫn dùng được như cũ.
      */
     if (this.ghostType) {
+      if (e.pointerType === 'mouse') {
+        // Chuột: mô hình mờ đã đứng sẵn dưới con trỏ. Bấm trái là đặt, bấm phải là bỏ.
+        if (e.button === 2) { this.onPlaceCancel?.(); return; }
+        if (e.button !== 0) return;
+        this.ghiChuot(e);
+        this.updateGhost();
+        this.onPlaceClick?.();
+        return;
+      }
       if (this.groundPoint(e)) {
         this.wanted.x = this.target.x + this.hitPoint.x - this.aimRaw.x;
         this.wanted.z = this.target.z + this.hitPoint.z - this.aimRaw.z;
@@ -1473,9 +1514,12 @@ export class Game {
   private ghost: THREE.Mesh | null = null;
   private ghostType: BuildingType | null = null;
   private ghostCell: [number, number] | null = null;
-  private ghostWhy: string | null = 'Chưa chọn';
+  private ghostWhy: string | null = 'No spot yet';
   /** Điểm khung ngắm chạm đất, CHƯA làm tròn — để bấm-tới-đâu-trượt-tới-đó tính độ lệch. */
   private readonly aimRaw = new THREE.Vector3();
+  /** Con trỏ chuột trên khung vẽ (toạ độ chuẩn hoá); null khi lần chạm gần nhất là ngón tay. */
+  private chuot: THREE.Vector2 | null = null;
+  private laChuot = false;
   private baseRing: THREE.Mesh | null = null;
   private rangeRings: THREE.Mesh[] = [];
 
@@ -1494,6 +1538,12 @@ export class Game {
    * có lúc ô đã đỏ mà nút vẫn còn ghi ĐẶT — một phần năm giây nói sai cũng là nói sai.
    */
   onGhost: (() => void) | null = null;
+  /** Bấm chuột trái xuống bản đồ lúc đang cầm mô hình mờ: giao diện lo việc đặt và báo. */
+  onPlaceClick: (() => void) | null = null;
+  /** Bấm chuột phải lúc đang cầm mô hình mờ: bỏ xuống. */
+  onPlaceCancel: (() => void) | null = null;
+  /** Đang ngắm bằng chuột (mô hình mờ đi theo con trỏ) hay bằng khung ngắm giữa màn. */
+  get aimByMouse(): boolean { return this.chuot !== null; }
   /** Bấm xuống chỗ đất trống, không trúng ai. Giao diện dùng nó để đóng ngăn đang mở. */
   onTapEmpty: (() => void) | null = null;
 
@@ -1541,12 +1591,16 @@ export class Game {
     this.ghost = null;
     this.ghostType = type;
     this.ghostCell = null;
-    this.ghostWhy = 'Chưa chọn';
+    this.ghostWhy = 'No spot yet';
     for (const r of this.rangeRings) this.scene.remove(r);
     this.rangeRings = [];
     if (this.baseRing) { this.scene.remove(this.baseRing); this.baseRing = null; }
     if (this.ghostCellMesh) this.ghostCellMesh.visible = type !== null;
-    if (!type) { this.updateMarkers(); return; }
+    if (!type) {
+      this.renderer.domElement.style.cursor = 'grab';
+      this.updateMarkers();
+      return;
+    }
 
     // Mô hình mờ phải là ĐÚNG căn sắp mọc lên: cùng kiểu nhà (kiểu đi theo mã), và khi
     // đang dời thì cùng cấp — không thì nhấc một căn nhà ngói cấp 5 lên lại thấy cái lều.
@@ -1590,13 +1644,14 @@ export class Game {
   }
 
   /**
-   * Ô đang ngắm: điểm giữa màn, nhích lên một phần tư chiều cao cho khỏi nằm dưới thanh
-   * xác nhận và dưới bàn tay đang cầm máy.
+   * Chỗ đang ngắm. Có chuột thì là chỗ con trỏ; không thì là điểm giữa màn, nhích lên một
+   * phần tư chiều cao cho khỏi nằm dưới thanh xác nhận và dưới bàn tay đang cầm máy.
    */
   private updateGhost(): void {
     const type = this.ghostType;
     if (!type || !this.ghost) return;
-    this.pointer.set(0, 0.22);
+    if (this.chuot) this.pointer.copy(this.chuot);
+    else this.pointer.set(0, 0.22);
     this.raycaster.setFromCamera(this.pointer, this.camera);
     if (!this.castToGround()) {
       this.ghost.visible = false;

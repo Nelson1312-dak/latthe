@@ -185,7 +185,7 @@ const XAY: BuildingType[] = ['house', 'granary', 'watchtower', 'farm', 'well', '
  */
 function deDanh(): Cost | null {
   const sau = economy.nextAge();
-  if (!sau || economy.ageBlock() !== 'Chưa đủ của') return null;
+  if (!sau || economy.ageBlock() !== 'Not enough resources') return null;
   return sau.cost;
 }
 

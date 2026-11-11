@@ -25,7 +25,7 @@
  */
 import * as THREE from 'three';
 import { BIOMES, PALETTE, POOL_COLORS } from './config';
-import { fogPaint, grain, matte, roadPaint } from './materials';
+import { fogPaint, grain, matte } from './materials';
 import {
   CHUNK, GRID_STEP, biomeWeights, chunkOf, hash2, nodeHeight, nodePool, valueNoise,
 } from './world';
@@ -84,11 +84,10 @@ export class Ground {
     // KHÔNG flatShading: pháp tuyến do buildTile tự ghi, mỗi mặt một hướng nhưng đã ghìm
     // bớt độ nghiêng — xem MAT_NGHIENG.
     m.flatShading = false;
-    // Thứ tự bọc có nghĩa: `grain` khai báo varying toạ độ thế giới mà hai lớp sau dùng lại,
+    // Thứ tự bọc có nghĩa: `grain` khai báo varying toạ độ thế giới mà lớp sương dùng lại,
     // nên nó phải ở trong cùng.
     this.mat = fogPaint(
-      roadPaint(grain(m, 6, 0.18), PALETTE.road, 2.25, 0.12, 0.35),
-      this.fogTex, this.fogOrigin, FOG_SPAN, PALETTE.fogLand);
+      grain(m, 6, 0.18), this.fogTex, this.fogOrigin, FOG_SPAN, PALETTE.fogLand);
   }
 
   /**

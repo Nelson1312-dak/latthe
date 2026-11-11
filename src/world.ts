@@ -102,53 +102,24 @@ export function heightAt(x: number, z: number, biome: BiomeId): number {
   return h;
 }
 
-/**
- * Lưới đường thưa, một trục mỗi CHUNK. Vô hạn mà không phải lưu gì.
+/*
+ * BẢN ĐỒ KHÔNG CÒN ĐƯỜNG.
  *
- * Hàm này chỉ dùng để GẠT những thứ khác ra khỏi lòng đường — nền đất, cây cối. Còn việc ô
- * nào được tô màu đường thì do MapManager quyết, bằng một phép khác hẳn: mỗi cột ô chọn
- * đúng một ô gần trục nhất. Hai phép khác nhau là có chủ ý — cái này rộng rãi một chút để
- * cây cối không mọc sát mép đường, cái kia phải chặt chẽ để con đường rộng đúng một ô.
+ * Trước bản này có một lưới đường thẳng tắp, sáu chục đơn vị một trục, chạy vô hạn theo hai
+ * chiều và cắt nhau đúng ở thủ phủ. Nó không làm gì cho cuộc chơi — dân không đi theo nó,
+ * không ai nhanh hơn trên nó — mà chỉ CẤM: cấm xây, cấm cây mọc. Và một cái lưới kẻ thước
+ * trên một hòn đảo thì đọc ra là máy sinh chứ không phải người đi mà thành.
+ *
+ * Còn lại đúng một con số và một phép thử, giữ vì DỮ LIỆU CŨ chứ không vì hình: hang thú và
+ * các nền đất sinh sẵn (mã của chúng nằm trong bản lưu) đã né các trục ấy từ lúc sinh ra,
+ * nên bỏ phép né đi là chúng xê chỗ. Không thứ gì người chơi nhìn thấy còn dùng tới hai thứ này.
  */
-export const ROAD_HALF = 2.6;
+export const LANE_SPACING = CHUNK * 2;
 
-/**
- * Khoảng cách giữa hai con đường.
- *
- * Một đường mỗi khối nghe hợp lý cho tới khi đếm: khối rộng 30 mà một ô lục giác rộng 4,16,
- * nên khối chỉ có bảy ô ngang. Lát đường rộng một ô theo cả hai trục thì 39% mặt đất là
- * đường — không còn là đường nữa mà là một cái sân. Cách hai khối thì còn chừng 9%, đủ để
- * ra một mạng đường mà vẫn là đường.
- */
-export const ROAD_SPACING = CHUNK * 2;
-
-/**
- * Gần một trục đường tới mức không nên đặt gì ở đó.
- *
- * Chỉ dùng để GẠT những thứ khác ra khỏi lòng đường — nền đất, cây cối. Còn ô nào được tô
- * màu đường thì xem hexIsRoad(): hai phép khác nhau là có chủ ý, cái này rộng rãi một chút
- * để cây không mọc sát mép, cái kia chặt chẽ để đường rộng đúng một ô.
- */
-export function onRoad(x: number, z: number): boolean {
-  const near = (v: number) => Math.abs(v - Math.round(v / ROAD_SPACING) * ROAD_SPACING) < ROAD_HALF;
+/** Điểm này từng nằm trong lòng một trục đường cũ. CHỈ để dữ liệu sinh sẵn đứng yên chỗ cũ. */
+export function oldAxis(x: number, z: number): boolean {
+  const near = (v: number) => Math.abs(v - Math.round(v / LANE_SPACING) * LANE_SPACING) < 2.6;
   return near(x) || near(z);
-}
-
-/**
- * Ô lục giác ở (x, z) có phải một ô ĐƯỜNG không.
- *
- * Mỗi trục đường chỉ lấy ĐÚNG MỘT hàng ô. Lấy theo kiểu "cách trục dưới ngưỡng X" thì sai,
- * vì ô xếp so le: cột chẵn có một ô nằm đúng trên trục, cột lẻ có hai ô cách trục nửa bước
- * về hai phía. Ngưỡng nào với tới được cột lẻ cũng sẽ ôm cả hai ô của nó, nên đường chạy
- * 1 ô rồi 2 ô rồi 1 ô và đọc ra như vệt loang. So trong một cửa sổ nửa mở — một đầu mở,
- * một đầu đóng — thì hai ô cách đều vẫn chỉ chọn được một.
- */
-export function hexIsRoad(x: number, z: number): boolean {
-  const trong = (v: number, buoc: number) => {
-    const d = v - Math.round(v / ROAD_SPACING) * ROAD_SPACING;
-    return d > -buoc / 2 && d <= buoc / 2;
-  };
-  return trong(x, HEX_STEP_X) || trong(z, HEX_STEP_Z);
 }
 
 /**
@@ -229,18 +200,6 @@ export function cellCenter(i: number, j: number): [number, number] {
 
 export const cellKey = (i: number, j: number): string => `${i},${j}`;
 
-/**
- * Cao độ mặt trên của một ô CHƯA san, theo tâm ô.
- *
- * Nhấp nhô 0,05–0,12 theo hàm băm: heightAt() là đường cong trơn, các ô cạnh nhau gần như
- * bằng nhau nên không có mép nào để ánh sáng bắt. Ô đường thì không nhấp nhô — một lối đi
- * gập ghềnh thì không ra lối đi.
- */
-export function naturalTop(hx: number, hz: number): number {
-  const h = heightAt(hx, hz, biomeAt(hx, hz));
-  if (hexIsRoad(hx, hz)) return h + 0.02;
-  return h + 0.05 + hash2(Math.round(hx * 3), Math.round(hz * 3), 23) * 0.07;
-}
 
 
 // ------------------------------------------------- mặt đất liền mạch
@@ -376,14 +335,6 @@ export function heightBlended(x: number, z: number): { h: number; crags: number;
   return { h, crags, dam, lua };
 }
 
-/** Mức "đang là lòng đường" ở một điểm, 0 tới 1. Mép mềm nửa đơn vị. */
-export function roadMask(x: number, z: number): number {
-  const gan = (v: number) => {
-    const d = Math.abs(v - Math.round(v / ROAD_SPACING) * ROAD_SPACING);
-    return 1 - muot(Math.min(1, Math.max(0, (d - (ROAD_HALF - 0.6)) / 0.6)));
-  };
-  return Math.max(gan(x), gan(z));
-}
 
 /**
  * Cao độ tại MỘT ĐỈNH LƯỚI. Đây là nơi duy nhất sinh ra con số; `groundAt` chỉ nội suy
@@ -414,12 +365,9 @@ function nodeCalc(i: number, j: number): number {
   // thì đọc ra như lỗi, nên nó phải tan dần đúng ở chỗ hai biến sinh thái gặp nhau.
   const bac = Math.round(h / CRAG_STEP) * CRAG_STEP;
   let y = h * (1 - crags) + bac * crags;
-  // Lòng đường phẳng: đường gập ghềnh thì không ra đường.
-  const duong = roadMask(x, z);
-  y += (hash2(i, j, 23) - 0.5) * (FACET + (FACET_CRAGS - FACET) * crags) * (1 - duong);
-  // Ghim vào bậc, trừ lòng đường — đường phải phẳng chứ không giật từng bậc.
-  const ghim = Math.round(y / STEP_Y) * STEP_Y;
-  const y0 = y * duong + ghim * (1 - duong);
+  y += (hash2(i, j, 23) - 0.5) * (FACET + (FACET_CRAGS - FACET) * crags);
+  // Ghim vào bậc: mặt đất là những thềm thấp, không phải một tấm vải gợn sóng.
+  const y0 = Math.round(y / STEP_Y) * STEP_Y;
   /*
    * VŨNG. Không dựng một mặt nước riêng: đỉnh nào nằm dưới mực thì DÂNG lên đúng mực, thế là
    * cả đáy trũng thành một mặt phẳng, và mặt đất tô nó màu nước. Một mặt nước rời sẽ phải
@@ -468,6 +416,57 @@ export function groundAt(x: number, z: number): number {
 }
 
 /**
+ * Chênh cao tối đa dưới chân một công trình: bốn bậc thềm.
+ *
+ * Đo trên chính trường cao độ này (đĩa bán kính 17 quanh thủ phủ): ở 0,8 thì nhà nhỏ đặt
+ * được gần như mọi chỗ, nhà cỡ vừa mất chừng 3% chỗ, nhà lớn mất 12%, thủ phủ mất gần 30% —
+ * tức là luật có CẮN, và cắn đúng vào thứ to. Vách đá và núi tuyết thì nhà lớn gần như
+ * không còn chỗ nào, còn chòi canh vẫn len được: đúng cái đọc "trên núi chỉ dựng được chòi".
+ * Xuống 0,6 là nhà cỡ vừa mất một phần năm đất ngay trong làng — người chơi sẽ thấy mình bị
+ * phạt vì một thứ không nhìn ra bằng mắt.
+ */
+export const FLAT_MAX = 0.8;
+
+/** 0 dựng được · 1 dốc quá · 2 dính nước đầm · 3 dính dung nham. */
+export type Site = 0 | 1 | 2 | 3;
+
+/**
+ * Chỗ này có dựng được một công trình bán kính `r` không.
+ *
+ * Mặt đất là những tam giác phẳng nên cực trị chỉ nằm ở ĐỈNH LƯỚI hoặc trên VÀNH: xét mọi
+ * đỉnh lọt trong vòng tròn cộng tám điểm trên vành là đủ, không cần rải mẫu dày. Nước thì
+ * xét rộng hơn một chút — mọi đỉnh của các ô mà vòng tròn chạm tới — vì mép vũng nằm giữa
+ * hai đỉnh, và một căn nhà đứng "sát bờ" mà nửa nền chìm trong đầm thì trông là lỗi.
+ */
+export function siteOf(x: number, z: number, r: number): Site {
+  const i0 = Math.floor((x - r) / GRID_STEP);
+  const i1 = Math.ceil((x + r) / GRID_STEP);
+  const j0 = Math.floor((z - r) / GRID_STEP);
+  const j1 = Math.ceil((z + r) / GRID_STEP);
+  let lo = groundAt(x, z);
+  let hi = lo;
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      const h = nodeCalc(i, j);
+      if (uot > 0) return 2;
+      if (uot < 0) return 3;
+      const dx = i * GRID_STEP - x;
+      const dz = j * GRID_STEP - z;
+      if (dx * dx + dz * dz > r * r) continue;
+      if (h < lo) lo = h;
+      if (h > hi) hi = h;
+    }
+  }
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4;
+    const h = groundAt(x + Math.cos(a) * r, z + Math.sin(a) * r);
+    if (h < lo) lo = h;
+    if (h > hi) hi = h;
+  }
+  return hi - lo > FLAT_MAX + 1e-6 ? 1 : 0;
+}
+
+/**
  * Cao độ tâm một nền đất hay một bãi.
  *
  * PHẢI gọi `groundAt`, không gọi thẳng `heightAt`. Mặt đất giờ đã hoà cao độ giữa các biến
@@ -494,16 +493,16 @@ export function patchFlatR(p: Patch): number {
 
 /** Mỗi loại tài nguyên một kiểu bãi, với tên gọi và cỡ riêng. */
 const PATCH_SPEC: Record<ResourceKind, { label: string; radius: number; spots: number; base: number }> = {
-  wood: { label: 'Rừng', radius: 5.6, spots: 6, base: 1 },
-  food: { label: 'Ruộng', radius: 5.2, spots: 5, base: 1 },
-  stone: { label: 'Mỏ đá', radius: 4.8, spots: 5, base: 0.9 },
-  gold: { label: 'Bãi vàng', radius: 4.4, spots: 4, base: 0.5 },
+  wood: { label: 'Forest', radius: 5.6, spots: 6, base: 1 },
+  food: { label: 'Field', radius: 5.2, spots: 5, base: 1 },
+  stone: { label: 'Quarry', radius: 4.8, spots: 5, base: 0.9 },
+  gold: { label: 'Gold field', radius: 4.4, spots: 4, base: 0.5 },
   // Pha lê sản lượng thấp nhưng mỗi mảnh đáng bảy lần một khúc gỗ. Số cũ là 0,3 và đo ra
   // thì đó là một cái bẫy: rừng pha lê cách nhà 122 đơn vị có hệ số giàu 0,78 — THẤP HƠN
   // rừng gỗ ngay cạnh nhà (1,40) — nên ai đi xa lấy pha lê đều kiếm ít hơn người ở nhà.
   // Cả bốn giờ chơi không một mảnh nào vào kho. 0,55 đặt nó cao hơn hàng gần chừng 1,3 lần
   // sau khi trừ quãng đi: đủ để đi là đáng, chưa đủ để thành lựa chọn duy nhất.
-  relics: { label: 'Rừng pha lê', radius: 4.8, spots: 4, base: 0.55 },
+  relics: { label: 'Crystal grove', radius: 4.8, spots: 4, base: 0.55 },
 };
 
 export function patchLabel(kind: ResourceKind): string {

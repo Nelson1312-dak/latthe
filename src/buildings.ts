@@ -18,7 +18,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { PALETTE } from './config';
+import { MODEL_SCALE, PALETTE } from './config';
 import { grain, METALNESS, ROUGHNESS } from './materials';
 import { roundedBox } from './shapes';
 import type { BuildingType, Vec3 } from './types';
@@ -175,7 +175,7 @@ class Kit {
   build(): THREE.BufferGeometry {
     const g = mergeGeometries(this.parts, false);
     for (const p of this.parts) p.dispose();
-    if (!g) throw new Error('Không hàn được hình công trình');
+    if (!g) throw new Error('Failed to merge building geometry');
     return g;
   }
 }
@@ -810,6 +810,10 @@ export function buildingGeometry(type: BuildingType, level: number, co = 0,
       dock: () => dock(level),
     };
     g = lam[type]();
+    // To lên theo diện tích chiếm đất. Nhân một lần lúc dựng rồi đệm lại, nên không ai
+    // phải nhớ nhân thêm ở chỗ vẽ — kể cả mô hình mờ lúc ngắm chỗ.
+    const s = MODEL_SCALE[type];
+    if (s !== 1) g.scale(s, s, s);
     CACHE.set(key, g);
   }
   return g;

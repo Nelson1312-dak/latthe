@@ -61,7 +61,7 @@ export const TIERS: Record<Tier, TierSpec> = {
     // Đã thử cho bậc này chạy qua hậu kỳ mà bỏ AO, để nó cũng được lọc màu ấm: đo ra
     // 1,54 → 2,39 ms, tức đắt thêm hơn nửa, chỉ vì phải cấp một target đa mẫu rồi phân giải
     // nó. Quá nhiều cho một bậc mà cả lý do tồn tại là chạy được trên máy yếu.
-    label: 'Thấp', dpr: 1, dprMax: 2, post: false, aoScale: 0, aoSamples: 0,
+    label: 'Low', dpr: 1, dprMax: 2, post: false, aoScale: 0, aoSamples: 0,
     shadowMap: 1024, shadowRadius: 1.5,
     // Không có bầu trời làm nguồn sáng: đo ở 1920x1080, phóng xa nhất, GTX 1660 SUPER thì nó
     // tốn 0,84 trên tổng 2,4 ms — hơn một phần ba cả khung hình, cho một bậc mà cả lý do tồn
@@ -70,7 +70,7 @@ export const TIERS: Record<Tier, TierSpec> = {
     bevel: false, sway: false, cloudDetail: 0, glow: false, tilt: false,
   },
   medium: {
-    label: 'Vừa', dpr: 1.5, dprMax: 2.5, post: true, aoScale: 0.5, aoSamples: 8,
+    label: 'Medium', dpr: 1.5, dprMax: 2.5, post: true, aoScale: 0.5, aoSamples: 8,
     shadowMap: 2048, shadowRadius: 2,
     env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: false, tilt: false,
@@ -82,7 +82,7 @@ export const TIERS: Record<Tier, TierSpec> = {
    * 0,1 ms và mô hình thu nhỏ gần như không tốn gì, nên giữ cả hai.
    */
   high: {
-    label: 'Cao', dpr: 2, dprMax: 3, post: true, aoScale: 0.75, aoSamples: 12,
+    label: 'High', dpr: 2, dprMax: 3, post: true, aoScale: 0.75, aoSamples: 12,
     shadowMap: 4096, shadowRadius: 3,
     env: true, grain: true, haze: true,
     bevel: true, sway: true, cloudDetail: 1, glow: true, tilt: true,

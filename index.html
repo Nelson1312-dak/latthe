@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Quần Đảo Vô Tận</title>
+<title>Endless Archipelago</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" href="/favicon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -27,39 +27,39 @@
   <div class="res" id="resbar"></div>
   <div class="spacer"></div>
   <div class="group">
-    <button class="stat lang-chip" id="lang-chip" title="Đổi tên làng và màu cờ">
-      <i class="dot" id="lang-dot" aria-hidden="true"></i><strong id="lang-hud">Làng</strong>
+    <button class="stat lang-chip" id="lang-chip" title="Rename village and flag colour">
+      <i class="dot" id="lang-dot" aria-hidden="true"></i><strong id="lang-hud">Village</strong>
     </button>
-    <div class="stat" title="Cấp quần đảo"><small>Cấp</small><strong id="level">1</strong></div>
-    <div class="stat reach" id="reach"><small>Xa</small><strong id="reach-val">0</strong></div>
-    <button class="icon" id="map-btn" title="Bản đồ nhỏ" aria-label="Bật hoặc tắt bản đồ nhỏ"
+    <div class="stat" title="Base level"><small>Lv</small><strong id="level">1</strong></div>
+    <div class="stat reach" id="reach"><small>Reach</small><strong id="reach-val">0</strong></div>
+    <button class="icon" id="map-btn" title="Minimap" aria-label="Toggle minimap"
             aria-pressed="false"></button>
-    <button class="icon" id="gfx" title="Cài đặt" aria-label="Cài đặt và đồ hoạ"
+    <button class="icon" id="gfx" title="Settings" aria-label="Settings and graphics"
             aria-haspopup="dialog" aria-expanded="false" aria-controls="gfx-menu"></button>
-    <button class="icon" id="mute" title="Bật/tắt âm" aria-label="Bật hoặc tắt âm"></button>
-    <button class="icon" id="pause" title="Tạm dừng (Esc)" aria-label="Tạm dừng"></button>
+    <button class="icon" id="mute" title="Sound" aria-label="Toggle sound"></button>
+    <button class="icon" id="pause" title="Pause (Esc)" aria-label="Pause"></button>
   </div>
 </header>
 
 <!-- ------------------------------------------------------------------ bảng đồ hoạ -->
-<div class="gfx glass" id="gfx-menu" role="dialog" aria-label="Cài đặt và đồ hoạ" hidden>
-  <!-- Màn hẹp: tên làng, cấp, quãng xa và nút âm dọn vào đây (xem UIManager.xepHud). -->
+<div class="gfx glass" id="gfx-menu" role="dialog" aria-label="Settings and graphics" hidden>
+  <!-- Quãng xa, mốc kế và nút âm ở đây; màn hẹp thêm tên làng và cấp (xem UIManager.xepHud). -->
   <div class="gfx-extra" id="gfx-extra" hidden></div>
-  <div class="gfx-head"><small>Đồ hoạ</small><span id="gfx-now"></span></div>
-  <div class="seg" id="gfx-seg" role="radiogroup" aria-label="Bậc đồ hoạ">
-    <button data-q="auto" role="radio">Tự động</button>
-    <button data-q="low" role="radio">Thấp</button>
-    <button data-q="medium" role="radio">Vừa</button>
-    <button data-q="high" role="radio">Cao</button>
+  <div class="gfx-head"><small>Graphics</small><span id="gfx-now"></span></div>
+  <div class="seg" id="gfx-seg" role="radiogroup" aria-label="Graphics quality">
+    <button data-q="auto" role="radio">Auto</button>
+    <button data-q="low" role="radio">Low</button>
+    <button data-q="medium" role="radio">Medium</button>
+    <button data-q="high" role="radio">High</button>
   </div>
   <button class="gfx-tilt" id="gfx-tilt" role="switch" aria-checked="false">
-    <span>Mô hình thu nhỏ</span><i class="sw" aria-hidden="true"></i>
+    <span>Tilt-shift</span><i class="sw" aria-hidden="true"></i>
   </button>
   <p class="gfx-note" id="gfx-note"></p>
 </div>
 
 <!-- ------------------------------------------------------------------ minimap -->
-<aside class="map" id="mapbox" title="Bấm để đưa camera tới đó">
+<aside class="map" id="mapbox" title="Click to move the camera there">
   <canvas id="minimap" width="168" height="168"></canvas>
 </aside>
 
@@ -77,7 +77,7 @@
   <aside class="wave" id="wave">
     <i class="wave-ico" id="wave-ico" aria-hidden="true"></i>
     <div class="wave-when">
-      <small id="wave-kind">Cướp biển</small>
+      <small id="wave-kind">Raid</small>
       <strong id="wave-clock">—</strong>
     </div>
     <div class="wave-mix" id="wave-mix"></div>
@@ -85,7 +85,7 @@
       <strong id="wave-verdict">—</strong>
       <div class="wave-bar"><i id="wave-fill"></i></div>
     </div>
-    <button class="wave-hire" id="wave-hire" hidden>Thuê lính</button>
+    <button class="wave-hire" id="wave-hire" hidden>Hire guards</button>
   </aside>
 
   <!-- ------------------------------------------------------------- báo sự kiện -->
@@ -121,34 +121,34 @@
 <!-- --------------------------------------------------------- bảng quay lại -->
 <div class="veil" id="welcome" hidden>
   <div class="card">
-    <h2>Trong lúc bạn đi vắng</h2>
+    <h2>While you were away</h2>
     <p class="away" id="away-time"></p>
     <ul class="loot" id="away-loot"></ul>
     <p class="capped" id="away-capped" hidden></p>
-    <button class="primary" id="away-ok">Nhận</button>
+    <button class="primary" id="away-ok">Collect</button>
   </div>
 </div>
 
 <div class="veil veil-soft" id="paused" hidden>
   <div class="card">
-    <h2>Tạm dừng</h2>
-    <p class="away">Không ai làm việc cả. Nhấn Esc hoặc bấm nút dưới để chạy tiếp.</p>
-    <button class="primary" id="resume">Chạy tiếp</button>
+    <h2>Paused</h2>
+    <p class="away">Nothing moves. Press Esc or the button to resume.</p>
+    <button class="primary" id="resume">Resume</button>
   </div>
 </div>
 
 <!-- ------------------------------------------------------------------ lập làng -->
 <div class="veil" id="lap-lang" hidden>
   <div class="card lang">
-    <h2>Lập làng</h2>
-    <p class="away">Đặt cho hòn đảo của bạn một cái tên và một màu cờ. Đổi lại lúc nào cũng được.</p>
+    <h2>Found your village</h2>
+    <p class="away">Pick a name and a flag colour. You can change both later.</p>
     <div class="lang-ten">
       <input id="lang-ten" maxlength="24" autocomplete="off" spellcheck="false"
-             placeholder="Tên làng" aria-label="Tên làng" />
-      <button class="icon" id="lang-boc" title="Bốc một tên khác" aria-label="Bốc một tên khác"></button>
+             placeholder="Village name" aria-label="Village name" />
+      <button class="icon" id="lang-boc" title="Another name" aria-label="Another name"></button>
     </div>
-    <div class="lang-mau" id="lang-mau" role="radiogroup" aria-label="Màu cờ"></div>
-    <button class="primary" id="lang-ok">Vào đảo</button>
+    <div class="lang-mau" id="lang-mau" role="radiogroup" aria-label="Flag colour"></div>
+    <button class="primary" id="lang-ok">Start</button>
   </div>
 </div>
 
