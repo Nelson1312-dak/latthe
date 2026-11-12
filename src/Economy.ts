@@ -13,19 +13,21 @@ import {
   BUILD_MIN_LEVEL, HIRE_COST, HIRE_GROWTH, HOUSING_FROM_TOWNHALL, HOUSING_PER_HOUSE,
   EXPORT_KEEP, RESERVE_HEADROOM, RESOURCES, SURPLUS_RATE_PER_LEVEL, SURPLUS_RESERVE, SAVE_KEY,
   AGES, BASE_RADIUS, BASE_RADIUS_PER_LEVEL, BUILD_MIN_AGE, DESERT_SECONDS, FOOTPRINT,
-  SMITH_COST, SMITH_GROWTH, SMITH_MAX_AGE2, SMITH_MAX_AGE4, TROOPS,
+  SMITH_COST, SMITH_GROWTH, SMITH_MAX_AGE2, SMITH_MAX_AGE4, SMITH_MAX_AGE5, TROOPS,
+  AGE_FARM, AGE_STORAGE, ageBonus,
   VILLAGE_COLORS, WAVE_EVERY_SECONDS, WAVE_FIRST_SECONDS, VOYAGES,
   SPEED_PER_LEVEL, STARTING,
   STORAGE_PER_GRANARY, TRAIN_COST, TRAIN_GROWTH,
   DOCK_VOYAGE_CAP, DOCK_VOYAGE_PER_LEVEL, FARM_FOOD_PER_LEVEL, LOOKOUT_RANGE_BASE,
   LOOKOUT_RANGE_PER_LEVEL, MARKET_PRICE_CAP, MARKET_PRICE_PER_LEVEL, MARKET_RATE_PER_LEVEL,
   WELL_SPEED_CAP, WELL_SPEED_PER_LEVEL, BUILD_LIMIT,
+  RESERVE_STORAGE_SHARE, TAX_PER_HALL_LEVEL, TAX_PER_VILLAGER, tenLangSangAnh,
 } from './config';
 import type {
   Building, BuildingType, Cost, GameState, Inventory, OfflineReport, ResourceKind, Threat,
   TroopKind, Troops, Unit, Voyage, VoyageBand, VoyageResult, WaveResult,
 } from './types';
-import { TROOP_KINDS } from './types';
+import { TROOP_KINDS, noTroops } from './types';
 import { biomeAt, siteOf } from './world';
 import { resolveVoyage, voyageSpec } from './voyage';
 import { denLoot, denPower, huntLosses, huntPower } from './dens';
@@ -34,6 +36,11 @@ import { guardOf, mercPrice, stormTargets, waveKind, waveOutcome, wavePower } fr
 import { raiderCount, resolveBattle, waveMix } from './battle';
 import type { BattleSeed } from './battle';
 import { RESOURCE_KINDS } from './types';
+import {
+  SHIP_AGE, SHIP_COST, SHIP_PER_DOCK, SHIP_SECONDS, SORTIE_SECONDS,
+  fleetStop, lairNeed, resolveLair, seaClash, seaPower,
+} from './naval';
+import type { LairResult } from './naval';
 import { bonusesFor, milestoneAt, nextMilestone, reachedCount } from './milestones';
 
 /**
@@ -71,9 +78,13 @@ function freshState(): GameState {
     nextBuildingId: 1,
     age: 1,
     ageLeft: 0,
-    army: { spear: 0, archer: 0, horse: 0 },
+    army: noTroops(),
     train: [],
     smith: { attack: 0, armour: 0 },
+    fleet: 0,
+    shipLeft: 0,
+    lairs: 0,
+    sortie: null,
     lastSavedTimestamp: Date.now(),
     muted: false,
     totalGold: 0,
@@ -134,7 +145,7 @@ export class Economy {
           // Bản lưu cũ không có làng: để trống thì màn lập làng tự hiện ra, người chơi đang
           // chơi dở vẫn được đặt tên cho chỗ mình đã xây.
           state.village = {
-            name: String(parsed.village?.name ?? '').slice(0, 24),
+            name: tenLangSangAnh(String(parsed.village?.name ?? '').trim()).slice(0, 24),
             color: Number(parsed.village?.color) || VILLAGE_COLORS[0],
           };
           /*
@@ -172,16 +183,23 @@ export class Economy {
            */
           state.age = Math.min(AGES.length, Math.max(1, Math.floor(Number(parsed.age) || 1)));
           state.ageLeft = Math.max(0, Number(parsed.ageLeft) || 0);
-          state.army = {
-            spear: Math.max(0, Math.floor(Number(parsed.army?.spear) || 0)),
-            archer: Math.max(0, Math.floor(Number(parsed.army?.archer) || 0)),
-            horse: Math.max(0, Math.floor(Number(parsed.army?.horse) || 0)),
-          };
+          // Bản lưu trước tháp phép chỉ có ba loại lính: hai loại mới đọc ra 0, không ai mất gì.
+          state.army = noTroops();
+          for (const k of TROOP_KINDS) {
+            state.army[k] = Math.max(0, Math.floor(Number(parsed.army?.[k]) || 0));
+          }
           state.train = Array.isArray(parsed.train) ? parsed.train.slice(0, 12) : [];
           state.smith = {
             attack: Math.max(0, Math.floor(Number(parsed.smith?.attack) || 0)),
             armour: Math.max(0, Math.floor(Number(parsed.smith?.armour) || 0)),
           };
+          // Bản lưu trước hạm đội: chưa có thuyền, chưa dẹp hang nào.
+          state.fleet = Math.max(0, Math.floor(Number(parsed.fleet) || 0));
+          state.shipLeft = Math.max(0, Number(parsed.shipLeft) || 0);
+          state.lairs = Math.max(0, Math.floor(Number(parsed.lairs) || 0));
+          state.sortie = parsed.sortie && Number(parsed.sortie.ships) > 0
+            ? { ships: Math.floor(Number(parsed.sortie.ships)), left: Math.max(0, Number(parsed.sortie.left) || 0) }
+            : null;
           state.voyage = parsed.voyage ?? null;
           state.voyagesDone = Math.max(0, Math.floor(Number(parsed.voyagesDone) || 0));
           // Bản lưu trước khi có thú dữ: chưa dẹp hang nào, và mọi hang đều còn đó.
@@ -288,19 +306,46 @@ export class Economy {
     const sau = this.nextAge();
     if (sau) gia.push(sau.cost);
     for (const k of TROOP_KINDS) gia.push(TROOPS[k].cost);
+    /*
+     * CHỈ GIỮ CHO THỨ MUA ĐƯỢC LÚC NÀY.
+     *
+     * Bản trước giữ cho MỌI loại nhà, kể cả chuồng ngựa của thời đại bốn (320 gỗ) khi làng
+     * còn ở thời đại một. Giữ cho thứ chưa mở khoá là khoá chết hàng trong kho mà chẳng để
+     * làm gì — và là một nửa lý do người mới không thấy vàng về. Lên thời đại thì mức giữ tự
+     * nhảy theo (after() gọi lại hàm này), hàng lại dồn lên tới đó.
+     */
     for (const t of Object.keys(BUILDINGS) as BuildingType[]) {
-      if (t !== 'townhall') gia.push(this.buildCostFor(t));
+      if (t === 'townhall' || (BUILD_MIN_AGE[t] ?? 0) > this.state.age) continue;
+      gia.push(this.buildCostFor(t));
     }
     for (const b of this.state.buildings) {
       if (b.level < BUILDINGS[b.type].maxLevel) gia.push(this.costFor(b.type, b.level));
     }
+    /*
+     * MỨC GIỮ KHÔNG ĐƯỢC CAO HƠN CÁI KHO.
+     *
+     * Chợ chỉ bán phần vượt mức giữ, còn kho thì chặn ở storageLimit. Mức giữ mà cao hơn
+     * kho thì "phần vượt" không bao giờ tồn tại: kho đầy, dân đứng chơi, vàng không về. Hai
+     * luật sửa nó, và cả hai đều giữ nguyên lời hứa cũ (món nào mua được thì gom được):
+     *   - món đắt hơn sức chứa của kho thì bỏ ra khỏi phép tính — gom tới bao giờ cũng không
+     *     đủ, và nút mua đã nói thẳng "Storage too small";
+     *   - phần dư 1,35 lần bị chặn ở 80% kho, nhưng KHÔNG BAO GIỜ xuống dưới chính cái giá
+     *     của món đắt nhất còn mua được.
+     */
+    const kho = this.state.storageLimit;
     for (const k of RESOURCE_KINDS) {
       let max = 0;
-      for (const c of gia) max = Math.max(max, c[k] ?? 0);
+      let vua = 0;
+      for (const c of gia) {
+        const v = c[k] ?? 0;
+        max = Math.max(max, v);
+        if (v <= kho) vua = Math.max(vua, v);
+      }
       this.maxCost[k] = max;
       // Thứ không công trình nào cần thì giữ rất ít: nó sinh ra để chảy thành vàng.
       this.reserve[k] = max > 0
-        ? Math.max(SURPLUS_RESERVE, max * RESERVE_HEADROOM)
+        ? Math.min(Math.max(SURPLUS_RESERVE, vua * RESERVE_HEADROOM),
+          Math.max(vua, kho * RESERVE_STORAGE_SHARE))
         : EXPORT_KEEP;
     }
   }
@@ -321,7 +366,8 @@ export class Economy {
 
   recompute(): void {
     this.state.storageLimit = Math.floor(
-      (BASE_STORAGE + this.sumLevels('granary') * STORAGE_PER_GRANARY) * (1 + this.bonus.storage));
+      (BASE_STORAGE + this.sumLevels('granary') * STORAGE_PER_GRANARY) * (1 + this.bonus.storage)
+      * ageBonus(this.state.age, AGE_STORAGE));
     let total = 0;
     for (const b of this.state.buildings) total += b.level;
     this.state.level = 1 + Math.floor(total / 3);
@@ -396,7 +442,7 @@ export class Economy {
 
   /** Ruộng lúa: lương thực tự ra mỗi giây. */
   farmRate(): number {
-    return FARM_FOOD_PER_LEVEL * this.sumLevels('farm');
+    return FARM_FOOD_PER_LEVEL * this.sumLevels('farm') * ageBonus(this.state.age, AGE_FARM);
   }
 
   /**
@@ -686,6 +732,18 @@ export class Economy {
    * Thủ phủ bán phần dư ra vàng. Chỉ bán thứ chất quá ngưỡng, nên không bao giờ moi mất số
    * nguyên liệu người chơi đang gom cho một công trình.
    */
+  /**
+   * Thuế: số vàng tự về mỗi giây, không cần ai đi lấy. Xem TAX_PER_HALL_LEVEL để biết vì
+   * sao nó tồn tại. Tính theo cấp thủ phủ VÀ số dân, nên thuê thêm người là thu thêm thuế —
+   * "vàng tăng dần theo thời gian" đúng theo cách làng lớn lên.
+   */
+  taxRate(): number {
+    const hall = this.state.buildings.find((b) => b.type === 'townhall');
+    return hall
+      ? TAX_PER_HALL_LEVEL * hall.level + TAX_PER_VILLAGER * this.villagers().length
+      : 0;
+  }
+
   /** Số món chợ bán được mỗi giây lúc này. 0 khi chưa có thủ phủ. */
   marketRate(): number {
     const hall = this.state.buildings.find((b) => b.type === 'townhall');
@@ -739,7 +797,7 @@ export class Economy {
 
   /** Sức thủ lúc này, đã gồm lính vừa thuê và số dân đang ở nhà. */
   guard(): number {
-    return guardOf(this.state.buildings, this.state.threat.hired, this.atHome());
+    return guardOf(this.state.buildings, this.state.threat.hired, this.atHome(), this.state.age);
   }
 
   // ------------------------------------------------------------------ săn thú
@@ -857,11 +915,22 @@ export class Economy {
   private runWave(away: boolean): WaveResult {
     const t = this.state.threat;
     const power = wavePower(t.wave, this.state.level);
-    const guard = guardOf(this.state.buildings, t.hired, this.atHome());
+    const guard = guardOf(this.state.buildings, t.hired, this.atHome(), this.state.age);
     const seed = this.battleSeed(t.wave);
+    /*
+     * HẢI CHIẾN TRƯỚC, TRẬN BỘ SAU. Cánh quân biển bị chặn ngoài khơi bao nhiêu thì đợt
+     * trên bộ nhẹ đi bấy nhiêu; phần lọt qua cộng thẳng vào SỨC ĐỢT của hạt giống trận —
+     * nên bản diễn lại (ArmyManager đọc lastSeed) và bản tính kết quả thấy cùng một đợt.
+     * Thuyền đang đi đánh hang thì không ở nhà mà chặn.
+     */
+    const sea = seaPower(power, this.state.age, waveKind(t.wave) === 'raid');
+    const clash = seaClash(t.wave, sea, this.state.fleet, this.state.age);
+    this.state.fleet = Math.max(0, this.state.fleet - clash.sunk);
+    seed.power += clash.landed;
     this.lastSeed = seed;
     const bat = resolveBattle(seed);
     const { result, take, levels } = waveOutcome(t.wave, power, guard, bat, this.state.inv, away);
+    if (clash.power > 0) result.sea = clash;
     for (const k of RESOURCE_KINDS) {
       const n = take[k];
       if (n) this.state.inv[k] = Math.max(0, this.state.inv[k] - n);
@@ -910,10 +979,15 @@ export class Economy {
     // lính bỏ đi, dù trong cùng nhịp ấy ruộng đã kịp bù.
     const lua = this.farmRate();
     if (lua > 0) this.deposit('food', lua * dt);
+    // Thuế vào kho qua đúng cửa deposit(): bị chặn bởi sức chứa, tính vào tổng vàng đã
+    // kiếm, hiện lên con số "mỗi giây" của HUD, và chạy cả trong lúc vắng mặt.
+    const thue = this.taxRate();
+    if (thue > 0) this.deposit('gold', thue * dt);
     this.tickThreat(dt);
     this.tickVoyage(dt);
     this.tickAge(dt);
     this.tickArmy(dt);
+    this.tickFleet(dt);
     this.checkDemand();
     this.sellSurplus(dt);
     const k = Math.min(1, dt / RATE_TAU);
@@ -972,6 +1046,94 @@ export class Economy {
   }
 
   onAge: ((label: string) => void) | null = null;
+
+  // ----------------------------------------------------------------- hạm đội
+
+  /** Trần chiến thuyền, theo tổng cấp bến tàu. */
+  shipCap(): number {
+    return this.sumLevels('dock') * SHIP_PER_DOCK;
+  }
+
+  /** Thuyền đang có, kể cả chiếc trên triền và những chiếc đang đi đánh hang. */
+  shipHave(): number {
+    return this.state.fleet + (this.state.shipLeft > 0 ? 1 : 0) + (this.state.sortie?.ships ?? 0);
+  }
+
+  shipBlock(): string | null {
+    if (this.state.age < SHIP_AGE) return `Unlocks in ${AGES[SHIP_AGE - 1].label}`;
+    if (this.sumLevels('dock') === 0) return 'Requires dock';
+    if (this.state.shipLeft > 0) return 'Shipyard busy';
+    if (this.shipHave() >= this.shipCap()) return `Full (${this.shipCap()}) — upgrade dock`;
+    if (!this.canAfford(SHIP_COST)) return 'Not enough resources';
+    return null;
+  }
+
+  buildShip(): boolean {
+    if (this.shipBlock()) return false;
+    if (!this.pay(SHIP_COST)) return false;
+    this.state.shipLeft = SHIP_SECONDS;
+    this.onChange?.();
+    return true;
+  }
+
+  /** Sức chặn của hạm đội đang ở nhà, và cánh quân biển của đợt tới. */
+  seaThreat(): { stop: number; sea: number } {
+    const w = this.state.threat.wave + 1;
+    return {
+      stop: fleetStop(this.state.fleet, this.state.age),
+      sea: seaPower(wavePower(w, this.state.level), this.state.age, waveKind(w) === 'raid'),
+    };
+  }
+
+  lairBlock(): string | null {
+    if (this.state.age < SHIP_AGE) return `Unlocks in ${AGES[SHIP_AGE - 1].label}`;
+    if (this.state.sortie) return 'Fleet is already out';
+    const can = lairNeed(this.state.lairs);
+    if (this.state.fleet < can) return `Needs ${can} warships at the dock`;
+    return null;
+  }
+
+  /** Cả hạm đội đang ở bến ra khơi đánh hang hải tặc kế tiếp. */
+  raidLair(): boolean {
+    if (this.lairBlock()) return false;
+    this.state.sortie = { ships: this.state.fleet, left: SORTIE_SECONDS };
+    this.state.fleet = 0;
+    this.onChange?.();
+    return true;
+  }
+
+  onShip: (() => void) | null = null;
+  onLair: ((r: LairResult) => void) | null = null;
+
+  private tickFleet(dt: number): void {
+    if (this.state.shipLeft > 0) {
+      this.state.shipLeft -= dt;
+      if (this.state.shipLeft <= 0) {
+        this.state.shipLeft = 0;
+        this.state.fleet += 1;
+        this.onShip?.();
+        this.onChange?.();
+      }
+    }
+    const s = this.state.sortie;
+    if (!s) return;
+    s.left -= dt;
+    if (s.left > 0) return;
+    const r = this.landSortie(s);
+    this.onLair?.(r);   // chạy trước, báo sau — xem tickThreat
+  }
+
+  private landSortie(s: { ships: number }): LairResult {
+    const r = resolveLair(this.state.lairs, s.ships, this.state.threat.wave);
+    this.state.sortie = null;
+    this.state.fleet += Math.max(0, s.ships - r.sunk);
+    if (r.won) this.state.lairs += 1;
+    if (r.gold) this.deposit('gold', r.gold);
+    if (r.relics) this.deposit('relics', r.relics);
+    this.recompute();
+    this.onChange?.();
+    return r;
+  }
 
   // ----------------------------------------------------------------- quân đội
 
@@ -1053,8 +1215,8 @@ export class Economy {
     this.doiKhat += dt;
     if (this.doiKhat < DESERT_SECONDS) return;
     this.doiKhat = 0;
-    // Bỏ đi theo thứ tự đắt nhất trước: kỵ binh ăn nhiều nhất thì cũng đi trước nhất.
-    for (const k of ['horse', 'archer', 'spear'] as TroopKind[]) {
+    // Bỏ đi theo thứ tự đắt nhất trước: xe pháo và kỵ binh ăn nhiều nhất thì cũng đi trước.
+    for (const k of ['siege', 'horse', 'mage', 'archer', 'spear'] as TroopKind[]) {
       if (this.state.army[k] > 0) {
         this.state.army[k] -= 1;
         this.onDesert?.(TROOPS[k].label);
@@ -1070,7 +1232,8 @@ export class Economy {
 
   /** Trần bậc rèn theo thời đại: bậc hai chỉ mở ở thời đại cuối. */
   smithCap(): number {
-    return this.state.age >= 4 ? SMITH_MAX_AGE4 : SMITH_MAX_AGE2;
+    const doi = this.state.age;
+    return doi >= 5 ? SMITH_MAX_AGE5 : doi >= 4 ? SMITH_MAX_AGE4 : SMITH_MAX_AGE2;
   }
 
   smithCost(bac: number): Cost {
@@ -1243,6 +1406,19 @@ export class Economy {
     if (vo) {
       vo.left -= elapsedSeconds * this.voyageSpeed();
       if (vo.left <= 0) voyage = this.landVoyage(vo);
+    }
+
+    // Triền đóng xong chiếc đang đóng, và hạm đội đi đánh hang cũng cập bến trong lúc vắng.
+    if (this.state.shipLeft > 0 && this.state.shipLeft <= elapsedSeconds) {
+      this.state.shipLeft = 0;
+      this.state.fleet += 1;
+    } else if (this.state.shipLeft > 0) {
+      this.state.shipLeft -= elapsedSeconds;
+    }
+    const so = this.state.sortie;
+    if (so) {
+      so.left -= elapsedSeconds;
+      if (so.left <= 0) this.landSortie(so);
     }
 
     let wave: WaveResult | null = null;

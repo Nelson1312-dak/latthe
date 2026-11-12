@@ -51,6 +51,11 @@ export const ROOF: Record<BuildingType, number> = {
   market: 0xc0563f,
   lookout: 0x7a5a38,
   dock: 0x4f7a8c,
+  // Tím than: màu duy nhất trong làng không có trong tự nhiên, nên tháp phép đọc ra là
+  // "chỗ này có phép" trước cả khi nhìn thấy viên pha lê.
+  magetower: 0x5b4a8a,
+  // Xám khói: xưởng là nơi có lửa và sắt, cùng họ với lò rèn nhưng nhạt hơn một bậc.
+  workshop: 0x5a5148,
 };
 
 /** Ba kiểu nhà ở: 0 nhà ngói, 1 nhà tranh, 2 nhà có chái. */
@@ -75,7 +80,8 @@ const Y0 = 0.18;
 function stage(type: BuildingType, level: number): number {
   if (type === 'smithy') return level >= 3 ? 2 : level >= 2 ? 1 : 0;
   if (type === 'outpost' || type === 'watchtower' || type === 'stable' || type === 'farm'
-    || type === 'well' || type === 'market' || type === 'lookout' || type === 'dock') {
+    || type === 'well' || type === 'market' || type === 'lookout' || type === 'dock'
+    || type === 'magetower' || type === 'workshop') {
     return level >= 5 ? 2 : level >= 3 ? 1 : 0;
   }
   return level >= 10 ? 3 : level >= 6 ? 2 : level >= 3 ? 1 : 0;
@@ -92,11 +98,13 @@ class Kit {
   private readonly parts: THREE.BufferGeometry[] = [];
   private readonly c = new THREE.Color();
 
-  private push(g: THREE.BufferGeometry, color: number): void {
+  private push(g: THREE.BufferGeometry, color: number, nguyen = false): void {
     const n = g.index ? g.toNonIndexed() : g;
     if (n !== g) g.dispose();
     n.deleteAttribute('uv');
-    this.c.setHex(color);
+    // Mọi mảnh của mọi công trình đi qua đúng chỗ này, nên đây là nơi duy nhất cần biết
+    // làng đang ở thời đại nào — xem `mauDoi`.
+    this.c.setHex(nguyen ? color : mauDoi(color));
     const count = n.attributes.position.count;
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i += 1) {
@@ -132,6 +140,23 @@ class Kit {
     const g = new THREE.ConeGeometry(r, h, seg);
     if (ry) g.rotateY(ry);
     g.translate(x, y + h / 2, z);
+    this.push(g, color);
+  }
+
+  /**
+   * Một tấm mang MÀU CỜ của người chơi. Không đi qua bảng màu thời đại: màu cờ có thể
+   * trùng đúng một màu mái, và lá cờ thì không được ngả màu theo thời đại.
+   */
+  flag(w: number, h: number, d: number, x: number, y: number, z: number, color: number): void {
+    const g = new THREE.BoxGeometry(w, h, d);
+    g.translate(x, y + h / 2, z);
+    this.push(g, color, true);
+  }
+
+  /** Nửa quả cầu úp: mái vòm. `y` là chân vòm. */
+  dome(r: number, x: number, y: number, z: number, color: number): void {
+    const g = new THREE.SphereGeometry(r, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    g.translate(x, y, z);
     this.push(g, color);
   }
 
@@ -199,6 +224,30 @@ class Kit {
  */
 function nen(k: Kit, r = 1.7): void {
   k.cyl(r * 0.86, r * 1.46, 1.1, 12, 0, -0.88, 0, PALETTE.plotDirt);
+  /*
+   * Hạ tầng lớn lên theo thời đại, và nó nằm ở ĐÂY vì mọi công trình con đều gọi `nen`:
+   * thêm một lần là cả làng đổi. Ruộng và bến thuyền thì không — không ai lát đá ruộng lúa.
+   *   - Thời Thành Luỹ: sân lát đá thay cho đất nện.
+   *   - Thời Đế Quốc: hai cột đèn lồng trước sân.
+   *   - Thời Công Nghiệp: cột đèn sắt cao có bóng sáng, và một viền gạch quanh sân.
+   */
+  if (DOI < 3 || LOAI === 'farm' || LOAI === 'dock') return;
+  k.cyl(r * 0.8, r * 0.87, 0.07, 12, 0, 0.19, 0, DOI >= 5 ? 0x8d8a86 : STONE);
+  if (DOI >= 5) k.cyl(r * 0.87, r * 0.9, 0.05, 12, 0, 0.17, 0, 0x9c5a44);
+  if (DOI < 4 || LOAI === 'well') return;
+  const cao = DOI >= 5 ? 1.25 : 0.8;
+  for (const sx of [-1, 1]) {
+    const x = sx * r * 0.62;
+    const z = r * 0.58;
+    k.cyl(0.035, 0.05, cao, 5, x, 0.24, z, STONE_DARK);
+    if (DOI >= 5) {
+      k.box(0.3, 0.04, 0.04, x, 0.24 + cao, z, STONE_DARK);
+      for (const dx of [-0.14, 0.14]) k.box(0.1, 0.12, 0.1, x + dx, 0.24 + cao - 0.14, z, DEN);
+    } else {
+      k.box(0.14, 0.17, 0.14, x, 0.24 + cao, z, GOLD);
+      k.cone(0.13, 0.1, 4, x, 0.24 + cao + 0.17, z, STONE_DARK, Math.PI / 4);
+    }
+  }
 }
 
 // ------------------------------------------------------------------ nhà ở
@@ -224,6 +273,57 @@ export function chimneyTop(type: BuildingType, level: number): Vec3 | null {
 const MAI_RA = 0xc7a95e;
 const TUONG_DAT = 0xd6bf97;
 const MAI_SAM = 0xa8553c;
+
+// ------------------------------------------------------------------ dáng theo thời đại
+
+/*
+ * LÊN ĐỜI THÌ CẢ LÀNG ĐỔI DÁNG.
+ *
+ * Người chơi đòi: "khi lên đời nhà thì sẽ đổi giao diện (theo theme hiện đại dần dần) và
+ * nâng cấp toàn bộ cấu trúc của các nhà con". Mười mấy loại nhà nhân năm thời đại là bảy
+ * chục cái hình vẽ tay — không ai giữ nổi. Thay vào đó mỗi thời đại là một BỘ VẬT LIỆU,
+ * áp vào chính những hình đang có ở đúng một chỗ (Kit.push):
+ *
+ *   I   Dựng Làng    tường trát đất, mái rạ, cửa sổ là lỗ tối (chưa có kính)
+ *   II  Mở Đất       gỗ và ngói — đúng dáng cũ, không đổi gì
+ *   III Thành Luỹ    tường đá xám, ngói sẫm lại, sân lát đá
+ *   IV  Đế Quốc      tường vôi trắng, ngói đỏ thắm, đèn lồng vàng
+ *   V   Công Nghiệp  tường gạch, mái đá đen, cửa kính sáng, đèn đường
+ *
+ * Màu mái được PHA về phía màu của thời đại chứ không thay hẳn: mỗi loại nhà vẫn giữ sắc
+ * riêng để nhận ra nhau (xem ROOF), chỉ là cả làng ngả về cùng một tông. Riêng thủ phủ thì
+ * có năm bóng dáng vẽ tay, vì nó là thứ người chơi nhìn nhiều nhất và là thứ "lên đời".
+ */
+let DOI = 2;
+/** Loại đang dựng — `nen` cần biết để không lát đá ruộng lúa. */
+let LOAI: BuildingType = 'house';
+/** Bóng đèn và cửa sổ sáng đèn của thời đại năm. */
+const DEN = 0xfff0b8;
+
+interface BoMau { tuong: number; mai: number; pha: number; kinh: number }
+const BO_MAU: Record<number, BoMau> = {
+  1: { tuong: 0xd2b88c, mai: 0xc2a35a, pha: 0.62, kinh: 0x4a3d31 },
+  3: { tuong: 0xd4cfc2, mai: 0x7a4636, pha: 0.28, kinh: GLASS },
+  4: { tuong: 0xf4efe3, mai: 0xa02f2c, pha: 0.36, kinh: 0x3f5a78 },
+  5: { tuong: 0xb3654c, mai: 0x3b3f47, pha: 0.6, kinh: 0x9fd2e6 },
+};
+const LA_TUONG = new Set<number>([PALETTE.wall, TUONG_DAT]);
+const LA_MAI = new Set<number>([...Object.values(ROOF), MAI_RA, MAI_SAM]
+  // Đá và vàng cũng được dùng làm mái (chòi canh, chóp tháp cấp cao), nhưng chúng là đá và
+  // vàng ở mọi thời đại.
+  .filter((m) => m !== STONE_DARK && m !== GOLD));
+const TAM_A = new THREE.Color();
+const TAM_B = new THREE.Color();
+
+/** Màu của một mảnh ở thời đại đang dựng. Thời đại hai trả lại đúng màu gốc. */
+function mauDoi(hex: number): number {
+  const bo = BO_MAU[DOI];
+  if (!bo) return hex;
+  if (hex === GLASS) return bo.kinh;
+  if (LA_TUONG.has(hex)) return bo.tuong;
+  if (LA_MAI.has(hex)) return TAM_A.setHex(hex).lerp(TAM_B.setHex(bo.mai), bo.pha).getHex();
+  return hex;
+}
 
 /**
  * Nhà ở, BA KIỂU cùng một khung.
@@ -290,7 +390,263 @@ function house(level: number, kieu = 0): THREE.BufferGeometry {
   return k.build();
 }
 
+/*
+ * NĂM THỦ PHỦ.
+ *
+ * Mỗi thời đại một bóng dáng khác hẳn, vì thủ phủ là thứ duy nhất trên bản đồ nói "làng
+ * này đang ở đời nào" mà không cần mở bảng: nhà dài mái rạ có rào cọc, hội quán gỗ có tháp
+ * chuông, pháo đài đá bốn tháp góc, cung điện mái vòm vàng, toà thị chính gạch có tháp
+ * đồng hồ. Cả năm cùng đứng trên một cái kè tròn bán kính 2,5 và cùng mang lá cờ màu người
+ * chơi ở điểm cao nhất, nên diện tích chiếm đất và chỗ tìm lá cờ không bao giờ đổi.
+ */
 function townhall(level: number, co: number): THREE.BufferGeometry {
+  if (DOI <= 1) return townhall1(level, co);
+  if (DOI === 3) return townhall3(level, co);
+  if (DOI === 4) return townhall4(level, co);
+  if (DOI >= 5) return townhall5(level, co);
+  return townhall2(level, co);
+}
+
+/** Thời Dựng Làng: nhà dài của trưởng làng, mái rạ dốc, rào cọc nhọn quây phía sau. */
+function townhall1(level: number, co: number): THREE.BufferGeometry {
+  const k = new Kit();
+  const st = stage('townhall', level);
+  // Nền đất nện chứ chưa phải kè đá: làng này chưa biết xẻ đá.
+  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, PALETTE.plotDirt);
+  const y0 = 0.3;
+  const w = 3.0;
+  const d = 1.9;
+  const zb = -0.35;
+  const H = 0.95 + level * 0.04;
+  k.rbox(w, H, d, 0.16, 0.05, 0, y0, zb, PALETTE.wall);
+  k.gable(w, d, 1.6, 0.34, 0, y0 + H - 0.05, zb, ROOF.townhall);
+  // Hai cặp kèo bắt chéo nhô khỏi nóc ở hai đầu hồi — cái sừng của nhà dài.
+  for (const sx of [-1, 1]) {
+    for (const nghieng of [-0.5, 0.5]) {
+      const keo = new THREE.CylinderGeometry(0.035, 0.035, 0.8, 4);
+      keo.rotateX(nghieng);
+      keo.translate(sx * (w / 2 + 0.3), y0 + H + 1.72, zb);
+      k.raw(keo, WOOD);
+    }
+  }
+  k.box(0.62, 0.8, 0.06, 0, y0, zb + d / 2, WOOD);
+  // Hiên trước: hai cột và một tấm mái rạ.
+  for (const x of [-0.6, 0.6]) k.cyl(0.06, 0.06, 0.95, 5, x, y0, zb + d / 2 + 0.55, WOOD);
+  k.box(1.6, 0.09, 0.8, 0, y0 + 0.95, zb + d / 2 + 0.3, ROOF.townhall);
+  // Rào cọc nhọn quây nửa sau.
+  for (let i = 0; i <= 12; i += 1) {
+    const a = Math.PI + 0.22 + (i / 12) * (Math.PI - 0.44);
+    const x = Math.cos(a) * 2.32;
+    const z = Math.sin(a) * 2.32;
+    const cao = 0.8 + (i % 2) * 0.16;
+    k.cyl(0.07, 0.09, cao, 5, x, y0 - 0.05, z, WOOD);
+    k.cone(0.08, 0.2, 5, x, y0 - 0.05 + cao, z, WOOD);
+  }
+  // Cột cờ trước sân, cao hơn nóc nhà.
+  k.cyl(0.05, 0.06, 3.1, 5, 1.55, y0, 1.25, WOOD);
+  k.flag(0.62, 0.38, 0.03, 1.88, y0 + 2.62, 1.25, co);
+  // Bếp lửa chung của làng.
+  k.cyl(0.3, 0.34, 0.1, 7, -1.35, y0, 1.3, STONE_DARK);
+  k.cone(0.2, 0.44, 5, -1.35, y0 + 0.1, 1.3, GOLD);
+  if (st >= 1) {
+    // Chòi kho tròn bên hông.
+    k.cyl(0.5, 0.56, 0.7, 8, -1.95, y0, 0.25, PALETTE.wall);
+    k.cone(0.74, 0.8, 8, -1.95, y0 + 0.7, 0.25, ROOF.townhall);
+  }
+  if (st >= 2) {
+    // Hai cờ đuôi nheo hai bên cửa.
+    for (const x of [-1.05, 1.05]) {
+      k.cyl(0.035, 0.035, 1.5, 5, x, y0, zb + d / 2 + 0.2, WOOD);
+      k.flag(0.03, 0.5, 0.26, x, y0 + 0.95, zb + d / 2 + 0.36, co);
+    }
+  }
+  if (st >= 3) k.cone(0.16, 0.36, 5, 0, y0 + H + 1.55, zb, GOLD);
+  return k.build();
+}
+
+/** Thời Thành Luỹ: pháo đài đá vuông, bốn tháp góc, một vọng lâu ở giữa. */
+function townhall3(level: number, co: number): THREE.BufferGeometry {
+  const k = new Kit();
+  const st = stage('townhall', level);
+  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE_DARK);
+  const y0 = 0.3;
+  const w = 2.7;
+  const zb = -0.15;
+  const H = 1.55 + level * 0.05;
+  k.rbox(w, H, w, 0.06, 0.03, 0, y0, zb, PALETTE.wall);
+  // Lỗ châu mai chạy quanh bốn mặt tường.
+  for (let i = -2; i <= 2; i += 1) {
+    const t = i * 0.42;
+    k.box(0.22, 0.24, 0.2, t, y0 + H, zb + w / 2 - 0.1, PALETTE.wall);
+    k.box(0.22, 0.24, 0.2, t, y0 + H, zb - w / 2 + 0.1, PALETTE.wall);
+    k.box(0.2, 0.24, 0.22, w / 2 - 0.1, y0 + H, zb + t, PALETTE.wall);
+    k.box(0.2, 0.24, 0.22, -w / 2 + 0.1, y0 + H, zb + t, PALETTE.wall);
+  }
+  // Bốn tháp góc tròn, mái chóp.
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const x = sx * (w / 2 - 0.05);
+      const z = zb + sz * (w / 2 - 0.05);
+      k.cyl(0.42, 0.47, H + 0.7, 8, x, y0, z, PALETTE.wall);
+      k.cyl(0.52, 0.42, 0.16, 8, x, y0 + H + 0.7, z, STONE);
+      k.cone(0.54, 0.8, 8, x, y0 + H + 0.86, z, st >= 2 && sz > 0 ? GOLD : ROOF.townhall);
+      k.box(0.1, 0.3, 0.05, x, y0 + H + 0.1, z + sz * 0.45, GLASS);
+    }
+  }
+  // Vọng lâu giữa: cao hơn hẳn, để pháo đài có một đỉnh.
+  const zv = zb - 0.25;
+  const Hv = H + 1.5 + level * 0.06;
+  k.rbox(1.3, Hv, 1.3, 0.05, 0.03, 0, y0, zv, PALETTE.wall);
+  k.box(1.5, 0.16, 1.5, 0, y0 + Hv, zv, STONE);
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) k.box(0.24, 0.22, 0.24, sx * 0.63, y0 + Hv + 0.16, zv + sz * 0.63, STONE);
+  }
+  k.cone(0.9, 1.05, 4, 0, y0 + Hv + 0.16, zv, st >= 3 ? GOLD : ROOF.townhall, Math.PI / 4);
+  for (const y of [0.45, 1.0]) k.box(0.16, 0.36, 0.05, 0, y0 + H + y, zv + 0.65, GLASS);
+  k.cyl(0.035, 0.035, 1.0, 5, 0, y0 + Hv + 1.1, zv, WOOD);
+  k.flag(0.6, 0.36, 0.03, 0.32, y0 + Hv + 1.7, zv, co);
+  // Cổng thành nhô ra phía trước, có bậc đá.
+  const zc = zb + w / 2;
+  k.rbox(1.3, H * 0.86, 0.5, 0.05, 0.03, 0, y0, zc + 0.2, PALETTE.wall);
+  for (const x of [-0.45, 0, 0.45]) k.box(0.2, 0.2, 0.2, x, y0 + H * 0.86, zc + 0.3, PALETTE.wall);
+  k.box(0.72, 0.95, 0.06, 0, y0, zc + 0.45, WOOD);
+  k.box(0.86, 0.1, 0.1, 0, y0 + 0.95, zc + 0.46, STONE);
+  k.box(1.1, 0.1, 0.34, 0, y0 - 0.02, zc + 0.62, STONE);
+  if (st >= 1) {
+    // Hai dải băng màu cờ treo hai bên cổng.
+    for (const x of [-0.95, 0.95]) k.flag(0.26, 0.74, 0.03, x, y0 + H - 0.95, zc + 0.02, co);
+  }
+  return k.build();
+}
+
+/** Thời Đế Quốc: cung điện vôi trắng, mái vòm vàng, hàng cột và bậc thềm. */
+function townhall4(level: number, co: number): THREE.BufferGeometry {
+  const k = new Kit();
+  const st = stage('townhall', level);
+  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE);
+  const y0 = 0.3;
+  // Bệ thềm: cả cung điện đứng cao hơn sân một bậc.
+  k.rbox(4.1, 0.22, 2.7, 0.05, 0.03, 0, y0, -0.1, STONE);
+  const y1 = y0 + 0.22;
+  const zb = -0.3;
+  const Hc = 1.85 + level * 0.05;
+  k.rbox(2.0, Hc, 1.9, 0.07, 0.03, 0, y1, zb, PALETTE.wall);
+  k.box(2.16, 0.12, 2.06, 0, y1 + Hc, zb, GOLD);
+  // Trống mái và mái vòm.
+  k.cyl(0.78, 0.82, 0.42, 12, 0, y1 + Hc + 0.12, zb, PALETTE.wall);
+  const yv = y1 + Hc + 0.54;
+  k.dome(0.84, 0, yv, zb, GOLD);
+  k.cyl(0.13, 0.16, 0.26, 8, 0, yv + 0.8, zb, PALETTE.wall);
+  k.cone(0.17, 0.62, 8, 0, yv + 1.06, zb, GOLD);
+  k.cyl(0.03, 0.03, 0.9, 5, 0, yv + 1.6, zb, WOOD);
+  k.flag(0.6, 0.36, 0.03, 0.32, yv + 2.1, zb, co);
+  // Hai cánh nhà, mái bốn mái.
+  const Hw = 1.25 + level * 0.03;
+  for (const sx of [-1, 1]) {
+    const x = sx * 1.5;
+    k.rbox(1.1, Hw, 1.5, 0.06, 0.03, x, y1, zb, PALETTE.wall);
+    k.box(1.2, 0.08, 1.6, x, y1 + Hw, zb, GOLD);
+    k.cone(0.98, 0.72, 4, x, y1 + Hw + 0.08, zb, ROOF.townhall, Math.PI / 4);
+    for (const dx of [-0.3, 0.3]) k.box(0.2, 0.52, 0.05, x + dx, y1 + 0.4, zb + 0.75, GLASS);
+    k.flag(0.18, 0.62, 0.03, x, y1 + Hw - 0.78, zb + 0.77, co);
+    k.box(0.05, 0.52, 0.22, sx * 2.05, y1 + 0.4, zb, GLASS);
+    // Tháp mảnh ở góc sau mỗi cánh.
+    k.cyl(0.25, 0.29, Hw + 1.15, 8, sx * 2.0, y1, zb - 0.6, PALETTE.wall);
+    k.cone(0.36, 0.95, 8, sx * 2.0, y1 + Hw + 1.15, zb - 0.6, ROOF.townhall);
+    if (st >= 1) k.cone(0.09, 0.3, 6, x, y1 + Hw + 0.78, zb, GOLD);
+    if (st >= 3) k.dome(0.2, sx * 2.0, y1 + Hw + 2.05, zb - 0.6, GOLD);
+  }
+  // Hàng hiên bốn cột, có trán tường.
+  const zh = zb + 0.95;
+  for (const x of [-0.75, -0.26, 0.26, 0.75]) k.cyl(0.085, 0.1, 1.25, 8, x, y1, zh + 0.34, PALETTE.cloud);
+  k.box(1.9, 0.12, 0.6, 0, y1 + 1.25, zh + 0.22, PALETTE.cloud);
+  k.gable(0.6, 1.9, 0.46, 0.03, 0, y1 + 1.37, zh + 0.22, ROOF.townhall, Math.PI / 2);
+  k.box(0.62, 0.98, 0.06, 0, y1, zh, WOOD);
+  k.box(0.74, 0.08, 0.08, 0, y1 + 0.98, zh + 0.01, GOLD);
+  // Ba bậc thềm đổ xuống sân.
+  for (let i = 0; i < 3; i += 1) k.box(1.7, 0.22 - i * 0.073, 0.2, 0, y0, 1.35 + i * 0.2, STONE);
+  if (st >= 2) {
+    // Hai chậu lửa vàng hai bên bậc thềm.
+    for (const x of [-1.15, 1.15]) {
+      k.cyl(0.14, 0.1, 0.5, 6, x, y0, 1.6, STONE);
+      k.cone(0.13, 0.3, 5, x, y0 + 0.5, 1.6, GOLD);
+    }
+  }
+  return k.build();
+}
+
+/** Thời Công Nghiệp: toà thị chính gạch, tháp đồng hồ mái vòm đồng, ống khói và đèn đường. */
+function townhall5(level: number, co: number): THREE.BufferGeometry {
+  const k = new Kit();
+  const st = stage('townhall', level);
+  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE_DARK);
+  const y0 = 0.3;
+  k.rbox(4.2, 0.2, 2.7, 0.04, 0.02, 0, y0, -0.1, 0x8d8a86);
+  const y1 = y0 + 0.2;
+  const zb = -0.35;
+  const Hm = 1.7 + level * 0.04;
+  k.rbox(3.8, Hm, 1.9, 0.04, 0.02, 0, y1, zb, PALETTE.wall);
+  k.box(3.86, 0.16, 1.96, 0, y1, zb, 0x8d8a86);
+  k.box(3.94, 0.14, 2.04, 0, y1 + Hm, zb, PALETTE.cloud);
+  k.box(3.6, 0.1, 1.7, 0, y1 + Hm + 0.14, zb, ROOF.townhall);
+  // Cửa sổ cao sáng đèn dọc mặt tiền và hai đầu hồi.
+  const zf = zb + 0.95;
+  for (const x of [-1.62, -1.24, 1.24, 1.62]) {
+    k.box(0.24, 0.98, 0.05, x, y1 + 0.38, zf, GLASS);
+    k.box(0.3, 0.06, 0.07, x, y1 + 0.32, zf, PALETTE.cloud);
+  }
+  for (const sx of [-1, 1]) {
+    for (const z of [-0.55, 0, 0.55]) k.box(0.05, 0.98, 0.24, sx * 1.9, y1 + 0.38, zb + z, GLASS);
+  }
+  // Hàng hiên cột đá giữa mặt tiền.
+  for (const x of [-0.78, -0.28, 0.28, 0.78]) k.cyl(0.08, 0.09, Hm - 0.12, 8, x, y1, zf + 0.36, PALETTE.cloud);
+  k.box(1.96, 0.14, 0.56, 0, y1 + Hm - 0.12, zf + 0.22, PALETTE.cloud);
+  k.gable(0.56, 1.96, 0.42, 0.02, 0, y1 + Hm + 0.02, zf + 0.22, PALETTE.cloud, Math.PI / 2);
+  k.box(0.72, 1.02, 0.05, 0, y1, zf, WOOD);
+  k.box(0.26, 0.3, 0.06, 0, y1 + 1.1, zf, DEN);
+  for (let i = 0; i < 2; i += 1) k.box(2.0, 0.2 - i * 0.1, 0.22, 0, y0, 1.36 + i * 0.22, 0x8d8a86);
+  // Tháp đồng hồ mọc lên từ giữa toà nhà.
+  const zt = zb - 0.1;
+  const Ht = Hm + 2.0 + level * 0.06;
+  k.rbox(1.0, Ht, 1.0, 0.03, 0.02, 0, y1, zt, PALETTE.wall);
+  k.box(1.14, 0.1, 1.14, 0, y1 + Ht, zt, PALETTE.cloud);
+  k.box(1.08, 0.08, 1.08, 0, y1 + Hm + 0.5, zt, PALETTE.cloud);
+  k.disc(0.33, 0, y1 + Ht - 0.5, zt + 0.52, st >= 3 ? GOLD : STONE_DARK);
+  k.disc(0.28, 0, y1 + Ht - 0.5, zt + 0.54, PALETTE.cloud);
+  k.box(0.035, 0.22, 0.02, 0, y1 + Ht - 0.5, zt + 0.58, STONE_DARK);
+  k.box(0.16, 0.035, 0.02, 0.07, y1 + Ht - 0.52, zt + 0.58, STONE_DARK);
+  // Mái vòm đồng đã lên gỉ xanh.
+  k.dome(0.5, 0, y1 + Ht + 0.1, zt, 0x5fa08a);
+  k.cyl(0.08, 0.1, 0.22, 6, 0, y1 + Ht + 0.58, zt, PALETTE.cloud);
+  k.cone(0.1, 0.5, 6, 0, y1 + Ht + 0.8, zt, GOLD);
+  k.cyl(0.03, 0.03, 0.8, 5, 0, y1 + Ht + 1.25, zt, STONE_DARK);
+  k.flag(0.6, 0.36, 0.03, 0.32, y1 + Ht + 1.66, zt, co);
+  // Dải băng màu cờ thả dọc thân tháp, dưới mặt đồng hồ.
+  k.flag(0.3, 0.8, 0.03, 0, y1 + Hm + 0.7, zt + 0.52, co);
+  // Hai ống khói gạch ở góc sau, và hai giếng trời kính trên mái.
+  for (const sx of [-1, 1]) {
+    k.box(0.3, Hm + 1.0, 0.3, sx * 1.55, y1, zb - 0.65, PALETTE.wall);
+    k.box(0.38, 0.1, 0.38, sx * 1.55, y1 + Hm + 1.0, zb - 0.65, STONE_DARK);
+    k.gable(1.0, 0.72, 0.3, 0, sx * 1.2, y1 + Hm + 0.24, zb + 0.25, GLASS);
+    // Đèn đường trước sân.
+    k.cyl(0.035, 0.05, 1.2, 5, sx * 1.55, y0, 1.5, STONE_DARK);
+    k.box(0.16, 0.16, 0.16, sx * 1.55, y0 + 1.2, 1.5, DEN);
+    k.cone(0.14, 0.1, 4, sx * 1.55, y0 + 1.36, 1.5, STONE_DARK, Math.PI / 4);
+  }
+  if (st >= 1) {
+    // Băng rôn hai đầu mặt tiền.
+    for (const x of [-0.98, 0.98]) k.flag(0.2, 0.7, 0.03, x, y1 + Hm - 0.95, zf + 0.02, co);
+  }
+  if (st >= 2) {
+    // Bồn nước tròn trước sân.
+    k.cyl(0.34, 0.38, 0.14, 10, -1.2, y0, 1.72, 0x8d8a86);
+    k.cyl(0.28, 0.28, 0.04, 10, -1.2, y0 + 0.12, 1.72, 0x6fa7c2);
+  }
+  return k.build();
+}
+
+/** Thời Mở Đất: hội quán gỗ có tháp chuông — dáng thủ phủ từ trước khi có thời đại. */
+function townhall2(level: number, co: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('townhall', level);
   // Bệ lục giác, xoay 30° cho khớp với lưới ô — thủ phủ ngồi đúng trên một ô.
@@ -319,14 +675,14 @@ function townhall(level: number, co: number): THREE.BufferGeometry {
   k.cyl(0.035, 0.035, 0.95, 5, 0, y0 + Ht + 0.9, zt, WOOD);
   // Lá cờ mang MÀU NGƯỜI CHƠI CHỌN. Đây là chỗ duy nhất trên bản đồ nói "làng này là của
   // tôi", nên nó phải ở trên cao nhất và không bị vàng cấp 3 chiếm mất.
-  k.box(0.55, 0.32, 0.03, 0.3, y0 + Ht + 1.45, zt, co);
+  k.flag(0.55, 0.32, 0.03, 0.3, y0 + Ht + 1.45, zt, co);
   if (st >= 1) {
     // Mặt đồng hồ trên tháp và hai dải băng đỏ trên mặt tiền.
     k.disc(0.27, 0, y0 + Ht - 0.5, zt + 0.47, PALETTE.wall);
     k.disc(0.05, 0, y0 + Ht - 0.5, zt + 0.5, WOOD);
     // Hai dải băng trên mặt tiền cũng theo màu cờ: một lá cờ bé tí trên đỉnh tháp thì ở mức
     // phóng xa không còn thấy, mà màu của mình thì phải thấy được từ xa.
-    for (const x of [-0.85, 0.85]) k.box(0.24, 0.62, 0.03, x, y0 + H - 0.75, zb + d / 2 + 0.02, co);
+    for (const x of [-0.85, 0.85]) k.flag(0.24, 0.62, 0.03, x, y0 + H - 0.75, zb + d / 2 + 0.02, co);
   }
   if (st >= 2) {
     // Tháp phụ phía sau, thấp hơn.
@@ -779,17 +1135,108 @@ function smithy(level: number): THREE.BufferGeometry {
   return k.build();
 }
 
+/** Một khẩu pháo dựng sẵn: hai bánh, càng gỗ, nòng sắt chếch lên trời. */
+function phao(k: Kit, x: number, z: number): void {
+  for (const dx of [-0.3, 0.3]) {
+    const banh = new THREE.CylinderGeometry(0.28, 0.28, 0.08, 10);
+    banh.rotateZ(Math.PI / 2);
+    banh.translate(x + dx, Y0 + 0.28, z);
+    k.raw(banh, WOOD);
+  }
+  k.box(0.44, 0.14, 0.8, x, Y0 + 0.2, z - 0.12, WOOD);
+  const nong = new THREE.CylinderGeometry(0.1, 0.15, 1.05, 8);
+  nong.rotateX(Math.PI / 2 - 0.36);
+  nong.translate(x, Y0 + 0.56, z + 0.12);
+  k.raw(nong, 0x33343a);
+}
+
+/** Tháp phép: tháp đá tròn mái chóp tím, một viên pha lê lơ lửng trên đỉnh. */
+function magetower(level: number): THREE.BufferGeometry {
+  const k = new Kit();
+  nen(k, 1.9);
+  const st = stage('magetower', level);
+  const H = 2.2 + level * 0.3;
+  k.cyl(0.8, 0.98, 0.5, 8, 0, Y0, 0, STONE_DARK);
+  k.cyl(0.6, 0.74, H, 8, 0, Y0 + 0.5, 0, PALETTE.wall);
+  const yB = Y0 + 0.5 + H;
+  // Ban công xoè ra đỡ lấy cái mái chóp rộng hơn thân tháp.
+  k.cyl(0.9, 0.64, 0.22, 8, 0, yB, 0, STONE);
+  k.cone(0.98, 1.6, 8, 0, yB + 0.22, 0, ROOF.magetower);
+  // Viên pha lê KHÔNG chạm mái: khoảng hở ấy chính là cái nói "có phép".
+  const tinh = new THREE.OctahedronGeometry(0.22);
+  tinh.scale(1, 1.7, 1);
+  tinh.translate(0, yB + 2.3, 0);
+  k.raw(tinh, 0x9fdcff);
+  k.box(0.44, 0.72, 0.06, 0, Y0, 0.9, WOOD);
+  // Cửa sổ sáng đèn xoắn dần lên theo thân tháp.
+  for (let i = 0; i < 3; i += 1) {
+    const a = 0.5 + i * 1.1;
+    const g = new THREE.BoxGeometry(0.2, 0.34, 0.06);
+    g.translate(0, Y0 + 1.1 + i * (H - 0.6) / 3 + 0.17, 0.7 - i * 0.03);
+    g.rotateY(a - 0.5);
+    k.raw(g, DEN);
+  }
+  if (st >= 1) {
+    // Ba tinh thể mọc quanh chân tháp.
+    for (let i = 0; i < 3; i += 1) {
+      const a = 0.9 + i * 2.1;
+      k.cone(0.13, 0.56, 5, Math.cos(a) * 1.3, Y0, Math.sin(a) * 1.3, 0x9fdcff);
+    }
+  }
+  if (st >= 2) {
+    // Tháp con áp lưng, cũng mái tím.
+    k.cyl(0.36, 0.42, H * 0.6, 8, -0.9, Y0, -0.4, PALETTE.wall);
+    k.cone(0.52, 0.85, 8, -0.9, Y0 + H * 0.6, -0.4, ROOF.magetower);
+  }
+  return k.build();
+}
+
+/** Xưởng công thành: nhà xưởng cửa mở toang, ống khói gạch, một khẩu pháo dựng trước sân. */
+function workshop(level: number): THREE.BufferGeometry {
+  const k = new Kit();
+  nen(k, 2.8);
+  const st = stage('workshop', level);
+  const w = 3.0;
+  const d = 2.1;
+  const zb = -0.5;
+  const H = 1.35 + level * 0.05;
+  k.rbox(w, H, d, 0.1, 0.04, 0, Y0, zb, PALETTE.wall);
+  k.gable(w, d, 0.9, 0.18, 0, Y0 + H, zb, ROOF.workshop);
+  // Cửa xưởng: một khoảng tối rộng bằng nửa mặt tiền, đủ cho một cỗ xe lăn ra.
+  k.box(1.5, 1.08, 0.06, -0.45, Y0, zb + d / 2, 0x2c2622);
+  k.box(1.72, 0.12, 0.1, -0.45, Y0 + 1.08, zb + d / 2 + 0.02, WOOD);
+  k.box(0.3, 0.42, 0.06, 0.98, Y0 + 0.5, zb + d / 2, GLASS);
+  k.box(0.44, H + 1.5, 0.44, 1.1, Y0, zb - 0.55, 0x8a4a3a);
+  k.box(0.54, 0.12, 0.54, 1.1, Y0 + H + 1.5, zb - 0.55, STONE_DARK);
+  phao(k, 0.95, 1.35);
+  // Chồng đạn bên cạnh pháo.
+  for (const [x, z, y] of [[-0.1, 1.5, 0], [0.14, 1.5, 0], [0.02, 1.7, 0], [0.02, 1.57, 0.17]] as const) {
+    const dan = new THREE.SphereGeometry(0.12, 6, 5);
+    dan.translate(x, Y0 + 0.12 + y, z);
+    k.raw(dan, 0x33343a);
+  }
+  if (st >= 1) {
+    // Cần cẩu gỗ để nhấc nòng pháo.
+    k.cyl(0.07, 0.08, 2.1, 5, -1.7, Y0, 0.9, WOOD);
+    k.box(1.2, 0.09, 0.09, -1.2, Y0 + 2.0, 0.9, WOOD);
+    k.box(0.02, 0.7, 0.02, -0.68, Y0 + 1.3, 0.9, STONE_DARK);
+  }
+  if (st >= 2) phao(k, -1.0, 1.75);
+  return k.build();
+}
+
 /**
  * Hình của một công trình. `co` là màu cờ của người chơi, chỉ thủ phủ dùng tới.
+ * `doi` là thời đại của làng: nó đổi vật liệu của mọi công trình và bóng dáng của thủ phủ.
  *
  * Màu cờ nằm trong KHOÁ bộ nhớ đệm chứ không tô sau: cả công trình là một khối đã hàn với
  * màu nằm ở từng đỉnh, nên đổi màu một bộ phận là phải hàn lại. Người chơi đổi cờ mấy lần
  * trong một ván, nên đệm thừa vài hình không đáng kể.
  */
 export function buildingGeometry(type: BuildingType, level: number, co = 0,
-  kieu = 0): THREE.BufferGeometry {
-  const key = type === 'townhall' ? `townhall:${level}:${co}`
-    : type === 'house' ? `house:${level}:${kieu}` : `${type}:${level}`;
+  kieu = 0, doi = 2): THREE.BufferGeometry {
+  const key = (type === 'townhall' ? `townhall:${level}:${co}`
+    : type === 'house' ? `house:${level}:${kieu}` : `${type}:${level}`) + `:${doi}`;
   let g = CACHE.get(key);
   if (!g) {
     // Bảng thay cho chuỗi ba ngôi: chín loại rồi, và trình biên dịch tự bắt khi thiếu một.
@@ -808,7 +1255,13 @@ export function buildingGeometry(type: BuildingType, level: number, co = 0,
       market: () => market(level),
       lookout: () => lookout(level),
       dock: () => dock(level),
+      magetower: () => magetower(level),
+      workshop: () => workshop(level),
     };
+    // Hai biến này chỉ sống trong lúc dựng: mọi hình dựng xong đều nằm trong bộ đệm, khoá
+    // theo thời đại, nên không ai đọc chúng ở ngoài hàm này.
+    DOI = Math.min(5, Math.max(1, Math.floor(doi)));
+    LOAI = type;
     g = lam[type]();
     // To lên theo diện tích chiếm đất. Nhân một lần lúc dựng rồi đệm lại, nên không ai
     // phải nhớ nhân thêm ở chỗ vẽ — kể cả mô hình mờ lúc ngắm chỗ.

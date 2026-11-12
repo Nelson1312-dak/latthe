@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { MAX_TICKS, TICK, battleStart, battleStep } from './battle';
 import type { BattleSeed, BattleState } from './battle';
 import type { TroopKind } from './types';
-import { TROOP_KINDS } from './types';
+import { TROOP_KINDS, noTroops } from './types';
 import { PALETTE } from './config';
 import type { MapManager } from './MapManager';
 import { matte, tinted } from './materials';
@@ -65,11 +65,13 @@ export class ArmyManager {
     this.map = map;
     const than = tinted(matte());
     than.vertexColors = true;
-    this.bodies = {
-      spear: new THREE.InstancedMesh(this.fighterGeometry('spear'), than, CAP),
-      archer: new THREE.InstancedMesh(this.fighterGeometry('archer'), than, CAP),
-      horse: new THREE.InstancedMesh(this.fighterGeometry('horse'), than, CAP),
-    };
+    // Dựng theo danh sách chứ không gõ tay từng loại: thêm loại lính thứ sáu thì chỉ còn
+    // việc vẽ dáng của nó.
+    const bodies = {} as Record<TroopKind, THREE.InstancedMesh>;
+    for (const k of TROOP_KINDS) {
+      bodies[k] = new THREE.InstancedMesh(this.fighterGeometry(k), than, CAP);
+    }
+    this.bodies = bodies;
     this.shots = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.09, 0.09, 1), matte(PALETTE.wheat, true), SHOT_CAP);
     for (const mesh of [...TROOP_KINDS.map((k) => this.bodies[k]), this.shots]) {
@@ -81,7 +83,7 @@ export class ArmyManager {
   }
 
   /**
-   * BA DÁNG NGƯỜI, một cho mỗi loại lính.
+   * NĂM DÁNG, một cho mỗi loại lính (ba dáng người đầu có từ bản thời đại).
    *
    * Luật khắc chế chỉ có nghĩa khi nhìn vào là biết đang đánh nhau với cái gì. Ở mức phóng
    * này người chơi đọc BÓNG DÁNG chứ không đọc chi tiết, nên ba dáng phải khác nhau ở
@@ -127,7 +129,45 @@ export class ArmyManager {
       add(guom, -0.4, 1.6, 0.1, PALETTE.granite);
       return han(parts);
     }
+    if (kind === 'siege') {
+      /*
+       * Xe pháo: KHÔNG có dáng người đứng thẳng. Hai bánh to, một nòng sẫm chếch lên, và
+       * một pháo thủ lom khom phía sau — thấp, dài và đen, không lẫn với bất kỳ loại nào.
+       * Sàn xe để màu phe (null) cho biết xe của ai.
+       */
+      add(new THREE.BoxGeometry(0.62, 0.2, 1.1), 0, 0.44, -0.05, null);
+      for (const x of [-0.4, 0.4]) {
+        const banh = new THREE.CylinderGeometry(0.37, 0.37, 0.1, 10);
+        banh.rotateZ(Math.PI / 2);
+        add(banh, x, 0.37, 0, PALETTE.trunk);
+      }
+      const nong = new THREE.CylinderGeometry(0.12, 0.18, 1.3, 8);
+      nong.rotateX(Math.PI / 2 - 0.32);
+      add(nong, 0, 0.82, 0.22, 0x33343a);
+      const cang = new THREE.BoxGeometry(0.14, 0.12, 0.8);
+      cang.rotateX(0.32);
+      add(cang, 0, 0.3, -0.78, PALETTE.trunk);
+      const tu = parts.length;
+      this.thanNguoi(parts, add, 0.86);
+      for (let i = tu; i < parts.length; i += 1) parts[i].translate(0.42, 0, -0.95);
+      return han(parts);
+    }
     this.thanNguoi(parts, add, 1);
+    if (kind === 'mage') {
+      /*
+       * Pháp sư: áo choàng xoè tới đất, mũ chóp nhọn tím trùm kín cái mũ sắt của dáng người
+       * chung, và một cây trượng có viên ngọc sáng. Đường viền là một hình nón trên một
+       * hình nón — thứ duy nhất trên bãi không có vũ khí chĩa ra trước.
+       */
+      add(new THREE.ConeGeometry(0.44, 0.56, 8), 0, 0.28, 0, null);
+      add(new THREE.CylinderGeometry(0.43, 0.43, 0.04, 10), 0, 0.92, 0, 0x6b4fa0);
+      add(new THREE.ConeGeometry(0.34, 0.74, 8), 0, 1.14, 0, 0x6b4fa0);
+      add(new THREE.CylinderGeometry(0.03, 0.03, 1.4, 5), -0.34, 0.7, 0.12, PALETTE.trunk);
+      // Cầu chứ không phải khối tám mặt: khối đa diện của three.js KHÔNG có chỉ số, gộp với các
+      // phần có chỉ số là `han` ném lỗi và cả trò chơi không khởi động.
+      add(new THREE.SphereGeometry(0.12, 6, 4), -0.34, 1.5, 0.12, 0x9fdcff);
+      return han(parts);
+    }
     if (kind === 'archer') {
       // Cánh cung: một vành cong dựng đứng trước mặt, đọc ra ngay từ xa.
       const cung = new THREE.TorusGeometry(0.42, 0.045, 5, 10, Math.PI * 1.15);
@@ -202,7 +242,7 @@ export class ArmyManager {
   private draw(): void {
     const s = this.s;
     if (!s) return;
-    const n: Record<TroopKind, number> = { spear: 0, archer: 0, horse: 0 };
+    const n = noTroops();
 
     const than = (f: { x: number; z: number; face: number; kind: TroopKind },
       hex: number, cui: number): void => {

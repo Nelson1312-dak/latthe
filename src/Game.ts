@@ -26,6 +26,7 @@ import { AutoTune, TIERS, firstAutoTier, loadGfx, pixelRatioFor, saveGfx, stepDo
 import type { Choice, GfxSettings, Tier, TierSpec } from './quality';
 import type { Economy } from './Economy';
 import { ArmyManager } from './ArmyManager';
+import { FleetView } from './FleetView';
 import { Beasts } from './Beasts';
 import { TOWER_RANGE } from './battle';
 import { BATTLE_RADIUS } from './battle';
@@ -129,6 +130,8 @@ export class Game {
   readonly map: MapManager;
   readonly fog: FogOfWar;
   readonly army: ArmyManager;
+  /** Chiến thuyền neo ở bến — chỉ phần hình của hạm đội. */
+  private readonly fleet: FleetView;
   readonly dat = new Ground();
   /** Khối ở giữa tấm sương lần nạp gần nhất — đổi khối thì nạp lại cả tấm. */
   private fogAt = '';
@@ -272,6 +275,11 @@ export class Game {
   readonly beasts: Beasts;
   /** Đang bám theo ai. Khác với "đang chọn ai": chọn rồi vẫn có thể không bám. */
   private followId: string | null = null;
+  /** Mức phóng trước lúc bấm "Follow", để thôi bám thì trả lại đúng mức ấy. */
+  private zoomTruocBam: number | null = null;
+  /** Chỗ vừa chọn, chờ thẻ kiểm tra dựng xong rồi mới xét nó có bị thẻ che không. */
+  private choLo: { x: number; z: number; khung: number } | null = null;
+  private readonly tam = new THREE.Vector3();
 
   constructor(canvas: HTMLCanvasElement, economy: Economy) {
     this.economy = economy;
@@ -404,6 +412,8 @@ export class Game {
 
     this.army = new ArmyManager(this.map);
     this.army.onDone = () => this.endBattle();
+    this.fleet = new FleetView(this.map, economy);
+    this.scene.add(this.fleet.group);
     // Thú chỉ hiện ở chỗ mây đã tan: hang lộ ra dưới mây là mất luôn cái công đi khám phá.
     this.beasts = new Beasts(
       (x, z) => this.map.groundY(x, z),
@@ -846,7 +856,8 @@ export class Game {
     const crates = b.type === 'outpost'
       ? Math.min(5, Math.ceil(Object.values(b.stock).reduce<number>((a, v) => a + (v ?? 0), 0) / 20))
       : 0;
-    return `${b.type}:${b.level}:${crates}`;
+    // Thời đại nằm trong chữ ký: lên đời là MỌI công trình dựng lại với vật liệu mới.
+    return `${b.type}:${b.level}:${crates}:${this.economy.state.age}`;
   }
 
   private geo(key: string, make: () => THREE.BufferGeometry): THREE.BufferGeometry {
@@ -865,7 +876,8 @@ export class Game {
   private buildStructure(g: THREE.Group, b: Building, id: string): void {
     // Cả công trình là MỘT khối đã hàn, tô bằng màu đỉnh — xem buildings.ts.
     const mesh = new THREE.Mesh(
-      buildingGeometry(b.type, b.level, this.economy.state.village.color, kieuOf(id)),
+      buildingGeometry(b.type, b.level, this.economy.state.village.color, kieuOf(id),
+        this.economy.state.age),
       buildingMaterial());
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -1195,13 +1207,15 @@ export class Game {
   boChon(): void { this.clearSelection(); }
 
   private clearSelection(): void {
-    this.followId = null;
+    this.thoiBam();
+    this.choLo = null;
     this.chooseUnit(null);
     this.pickPatch(null);
     this.pickDen(null);
     this.selectedId = null;
     this.updateMarkers();
-    this.wantedZoom = Math.max(this.wantedZoom, this.mucNghi);
+    // KHÔNG đụng mức phóng ở đây nữa. Bản trước kéo về mức nghỉ mỗi lần bỏ chọn, nên ai đã
+    // tự chụm vào gần thì cứ bấm ra đất trống là khung nhìn lại nhảy ra xa.
     this.onSelect?.(null);
   }
 
@@ -1210,7 +1224,11 @@ export class Game {
     this.selectedUnitId = id;
     this.doi.clear();
     if (id) this.doi.add(id);
-    if (id === null) this.followId = null;
+    if (id === null) this.thoiBam();
+    else {
+      const u = this.economy.state.units.find((x) => x.id === id);
+      if (u) this.giuTrongKhung(u.position[0], u.position[2]);
+    }
     this.unitRing.visible = id !== null;
     this.onSelectUnit?.(id);
   }
@@ -1229,7 +1247,10 @@ export class Game {
     const d = id ? this.beasts.living.find((x) => x.id === id) : undefined;
     this.selectedDenId = d ? d.id : null;
     this.denRing.visible = !!d;
-    if (d) this.denRing.position.set(d.x, this.map.groundY(d.x, d.z) + 0.3, d.z);
+    if (d) {
+      this.denRing.position.set(d.x, this.map.groundY(d.x, d.z) + 0.3, d.z);
+      this.giuTrongKhung(d.x, d.z);
+    }
     this.onSelectDen?.(this.selectedDenId);
   }
 
@@ -1300,6 +1321,8 @@ export class Game {
   pickPatch(id: string | null): void {
     if (this.selectedPatchId === id) return;
     this.selectedPatchId = id;
+    const bai = id ? this.map.patchById(id) : null;
+    if (bai) this.giuTrongKhung(bai.center[0], bai.center[2]);
     this.updateMarkers();
     this.onSelectPatch?.(id);
   }
@@ -1310,11 +1333,85 @@ export class Game {
 
   /**
    * Bật/tắt bám theo một người. Bám thì kéo luôn mức phóng vào gần, vì bám mà nhìn từ xa
-   * thì chẳng khác gì không bám.
+   * thì chẳng khác gì không bám. Đây là chỗ DUY NHẤT một cú bấm được đổi mức phóng — người
+   * chơi đã bấm đúng cái nút "Follow" — và thôi bám thì mức cũ được trả lại.
    */
   setFollow(id: string | null): void {
+    if (!id) { this.thoiBam(); return; }
     this.followId = id;
-    if (id && this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
+    this.zoomTruocBam = null;
+    if (this.wantedZoom > FOCUS_ZOOM) {
+      this.zoomTruocBam = this.wantedZoom;
+      this.wantedZoom = FOCUS_ZOOM;
+    }
+  }
+
+  /**
+   * Thôi bám, và trả mức phóng về như trước lúc bám — nhưng chỉ khi người chơi chưa tự
+   * chụm hay lăn chuột trong lúc bám: mức họ tự chọn thì là của họ.
+   */
+  private thoiBam(): void {
+    if (!this.followId) return;
+    this.followId = null;
+    if (this.zoomTruocBam !== null && Math.abs(this.wantedZoom - FOCUS_ZOOM) < 0.01) {
+      this.wantedZoom = this.zoomTruocBam;
+    }
+    this.zoomTruocBam = null;
+  }
+
+  /*
+   * CHỌN MỘT THỨ KHÔNG ĐƯỢC LÀM KHUNG NHÌN NHẢY.
+   *
+   * Trước bản này mỗi cú bấm đổi khung nhìn theo HAI cách chồng lên nhau: bấm vào nhà thì
+   * camera bay tới và phóng vào mức 12; và thẻ kiểm tra vừa trượt lên là cả cảnh bị co lại
+   * cho vừa phần màn còn trống — trên điện thoại thẻ chiếm gần nửa màn, nên cảnh nhỏ đi
+   * gần một nửa. Bấm ra chỗ trống thì mọi thứ lại nở ra. Người chơi gọi đúng tên nó: "cứ
+   * click vào cái gì là nó lại zoom".
+   *
+   * Giờ cú bấm không đổi mức phóng, và thẻ kiểm tra không còn nắn khung camera (xem
+   * resize()). Chỉ còn một can thiệp: nếu thứ vừa chọn nằm DƯỚI tấm thẻ hoặc sát mép màn
+   * thì camera trượt vừa đủ để nó ló ra. Thấy sẵn rồi thì không nhúc nhích gì cả.
+   *
+   * Phải đợi hai khung: thẻ được dựng trong chính cú bấm này, và chiều cao của nó chỉ đo
+   * được sau khi trình duyệt dàn trang xong.
+   */
+  private giuTrongKhung(x: number, z: number): void {
+    this.choLo = { x, z, khung: 2 };
+  }
+
+  private xetChoLo(): void {
+    const c = this.choLo;
+    if (!c) return;
+    c.khung -= 1;
+    if (c.khung > 0) return;
+    this.choLo = null;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const tren = document.querySelector('.bar-top')?.getBoundingClientRect().bottom ?? 0;
+    const the = document.querySelector('.inspector:not([hidden])')?.getBoundingClientRect();
+    const dock = document.querySelector('.dock')?.getBoundingClientRect();
+    const duoi = Math.min(the?.top ?? h, dock?.top ?? h);
+    // Lề đủ cho một căn nhà đứng trọn trong khung; dải trống quá hẹp thì co lề lại.
+    const leY = Math.min(64, Math.max(0, (duoi - tren) / 3));
+    const leX = Math.min(44, w / 4);
+    // Xét ở chỗ camera SẼ DỪNG chứ không phải chỗ nó đang trôi qua: camera trực giao nên
+    // dời camera một đoạn thì mọi thứ trên màn dời đúng ngược lại đoạn ấy.
+    this.tam.set(
+      c.x - (this.wanted.x - this.target.x), this.map.groundY(c.x, c.z),
+      c.z - (this.wanted.z - this.target.z)).project(this.camera);
+    const sx = (this.tam.x + 1) / 2 * w;
+    const sy = (1 - this.tam.y) / 2 * h;
+    const dx = THREE.MathUtils.clamp(sx, leX, w - leX);
+    const dy = THREE.MathUtils.clamp(sy, tren + leY, duoi - leY);
+    if (Math.abs(dx - sx) < 1 && Math.abs(dy - sy) < 1) return;
+    // Điểm trên mặt đất đang nằm ở chỗ mình muốn thứ kia hiện ra; dời camera đúng bằng độ
+    // lệch giữa hai điểm thì thứ kia trượt tới đó. Dời ÍT NHẤT có thể, không đưa vào giữa.
+    this.pointer.set((dx / w) * 2 - 1, -(dy / h) * 2 + 1);
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    if (!this.castToGround()) return;
+    this.wanted.x = this.target.x + c.x - this.hitPoint.x;
+    this.wanted.z = this.target.z + c.z - this.hitPoint.z;
+    this.clampTarget();
   }
 
   /** Điểm trên mặt đất dưới con trỏ. Trả false khi tia không cắt mặt đất. */
@@ -1350,17 +1447,12 @@ export class Game {
   }
 
   /**
-   * Đưa ô vừa chọn vào giữa màn và phóng gần lại.
-   *
-   * Trên bản đồ 60×60 nhìn từ mức mặc định, một căn nhà chỉ cao chừng ba chục điểm ảnh — bấm
-   * trúng rồi vẫn không đọc nổi nó là nhà gì. Bay tới là cách duy nhất khiến thao tác chọn
-   * có nghĩa, và vì camera vốn đã trượt mượt nên không cần thêm hoạt cảnh nào.
+   * Công trình vừa chọn: chỉ bảo đảm nó không nằm dưới tấm thẻ. Bản trước bay tới và phóng
+   * vào gần ở mọi cú bấm — xem giuTrongKhung() để biết vì sao bỏ.
    */
   private focusOnBuilding(id: string): void {
     const b = this.economy.buildingById(id);
-    if (!b) return;
-    this.panTo(b.position[0], b.position[2]);
-    if (this.wantedZoom > FOCUS_ZOOM) this.wantedZoom = FOCUS_ZOOM;
+    if (b) this.giuTrongKhung(b.position[0], b.position[2]);
   }
 
 
@@ -1416,17 +1508,14 @@ export class Game {
   }
 
   /**
-   * Dua mot bai vao giua man, va chi keo lai gan KHI dang qua xa.
-   *
-   * Khac voi nen dat: bai to va doc duoc tu xa, nen keo gan moi lan bam la giat man hinh
-   * vo co - nhat la luc nguoi choi dang di giao nguoi cho ba bon bai lien tiep. Chi can
-   * thiep khi bai dang nho qua de nhin thay nguoi dan trong do.
+   * Nút "VIEW …" trên thẻ người dân: camera trượt tới bãi, mức phóng để yên. Trượt xong mà
+   * bãi rơi vào dưới tấm thẻ thì xetChoLo() nhích thêm cho nó ló ra.
    */
   focusOnPatch(id: string): void {
     const b = this.map.patchById(id);
     if (!b) return;
     this.panTo(b.center[0], b.center[2]);
-    if (this.wantedZoom > 30) this.wantedZoom = 30;
+    this.giuTrongKhung(b.center[0], b.center[2]);
   }
 
   /**
@@ -1607,7 +1696,8 @@ export class Game {
     const dang = doi ? this.economy.buildingById(doi) : undefined;
     const ma = dang ? dang.id : `b_${this.economy.state.nextBuildingId}`;
     this.ghost = new THREE.Mesh(
-      buildingGeometry(type, dang ? dang.level : 1, this.economy.state.village.color, kieuOf(ma)),
+      buildingGeometry(type, dang ? dang.level : 1, this.economy.state.village.color, kieuOf(ma),
+        this.economy.state.age),
       this.ghostMat);
     this.ghost.renderOrder = 5;
     this.scene.add(this.ghost);
@@ -1754,9 +1844,11 @@ export class Game {
     const h = window.innerHeight;
     const topPx = document.querySelector('.bar-top')?.getBoundingClientRect().height ?? 0;
     const dockPx = document.querySelector('.dock')?.getBoundingClientRect().height ?? 0;
-    const inspPx = document.querySelector('.inspector:not([hidden])')?.getBoundingClientRect().height ?? 0;
-    const botPx = dockPx + inspPx + 24;
-    const freeH = Math.max(h * 0.34, h - topPx - botPx);
+    // Thẻ kiểm tra KHÔNG tham gia vào khung camera. Bản trước trừ cả chiều cao của nó, nên
+    // thẻ mở ra là cả cảnh co lại và dồn lên trên, thẻ đóng là nở ra — một cú "zoom" ở mỗi
+    // lần bấm. Thứ đang chọn có bị thẻ che thì xetChoLo() trượt camera, không co cảnh.
+    const botPx = dockPx + 24;
+    const freeH = this.freeHeight();
 
     const aspect = w / h;
     const halfH = this.zoom * (h / freeH);
@@ -1788,7 +1880,7 @@ export class Game {
   private watchHud(): void {
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(() => this.resize());
-    for (const sel of ['.bar-top', '.dock', '.inspector']) {
+    for (const sel of ['.bar-top', '.dock']) {
       const node = document.querySelector(sel);
       if (node) ro.observe(node);
     }
@@ -1824,12 +1916,14 @@ export class Game {
     this.autoTune(gap);
 
     this.updateWeather(this.paused ? 0 : dt);
+    this.xetChoLo();
     this.moveCamera(dt);
     // Nạp khối chạy cả khi tạm dừng: người chơi vẫn kéo bản đồ đi xem được, và đất mới phải
     // hiện ra theo.
     this.map.update(this.target);
     this.updateGround();
     this.beasts.update(this.elapsed, dt, this.target);
+    this.fleet.update(this.elapsed);
     // Mô hình mờ bám ô giữa màn, nên phải tính SAU khi camera đã trôi xong trong khung này.
     if (this.ghostType) this.updateGhost();
     // So voi phien ban DA DUNG chu khong so truoc/sau trong cung mot khung: ai khac goi

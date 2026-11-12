@@ -355,6 +355,60 @@ export function nodePool(i: number, j: number): number {
 
 /** Kênh phụ của nodeCalc — độ ngập của đỉnh vừa tính. */
 let uot = 0;
+/** Kênh phụ thứ hai: đỉnh vừa tính chìm dưới SÔNG hay BIỂN tới đâu, 0–1. */
+let sau = 0;
+
+// ------------------------------------------------- sông và biển
+
+/*
+ * SÔNG VÀ BIỂN LÀ MỘT TRƯỜNG NHIỄU RIÊNG, phủ lên trên mọi biến sinh thái.
+ *
+ * Không thêm biến sinh thái "biển": `biomeAt` quyết loại bãi tài nguyên và nằm trong bản lưu
+ * (`Building.biome`), đổi nó là đổi luật chơi của mọi làng đã có. Nước chỉ là một lớp phủ:
+ * chỗ nào trường này dương thì mặt đất bị KÉO XUỐNG đúng mực nước và tô màu nước — cùng mẹo
+ * với vũng đầm ở trên, nên dân vẫn lội qua được, bóng vẫn đổ lên, sương vẫn phủ.
+ *
+ * Hai lớp nhiễu, hai muối MỚI (101, 103, 107) — không đụng chuỗi ngẫu nhiên nào đã có:
+ *   · BIỂN: phần đỉnh của một lớp nhiễu rất rộng. Ra những vùng nước lớn, bờ lượn.
+ *   · SÔNG: đường đồng mức 0,5 của một lớp nhiễu khác. Đường đồng mức của nhiễu trơn là
+ *     những đường cong dài không đứt, tự uốn khúc — đúng dáng một con sông, mà không phải
+ *     dò dòng chảy gì cả.
+ *
+ * Quanh thủ phủ luôn KHÔ: trong bán kính 48 không có nước, tới 66 mới ngập hẳn. Vành căn cứ
+ * lớn nhất chưa tới 45, nên không căn nhà nào trong làng của bản lưu cũ bị nước tràn vào.
+ */
+/** Mực nước sông biển. Bội của STEP_Y, thấp hơn mực đầm một bậc. */
+export const SEA_Y = -1.2;
+const DRY_IN = 48;
+const DRY_OUT = 66;
+const SEA_CELL = 190;
+const SEA_AT = 0.69;
+const SEA_BAND = 0.05;
+const RIVER_CELL = 130;
+const RIVER_IN = 0.02;
+const RIVER_OUT = 0.042;
+
+/**
+ * Độ sâu thô của nước tại một điểm: 0 là đất khô, 0–1 là bờ thoải, trên 1 là nước sâu dần.
+ * Hàm thuần của toạ độ, rẻ (ba phép nhiễu) — dùng được ở mọi nơi mà không phải tính cao độ.
+ */
+export function waterDepth(x: number, z: number): number {
+  const r = Math.hypot(x, z);
+  if (r <= DRY_IN) return 0;
+  const bien = (valueNoise(x, z, SEA_CELL, 101) - SEA_AT) / SEA_BAND;
+  // Một chút nhiễu nhỏ cho bờ sông bớt trơn như ống nước.
+  const n = valueNoise(x, z, RIVER_CELL, 103) + (valueNoise(x, z, 34, 107) - 0.5) * 0.05;
+  const song = (RIVER_OUT - Math.abs(n - 0.5)) / (RIVER_OUT - RIVER_IN);
+  const d = Math.max(bien, song);
+  if (d <= 0) return 0;
+  return d * muot(Math.min(1, (r - DRY_IN) / (DRY_OUT - DRY_IN)));
+}
+
+/** Chỗ này ngập tới đâu, 0–1: 0 là khô, 1 là mặt nước phẳng. */
+export function waterAt(x: number, z: number): number {
+  const d = waterDepth(x, z);
+  return d <= 0 ? 0 : d >= 1 ? 1 : muot(d);
+}
 
 function nodeCalc(i: number, j: number): number {
   const x = i * GRID_STEP;
@@ -377,11 +431,22 @@ function nodeCalc(i: number, j: number): number {
    * Độ dâng tan dần theo trọng số vùng, nên ở ranh giới vũng cạn dần chứ không dựng vách.
    */
   uot = 0;
+  let y1 = y0;
   const vung = dam + lua;
-  if (vung < 0.15 || y0 >= POOL_Y) return y0;
-  const m = muot(Math.min(1, (vung - 0.15) / 0.35));
-  uot = Math.min(1, (POOL_Y - y0) / 0.5) * m * (lua > dam ? -1 : 1);
-  return y0 + (POOL_Y - y0) * m;
+  if (vung >= 0.15 && y0 < POOL_Y) {
+    const m = muot(Math.min(1, (vung - 0.15) / 0.35));
+    uot = Math.min(1, (POOL_Y - y0) / 0.5) * m * (lua > dam ? -1 : 1);
+    y1 = y0 + (POOL_Y - y0) * m;
+  }
+  /*
+   * SÔNG BIỂN. Đất bị kéo về đúng mực nước theo độ ngập: ngập hẳn thì trả về CHÍNH hằng số
+   * (không qua phép cộng trừ nào) để mặt nước phẳng tuyệt đối, còn bờ thì thoải dần. Ở vách
+   * đá bờ ấy thành một cái hẻm sâu — con sông tự khoét lòng mà không ai phải vẽ.
+   */
+  sau = waterAt(x, z);
+  if (sau <= 0) return y1;
+  uot *= 1 - sau;
+  return sau >= 1 ? SEA_Y : y1 + (SEA_Y - y1) * sau;
 }
 
 /**
@@ -448,7 +513,8 @@ export function siteOf(x: number, z: number, r: number): Site {
   for (let i = i0; i <= i1; i++) {
     for (let j = j0; j <= j1; j++) {
       const h = nodeCalc(i, j);
-      if (uot > 0) return 2;
+      // Bờ sông bờ biển cũng là nước: nhà dựng trên bãi thoải thì nửa nền chìm.
+      if (uot > 0 || sau > 0.05) return 2;
       if (uot < 0) return 3;
       const dx = i * GRID_STEP - x;
       const dz = j * GRID_STEP - z;
@@ -505,6 +571,11 @@ const PATCH_SPEC: Record<ResourceKind, { label: string; radius: number; spots: n
   relics: { label: 'Crystal grove', radius: 4.8, spots: 4, base: 0.55 },
 };
 
+/** Tâm bãi ngập quá mức này thì bãi thành bãi cá. */
+const FISH_AT = 0.6;
+/** Bãi cá cho nhiều hơn ruộng một nửa: phải lội ra tận nước, và thường nằm xa làng. */
+const FISH_BASE = 1.5;
+
 export function patchLabel(kind: ResourceKind): string {
   return PATCH_SPEC[kind].label;
 }
@@ -548,16 +619,24 @@ function makePatch(
     const d = spec.radius * (0.45 + r() * 0.3);
     spots.push([x + Math.cos(a) * d, 0, z + Math.sin(a) * d]);
   }
+  /*
+   * BÃI NẰM GIỮA NƯỚC THÌ THÀNH BÃI CÁ. Bãi vẫn đúng mã ấy, đúng chỗ ấy, đúng những chỗ đứng
+   * ấy (mã bãi nằm trong bản lưu, qua lệnh giao dân) — chỉ đổi thứ lấy được: cá, tính là
+   * lương thực, và nhiều hơn ruộng. Không thì một khu rừng đứng giữa biển, mà dẹp nó đi thì
+   * mọi bãi phía sau trong khối đổi mã.
+   */
+  const ca = waterAt(x, z) >= FISH_AT;
   return {
     id: `b_${cx}_${cz}_${k}`,
-    kind,
-    label: spec.label,
+    kind: ca ? 'food' : kind,
+    label: ca ? 'Fishing ground' : spec.label,
     // center[1] là CAO ĐỘ của khoảnh đất đã san trong bãi — xem levelAtCenter().
     center: [x, levelAtCenter(x, z), z],
     radius: spec.radius,
     spots,
     biome,
-    richness: spec.base * richnessAt(x, z),
+    richness: (ca ? FISH_BASE : spec.base) * richnessAt(x, z),
+    ...(ca ? { was: kind } : {}),
   };
 }
 

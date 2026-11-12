@@ -10,14 +10,15 @@
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
 import {
-  AGES, BIOMES, BUILDINGS, BUILD_GROUPS, BUILD_LIMIT, BUILD_MIN_AGE, BUILD_MIN_LEVEL, FOOTPRINT, KHAC,
-  MINIMAP_SPAN, ORDER_HOLD_SECONDS, RESOURCES, BEASTS, DEN_FEAR, DEN_YIELD,
+  AGES, AGE_DEFENCE, AGE_FARM, AGE_STORAGE, BIOMES, BUILDINGS, FISH_COLOR, BUILD_GROUPS, BUILD_LIMIT, BUILD_MIN_AGE, BUILD_MIN_LEVEL, FOOTPRINT, KHAC,
+  MINIMAP_SPAN, ORDER_HOLD_SECONDS, RESOURCES, TAX_PER_VILLAGER, BEASTS, DEN_FEAR, DEN_YIELD,
   SMITH_ARMOUR, SMITH_ATTACK, TROOPS, VILLAGE_COLORS, VOYAGES, WAVE_WARN_SECONDS,
-  tenLangNgauNhien,
+  ageBonus, tenLangNgauNhien,
 } from './config';
 import { voyageSpec } from './voyage';
 import { waveKind } from './raids';
-import { CHUNK, biomeAt, chunkOf } from './world';
+import { CHUNK, biomeAt, chunkOf, waterAt } from './world';
+import { SHIP_AGE, SHIP_COST, SORTIE_SECONDS, lairLoot, lairNeed } from './naval';
 import { rewardText } from './milestones';
 import { ico, iconSvg } from './icons';
 import type { IconName } from './icons';
@@ -32,6 +33,7 @@ import type {
   BiomeId, BuildingType, Cost, Inventory, OfflineReport, Patch, ResourceKind, Unit, VoyageBand,
   VoyageResult, WaveResult,
 } from './types';
+import { eliteOf } from './battle';
 import { RESOURCE_KINDS, TROOP_KINDS } from './types';
 
 const STAT_MS = 200;
@@ -178,6 +180,19 @@ export class UIManager {
       this.waveSauTran = null;
     };
     economy.onVoyage = (r) => this.showVoyage(r);
+    economy.onShip = () => {
+      this.toast(`Warship launched · ${this.economy.state.fleet} at the dock`, 'ship');
+      this.renderAll();
+    };
+    economy.onLair = (r) => {
+      if (r.won) {
+        const thu = this.lootText({ gold: r.gold, relics: r.relics });
+        this.bao('ship', 'Pirate lair burned', `${thu}${r.sunk ? ` · ${r.sunk} warship${r.sunk > 1 ? 's' : ''} sunk` : ''}`, 'won');
+      } else {
+        this.bao('ship', 'Fleet driven off', `${r.sunk} warship${r.sunk > 1 ? 's' : ''} sunk · the lair still stands`, 'lost');
+      }
+      this.renderAll();
+    };
     this.el.waveHire.addEventListener('click', () => {
       const mua = this.economy.hireGuards();
       if (mua > 0) this.toast(`Hired ${mua} guards for this wave`, 'shield');
@@ -292,6 +307,15 @@ export class UIManager {
       sp.append(ico(TROOPS[k].icon, 'gico'), el('b', undefined, String(mix[k])));
       e.waveMix.append(sp);
     }
+    // Giặc tinh nhuệ: số tên đã chạm trần nên con số bên trên đứng yên, còn từng tên thì
+    // dày da lên. Không nói ra thì người chơi thấy "vẫn 36 tên" mà thua không hiểu vì sao.
+    const tinh = eliteOf(power);
+    if (tinh > 1.05) {
+      const sp = el('span');
+      sp.title = 'Elite raiders: tougher, hit harder';
+      sp.append(el('b', undefined, `×${tinh.toFixed(1)}`));
+      e.waveMix.append(sp);
+    }
 
     const thieu = power - guard;
     e.waveVerdict.textContent = thieu <= 0 ? 'Safe' : `Short ${thieu}`;
@@ -367,6 +391,12 @@ export class UIManager {
       if (mat) bits.push(`lost ${mat}`);
     }
     if (r.escaped > 0) bits.push(`${r.escaped} escaped`);
+    // Hải chiến kể trước chữ "lúc vắng mặt": nó là một phần của chính đợt ấy.
+    if (r.sea) {
+      const phan = Math.round((r.sea.stopped / Math.max(1, r.sea.power)) * 100);
+      bits.push(r.sea.stopped > 0 ? `fleet stopped ${phan}% of the sea raid` : 'sea raid landed unopposed');
+      if (r.sea.sunk > 0) bits.push(`${r.sea.sunk} warship${r.sea.sunk > 1 ? 's' : ''} sunk`);
+    }
     if (r.away) bits.push('while you were away');
     this.bao(r.kind === 'storm' ? 'storm' : 'raid', title, bits.join(' · '),
       r.won ? 'won' : 'lost');
@@ -386,6 +416,50 @@ export class UIManager {
     if (!this.economy.startVoyage(band)) return;
     this.toast(`${sp.crew} set sail · ${sp.label}`, sp.icon);
     this.renderInspector();
+  }
+
+  /**
+   * Hạm đội, đầu ngăn Biển: bao nhiêu thuyền, chặn được bao nhiêu của cánh quân biển đợt
+   * tới, nút đóng thuyền và nút đánh hang. Trước thời đại bốn chỉ một dòng hẹn — nói ra cái
+   * đang chờ phía trước, đừng giấu nó đi.
+   */
+  private renderFleet(sheet: HTMLElement): void {
+    const e = this.economy;
+    if (e.state.age < SHIP_AGE) {
+      sheet.append(el('p', 'sheet-note',
+        `Warships and pirate lairs unlock in the ${AGES[SHIP_AGE - 1].label}. From then on every raid also comes by sea.`));
+      return;
+    }
+    const { stop, sea } = e.seaThreat();
+    const dang = e.state.sortie;
+    sheet.append(this.sheetHead('Fleet', dang
+      ? `${dang.ships} warships raiding a lair · ${Math.ceil(dang.left)}s · ${e.state.fleet} at the dock`
+      : `${e.state.fleet}/${e.shipCap()} warships · ${sea > 0
+        ? `blocks ${Math.min(100, Math.round((stop / sea) * 100))}% of the next sea raid`
+        : 'next wave is a storm'}`));
+    const dong = e.state.shipLeft > 0 ? ` · launching in ${Math.ceil(e.state.shipLeft)}s` : '';
+    sheet.append(this.row('ship', 'Build warship', `Sinks raiders before they land${dong}`,
+      SHIP_COST, e.shipBlock(), () => { e.buildShip(); this.renderInspector(); }));
+    const n = e.state.lairs;
+    const loot = lairLoot(n);
+    sheet.append(this.row('ship', `Raid pirate lair ${n + 1}`,
+      `Needs ${lairNeed(n)} warships · ${SORTIE_SECONDS}s · ${loot.gold} gold, ${loot.relics} relics`,
+      {}, e.lairBlock(), () => {
+        if (e.raidLair()) this.toast('Fleet sails for the pirate lair', 'ship');
+        this.renderInspector();
+      }, true));
+    sheet.append(el('p', 'sheet-note', 'Ships away on a raid do not guard the coast.'));
+  }
+
+  /**
+   * Đầu mục đi biển. Từ thời đại bốn, ngăn Biển mở đầu bằng mục Hạm đội (có nút đóng ngăn),
+   * nên mục này chỉ còn là một dòng tiêu đề phụ — hai nút × trong một ngăn là một nút thừa.
+   */
+  private headBien(ten: string, phu: string): HTMLElement {
+    if (this.economy.state.age < SHIP_AGE) return this.sheetHead(ten, phu);
+    const h = el('div', 'sheet-sub');
+    h.append(el('strong', undefined, ten), el('small', undefined, phu));
+    return h;
   }
 
   private showVoyage(r: VoyageResult): void {
@@ -637,9 +711,17 @@ export class UIManager {
     const e = this.economy;
     const s = e.state;
     const r = e.rates[kind];
+    /*
+     * Bấm vào một con số trên thanh là hỏi "cái này từ đâu ra, đi đâu?". Vàng thì trả lời
+     * nguồn của nó — thuế và chợ — vì đó chính là câu người chơi đã hỏi. Các thứ khác thì
+     * nói từ mức nào trở lên thủ phủ đem bán lấy vàng; kho chưa đủ lớn để có phần dư thì
+     * thôi không nói, kẻo thành một lời hứa suông.
+     */
+    const giu = Math.ceil(e.reserveOf(kind));
     const them = e.isFull(kind) ? ' · FULL — build granaries'
-      : kind !== 'gold' && e.marketBusy && s.inv[kind] > e.reserveOf(kind) * 1.5
-        ? ' · market is backed up' : '';
+      : kind === 'gold' ? ` · tax ${e.taxRate().toFixed(1)}/s + goods sold at the Town Hall`
+        : e.marketBusy && s.inv[kind] > e.reserveOf(kind) * 1.5 ? ' · market is backed up'
+          : giu < s.storageLimit ? ` · sold for gold above ${fmt(giu)}` : '';
     this.toast(`${RESOURCES[kind].label} ${fmt(s.inv[kind])}/${fmt(s.storageLimit)}`
       + ` · +${(Number.isFinite(r) ? r : 0).toFixed(1)}/s${them}`);
   }
@@ -751,7 +833,8 @@ export class UIManager {
     if (this.ngan === 'dan') {
       sheet.append(this.sheetHead('Villagers',
         `${e.villagers().length} villagers · room for ${e.housing()}`));
-      sheet.append(this.row('crew', 'Hire a villager', 'One more pair of hands',
+      sheet.append(this.row('crew', 'Hire a villager',
+        `One more pair of hands · +${TAX_PER_VILLAGER.toFixed(2)} gold/s tax`,
         e.hireCost(), e.canHire() ? null : 'No room — build a house',
         () => { e.hire((h) => this.game.workers.spawnVillager(h)); this.renderInspector(); }));
       sheet.append(this.row('boot', `Faster feet · tier ${e.state.speedLevel}`,
@@ -763,25 +846,40 @@ export class UIManager {
       const tu = e.state.autoFarm;
       const nutTu = this.row(tu ? 'robot' : 'hand',
         tu ? 'Auto-assign: on' : 'Auto-assign: off',
-        tu ? 'Villagers pick the nearest, emptiest sites' : 'Villagers only work sites you assign',
+        tu ? 'Free villagers pick their own work' : 'Villagers only work where you place them',
         null, null, () => { this.toggleFarm(); this.renderInspector(); });
       nutTu.classList.toggle('on', tu);
       sheet.append(nutTu);
+      // Chỉ hiện khi có chỗ đã đặt: một nút dọn sạch cho cả làng, thay cho CLEAR ALL từng
+      // nằm trên thẻ của MỖI bãi.
+      const daDat = Object.values(e.state.assignments).reduce((s, v) => s + v, 0);
+      if (daDat > 0) {
+        sheet.append(this.row('broom', 'Clear placements',
+          `${daDat} placed by you at sites · tap to free them`,
+          null, null, () => {
+            e.state.assignments = {};
+            e.save();
+            this.renderDock();
+            this.renderInspector();
+          }));
+      }
       return;
     }
 
     if (this.ngan === 'bien') {
       const v = e.state.voyage;
       if (v) {
+        this.renderFleet(sheet);
         const sp = voyageSpec(v.band);
         const con = Math.max(0, Math.ceil(v.left / e.voyageSpeed()));
-        sheet.append(this.sheetHead('At sea',
+        sheet.append(this.headBien('At sea',
           `${sp.label} · ${v.crew.length} crew · ${Math.floor(con / 60)}:${String(con % 60).padStart(2, '0')} left`));
         sheet.append(el('p', 'sheet-note',
           'One voyage at a time. Crew at sea do not defend.'));
         return;
       }
-      sheet.append(this.sheetHead('Voyages', 'Send crew for gold and relics'));
+      this.renderFleet(sheet);
+      sheet.append(this.headBien('Voyages', 'Send crew for gold and relics'));
       for (const sp of VOYAGES) {
         const chan = e.voyageBlock(sp.id);
         const phut = String(Math.round(sp.seconds / 60 * 10) / 10);
@@ -911,7 +1009,7 @@ export class UIManager {
     sheet.append(nut);
   }
 
-  /** Ngăn quân đội: thời đại, ba loại lính, và lò rèn. */
+  /** Ngăn quân đội: thời đại, năm loại lính, và lò rèn. */
   private renderQuan(sheet: HTMLElement): void {
     const e = this.economy;
     const s = e.state;
@@ -936,7 +1034,7 @@ export class UIManager {
         e.ageBlock(), () => { e.advanceAge(); this.renderInspector(); }));
     }
 
-    // --- ba loại lính
+    // --- năm loại lính
     for (const k of TROOP_KINDS) {
       const sp = TROOPS[k];
       const cap = e.troopCap(k);
@@ -1023,10 +1121,8 @@ export class UIManager {
     } else {
       row.append(bit('basket', 'empty-handed'));
     }
-    row.append(bit('boot', u.speed.toFixed(1)));
-    row.append(bit('pack', String(Math.floor(u.capacity))));
-    const xa = Math.round(Math.hypot(u.position[0], u.position[2]));
-    row.append(bit('compass', `${xa} from Town Hall`));
+    // Chỉ còn món đang vác. Tốc độ và sức mang là của CẢ LÀNG (mua trong ngăn Villagers),
+    // còn khoảng cách tới thủ phủ thì không ai cần biết thành một con số.
     body.append(row);
 
     /*
@@ -1037,7 +1133,7 @@ export class UIManager {
     if (laDan) {
       const mach = el('p', 'insp-lenh');
       mach.append(ico('flag', 'bico'), el('span', undefined,
-        'Tap the map to send them there (fog too) · tap a site to work it'));
+        'Tap the map to send them · tap a site to work there'));
       body.append(mach);
 
       const lenh = el('div', 'lenh-row');
@@ -1200,7 +1296,7 @@ export class UIManager {
     const res = RESOURCES[b.kind];
 
     const head = el('div', 'insp-head');
-    head.append(ico(res.icon, 'insp-ico', res.color));
+    head.append(b.was ? ico('fish', 'insp-ico', FISH_COLOR) : ico(res.icon, 'insp-ico', res.color));
     const t = el('div', 'insp-title');
     const live = el('small', 'live', this.patchLine(b));
     this.patchLive = live;
@@ -1218,7 +1314,8 @@ export class UIManager {
       s.append(ico(ten), el('span', undefined, text));
       return s;
     };
-    row.append(bit(res.icon, res.label));
+    // Bãi cá nói rõ nó cho gì: cá vào kho là lương thực.
+    row.append(b.was ? bit('fish', `Fish · counts as ${res.label.toLowerCase()}`) : bit(res.icon, res.label));
     /*
      * MỘT CHUYẾN ĐÁNG BAO NHIÊU VÀNG — chứ không phải hệ số giàu.
      *
@@ -1237,8 +1334,6 @@ export class UIManager {
       + ` ${res.label.toLowerCase()} (richness ×${b.richness.toFixed(2)}),`
       + ` worth about ${fmt(moiChuyen)} gold at the Town Hall`;
     row.append(chuyen);
-    const xa = Math.round(Math.hypot(b.center[0], b.center[2]));
-    row.append(bit('compass', `${xa} from Town Hall`));
     if (e.isFull(b.kind)) row.append(bit('basket', 'storage full', 'lack'));
     if (thu && biQuay) {
       row.append(bit('paw',
@@ -1246,6 +1341,19 @@ export class UIManager {
     }
     body.append(row);
 
+    /*
+     * ĐIỀU DÂN: MỘT CON SỐ, HAI NÚT. KHÔNG GÌ KHÁC.
+     *
+     * Thẻ cũ có năm thứ cho một việc: con số +/−, một dòng "còn mấy người rảnh", nút SEND
+     * ALL, nút CLEAR ALL, và một đoạn chú thích về chế độ tự cân. Người chơi nói thẳng là
+     * rối — và dòng trạng thái ở đầu thẻ còn ghi "Nobody working here" ngay cạnh con số 2.
+     *
+     * Giờ chỉ còn con số: bao nhiêu người làm ở bãi này. Dấu + luôn bấm được chừng nào bãi
+     * chưa có cả làng — hết người rảnh thì nó tự rút một người từ bãi đang đông nhất, nên
+     * không cần đi tìm bãi kia để bấm − trước. Thế là SEND ALL (bấm + vài lần) và CLEAR ALL
+     * (bấm −) không còn lý do tồn tại; nút dọn sạch mọi chỗ đã đặt nằm trong ngăn Villagers,
+     * cạnh công tắc tự cân, là nơi của những thứ áp cho cả làng.
+     */
     const giao = e.state.assignments[b.id] ?? 0;
     const tong = e.villagers().length;
     const tongGiao = () => Object.values(e.state.assignments).reduce((s, v) => s + v, 0);
@@ -1254,28 +1362,43 @@ export class UIManager {
     const lab = el('div', 'lab');
     const note = el('small', undefined, '');
     const sayLeft = () => {
+      const day = e.state.assignments[b.id] ?? 0;
       const ranh = Math.max(0, tong - tongGiao());
       note.textContent = tong === 0 ? 'No villagers yet'
-        : ranh > 0 ? `${ranh} unassigned`
-        : 'Everyone is assigned';
+        : day >= tong ? `All ${tong} are here`
+        : ranh > 0 ? `${ranh} of ${tong} free`
+        : 'None free · + moves one over';
     };
     sayLeft();
-    lab.append(el('strong', undefined, 'Assign villagers'), note);
+    lab.append(el('strong', undefined, 'Villagers here'), note);
     crew.append(lab);
 
     const step = el('div', 'insp-step');
     const num = el('span', 'num', String(giao));
     const minus = el('button', undefined, '−') as HTMLButtonElement;
     const plus = el('button', undefined, '+') as HTMLButtonElement;
+    minus.setAttribute('aria-label', 'One fewer villager here');
+    plus.setAttribute('aria-label', 'One more villager here');
     const set = (v: number) => {
+      const a = e.state.assignments;
       const w = Math.max(0, Math.min(tong, v));
-      if (w === 0) delete e.state.assignments[b.id];
-      else e.state.assignments[b.id] = w;
+      if (w === 0) delete a[b.id];
+      else a[b.id] = w;
+      // Đặt quá số dân đang có thì rút bớt ở bãi khác, bãi đông nhất trước. Vòng lặp chứ
+      // không rút đúng một: bản lưu cũ có thể đã đặt thừa từ trước (dân chết, dân ra khơi).
+      for (let thua = tongGiao() - tong; thua > 0; thua -= 1) {
+        const khac = Object.keys(a).filter((id) => id !== b.id && a[id] > 0)
+          .sort((x, y) => a[y] - a[x])[0];
+        if (!khac) break;
+        if (a[khac] <= 1) delete a[khac];
+        else a[khac] -= 1;
+      }
       e.save();
       num.textContent = String(w);
       minus.disabled = w === 0;
       plus.disabled = w >= tong;
       sayLeft();
+      live.textContent = this.patchLine(b);
       this.updateCrewPill();
     };
     minus.disabled = giao === 0;
@@ -1285,39 +1408,6 @@ export class UIManager {
     step.append(minus, num, plus);
     crew.append(step);
     body.append(crew);
-
-    const acts = el('div', 'insp-choice');
-    // Nut chinh cua the bai: ho phach. "BO HET" ben canh la nut phu nen de kieu mo.
-    const all = el('button', 'insp-go') as HTMLButtonElement;
-    all.append(ico('crew', 'bico'), el('span', undefined, 'SEND ALL'));
-    all.title = 'Assign everyone here and clear other assignments';
-    all.addEventListener('click', () => {
-      e.state.assignments = tong > 0 ? { [b.id]: tong } : {};
-      e.save();
-      this.renderInspector();
-      this.renderDock();
-    });
-    acts.append(all);
-
-    if (tongGiao() > 0) {
-      const clear = el('button', 'insp-go want') as HTMLButtonElement;
-      clear.append(ico('broom', 'bico'), el('span', undefined, 'CLEAR ALL'));
-      clear.title = 'Clear every assignment; back to auto';
-      clear.addEventListener('click', () => {
-        e.state.assignments = {};
-        e.save();
-        this.renderInspector();
-        this.renderDock();
-      });
-      acts.append(clear);
-    }
-    body.append(acts);
-
-    // Giao người mà để tự farm bật thì vẫn chạy, chỉ là phần còn lại do máy lo. Tắt đi mới
-    // là "chỉ làm đúng những gì tôi bảo" — nói thẳng ra, vì đó là chỗ dễ hiểu nhầm nhất.
-    body.append(el('p', 'insp-note', e.state.autoFarm
-      ? 'Auto-assign ON: your assignments come first, the rest pick their own work.'
-      : 'Auto-assign OFF: villagers only work assigned sites.'));
 
     box.append(head, body);
   }
@@ -1375,15 +1465,26 @@ export class UIManager {
 
 
   /** Bãi này đang có bao nhiêu người, và họ đang làm gì. Một dòng, làm mới liên tục. */
+  /**
+   * Dòng trạng thái của bãi. Nó phải ĂN KHỚP với con số đã đặt ngay bên dưới: bản cũ chỉ
+   * đếm người đang nhắm tới bãi, nên vừa bấm + xong vẫn đọc "Nobody working here" — dân chỉ
+   * đổi việc sau khi đổ xong chuyến đang vác. Giờ nó nói luôn là họ đang tới, và vì sao chưa.
+   */
   private patchLine(b: Patch): string {
-    const toi = this.economy.villagers().filter((v) => v.targetId === b.id);
-    const dao = toi.filter((v) => v.state === 'gathering').length;
-    if (toi.length === 0) {
-      return this.economy.isFull(b.kind)
-        ? 'Storage full · nobody here'
-        : 'Nobody working here';
+    const e = this.economy;
+    const toi = e.villagers().filter((v) => v.targetId === b.id).length;
+    const giao = e.state.assignments[b.id] ?? 0;
+    if (toi > 0) {
+      return giao > toi ? `${toi} working here · ${giao - toi} more coming` : `${toi} working here`;
     }
-    return `${toi.length} here · ${dao} gathering`;
+    if (e.isFull(b.kind)) return 'Storage full · gathering paused';
+    if (giao > 0) {
+      const don = e.demandKinds();
+      return don.length > 0 && !don.includes(b.kind)
+        ? 'Coming once the build order is supplied'
+        : 'Coming after their current trip';
+    }
+    return 'Nobody here · tap + to send someone';
   }
 
 
@@ -1433,7 +1534,9 @@ export class UIManager {
 
     head.append(ico(BUILDINGS[b.type].icon, 'insp-ico'));
     const t = el('div', 'insp-title');
-    t.append(el('strong', undefined, BUILDINGS[b.type].label),
+    // Thẻ thủ phủ mang luôn tên thời đại: nó là thứ "lên đời", nên tên đời nằm ở tên nhà.
+    t.append(el('strong', undefined, b.type === 'townhall'
+      ? `${BUILDINGS[b.type].label} · ${this.economy.ageSpec().label}` : BUILDINGS[b.type].label),
       el('small', undefined, `Level ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
     head.append(t);
 
@@ -1442,6 +1545,60 @@ export class UIManager {
      * chẳng gì nói cho họ biết nút cần bấm nằm ở đây. Nói thẳng ra, ngay trên cái thẻ có
      * nút nâng cấp.
      */
+    // Thẻ thủ phủ là nơi vàng sinh ra, nên nó nói luôn vàng đang về bao nhiêu và từ đâu.
+    if (b.type === 'townhall') {
+      const vang = el('p', 'insp-next');
+      vang.append(ico('gold', 'bico'), el('span', undefined,
+        `Gold comes from taxes (+${this.economy.taxRate().toFixed(1)}/s now)`
+        + ' and from spare goods sold here'));
+      body.append(vang);
+    }
+    /*
+     * LÊN ĐỜI Ở CHÍNH THỦ PHỦ, kiểu Đế Chế: bấm vào nhà chính là thấy đời kế tiếp tên gì,
+     * giá bao nhiêu, còn thiếu gì, và lên rồi thì được gì. Bản trước chỉ có dòng này trong
+     * ngăn Quân — một chỗ không ai nghĩ tới khi muốn "nâng nhà chính".
+     */
+    if (b.type === 'townhall') {
+      const e = this.economy;
+      const sau = e.nextAge();
+      if (e.state.ageLeft > 0) {
+        body.append(el('p', 'sheet-note',
+          `Advancing to ${AGES[e.state.age].label} — ${Math.ceil(e.state.ageLeft)}s left.`));
+      } else if (sau) {
+        body.append(this.row('age', `Advance to ${sau.label}`, `Unlocks ${sau.opens.toLowerCase()}`,
+          sau.cost, e.ageBlock(), () => { e.advanceAge(); this.renderInspector(); }));
+        body.append(el('p', 'sheet-note',
+          `Each age rebuilds every building in a newer style, and adds +${Math.round(AGE_DEFENCE * 100)}%`
+          + ` tower and Town Hall damage, +${Math.round(AGE_FARM * 100)}% farm output and`
+          + ` +${Math.round(AGE_STORAGE * 100)}% storage.`));
+      } else {
+        body.append(el('p', 'sheet-note', 'Final age reached.'));
+      }
+    }
+    // Chòi canh nói ra phần thưởng thời đại nó đang hưởng — không thì "+20% mỗi đời" chỉ là
+    // một câu hứa trên thẻ thủ phủ.
+    if (b.type === 'watchtower' && this.economy.state.age > 1) {
+      const them = Math.round((ageBonus(this.economy.state.age, AGE_DEFENCE) - 1) * 100);
+      const dong = el('p', 'insp-next');
+      dong.append(ico('shield', 'bico'), el('span', undefined,
+        `${this.economy.ageSpec().label}: +${them}% damage`));
+      body.append(dong);
+    }
+    /*
+     * MỖI NHÀ QUÂN RA ĐÚNG MỘT LOẠI LÍNH, và nút nuôi nằm ngay trên thẻ của nó: doanh trại
+     * ra lính giáo, trường bắn ra cung thủ, chuồng ngựa ra kỵ binh, tháp phép ra pháp sư,
+     * xưởng ra xe pháo. Ngăn Quân vẫn còn đủ cả năm dòng — đó là bảng tổng, đây là chỗ làm.
+     */
+    for (const k of TROOP_KINDS) {
+      const sp = TROOPS[k];
+      if (sp.from !== b.type) continue;
+      const e = this.economy;
+      const dang = e.state.train.filter((x) => x.kind === k).length;
+      const khac = TROOP_KINDS.filter((o) => KHAC[k][o] > 1.2).map((o) => TROOPS[o].label.toLowerCase());
+      body.append(this.row(sp.icon, `Train ${sp.label.toLowerCase()} · ${e.state.army[k]}/${e.troopCap(k)}`,
+        `Beats ${khac.join(' and ') || 'no one'}${dang ? ` · training ${dang}` : ''}`,
+        sp.cost, e.trainBlock(k), () => { e.train(k); this.renderInspector(); }));
+    }
     if (b.type === 'townhall' && this.economy.marketBusy) {
       const canh = el('p', 'insp-warn');
       canh.append(ico('warn', 'bico'), el('strong', undefined, 'Market is backed up'),
@@ -1536,7 +1693,7 @@ export class UIManager {
     const step = 4;
     for (let x = ox; x < ox + span; x += step) {
       for (let z = oz; z < oz + span; z += step) {
-        ctx.fillStyle = BIOMES[biomeAt(x, z)].minimap;
+        ctx.fillStyle = waterAt(x + step / 2, z + step / 2) > 0.5 ? '#4a9fc9' : BIOMES[biomeAt(x, z)].minimap;
         ctx.fillRect(tx(x), tz(z), step * px + 1, step * px + 1);
       }
     }
@@ -1553,7 +1710,7 @@ export class UIManager {
     // đúng cỡ cho biết ngay chỗ nào đáng kéo camera tới.
     for (const b of this.game.map.patches) {
       if (!this.game.fog.isRevealed(b.center[0], b.center[2])) continue;
-      const mau = `#${RESOURCES[b.kind].color.toString(16).padStart(6, '0')}`;
+      const mau = `#${(b.was ? FISH_COLOR : RESOURCES[b.kind].color).toString(16).padStart(6, '0')}`;
       const r = Math.max(2.5, b.radius * px);
       ctx.beginPath();
       ctx.arc(tx(b.center[0]), tz(b.center[2]), r, 0, 7);

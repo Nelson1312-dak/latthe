@@ -24,10 +24,10 @@
  *     đỉnh là mỗi lần vén một khối lại phải ghi lại cả một mảng. Cả hai nằm trong shader.
  */
 import * as THREE from 'three';
-import { BIOMES, PALETTE, POOL_COLORS } from './config';
+import { BIOMES, PALETTE, POOL_COLORS, SEA_COLORS } from './config';
 import { fogPaint, grain, matte } from './materials';
 import {
-  CHUNK, GRID_STEP, biomeWeights, chunkOf, hash2, nodeHeight, nodePool, valueNoise,
+  CHUNK, GRID_STEP, biomeWeights, chunkOf, hash2, nodeHeight, nodePool, valueNoise, waterDepth,
 } from './world';
 
 /** Cạnh một mảnh đất, bằng ba khối bản đồ. */
@@ -110,13 +110,29 @@ export class Ground {
     out.copy(this.acc);
     // Vũng nước và dung nham. Chỉ hỏi độ ngập ở nơi có thể có vũng: phép hỏi tính lại cả
     // cao độ, mà ba phần tư bản đồ không bao giờ cần tới nó.
-    if (!coVung) return;
-    const ngap = nodePool(i, j);
-    if (ngap === 0) return;
-    const [a, c] = ngap > 0 ? POOL_COLORS.water : POOL_COLORS.lava;
+    if (coVung) {
+      const ngap = nodePool(i, j);
+      if (ngap !== 0) {
+        const [a, c] = ngap > 0 ? POOL_COLORS.water : POOL_COLORS.lava;
+        this.c0.setHex(a).lerp(this.c1.setHex(c), k);
+        // Mép vũng còn lẫn màu đất — bùn, hay đá đang nguội — rồi mới tới màu vũng thật.
+        out.lerp(this.c0, Math.min(1, 0.55 + Math.abs(ngap) * 0.6));
+      }
+    }
+    /*
+     * SÔNG BIỂN: đất → cát bờ → nước nông → nước sâu, theo đúng độ sâu mà cao độ đang dùng.
+     * Hỏi `waterDepth` chứ không hỏi lại cao độ: nó là ba phép nhiễu, và bốn phần năm bản
+     * đồ trả về 0 ngay.
+     */
+    const d = waterDepth(x, z);
+    if (d <= 0) return;
+    const m = d >= 1 ? 1 : d * d * (3 - 2 * d);
+    out.lerp(this.c0.setHex(SEA_COLORS.sand), Math.min(1, m * 2.4));
+    if (m <= 0.3) return;
+    const [a, c] = SEA_COLORS.shallow;
     this.c0.setHex(a).lerp(this.c1.setHex(c), k);
-    // Mép vũng còn lẫn màu đất — bùn, hay đá đang nguội — rồi mới tới màu vũng thật.
-    out.lerp(this.c0, Math.min(1, 0.55 + Math.abs(ngap) * 0.6));
+    this.c0.lerp(this.c1.setHex(SEA_COLORS.deep), Math.min(1, Math.max(0, (d - 1) / 1.6)));
+    out.lerp(this.c0, Math.min(1, (m - 0.3) / 0.45));
   }
 
   /**

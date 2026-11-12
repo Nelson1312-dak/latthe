@@ -70,20 +70,33 @@ export interface Patch {
   spots: Vec3[];
   biome: BiomeId;
   richness: number;
+  /**
+   * Chỉ có ở BÃI CÁ: loại tài nguyên mà bãi này từng là, trước khi sông biển tràn qua. Phải
+   * giữ lại vì trang trí của bãi rút số ngẫu nhiên THEO LOẠI CŨ — xem MapManager.dressPatch.
+   */
+  was?: ResourceKind;
 }
 
 // ------------------------------------------------------------------ công trình
 
 export type BuildingType = 'townhall' | 'house' | 'granary' | 'outpost' | 'watchtower'
   | 'barracks' | 'archery' | 'stable' | 'smithy'
-  | 'farm' | 'well' | 'market' | 'lookout' | 'dock';
+  | 'farm' | 'well' | 'market' | 'lookout' | 'dock' | 'magetower' | 'workshop';
 
 /** Ba loại lính, khắc nhau theo vòng tròn — xem KHAC trong config. */
-export type TroopKind = 'spear' | 'archer' | 'horse';
-export const TROOP_KINDS: readonly TroopKind[] = ['spear', 'archer', 'horse'];
+export type TroopKind = 'spear' | 'archer' | 'horse' | 'mage' | 'siege';
+export const TROOP_KINDS: readonly TroopKind[] = ['spear', 'archer', 'horse', 'mage', 'siege'];
 
 /** Quân số của một bên. Lính là CON SỐ, không phải `Unit`: xem ghi chú ở Economy.army. */
 export type Troops = Record<TroopKind, number>;
+
+/**
+ * Một đội quân rỗng. Có năm loại lính rồi, và mỗi chỗ tự gõ tay `{ spear: 0, archer: 0, ... }`
+ * là một chỗ sẽ quên loại thứ sáu — trình biên dịch bắt được, nhưng bản lưu cũ thì không.
+ */
+export function noTroops(): Troops {
+  return { spear: 0, archer: 0, horse: 0, mage: 0, siege: 0 };
+}
 
 /** Một suất đang huấn luyện. Hàng đợi chung cho cả ba loại. */
 export interface TrainSlot {
@@ -117,6 +130,8 @@ export interface WaveResult {
   reward: Partial<Inventory>;
   /** Đợt này nổ ra lúc người chơi không có mặt. */
   away: boolean;
+  /** Hải chiến trước đợt (từ thời đại bốn, chỉ đợt cướp). Bản lưu cũ không có. */
+  sea?: { power: number; stopped: number; landed: number; sunk: number };
 }
 
 export interface Threat {
@@ -251,6 +266,14 @@ export interface GameState {
   train: TrainSlot[];
   /** Bậc nâng cấp mua ở lò rèn. */
   smith: { attack: number; armour: number };
+  /** Chiến thuyền đang có ở bến. */
+  fleet: number;
+  /** Giây còn lại của chiếc đang đóng; 0 là triền trống. */
+  shipLeft: number;
+  /** Số hang hải tặc đã dẹp — cũng là hạt giống của lần đánh tới. */
+  lairs: number;
+  /** Chuyến đánh hang đang đi: bao nhiêu thuyền, còn bao giây. */
+  sortie: { ships: number; left: number } | null;
   lastSavedTimestamp: number;
   muted: boolean;
   totalGold: number;

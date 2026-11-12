@@ -370,6 +370,10 @@ body.chuot .aim { display: none; }
 .sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .sheet-head strong { font-size: 15px; }
 .sheet-head small { font-size: 11.5px; color: var(--ink-dim); font-weight: 600; }
+.sheet-sub { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-top: 6px; padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.sheet-sub strong { font-size: 13.5px; }
+.sheet-sub small { font-size: 11.5px; color: var(--ink-dim); font-weight: 600; }
 .sheet-note { margin: 0; font-size: 11.5px; color: var(--ink-dim); font-weight: 600; line-height: 1.35; }
 
 /* Một dòng trong ngăn: biểu tượng, tên + mô tả, giá, nút. */

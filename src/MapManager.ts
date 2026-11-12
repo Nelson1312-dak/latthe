@@ -18,13 +18,13 @@
 import * as THREE from 'three';
 import { gem, matte, metal, glowTexture, haloTexture, sway, SWAY_ON, WIND } from './materials';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BIOME_TINT, CAMERA_OFFSET, PALETTE, RESOURCES } from './config';
+import { BIOME_TINT, CAMERA_OFFSET, FISH_COLOR, PALETTE, RESOURCES } from './config';
 import { han, paint } from './shapes';
 import type { BiomeId, Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
   GRID_STEP, biomeAt, chunkKey, chunkOf, chunkRng, groundAt, hash2, levelAtCenter,
-  nodePool, oldAxis, patchesOf,
+  nodePool, oldAxis, patchesOf, waterAt,
 } from './world';
 
 /*
@@ -39,6 +39,7 @@ const CAP = {
   halo: 300,
   pine: 1300, wheat: 1400, rock: 1700, ore: 800, spire: 500, palm: 300, tuft: 2300,
   leaf: 620, bush: 450, flower: 1000, glow: 950,
+  boat: 60, buoy: 180,
 } as const;
 
 type PropKey = keyof typeof CAP;
@@ -207,6 +208,14 @@ export class MapManager {
     make('bush', this.bushGeometry(), la(0.05), true);
     // Hoa không đổ bóng: thân mảnh như sợi chỉ, bóng của nó chỉ thành những chấm nhiễu.
     make('flower', this.flowerGeometry(), la(0.4, true), false);
+    // Thuyền chài và phao lưới của bãi cá. Màu đỉnh như cây: phần trắng nhận màu của bản.
+    const son = (): THREE.MeshStandardMaterial => {
+      const m = matte(undefined, true);
+      m.vertexColors = true;
+      return m;
+    };
+    make('boat', this.boatGeometry(), son(), true);
+    make('buoy', this.buoyGeometry(), son(), false);
 
     /*
      * Quầng sáng quanh pha lê và quặng vàng — thay cho bloom.
@@ -357,7 +366,8 @@ export class MapManager {
       if (!daVen) continue;
 
       chunk.patches.forEach((p, i) => {
-        put('halo', this.haloMatrix(p, t === undefined ? 1 : this.kQuang(t, i)), this.color.setHex(RESOURCES[p.kind].color));
+        put('halo', this.haloMatrix(p, t === undefined ? 1 : this.kQuang(t, i)),
+          this.color.setHex(p.was ? FISH_COLOR : RESOURCES[p.kind].color));
       });
       chunk.props.forEach((pr, i) => {
         put(pr.key, this.propMatrix(pr, t === undefined ? 1 : this.kMoc(t, i)), this.color.setHex(pr.color));
@@ -522,6 +532,14 @@ export class MapManager {
 
     this.decorate(layout, cx, cz);
 
+    /*
+     * CÂY CỎ KHÔNG MỌC GIỮA SÔNG BIỂN. Lọc ở CUỐI, sau khi mọi số ngẫu nhiên đã rút xong: bỏ
+     * một cái cây ngay lúc rút là mọi thứ phía sau trong khối xê dịch, còn bỏ ở đây thì chỉ
+     * mất đúng cái cây ấy. Thuyền và phao thì dĩ nhiên ở lại.
+     */
+    layout.props = layout.props.filter((pr) =>
+      pr.key === 'boat' || pr.key === 'buoy' || waterAt(pr.pos[0], pr.pos[2]) < 0.35);
+
     this.layouts.set(key, layout);
     return layout;
   }
@@ -604,8 +622,16 @@ export class MapManager {
   /** Props bên trong một bãi: dày, cao, và bám sát vùng đất của nó. */
   private dressPatch(layout: Layout, p: Patch, r: () => number): void {
     const [x, , z] = p.center;
+    /*
+     * BÃI CÁ VẪN RÚT ĐỦ SỐ CỦA BÃI CŨ. Một bãi cá từng là rừng, là mỏ đá — và chuỗi ngẫu nhiên
+     * chính của khối đã "dành" cho nó đúng ngần ấy số. Rút thiếu là mọi bụi cỏ phía sau trong
+     * khối đổi chỗ. Nên nó đi đúng nhánh của loại cũ, rút đủ, chỉ không đặt xuống cái gì.
+     */
+    const ca = p.was !== undefined;
     const put = (key: PropKey, dx: number, dy: number, dz: number, scale: number, color: number) => {
-      layout.props.push({ key, pos: [x + dx, dy, z + dz], scale, rot: r() * 6, color: mauVung(p.biome, key, color) });
+      const rot = r() * 6;
+      if (ca) return;
+      layout.props.push({ key, pos: [x + dx, dy, z + dz], scale, rot, color: mauVung(p.biome, key, color) });
       /*
        * Quầng sáng đi kèm pha lê và quặng. Không rút số nào: chuỗi ngẫu nhiên giữ nguyên.
        *
@@ -629,7 +655,7 @@ export class MapManager {
       for (let i = 0; i < n; i += 1) fn(r() * Math.PI * 2, Math.sqrt(r()) * p.radius * 0.88);
     };
 
-    switch (p.kind) {
+    switch (p.was ?? p.kind) {
       case 'wood':
         /*
          * Rừng đồng cỏ là rừng HỖN GIAO: chừng một phần ba là cây tán tròn. Chọn loại bằng hàm
@@ -662,6 +688,26 @@ export class MapManager {
       case 'relics':
         rai(9, (a, d) => put('spire', Math.cos(a) * d, 0, Math.sin(a) * d, 0.7 + r() * 0.9, PALETTE.crystal));
         break;
+    }
+
+    // Đồ của bãi cá: một vòng phao lưới và hai chiếc thuyền chài. Số lấy từ hàm băm theo tâm
+    // bãi (muối 79), không từ chuỗi của khối.
+    if (!ca) return;
+    const h = (n: number): number => hash2(Math.round(x) * 31 + n, Math.round(z) * 17 - n, 79);
+    const tha = (key: PropKey, a: number, d: number, scale: number, rot: number, color: number) => {
+      const px = x + Math.cos(a) * d;
+      const pz = z + Math.sin(a) * d;
+      // Mép bãi có thể chờm lên bờ: phao nằm trên cát thì đọc ra là lỗi.
+      if (waterAt(px, pz) < 0.9) return;
+      layout.props.push({ key, pos: [px, 0, pz], scale, rot, color });
+    };
+    for (let i = 0; i < 7; i += 1) {
+      tha('buoy', (i / 7) * Math.PI * 2 + h(i) * 0.6, p.radius * (0.74 + h(i + 10) * 0.2),
+        0.9 + h(i + 20) * 0.35, h(i + 30) * 6, i % 2 ? 0xe8553f : 0xf4ecd8);
+    }
+    for (let i = 0; i < 2; i += 1) {
+      tha('boat', h(40 + i) * Math.PI * 2, p.radius * (0.12 + h(50 + i) * 0.38),
+        1 + h(60 + i) * 0.25, h(70 + i) * 6, i ? 0xffffff : 0xf3e3c8);
     }
   }
 
@@ -818,6 +864,39 @@ export class MapManager {
     side.translate(0.55, 0.9, 0.2);
     parts.push(side);
     return mergeGeometries(parts, false) ?? main;
+  }
+
+  /**
+   * Thuyền chài: thân là nửa dưới một quả cầu bóp dẹt, có mặt boong đậy lên (không thì nhìn
+   * từ trên xuống thấy xuyên qua lòng thuyền), một cột và một cánh buồm tam giác. Gốc toạ độ
+   * nằm ở MỚN NƯỚC, vì "mặt đất" ở đây chính là mặt nước.
+   */
+  private boatGeometry(): THREE.BufferGeometry {
+    const than = new THREE.SphereGeometry(1, 7, 3, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+    than.scale(1.15, 0.5, 0.46);
+    than.translate(0, 0.2, 0);
+    const boong = new THREE.CircleGeometry(1, 7);
+    boong.rotateX(-Math.PI / 2);
+    boong.scale(1.13, 1, 0.45);
+    boong.translate(0, 0.19, 0);
+    const cot = new THREE.CylinderGeometry(0.035, 0.045, 1.3, 4);
+    cot.translate(-0.1, 0.84, 0);
+    const buom = new THREE.ConeGeometry(0.5, 1.0, 3);
+    buom.scale(1, 1, 0.1);
+    buom.translate(0.22, 0.95, 0);
+    return han([paint(than, 0xa9713f), paint(boong, 0x8a6a4a), paint(cot, PALETTE.trunk), paint(buom, 0xf4ecd8)]);
+  }
+
+  /** Phao lưới: một quả phao nổi và cây sào cắm cờ. */
+  private buoyGeometry(): THREE.BufferGeometry {
+    const phao = new THREE.SphereGeometry(0.2, 6, 4);
+    phao.translate(0, 0.07, 0);
+    const sao = new THREE.CylinderGeometry(0.022, 0.022, 0.75, 4);
+    sao.translate(0, 0.5, 0);
+    const co = new THREE.ConeGeometry(0.11, 0.24, 3);
+    co.rotateZ(-Math.PI / 2);
+    co.translate(0.13, 0.78, 0);
+    return han([paint(phao, null), paint(sao, PALETTE.trunk), paint(co, null)]);
   }
 
   private palmGeometry(): THREE.BufferGeometry {

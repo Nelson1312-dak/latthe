@@ -27,6 +27,7 @@ import type { MapManager } from './MapManager';
 import type { Building, Patch, ResourceKind, Unit, Vec3 } from './types';
 import { RESOURCE_KINDS } from './types';
 import { denNearPatch } from './dens';
+import { waterAt } from './world';
 
 const ARRIVE = 0.35;
 /*
@@ -38,8 +39,6 @@ const ARRIVE = 0.35;
 export const LENH = 'lenh';
 /** Đã tới điểm ấy, đang đứng chờ (đếm bằng `gatherTimer`). */
 export const CHO = 'cho';
-/** Duoi ngan nay don thi chua bo mot chuyen cho hang. */
-const CARRY_WORTH_IT = 0.5;
 const MAX_UNITS = 220;
 /** Sức chứa của lưới xe thồ. */
 const CART_CAP = 24;
@@ -447,14 +446,13 @@ export class WorkerManager {
       return;
     }
 
-    const shop = this.neediestProcessor(u);
-    if (shop) {
-      u.targetId = shop.id;
-      u.targetPos = [shop.position[0], 0, shop.position[2]];
-      u.state = 'moving';
-      return;
-    }
-
+    /*
+     * KHÔNG còn nhánh "ra trạm chở hàng". Nó là dấu vết của một bản cũ, và nó khoá cả làng:
+     * dân tới trạm thì rơi vào trạng thái "đang hái" với một bãi không tồn tại, nhận về một
+     * gánh GỖ từ hư không, đổ ngay vào chính trạm ấy, trạm lại "có hàng cần chở", và người
+     * ấy quay lại — mãi mãi. Đo bằng pace: chín dân đứng ở một trạm suốt ba tiếng, kho gỗ
+     * đầy tràn còn đá thì không ai đi lấy, làng kẹt ở đời II. Hàng ở trạm là việc của xe thồ.
+     */
     const villagers = this.economy.villagers();
     const scoutIndex = villagers.length >= SCOUT_MIN_VILLAGERS ? villagers.length - 1 : -1;
     // Hạn ngạch là mệnh lệnh trực tiếp của người chơi, nên nó đứng TRÊN việc đi thám hiểm:
@@ -480,28 +478,6 @@ export class WorkerManager {
     u.targetId = patch.id;
     u.targetPos = patch.spots[i % patch.spots.length];
     u.state = 'moving';
-  }
-
-  /**
-   * Xưởng nào đang cần người chở hàng nhất. Ưu tiên đống to nhất, vì đống đầy là trạm đó
-   * dừng hẳn — tốn hơn nhiều so với việc chở chậm một chuyến.
-   */
-  private neediestProcessor(worker: Unit): Building | null {
-    const busy = new Set(
-      this.economy.state.units
-        .filter((u) => u !== worker && u.kind === 'villager' && u.targetId)
-        .map((u) => u.targetId as string));
-
-    let best: Building | null = null;
-    for (const o of this.economy.outposts()) {
-      const total = RESOURCE_KINDS.reduce((s, k) => s + (o.stock[k] ?? 0), 0);
-      if (total < CARRY_WORTH_IT) continue;
-      if (busy.has(o.id) && total < worker.capacity * 2) continue;
-      if (!best) { best = o; continue; }
-      const bestTotal = RESOURCE_KINDS.reduce((s, k) => s + (best!.stock[k] ?? 0), 0);
-      if (total > bestTotal) best = o;
-    }
-    return best;
   }
 
   /** Bãi đang nạp và đã lộ khỏi màn mây. */
@@ -689,7 +665,9 @@ export class WorkerManager {
 
   /** Cao độ vẽ của một người, đã nội suy về mặt đất bên dưới. */
   private yOf(id: string, x: number, z: number, dt: number): number {
-    const dat = this.map.groundY(x, z);
+    // Qua sông qua biển thì LỘI: mặt nước chính là mặt đất, nên chìm người xuống một đoạn là
+    // mặt đất tự cắt ngang lưng — khỏi cần một hoạt cảnh bơi.
+    const dat = this.map.groundY(x, z) - waterAt(x, z) * 0.42;
     const cu = this.yVe.get(id);
     const y = cu === undefined ? dat : cu + (dat - cu) * (1 - Math.exp(-14 * dt));
     this.yVe.set(id, y);

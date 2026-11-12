@@ -6,7 +6,8 @@
  * áp kết quả vào kho và vào công trình.
  */
 import {
-  GUARD_PER_TOWER, GUARD_PER_TOWNHALL, GUARD_PER_VILLAGER, MERC_BASE, MERC_PER_POWER,
+  AGE_DEFENCE, GUARD_PER_TOWER, GUARD_PER_TOWNHALL, GUARD_PER_VILLAGER, MERC_BASE, MERC_PER_POWER,
+  ageBonus,
   WAVE_BASE, WAVE_PER_LEVEL, WAVE_PER_WAVE, WAVE_RATCHET,
 } from './config';
 import type { Building, Inventory, WaveKind, WaveResult } from './types';
@@ -25,14 +26,16 @@ export function wavePower(wave: number, level: number): number {
 }
 
 /** Sức thủ sẵn có của một cái làng. `hired` là lính thuê thêm cho riêng đợt sắp tới. */
-export function guardOf(buildings: Building[], hired = 0, atHome = 0): number {
+export function guardOf(buildings: Building[], hired = 0, atHome = 0, age = 1): number {
   let th = 0;
   let tw = 0;
   for (const b of buildings) {
     if (b.type === 'townhall') th += b.level;
     else if (b.type === 'watchtower') tw += b.level;
   }
-  return th * GUARD_PER_TOWNHALL + tw * GUARD_PER_TOWER
+  // Phần của CÔNG TRÌNH lớn lên theo thời đại, đúng bằng mức tháp và thủ phủ bắn mạnh
+  // thêm trong trận (AGE_DEFENCE) — con số trên bảng phải nói cùng một điều với trận đánh.
+  return Math.round((th * GUARD_PER_TOWNHALL + tw * GUARD_PER_TOWER) * ageBonus(age, AGE_DEFENCE))
     + Math.max(0, Math.round(atHome)) * GUARD_PER_VILLAGER
     + Math.max(0, Math.round(hired));
 }

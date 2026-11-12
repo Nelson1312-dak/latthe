@@ -95,6 +95,34 @@ export const RESERVE_HEADROOM = 1.35;
  */
 export const EXPORT_KEEP = 25;
 export const SURPLUS_RATE_PER_LEVEL = 2.2;
+/*
+ * THUẾ: VÀNG TỰ VỀ THEO THỜI GIAN.
+ *
+ * Trước bản này vàng chỉ có hai nguồn: đào ở sa mạc xa, và thủ phủ bán hàng dư. Cả hai đều
+ * vô hình với người mới — sa mạc còn nằm trong sương, còn chợ thì chỉ bán thứ vượt mức giữ,
+ * mà mức giữ lúc đầu lại cao hơn sức chứa của kho (xem RESERVE_STORAGE_SHARE). Một người
+ * chơi thật tiêu hết 120 vàng khởi đầu, đứng ở 23 vàng với 300 gỗ 300 lương thực, và hỏi:
+ * "không biết kiếm vàng ở đâu?".
+ *
+ * Thuế trả lời câu ấy bằng một thứ luôn chạy: mỗi cấp thủ phủ và mỗi người dân đóng một ít
+ * vàng mỗi giây. Làng hai dân, thủ phủ cấp 1 được 0,3 vàng/giây — chừng ba phút một căn
+ * ruộng. Đủ để không bao giờ kẹt cứng, nhưng không thay được chợ: giữa ván (thủ phủ cấp 3,
+ * mười tám dân) thuế là 1,5 vàng/giây, chừng một phần mười thu nhập.
+ *
+ * Đã đo ba mức bằng npm run pace (58 đợt giặc, đích là đẩy lui ~45):
+ *   0,3 + 0,10 → 49 · 0,2 + 0,10 → 51 · 0,2 + 0,05 → 47.
+ * Cao hơn nữa là vàng thừa nuôi lính thừa, và các đợt giặc thành tiền cho không.
+ */
+export const TAX_PER_HALL_LEVEL = 0.2;
+export const TAX_PER_VILLAGER = 0.05;
+/*
+ * Mức giữ không bao giờ được cao hơn phần này của kho, trừ khi chính món đắt nhất đòi hơn.
+ *
+ * Mức giữ = món đắt nhất × 1,35. Kho gốc chứa 400, mà Thời Mở Đất đòi 400 lương thực, tức
+ * mức giữ 540 > 400: kho đầy tới nóc vẫn chưa "dư" một hạt nào, và chợ đứng im cho tới khi
+ * có kho lẫm. Chặn ở 80% kho thì hễ kho gần đầy là phần ngọn chảy thành vàng.
+ */
+export const RESERVE_STORAGE_SHARE = 0.8;
 /**
  * Thu phu tu no chua duoc may nguoi. Khong co dong nay thi vua mo game da thay 1/0 - mot dan
  * dang lam viec trong khi cho o bang khong - nhin nhu loi chu khong nhu luat choi.
@@ -297,6 +325,32 @@ export function tenLangNgauNhien(): string {
   return `${b} ${a}`;
 }
 
+/*
+ * TÊN GỢI Ý CỦA BẢN TIẾNG VIỆT, GIỮ LẠI CHỈ ĐỂ ĐỔI BẢN LƯU CŨ.
+ *
+ * Giao diện đã sang tiếng Anh hết, nhưng cái tên làng thì nằm trong bản lưu: ai lập làng từ
+ * trước bằng nút gợi ý vẫn thấy "Đảo Cỏ May" ngay trên thanh HUD, và đọc ra là "trang web
+ * chưa dịch xong". Hai danh sách dưới đây xếp ĐÚNG THỨ TỰ với TEN_DAU / TEN_SAU ở trên, nên
+ * một cái tên do máy gợi ý đổi được sang đúng cái tên tương ứng. Tên người chơi TỰ GÕ thì
+ * không khớp tổ hợp nào và được để nguyên — đó là tên của họ.
+ */
+const TEN_DAU_CU = ['Đảo', 'Vịnh', 'Làng', 'Bến', 'Cồn', 'Mũi', 'Xóm', 'Bãi'] as const;
+const TEN_SAU_CU = [
+  'Mây Trắng', 'Gió Nồm', 'Sương Sớm', 'Cát Vàng', 'Rừng Thông', 'Đá Dựng',
+  'Trăng Non', 'Sóng Bạc', 'Nắng Hạ', 'Cỏ May', 'Lửa Ấm', 'Chim Sẻ',
+] as const;
+
+/** Tên gợi ý kiểu cũ ("Đảo Cỏ May") thành tên kiểu mới ("Tall Grass Isle"); còn lại để yên. */
+export function tenLangSangAnh(ten: string): string {
+  for (let i = 0; i < TEN_DAU_CU.length; i += 1) {
+    const dau = TEN_DAU_CU[i] + ' ';
+    if (!ten.startsWith(dau)) continue;
+    const j = (TEN_SAU_CU as readonly string[]).indexOf(ten.slice(dau.length));
+    if (j >= 0) return `${TEN_SAU[j]} ${TEN_DAU[i]}`;
+  }
+  return ten;
+}
+
 // ------------------------------------------------------------- tài nguyên
 
 export const RESOURCES: Record<ResourceKind, {
@@ -360,6 +414,18 @@ export const BIOMES: Record<BiomeId, Biome> = {
 };
 
 /** Hai sắc của mặt vũng, trộn theo cùng phép nhiễu với nền đất. */
+/**
+ * Màu sông biển: bờ cát, nước nông (hai sắc trộn theo nhiễu như nền đất), và nước sâu. Xanh
+ * LAM hẳn, khác màu lục đục của nước đầm — liếc là biết đâu là sông, đâu là vũng lầy.
+ */
+export const SEA_COLORS = {
+  sand: 0xd9c68f,
+  shallow: [0x62b9cc, 0x55abc3],
+  deep: 0x2d7bb0,
+} as const;
+/** Màu quầng và chấm minimap của bãi cá. */
+export const FISH_COLOR = 0x58c7e6;
+
 export const POOL_COLORS = {
   water: [0x4f9296, 0x3a7786],
   lava: [0xff8f2e, 0xe9521f],
@@ -436,6 +502,7 @@ export const BUILDINGS = {
   townhall: {
     label: 'Town Hall', icon: 'townhall', maxLevel: 10,
     describe: (l: number) => `Sells ${(SURPLUS_RATE_PER_LEVEL * l).toFixed(1)} goods/s`
+      + ` · +${(TAX_PER_HALL_LEVEL * l).toFixed(1)} gold/s tax`
       + ` · houses ${l * HOUSING_FROM_TOWNHALL}`,
   },
   house: {
@@ -494,6 +561,19 @@ export const BUILDINGS = {
     describe: (l: number) => `Voyages return ${
       Math.round(Math.min(DOCK_VOYAGE_CAP, DOCK_VOYAGE_PER_LEVEL * l) * 100)}% faster`,
   },
+  /*
+   * MỖI NHÀ QUÂN MỘT VIỆC, như Age of Empires: doanh trại ra bộ binh, trường bắn ra cung thủ,
+   * chuồng ngựa ra kỵ binh, tháp phép ra pháp sư, xưởng công thành ra xe pháo. Không nhà nào
+   * làm hai việc — muốn loại lính nào thì phải dựng đúng cái nhà của nó.
+   */
+  magetower: {
+    label: 'Mage Tower', icon: 'mage', maxLevel: 6,
+    describe: (l: number) => `Holds ${l * 2} mages`,
+  },
+  workshop: {
+    label: 'Siege Workshop', icon: 'cannon', maxLevel: 5,
+    describe: (l: number) => `Holds ${l * 2} cannon carts`,
+  },
 } as const;
 
 /**
@@ -503,7 +583,7 @@ export const BUILDINGS = {
 export const BUILD_GROUPS = [
   { id: 'dan', label: 'Village', types: ['house', 'farm', 'well', 'granary'] },
   { id: 'kinhte', label: 'Economy', types: ['market', 'outpost', 'dock', 'lookout'] },
-  { id: 'quan', label: 'Military', types: ['watchtower', 'barracks', 'archery', 'stable', 'smithy'] },
+  { id: 'quan', label: 'Military', types: ['watchtower', 'barracks', 'archery', 'stable', 'magetower', 'workshop', 'smithy'] },
 ] as const;
 
 /** Giá xây mới. Nâng cấp dùng cùng bảng này nhân theo cấp, xem Economy.costFor. */
@@ -533,6 +613,8 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   market: { gold: 200, wood: 120, stone: 40 },
   lookout: { gold: 120, wood: 140 },
   dock: { gold: 400, wood: 300, stone: 80 },
+  magetower: { gold: 700, wood: 260, stone: 320 },
+  workshop: { gold: 900, wood: 600, stone: 420 },
 };
 
 /**
@@ -625,6 +707,8 @@ export const FOOTPRINT: Record<keyof typeof BUILDINGS, number> = {
   barracks: 3.1,
   stable: 3.2,
   farm: 3.3,
+  magetower: 2.0,
+  workshop: 3.0,
   townhall: 3.6,
 };
 
@@ -650,6 +734,8 @@ export const MODEL_SCALE: Record<keyof typeof BUILDINGS, number> = {
   barracks: 1.25,
   stable: 1.2,
   farm: 1.35,
+  magetower: 1.15,
+  workshop: 1.2,
   townhall: 1.3,
 };
 
@@ -697,7 +783,7 @@ export const WAVE_RATCHET = 1.5;
 // ------------------------------------------------------------------ thời đại
 
 /**
- * BỐN THỜI ĐẠI.
+ * NĂM THỜI ĐẠI (bốn cho tới bản có tháp phép; thời đại năm thêm sau, xem cuối bảng).
  *
  * Mỗi thời mở thêm công trình và thêm một loại lính, nhưng cũng làm GIẶC MẠNH LÊN và cho
  * chúng thêm một loại quân mới. Nếu lên thời đại chỉ toàn cái được thì nó là một nút bấm
@@ -733,16 +819,46 @@ export const AGES: readonly AgeSpec[] = [
   { label: 'Fortress Age', level: 9, need: 'barracks',
     cost: { food: 1200, gold: 900, stone: 400 }, seconds: 150,
     opens: 'Archery range and dock' },
-  { label: 'Seafaring Age', level: 16, need: 'smithy',
+  { label: 'Imperial Age', level: 16, need: 'smithy',
     cost: { food: 2000, gold: 3000, stone: 700, relics: 20 }, seconds: 240,
-    opens: 'Stable, cavalry and tier-two smithing' },
+    opens: 'Stable, mage tower, warships and tier-two smithing' },
+  /*
+   * Thời đại năm đòi THÁP PHÉP chứ không đòi thêm cấp căn cứ cao ngất: người chơi phải đi
+   * hết nhánh quân của thời đại bốn rồi mới bước tiếp, đúng kiểu Age of Empires bắt dựng
+   * hai công trình của đời này mới cho lên đời sau.
+   */
+  { label: 'Industrial Age', level: 26, need: 'magetower',
+    cost: { food: 3000, gold: 5000, stone: 1500, relics: 40 }, seconds: 300,
+    opens: 'Siege workshop, cannon carts and tier-three smithing' },
 ];
 
 /** Thời đại tối thiểu để xây từng loại. Thiếu nghĩa là có từ đầu. */
 export const BUILD_MIN_AGE: Partial<Record<BuildingType, number>> = {
   barracks: 2, smithy: 2, archery: 3, stable: 4,
   market: 2, lookout: 2, dock: 3,
+  magetower: 4, workshop: 5,
 };
+
+/*
+ * LÊN ĐỜI LÀ MẠNH LÊN THẬT, KHÔNG CHỈ MỞ KHOÁ.
+ *
+ * Trước bản này lên thời đại chỉ mở thêm nhà mới; mọi thứ đã dựng thì y nguyên. Người chơi
+ * hỏi đúng chỗ ấy: "lên đời nhà thì phải nâng cấp tham số, ví dụ tăng damage của các nhà
+ * bảo vệ". Bốn con số dưới đây là phần thưởng cộng dồn CHO MỖI THỜI ĐẠI sau thời đại một:
+ *   - tháp canh và thủ phủ bắn mạnh hơn (và sức thủ ghi trên bảng cũng tăng theo);
+ *   - ruộng ra nhiều lương hơn, kho chứa được nhiều hơn.
+ * Giặc cũng dày da lên theo thời đại (AGE_RAIDER_HP), không thì ba cái thưởng kia biến
+ * những đợt cuối ván thành tiền cho không — xem ghi chú ở DOI_HINH trong battle.ts.
+ */
+export const AGE_DEFENCE = 0.2;
+export const AGE_FARM = 0.1;
+export const AGE_STORAGE = 0.1;
+export const AGE_RAIDER_HP = 0.1;
+
+/** Hệ số nhân của một phần thưởng theo thời đại: thời đại một là 1, mỗi đời sau cộng `moi`. */
+export function ageBonus(age: number, moi: number): number {
+  return 1 + moi * Math.max(0, Math.floor(age) - 1);
+}
 
 // ------------------------------------------------------------------ quân đội
 
@@ -770,6 +886,8 @@ export interface TroopSpec {
   upkeep: number;
   /** Mỗi cấp công trình nuôi được bấy nhiêu người. */
   perLevel: number;
+  /** Bán kính nổ lan quanh mục tiêu; thiếu là đánh một người. Chỉ xe pháo có. */
+  splash?: number;
 }
 
 export const TROOPS: Record<TroopKind, TroopSpec> = {
@@ -788,6 +906,26 @@ export const TROOPS: Record<TroopKind, TroopSpec> = {
     hp: 58, dps: 10, speed: 4.4, range: 1.6, cost: { food: 80, gold: 60 },
     seconds: 24, upkeep: 0.058, perLevel: 2,
   },
+  /*
+   * Pháp sư: bắn xa như cung thủ nhưng khắc đúng hai thứ cung thủ sợ — bộ binh và kỵ binh
+   * xông tới. Giá của họ là máu mỏng nhất bảng và tốn vàng chứ không tốn gỗ, nên một đội
+   * toàn pháp sư sẽ tan ngay khi kỵ binh giặc chạm tới.
+   */
+  mage: {
+    label: 'Mages', icon: 'mage', from: 'magetower',
+    hp: 18, dps: 9, speed: 2.4, range: 8, cost: { food: 50, gold: 70 },
+    seconds: 20, upkeep: 0.046, perLevel: 2,
+  },
+  /*
+   * Xe pháo: chậm nhất, bắn xa nhất, và là loại duy nhất NỔ LAN — một phát trúng cả cụm.
+   * Giặc tới theo đội hình sáu hàng ngang (xem battleStart), nên nổ lan là thứ duy nhất
+   * trừng phạt đúng cái làm giặc mạnh. Đổi lại kỵ binh áp sát là nó gần như vô dụng.
+   */
+  siege: {
+    label: 'Cannon carts', icon: 'cannon', from: 'workshop',
+    hp: 70, dps: 12, speed: 1.6, range: 13, cost: { wood: 120, gold: 110 },
+    seconds: 30, upkeep: 0.062, perLevel: 2, splash: 2.4,
+  },
 };
 
 /**
@@ -795,16 +933,21 @@ export const TROOPS: Record<TroopKind, TroopSpec> = {
  * giáo chống kỵ binh, cung bắn bộ binh, kỵ binh chém cung thủ.
  */
 export const KHAC: Record<TroopKind, Record<TroopKind, number>> = {
-  spear: { spear: 1, archer: 0.6, horse: 2.0 },
-  archer: { spear: 1.8, archer: 1, horse: 0.6 },
-  horse: { spear: 0.55, archer: 2.0, horse: 1 },
+  spear: { spear: 1, archer: 0.6, horse: 2.0, mage: 1.0, siege: 1.2 },
+  archer: { spear: 1.8, archer: 1, horse: 0.6, mage: 1.4, siege: 0.5 },
+  horse: { spear: 0.55, archer: 2.0, horse: 1, mage: 2.0, siege: 1.8 },
+  mage: { spear: 1.5, archer: 1.0, horse: 1.4, mage: 1, siege: 0.6 },
+  siege: { spear: 1.2, archer: 1.6, horse: 0.6, mage: 1.0, siege: 1 },
 };
+/** Phần sát thương mà kẻ đứng cạnh mục tiêu của một phát nổ lan phải chịu. */
+export const SPLASH_SHARE = 0.5;
 
 /** Lò rèn: mỗi bậc cộng bấy nhiêu phần trăm sát thương, và giảm bấy nhiêu phần sát thương nhận. */
 export const SMITH_ATTACK = 0.18;
 export const SMITH_ARMOUR = 0.14;
 export const SMITH_MAX_AGE2 = 1;
 export const SMITH_MAX_AGE4 = 2;
+export const SMITH_MAX_AGE5 = 3;
 export const SMITH_COST: Cost = { gold: 400, stone: 200 };
 export const SMITH_GROWTH = 2.4;
 
@@ -926,6 +1069,8 @@ export const DEN_YIELD = 0.6;
 export const DEN_POWER = 5;
 export const DEN_MAX_LEVEL = 6;
 /** Mỗi người lính đáng bấy nhiêu điểm khi đi săn. */
-export const HUNT_POWER: Record<TroopKind, number> = { spear: 2, archer: 2, horse: 4 };
+export const HUNT_POWER: Record<TroopKind, number> = {
+  spear: 2, archer: 2, horse: 4, mage: 3, siege: 5,
+};
 /** Vừa đủ sức thì ngã ngần này phần quân; đông gấp đôi thì ngã một nửa số ấy. */
 export const HUNT_LOSS = 0.45;

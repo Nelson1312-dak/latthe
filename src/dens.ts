@@ -12,7 +12,7 @@ import {
 } from './config';
 import type { BeastKind } from './config';
 import type { BiomeId, Cost, Patch, Troops } from './types';
-import { TROOP_KINDS } from './types';
+import { TROOP_KINDS, noTroops } from './types';
 import { CHUNK, LANE_SPACING, biomeAt, chunkOf, hash2 } from './world';
 
 export interface Den {
@@ -91,11 +91,9 @@ export function huntPower(army: Troops, attack: number): number {
 /** Số người ngã. Tỉ lệ nghịch với độ áp đảo, làm tròn XUỐNG — đội đủ đông thì về đủ. */
 export function huntLosses(army: Troops, have: number, need: number): Troops {
   const phan = have > 0 ? HUNT_LOSS * Math.min(1, need / have) : 0;
-  return {
-    spear: Math.floor(army.spear * phan),
-    archer: Math.floor(army.archer * phan),
-    horse: Math.floor(army.horse * phan),
-  };
+  const mat = noTroops();
+  for (const k of TROOP_KINDS) mat[k] = Math.floor(army[k] * phan);
+  return mat;
 }
 
 const ganBai = new Map<string, Den | null>();

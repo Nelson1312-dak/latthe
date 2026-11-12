@@ -17,9 +17,12 @@
  *     duyệt Map hay Set ở chỗ thứ tự có thể đổi, và mọi phép so hoà nhau phân định bằng
  *     chỉ số trong mảng.
  */
-import { KHAC, SMITH_ARMOUR, SMITH_ATTACK, TROOPS } from './config';
+import {
+  AGE_DEFENCE, AGE_RAIDER_HP, KHAC, SMITH_ARMOUR, SMITH_ATTACK, SPLASH_SHARE, TROOPS, ageBonus,
+} from './config';
 import { hash2 } from './world';
 import type { TroopKind, Troops, WaveKind } from './types';
+import { TROOP_KINDS, noTroops } from './types';
 
 /** Một bước mô phỏng. Nhỏ hơn thì mượt hơn mà cũng tốn hơn; 0,1 giây là đủ cho tốc độ này. */
 export const TICK = 0.1;
@@ -46,6 +49,9 @@ const RAIDERS_MAX = 36;
  */
 const RAIDER_HP = 0.72;
 const RAIDER_DPS = 0.85;
+/** Giặc tinh nhuệ dày da và nặng tay thêm theo luỹ thừa này của `eliteOf`. Xem ở đó. */
+const ELITE_HP = 2.4;
+const ELITE_DPS = 0.6;
 
 /** Tới cách thủ phủ ngần này là khuân được hàng. */
 const LOOT_RANGE = 3.2;
@@ -89,6 +95,7 @@ const DOI_HINH: readonly (readonly [number, number])[] = [
   [0.7, 0.3],
   [0.55, 0.3],
   [0.45, 0.32],
+  [0.4, 0.32],
 ];
 
 // ------------------------------------------------------------------ kiểu
@@ -172,13 +179,31 @@ export function raiderCount(power: number): number {
   return Math.max(RAIDERS_MIN, Math.min(RAIDERS_MAX, Math.round(power / POWER_PER_RAIDER)));
 }
 
+/**
+ * GIẶC TINH NHUỆ: sức đợt vượt quá mức mà ba mươi sáu tên gánh nổi thì phần dôi ra dồn vào
+ * từng tên, chứ không biến mất.
+ *
+ * Trước đây nó biến mất thật: số giặc chạm trần ở sức 252 (làng cấp 67, chừng giờ thứ hai),
+ * và từ đó đợt nào cũng y như đợt nào trong khi quân người chơi cứ đông lên — đo bốn tiếng
+ * ra 56 thắng trên 58 trận với hai trăm lính đứng nhìn ba chục tên giặc.
+ *
+ * Số mũ (ELITE_HP, ELITE_DPS) là số ĐO, không phải số đẹp. Máu tăng thẳng theo sức đợt
+ * (mũ 1) thì vẫn 56/58: quân người chơi lớn theo TỪNG CẤP của TỪNG nhà quân, nhanh hơn
+ * hẳn một đường thẳng. Mũ 2,4 cho máu và 0,6 cho đòn ra 53/58 với 96% giặc bị hạ; nhích
+ * đòn lên 0,75 là rơi xuống 49 và quân thường trực bị quét sạch mỗi đợt.
+ */
+export function eliteOf(power: number): number {
+  return Math.max(1, power / (RAIDERS_MAX * POWER_PER_RAIDER));
+}
+
 /** Đội hình một đợt: bao nhiêu giáo, bao nhiêu cung, bao nhiêu ngựa. */
 export function waveMix(power: number, age: number): Troops {
   const n = raiderCount(power);
   const [a, b] = DOI_HINH[Math.min(DOI_HINH.length - 1, Math.max(0, age - 1))];
   const spear = Math.round(n * a);
   const archer = Math.round(n * b);
-  return { spear, archer, horse: Math.max(0, n - spear - archer) };
+  // Giặc chỉ có ba loại cũ: pháp sư và xe pháo là lợi thế RIÊNG của người đã lên đời.
+  return { ...noTroops(), spear, archer, horse: Math.max(0, n - spear - archer) };
 }
 
 /**
@@ -219,7 +244,9 @@ export function battleStart(seed: BattleSeed): BattleState {
     raiders.push({
       x: lx * doc + lz * ngang,
       z: lz * doc + lx * ngang,
-      hp: TROOPS[kind].hp * RAIDER_HP,
+      // Giặc dày da lên theo thời đại của LÀNG: lên đời thì tháp bắn mạnh hơn, nên giặc
+      // cũng phải chịu được nhiều hơn, không thì lên đời là thắng sẵn.
+      hp: TROOPS[kind].hp * RAIDER_HP * ageBonus(seed.age, AGE_RAIDER_HP) * eliteOf(seed.power) ** ELITE_HP,
       kind,
       state: 'march',
       loaded: false,
@@ -246,6 +273,10 @@ export function battleStart(seed: BattleSeed): BattleState {
   dat('archer', seed.army.archer, 4.2, 0.4);
   dat('spear', seed.army.spear + seed.mercs, 6.4, 0);
   dat('horse', seed.army.horse, 8.6, 0.8);
+  // Pháp sư đứng lẫn với cung thủ; xe pháo dàn ở vòng ngoài cùng, tầm 13 nên không phải lăn
+  // bánh đi đâu — và đứng ngoài thì không chắn đường quân bộ chạy ra.
+  dat('mage', seed.army.mage, 5.3, 1.1);
+  dat('siege', seed.army.siege, 10.8, 0.3);
 
   return {
     seed,
@@ -297,7 +328,7 @@ function toward(e: Fighter, tx: number, tz: number, speed: number): number {
  * người chơi. Một luật chỉ đúng một chiều thì người chơi không học được nó.
  */
 function damage(s: BattleState, kind: TroopKind, target: TroopKind, ta: boolean): number {
-  const base = TROOPS[kind].dps * (ta ? 1 : RAIDER_DPS);
+  const base = TROOPS[kind].dps * (ta ? 1 : RAIDER_DPS * eliteOf(s.seed.power) ** ELITE_DPS);
   const d = base * KHAC[kind][target];
   if (ta) return d * (1 + SMITH_ATTACK * s.seed.smith.attack);
   return d * (1 - Math.min(0.6, SMITH_ARMOUR * s.seed.smith.armour));
@@ -310,6 +341,16 @@ function strike(s: BattleState, me: Fighter, you: Fighter, ta: boolean): void {
     // Bắn xa: một phát mỗi 1,2 giây, và có vệt để nhìn thấy đường tên.
     if (me.cool > 0) { me.cool -= 1; return; }
     you.hp -= damage(s, me.kind, you.kind, ta) * 1.2;
+    // Nổ lan: mọi kẻ cùng phe đứng quanh mục tiêu ăn một phần. Người chết được quét ở cuối
+    // bước, nên trừ máu ở đây là đủ.
+    const lan = TROOPS[me.kind].splash ?? 0;
+    if (lan > 0) {
+      const phe: readonly Fighter[] = ta ? s.raiders : s.guards;
+      for (const o of phe) {
+        if (o === you || Math.hypot(o.x - you.x, o.z - you.z) > lan) continue;
+        o.hp -= damage(s, me.kind, o.kind, ta) * 1.2 * SPLASH_SHARE;
+      }
+    }
     s.shots.push({ x0: me.x, z0: me.z, x1: you.x, z1: you.z });
     me.cool = Math.round(1.2 / TICK);
     return;
@@ -335,7 +376,7 @@ export function battleStep(s: BattleState): void {
     if (k < 0) continue;
     const r = s.raiders[k];
     r.hp -= (TOWER_DMG_BASE + TOWER_DMG_PER_LEVEL * t.level)
-      * (1 + SMITH_ATTACK * s.seed.smith.attack);
+      * (1 + SMITH_ATTACK * s.seed.smith.attack) * ageBonus(s.seed.age, AGE_DEFENCE);
     s.shots.push({ x0: t.x, z0: t.z, x1: r.x, z1: r.z });
     s.cool[i] = Math.round(TOWER_RELOAD / TICK);
   }
@@ -345,7 +386,8 @@ export function battleStep(s: BattleState): void {
   else {
     const k = nearestRaider(s, 0, 0, CORE_RANGE * (bao ? STORM_RANGE_MULT : 1));
     if (k >= 0) {
-      s.raiders[k].hp -= CORE_DMG_BASE + CORE_DMG_PER_MILITIA * s.seed.militia;
+      s.raiders[k].hp -= (CORE_DMG_BASE + CORE_DMG_PER_MILITIA * s.seed.militia)
+        * ageBonus(s.seed.age, AGE_DEFENCE);
       s.shots.push({ x0: 0, z0: 0, x1: s.raiders[k].x, z1: s.raiders[k].z });
       s.coreCool = Math.round(CORE_RELOAD / TICK);
     }
@@ -437,15 +479,12 @@ export function resolveBattle(seed: BattleSeed): BattleOutcome {
   for (const r of s.raiders) if (r.loaded) con += 1;
   const escaped = s.escaped + con;
 
-  const song: Troops = { spear: 0, archer: 0, horse: 0 };
+  const song = noTroops();
   for (const g of s.guards) song[g.kind] += 1;
   // Lính thuê tan sau trận dù sống hay chết, nên trừ chúng khỏi phần bộ binh còn lại.
   song.spear = Math.max(0, song.spear - seed.mercs);
-  const lost: Troops = {
-    spear: Math.max(0, seed.army.spear - song.spear),
-    archer: Math.max(0, seed.army.archer - song.archer),
-    horse: Math.max(0, seed.army.horse - song.horse),
-  };
+  const lost = noTroops();
+  for (const k of TROOP_KINDS) lost[k] = Math.max(0, seed.army[k] - song[k]);
 
   return {
     count,

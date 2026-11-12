@@ -21,7 +21,8 @@ export type IconName =
   | 'sound' | 'mute' | 'pause' | 'play' | 'ring' | 'ringOn' | 'gear' | 'shuffle'
   | 'hammer' | 'close' | 'spear' | 'bow' | 'horse' | 'anvil' | 'age'
   | 'farm' | 'well' | 'market' | 'lookout' | 'dock'
-  | 'move' | 'flag' | 'paw' | 'sword' | 'check' | 'map' | 'up' | 'people' | 'stop';
+  | 'move' | 'flag' | 'paw' | 'sword' | 'check' | 'map' | 'up' | 'people' | 'stop'
+  | 'mage' | 'cannon' | 'fish' | 'ship';
 
 /** Phần bên trong <svg>. Giữ mỗi icon trong vài nét, đừng thêm chi tiết. */
 const PATH: Record<IconName, string> = {
@@ -133,6 +134,17 @@ const PATH: Record<IconName, string> = {
   gear: '<circle cx="12" cy="12" r="2.8"/><circle cx="12" cy="12" r="6.4"/>'
     + '<path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1'
     + 'M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1"/>',
+  /** Mũ chóp nhọn có vành: pháp sư. */
+  mage: '<path d="M12 2.5l4.5 12h-9z"/><path d="M3.5 17.5c2.6-2.4 14.4-2.4 17 0-2.6 2.4-14.4 2.4-17 0z"/>'
+    + '<path d="M10 9.5h4"/>',
+  /** Khẩu pháo trên bánh xe. */
+  cannon: '<circle cx="8.5" cy="16.5" r="3.6"/><path d="M6.5 11.5L19 6.5l1.6 3.8-9.2 3.9"/>'
+    + '<path d="M3 20.5h18"/>',
+  fish: '<path d="M3 12c3-5 9.5-6 13.5-2L21 7v10l-4.5-3c-4 4-10.5 3-13.5-2z"/>'
+    + '<path d="M7.5 11v.5"/>',
+  /** Thuyền buồm: tàu chiến. */
+  ship: '<path d="M3 15.5h18l-2.5 5h-13z"/><path d="M12 15.5V3"/><path d="M12 4.5l6.5 8H12"/>'
+    + '<path d="M12 7l-4.5 5.5H12"/>',
 };
 
 /** Một icon, dưới dạng chuỗi SVG. Dùng khi cần nhét vào innerHTML sẵn có. */
