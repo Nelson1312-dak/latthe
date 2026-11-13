@@ -88,7 +88,7 @@ export class WorkerManager {
   private readonly legs: THREE.InstancedMesh;
   private readonly arms: THREE.InstancedMesh;
   /** Quãng đường đã đi và mức "đang đi" của từng người, để chân bước đúng nhịp, không trượt. */
-  private readonly buocDan = new Map<string, { x: number; z: number; quang: number; di: number }>();
+  private readonly buocDan = new Map<string, { x: number; z: number; quang: number; di: number; co: number }>();
   private readonly mChi = new THREE.Matrix4();
   /** Việc của từng người, nhớ theo đích để khỏi tra bãi mỗi khung. */
   private readonly roles = new Map<string, { t: string; kind: ResourceKind | null }>();
@@ -801,7 +801,11 @@ export class WorkerManager {
       const walking = u.state === 'moving' || u.state === 'delivering';
       let bc = this.buocDan.get(u.id);
       if (!bc) {
-        bc = { x: u.position[0], z: u.position[2], quang: vi * 0.37, di: 0 };
+        // Mỗi người một tầm vóc (±7%), băm từ mã nên lần nào mở game cũng y như cũ. Một đoàn
+        // dân cao bằng nhau răm rắp là dấu hiệu "nhân bản" dễ nhận nhất.
+        let h = 0;
+        for (let c = 0; c < u.id.length; c += 1) h = (h * 31 + u.id.charCodeAt(c)) >>> 0;
+        bc = { x: u.position[0], z: u.position[2], quang: vi * 0.37, di: 0, co: DAN * (0.93 + ((h % 1000) / 1000) * 0.14) };
         this.buocDan.set(u.id, bc);
       }
       const dq = Math.hypot(u.position[0] - bc.x, u.position[2] - bc.z);
@@ -810,16 +814,16 @@ export class WorkerManager {
       bc.z = u.position[2];
       bc.di += ((walking && dq > 1e-4 ? 1 : 0) - bc.di) * Math.min(1, dt * 12);
       const di = bc.di;
-      const nhip = (bc.quang / (RIG.stride * DAN)) * Math.PI;
+      const nhip = (bc.quang / (RIG.stride * bc.co)) * Math.PI;
       const sin = Math.sin(nhip);
       const nhun = Math.abs(sin) * di;
       const dap = u.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7 + vi * 0.9)) : 0;
       const mang = u.carrying > 0 && !!u.carryingKind;
 
       const y = this.yOf(u.id, u.position[0], u.position[2], dt);
-      this.v.set(u.position[0], y + nhun * 0.035 * DAN, u.position[2]);
+      this.v.set(u.position[0], y + nhun * 0.035 * bc.co, u.position[2]);
       this.q.setFromEuler(this.euler.set(0.06 * di + dap * 0.2, u.facing, sin * 0.05 * di, 'YXZ'));
-      this.s.set(DAN, DAN, DAN);
+      this.s.set(bc.co, bc.co, bc.co);
       this.m.compose(this.v, this.q, this.s);
       this.bodies.setMatrixAt(vi, this.m);
 

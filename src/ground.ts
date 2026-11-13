@@ -76,6 +76,15 @@ const VAN_DAM = [0.8, 0.5, 0.9, 0.9, 1, 0.8, 0.5, 0.9];
 /** Một ô vân phủ ngần này đơn vị, và lớp thứ hai (chống lặp) phủ ngần này. */
 const VAN_GAN = 6;
 const VAN_XA = 17;
+/**
+ * Số vệt đất nện tối đa gửi xuống shader — những công trình GẦN tâm ngắm nhất. Ba mươi hai
+ * là đủ phủ cả màn hình ở mức phóng xa nhất; lấy hết thì mỗi điểm ảnh mặt đất phải đo
+ * khoảng cách tới cả trăm công trình.
+ */
+const NEN_MAX = 32;
+/** Màu đất nện quanh chân công trình (tuyến tính hoá trong shader qua màu đỉnh). */
+const MAU_NEN = 0x84705a;
+
 /** Phần màu ảnh thật trộn vào; 0 là chỉ lấy vân, 1 là ảnh chụp nguyên màu. */
 const DAT_THAT = 0.15;
 /** Bật lại kiểu mặt gãy đa giác cũ (để so hai bên). */
@@ -101,6 +110,13 @@ export class Ground {
   private fogCx = 0;
   private fogCz = 0;
 
+  /** Mọi công trình (x, z, bán kính), và phần gần tâm ngắm nhất đang nằm trong shader. */
+  private nenAll: [number, number, number][] = [];
+  private readonly nen = { value: Array.from({ length: NEN_MAX }, () => new THREE.Vector3(0, 0, 0)) };
+  private readonly nenSo = { value: 0 };
+  private nenX = Infinity;
+  private nenZ = Infinity;
+
   private readonly c0 = new THREE.Color();
   private readonly c1 = new THREE.Color();
   private readonly acc = new THREE.Color();
@@ -122,7 +138,8 @@ export class Ground {
     // Thứ tự bọc có nghĩa: `grain` khai báo varying toạ độ thế giới mà lớp sương dùng lại,
     // nên nó phải ở trong cùng.
     this.mat = fogPaint(
-      datVan(grain(m, 6, 0.07), this.vanTex, this.vanTb, this.vanCo), this.fogTex, this.fogOrigin,
+      datNen(datVan(grain(m, 6, 0.07), this.vanTex, this.vanTb, this.vanCo), this.nen, this.nenSo),
+      this.fogTex, this.fogOrigin,
       FOG_SPAN, PALETTE.fogLand);
     napVan(this.vanTex, this.vanTb);
   }
@@ -397,8 +414,30 @@ export class Ground {
     return mesh;
   }
 
+  /**
+   * Danh sách công trình để vẽ vệt đất nện. Gọi mỗi khi công trình đổi (xây, dỡ, dời).
+   * Bán kính là bán kính CHIẾM ĐẤT; vệt loang ra quá nó một chút, viền răng cưa theo nhiễu.
+   */
+  setNen(list: [number, number, number][]): void {
+    this.nenAll = list;
+    this.nenX = Infinity;
+  }
+
+  /** Chọn những công trình gần tâm ngắm nhất cho shader — chỉ khi tâm đã trôi đi đủ xa. */
+  private chonNen(x: number, z: number): void {
+    if (Math.hypot(x - this.nenX, z - this.nenZ) < 6) return;
+    this.nenX = x;
+    this.nenZ = z;
+    const gan = this.nenAll.length <= NEN_MAX ? this.nenAll
+      : [...this.nenAll].sort((a, b) => Math.hypot(a[0] - x, a[1] - z) - Math.hypot(b[0] - x, b[1] - z))
+        .slice(0, NEN_MAX);
+    gan.forEach(([a, b, r], i) => this.nen.value[i].set(a, b, r));
+    this.nenSo.value = gan.length;
+  }
+
   /** Nạp và thả mảnh theo tâm ngắm. Chỉ chạy khi tâm đổi sang mảnh khác. */
   update(x: number, z: number): void {
+    this.chonNen(x, z);
     const gi = Math.floor(x / TILE);
     const gj = Math.floor(z / TILE);
     const key = `${gi},${gj}`;
@@ -599,5 +638,51 @@ function datVan<T extends THREE.Material>(
       }`);
   };
   mat.customProgramCacheKey = () => `${khoaTruoc}|datvan`;
+  return mat;
+}
+
+/**
+ * Lớp bọc shader: VỆT ĐẤT NỆN quanh chân mỗi công trình.
+ *
+ * Trước đây mỗi công trình đứng trên một mô đất nâu đắp nổi, tròn vành vạnh — nhìn từ trên
+ * xuống là một rừng đĩa nâu đặt trên cỏ, và chính người chơi gọi tên nó ra là thứ xấu. Ngoài
+ * đời, quanh một căn nhà là đất bị chân người giẫm trụi: không nổi lên, không tròn, mép loang
+ * lổ lẫn vào cỏ. Vẽ nó ngay trên mặt đất thì nó liền với đất, theo đúng dốc, không có mép.
+ *
+ * Chèn SAU lớp vân đất (map_fragment) và TRƯỚC color_fragment, nên sương vẫn phủ lên nó.
+ */
+function datNen<T extends THREE.Material>(
+  mat: T, nen: { value: THREE.Vector3[] }, so: { value: number },
+): T {
+  const mau = { value: new THREE.Color(MAU_NEN) };
+  const khoaTruoc = mat.customProgramCacheKey();
+  const truoc = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader, renderer) => {
+    truoc?.call(mat, shader, renderer);
+    shader.uniforms.uNen = nen;
+    shader.uniforms.uNenSo = so;
+    shader.uniforms.uNenMau = mau;
+    shader.fragmentShader = `uniform vec3 uNen[${NEN_MAX}];\nuniform int uNenSo;\nuniform vec3 uNenMau;\n`
+      + shader.fragmentShader.replace('#include <color_fragment>', `{
+        float nenK = 0.0;
+        float nhieu = texture2D(uVan, vVanXZ * 0.16).r;
+        for (int i = 0; i < ${NEN_MAX}; i++) {
+          if (i >= uNenSo) break;
+          vec3 c = uNen[i];
+          float d = length(vVanXZ - c.xy) + (nhieu - 0.5) * c.z * 0.55;
+          nenK = max(nenK, 1.0 - smoothstep(c.z * 0.62, c.z * 1.08, d));
+        }
+        if (nenK > 0.0) {
+          // Lấy lớp vân "đất" (lớp 2) của chính mặt đất, nên đất nện có hạt sỏi như đất thật.
+          vec3 a = texture(uDat, vec3(vVanXZ * uDatCo.x, 2.0)).rgb / max(uDatTb[2], vec3(0.02));
+          vec3 goc = max(vColor.rgb, vec3(0.02));
+          float loang = 0.88 + texture2D(uVan, vVanXZ * 0.5).r * 0.24;
+          diffuseColor.rgb = mix(diffuseColor.rgb, uNenMau * mix(vec3(1.0), a, 0.85) * loang / goc,
+            nenK * 0.8 * (1.0 - datUot));
+        }
+      }
+      #include <color_fragment>`);
+  };
+  mat.customProgramCacheKey = () => `${khoaTruoc}|nen`;
   return mat;
 }

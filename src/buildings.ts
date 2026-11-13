@@ -73,6 +73,9 @@ export function kieuOf(id: string): number {
   return Number.isFinite(n) ? Math.abs(Math.floor(n)) % HOUSE_KINDS : 0;
 }
 
+/** Đất nện dưới chân — đúng màu vệt đất nện ground.ts vẽ quanh công trình. */
+const DAT_NEN = 0x84705a;
+
 /** Mặt trên tấm bệ đất — mọi thân công trình đứng lên đây. */
 const Y0 = 0.18;
 
@@ -113,6 +116,9 @@ class Kit {
       arr[i * 3 + 2] = this.c.b;
     }
     n.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    // Loại vật liệu cho shader vân (xem `vanVatLieu`): tính từ màu GỐC, trước khi pha theo
+    // thời đại, vì cùng một màu tường ở thời Thành Luỹ là đá xây còn thời Công Nghiệp là gạch.
+    n.setAttribute('aVl', new THREE.BufferAttribute(new Float32Array(count).fill(nguyen ? 0 : loaiVl(color)), 1));
     this.parts.push(n);
   }
 
@@ -223,7 +229,9 @@ class Kit {
  * tích nhìn thấy không lấn sang phần đất của công trình bên cạnh.
  */
 function nen(k: Kit, r = 1.7): void {
-  k.cyl(r * 0.86, r * 1.46, 1.1, 12, 0, -0.88, 0, PALETTE.plotDirt);
+  // Mô đất thấp, choãi rộng, cùng màu với vệt đất nện vẽ trên mặt đất quanh nó (ground.ts):
+  // chân mô chìm vào vệt đất chứ không còn là một cái đĩa nâu tròn đặt trên cỏ.
+  k.cyl(r * 0.78, r * 1.5, 1.1, 20, 0, -0.92, 0, DAT_NEN);
   /*
    * Hạ tầng lớn lên theo thời đại, và nó nằm ở ĐÂY vì mọi công trình con đều gọi `nen`:
    * thêm một lần là cả làng đổi. Ruộng và bến thuyền thì không — không ai lát đá ruộng lúa.
@@ -302,7 +310,8 @@ const DEN = 0xfff0b8;
 
 interface BoMau { tuong: number; mai: number; pha: number; kinh: number }
 const BO_MAU: Record<number, BoMau> = {
-  1: { tuong: 0xd2b88c, mai: 0xc2a35a, pha: 0.62, kinh: 0x4a3d31 },
+  // Rạ thật ngả vàng xám, không cam: pha gần hết về màu rơm để mái nào cũng đọc ra là rạ.
+  1: { tuong: 0xd2b88c, mai: 0xb59a5c, pha: 0.84, kinh: 0x4a3d31 },
   3: { tuong: 0xd4cfc2, mai: 0x7a4636, pha: 0.28, kinh: GLASS },
   4: { tuong: 0xf4efe3, mai: 0xa02f2c, pha: 0.36, kinh: 0x3f5a78 },
   5: { tuong: 0xb3654c, mai: 0x3b3f47, pha: 0.6, kinh: 0x9fd2e6 },
@@ -314,6 +323,25 @@ const LA_MAI = new Set<number>([...Object.values(ROOF), MAI_RA, MAI_SAM]
   .filter((m) => m !== STONE_DARK && m !== GOLD));
 const TAM_A = new THREE.Color();
 const TAM_B = new THREE.Color();
+
+/*
+ * LOẠI VẬT LIỆU — mỗi đỉnh mang một con số, shader vẽ vân theo nó:
+ *   0 trơn · 1 tường trát có khung gỗ · 2 ngói · 3 rạ · 4 ván gỗ · 5 đá xây · 6 gạch
+ *   7 kính · 8 đất nện
+ * Trước đây mọi mặt chỉ là MỘT màu phẳng cộng chút nhiễu, nên ngôi nhà đọc ra là đồ nhựa
+ * đúc: không có viên ngói, không có thớ gỗ, không có mạch vữa. Vẽ bằng hình học thì mỗi
+ * viên ngói là mười hai tam giác; vẽ trong shader thì không tốn thêm đỉnh nào.
+ */
+function loaiVl(hex: number): number {
+  if (hex === GLASS) return 7;
+  if (LA_TUONG.has(hex)) return DOI === 3 ? 5 : DOI >= 5 ? 6 : 1;
+  if (hex === MAI_RA || (DOI === 1 && LA_MAI.has(hex))) return 3;
+  if (LA_MAI.has(hex)) return 2;
+  if (hex === WOOD) return 4;
+  if (hex === STONE || hex === STONE_DARK) return 5;
+  if (hex === PALETTE.plotDirt || hex === DAT_NEN) return 8;
+  return 0;
+}
 
 /** Màu của một mảnh ở thời đại đang dựng. Thời đại hai trả lại đúng màu gốc. */
 function mauDoi(hex: number): number {
@@ -412,7 +440,7 @@ function townhall1(level: number, co: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('townhall', level);
   // Nền đất nện chứ chưa phải kè đá: làng này chưa biết xẻ đá.
-  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, PALETTE.plotDirt);
+  k.cyl(2.5, 3.6, 1.3, 24, 0, -1.0, 0, DAT_NEN);
   const y0 = 0.3;
   const w = 3.0;
   const d = 1.9;
@@ -468,7 +496,7 @@ function townhall1(level: number, co: number): THREE.BufferGeometry {
 function townhall3(level: number, co: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('townhall', level);
-  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE_DARK);
+  k.cyl(2.5, 3.2, 1.3, 24, 0, -1.0, 0, STONE_DARK);
   const y0 = 0.3;
   const w = 2.7;
   const zb = -0.15;
@@ -523,7 +551,7 @@ function townhall3(level: number, co: number): THREE.BufferGeometry {
 function townhall4(level: number, co: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('townhall', level);
-  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE);
+  k.cyl(2.5, 3.2, 1.3, 24, 0, -1.0, 0, STONE);
   const y0 = 0.3;
   // Bệ thềm: cả cung điện đứng cao hơn sân một bậc.
   k.rbox(4.1, 0.22, 2.7, 0.05, 0.03, 0, y0, -0.1, STONE);
@@ -579,7 +607,7 @@ function townhall4(level: number, co: number): THREE.BufferGeometry {
 function townhall5(level: number, co: number): THREE.BufferGeometry {
   const k = new Kit();
   const st = stage('townhall', level);
-  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE_DARK);
+  k.cyl(2.5, 3.2, 1.3, 24, 0, -1.0, 0, STONE_DARK);
   const y0 = 0.3;
   k.rbox(4.2, 0.2, 2.7, 0.04, 0.02, 0, y0, -0.1, 0x8d8a86);
   const y1 = y0 + 0.2;
@@ -653,7 +681,7 @@ function townhall2(level: number, co: number): THREE.BufferGeometry {
   // Bệ đá tròn, thụt xuống như mọi bệ khác. Bản cũ là lục giác xoay 30 độ cho khớp
   // lưới ô — mà lưới ô thì không còn.
   // Chân choãi như kè đá, cùng lý do với mô đất ở `nen`: vành dựng đứng là một đồng xu.
-  k.cyl(2.5, 3.2, 1.3, 16, 0, -1.0, 0, STONE_DARK);
+  k.cyl(2.5, 3.2, 1.3, 24, 0, -1.0, 0, STONE_DARK);
   const y0 = 0.4;
   const w = 2.6;
   const d = 2.3;
@@ -1277,8 +1305,133 @@ export function buildingMaterial(): THREE.MeshStandardMaterial {
   // Thớ mịn hơn mặt đất: lát lại mỗi 2,2 đơn vị, mà căn nhà cũng chỉ rộng chừng 2 — nên nó
   // đọc ra là vữa tường và ngói rám, không phải cỏ. Biên độ nhẹ hơn mặt đất, vì tường kem
   // sáng nên cùng một biên độ trên tường trông gấp đôi trên cỏ.
-  MAT ??= grain(new THREE.MeshStandardMaterial({
+  MAT ??= vanVatLieu(grain(new THREE.MeshStandardMaterial({
     vertexColors: true, roughness: ROUGHNESS, metalness: METALNESS, flatShading: true,
-  }), 2.2, 0.11);
+  }), 2.2, 0.11));
   return MAT;
+}
+
+/** Bật/tắt vân vật liệu — bậc đồ hoạ Thấp tắt cho nhẹ máy. */
+export const VAN_VL_ON = { value: 1 };
+
+/*
+ * Hàm GLSL dùng chung. Mọi khoảng cách tính bằng ĐƠN VỊ THẾ GIỚI trong toạ độ của chính
+ * công trình, nên một viên gạch to đúng bằng nhau trên nhà nhỏ lẫn doanh trại.
+ *
+ * Mỗi mẫu tự PHAI ĐI khi nó nhỏ hơn chừng hai điểm ảnh (đo bằng fwidth): không phai thì
+ * lúc thu nhỏ bản đồ, những hàng ngói 0,16 đơn vị thành sọc moiré nhấp nháy khắp làng.
+ */
+const VL_GLSL = `
+float vlHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// Lưới viên xếp so le (gạch, đá, ngói). Trả về (mức mạch vữa 0..1, độ sáng riêng từng viên,
+// vị trí dọc trong viên 0..1).
+vec3 vlVien(vec2 q, vec2 co, float mach, float fw) {
+  float hang = floor(q.y / co.y);
+  q.x += mod(hang, 2.0) * co.x * 0.5;
+  vec2 o = floor(q / co);
+  vec2 f = fract(q / co);
+  vec2 kc = min(f, 1.0 - f) * co;
+  float m = smoothstep(mach - fw, mach + fw, min(kc.x, kc.y));
+  return vec3(m, vlHash(o + hang * 7.31), f.y);
+}
+`;
+
+/**
+ * Lớp bọc shader: vân vật liệu theo `aVl`, cộng một dải bẩn ở chân tường.
+ *
+ * Dải bẩn là thứ làm công trình ĐỨNG trên đất: ngoài đời chân tường luôn sẫm hơn (bùn bắn,
+ * rêu, ít ánh trời), và thiếu nó thì ngôi nhà trông như đặt lên từ trên cao xuống.
+ */
+function vanVatLieu<T extends THREE.Material>(mat: T): T {
+  const khoaTruoc = mat.customProgramCacheKey();
+  const truoc = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader, renderer) => {
+    truoc?.call(mat, shader, renderer);
+    shader.uniforms.uVlOn = VAN_VL_ON;
+    shader.vertexShader = 'attribute float aVl;\nvarying float vVl;\nvarying vec3 vVlP;\nvarying vec3 vVlN;\n'
+      + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vVl = aVl; vVlP = position; vVlN = normal;`);
+    shader.fragmentShader = 'uniform float uVlOn;\nvarying float vVl;\nvarying vec3 vVlP;\nvarying vec3 vVlN;\n'
+      + VL_GLSL + shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      {
+        vec3 p = vVlP;
+        vec3 n = normalize(vVlN);
+        float vl = floor(vVl + 0.5);
+        // Trục ngang trên mặt: vuông góc với hướng nằm ngang của pháp tuyến. Mặt đứng, mái
+        // dốc, chóp nón đều dùng được; mặt nằm ngang thì lấy thẳng (x, z).
+        vec2 nh = n.xz;
+        float dai = length(nh);
+        float u = dai > 0.2 ? dot(p.xz, vec2(-nh.y, nh.x) / dai) : p.x;
+        float v = dai > 0.2 ? p.y : p.z;
+        float doc = abs(n.y);
+        float fw = max(fwidth(u), fwidth(v));
+        float k = 1.0;
+        if (uVlOn > 0.5 && vl > 0.5) {
+          if (vl < 1.5) {
+            // Tường trát: vữa loang nhẹ, và KHUNG GỖ lộ ra — cột mỗi 0,7 đơn vị, một xà ngang
+            // sát chân. Chỉ trên mặt đứng: mặt trên của tường là chỗ mái che, không ai thấy.
+            float loang = texture2D(uVan, p.xy * 0.9 + p.zz * 0.6).r;
+            k = 0.93 + loang * 0.12;
+            if (doc < 0.3) {
+              float cot = abs(fract(u / 0.7 + 0.5) - 0.5) * 0.7;
+              float xa = abs(p.y - 0.26);
+              float go = 1.0 - smoothstep(0.035 - fw, 0.035 + fw, min(cot, xa));
+              go *= 1.0 - smoothstep(0.12, 0.35, fw);
+              k = mix(k, 0.36, go);
+            }
+          } else if (vl < 2.5) {
+            // Ngói: hàng ngang theo độ cao, mỗi hàng sẫm dần về mép dưới (bóng của hàng trên
+            // đè lên), mạch đứng so le, viên nào cũng lệch màu một chút.
+            vec3 vi = vlVien(vec2(u, v), vec2(0.21, 0.15), 0.012, fw);
+            float bong = mix(0.74, 1.06, smoothstep(0.0, 0.8, vi.z));
+            float am = (0.94 + vi.y * 0.12) * mix(0.8, 1.0, vi.x) * bong;
+            k = mix(1.0, am, 1.0 - smoothstep(0.04, 0.09, fw));
+          } else if (vl < 3.5) {
+            // Rạ: lớp dày hơn ngói, sợi rơm chạy dọc theo dốc mái.
+            float hang = fract(v / 0.24);
+            float soi = vlHash(vec2(floor(u * 34.0), floor(v / 0.24)));
+            float am = mix(0.72, 1.05, smoothstep(0.0, 0.7, hang)) * (0.9 + soi * 0.18);
+            k = mix(1.0, am, 1.0 - smoothstep(0.05, 0.12, fw));
+          } else if (vl < 4.5) {
+            // Ván gỗ: tấm đứng trên mặt đứng, tấm nằm trên mặt ngang; khe tối giữa hai tấm và
+            // thớ gỗ kéo dài theo chiều tấm.
+            float q = doc < 0.5 ? u : p.x;
+            float dt = doc < 0.5 ? v : p.z;
+            float tam = floor(q / 0.17);
+            float f = abs(fract(q / 0.17) - 0.5) * 0.17;
+            float khe = smoothstep(0.072 - fw, 0.08 + fw, f);
+            float tho = texture2D(uVan, vec2(q * 3.0 + tam * 0.37, dt * 0.35)).r;
+            float am = (0.86 + vlHash(vec2(tam, 3.1)) * 0.2) * (0.9 + tho * 0.18) * mix(0.62, 1.0, 1.0 - khe);
+            k = mix(1.0, am, 1.0 - smoothstep(0.05, 0.1, fw));
+          } else if (vl < 6.5) {
+            // Đá xây (khối to, lệch màu nhiều) và gạch (viên nhỏ, đều). Mặt trên của từng
+            // viên sáng lên một chút — cái gờ bắt nắng làm bức tường có độ nổi.
+            bool gach = vl > 5.5;
+            vec2 co = gach ? vec2(0.27, 0.115) : vec2(0.46, 0.25);
+            vec2 q = doc > 0.7 ? p.xz : vec2(u, v);
+            vec3 vi = vlVien(q, co, gach ? 0.014 : 0.022, fw);
+            float noi = gach ? 1.0 : mix(0.92, 1.06, smoothstep(0.1, 0.95, vi.z));
+            float am = (gach ? 0.9 + vi.y * 0.18 : 0.8 + vi.y * 0.34) * noi;
+            am = mix(gach ? 1.18 : 0.55, am, vi.x);
+            k = mix(1.0, am, 1.0 - smoothstep(0.06, 0.13, fw));
+          } else if (vl < 7.5) {
+            // Kính: sáng dần lên trên (bầu trời phản chiếu), có song cửa chữ thập.
+            float song = min(abs(fract(u / 0.17 + 0.5) - 0.5) * 0.17, abs(fract(p.y / 0.17 + 0.5) - 0.5) * 0.17);
+            k = mix(0.8, 1.25, fract(p.y / 0.34 + 0.15));
+            k = mix(k, 1.9, (1.0 - smoothstep(0.012 - fw, 0.012 + fw, song)) * (1.0 - smoothstep(0.03, 0.07, fw)));
+          } else {
+            // Đất nện: loang to, sỏi lấm tấm.
+            float loang = texture2D(uVan, p.xz * 0.35).r;
+            float soi = step(0.93, vlHash(floor(p.xz * 9.0)));
+            k = (0.86 + loang * 0.24) * (1.0 + soi * 0.25);
+          }
+        }
+        // Chân tường sẫm lại trong nửa đơn vị đầu, mạnh nhất ngay sát đất.
+        // Không áp lên đất nện: mô đất nằm dưới mức ấy, sẫm theo thì thành một vành đen.
+        if (vl < 7.5) k *= mix(0.62, 1.0, smoothstep(0.15, 0.9, p.y));
+        diffuseColor.rgb *= k;
+      }`);
+  };
+  mat.customProgramCacheKey = () => `${khoaTruoc}|vatlieu`;
+  return mat;
 }

@@ -12,7 +12,7 @@
  */
 import * as THREE from 'three';
 import { matte, haloTexture, labelTexture, skyEnvTexture, GRAIN_ON } from './materials';
-import { buildingGeometry, buildingMaterial, chimneyTop, kieuOf } from './buildings';
+import { VAN_VL_ON, buildingGeometry, buildingMaterial, chimneyTop, kieuOf } from './buildings';
 import { Smoke } from './Smoke';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -549,6 +549,8 @@ export class Game {
     this.datDen(this.baoLuc);
     if (this.scene.fog) (this.scene.fog as THREE.Fog).far = q.haze ? this.hazeFar : 1e6;
     GRAIN_ON.value = q.grain ? 1 : 0;
+    // Vân vật liệu công trình đi cùng công tắc vân: bậc Thấp tắt cả hai.
+    VAN_VL_ON.value = q.grain ? 1 : 0;
     this.map.setQuality(q);
     this.fog.setDetail(q.cloudDetail);
     this.disposeComposer();
@@ -825,6 +827,9 @@ export class Game {
         this.structures.delete(id);
       }
     }
+    // Vệt đất nện dưới chân từng công trình, vẽ thẳng trên mặt đất.
+    this.dat.setNen(this.economy.state.buildings.map((b) => [b.position[0], b.position[2],
+      FOOTPRINT[b.type] * (b.type === 'farm' || b.type === 'dock' ? 0.75 : 1)] as [number, number, number]));
     this.pickable.length = 0;
     for (const st of this.structures.values()) {
       st.g.traverse((o) => {

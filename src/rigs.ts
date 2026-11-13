@@ -163,6 +163,21 @@ function muSat(k: Ke, y: number): void {
     .add(hop(0.025, 0.07, 0.02), 0, y - 0.07, 0.125, SAT_TOI);
 }
 
+/**
+ * Áo choàng màu phe buông sau lưng, xoè dần xuống dưới, và chùm lông trên đỉnh mũ.
+ * Từ góc camera nhìn chéo từ sau, áo choàng là mảng màu phe LỚN NHẤT trên người lính:
+ * một hàng quân đọc ra ngay là quân ai, và trông ra dáng chiến binh chứ không phải dân phu.
+ */
+function aoChoang(k: Ke, yMu: number): void {
+  k.add(xoay(dep(tru(0.16, 0.24, 0.58, 10), 1, 1, 0.22), 0.16), 0, 0.71, -0.15, null)
+    .add(dep(tru(0.2, 0.2, 0.05, 10), 1, 1, 0.5), 0, 0.98, -0.07, null);
+  // Chùm lông: một dải cong từ trán ra sau gáy, như mào mũ lính.
+  for (let i = 0; i < 4; i += 1) {
+    const a = -0.5 + i * 0.42;
+    k.add(dep(cau(0.045, 6, 5), 0.7, 1.15, 1.2), 0, yMu + 0.13 + Math.cos(a) * 0.06, Math.sin(a) * 0.1 - 0.02, null);
+  }
+}
+
 /** Lính giáo: áo giáp xích dưới áo choàng màu phe, khiên tròn tay trái, giáo dài tay phải. */
 /** Giáp vai sắt đè lên vai áo — không có nó thì vai áo màu phe đọc ra như hai nắm tay. */
 function giapVai(k: Ke): void {
@@ -175,6 +190,7 @@ function linhGiao(): Rig {
   k.add(dep(tru(0.2, 0.2, 0.16, 10), 1, 1, 0.7), 0, 0.97, 0, SAT);
   giapVai(k);
   muSat(k, 1.21);
+  aoChoang(k, 1.21);
   const rp = -0.75;
   // Tay khiên co sát người: khiên che ngực chứ không chìa ra một sải tay.
   const rt = -0.45;
@@ -266,6 +282,7 @@ function kyBinh(): Rig {
   ng.add(dep(tru(0.2, 0.2, 0.16, 10), 1, 1, 0.7), 0, 0.97, 0, SAT);
   giapVai(ng);
   muSat(ng, 1.21);
+  aoChoang(ng, 1.21);
   ng.nhom(tay(SAT), -1.9, VAI_X, VAI_Y, 0).nhom(tay(SAT), -0.7, -VAI_X, VAI_Y, 0);
   const [px, py, pz] = banTay(VAI_X, -1.9);
   ng.add(xoay(hop(0.04, 0.78, 0.015), -0.5), px, py + 0.32, pz + 0.2, SAT)

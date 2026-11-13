@@ -1115,3 +1115,77 @@ body.dat .aim { border-color: rgba(251, 191, 36, 0.85); box-shadow: 0 0 0 4px rg
   align-items: center; justify-content: center; gap: 8px; }
 .insp-go:disabled { opacity: 0.55; cursor: not-allowed; }
 .insp-next.chan { color: var(--rose); }
+
+/* =================================================================================
+ * DA ĐẾ CHẾ — gỗ sẫm, viền đồng, chữ khắc.
+ *
+ * Người chơi muốn giao diện "realistic và chiến". Kính mờ xanh than là ngôn ngữ của app
+ * văn phòng; cạnh một ngôi làng mái rạ, tường đá thì nó lạc tông. Ở đây vẫn giữ đúng hai
+ * nguyên tắc ở đầu tệp — HUD tối, tách bạch khỏi cảnh sáng — chỉ đổi CHẤT LIỆU: nền gỗ óc
+ * chó sẫm có thớ mờ, viền đồng thau, một đường chỉ vàng bên trong như khung tranh, và chữ
+ * tiêu đề Cinzel khắc kiểu bia đá La Mã. Chữ thân giữ Jakarta: chữ khắc đọc khó ở cỡ 11px.
+ *
+ * Tất cả nằm ở cuối tệp và chỉ đè lên biến cùng vài bề mặt chính, nên gỡ cả khối này ra là
+ * về đúng giao diện cũ.
+ * ================================================================================= */
+:root {
+  --go-thot: repeating-linear-gradient(97deg, rgba(255, 220, 170, 0.025) 0 2px, transparent 2px 7px,
+    rgba(0, 0, 0, 0.05) 7px 8px, transparent 8px 13px);
+  --glass: var(--go-thot), linear-gradient(180deg, rgba(58, 40, 26, 0.9), rgba(30, 20, 13, 0.93));
+  --glass-deep: var(--go-thot), linear-gradient(180deg, rgba(52, 36, 24, 0.96), rgba(24, 16, 10, 0.97));
+  --glass-inner: rgba(255, 226, 170, 0.06);
+  --glass-inner-hi: rgba(255, 226, 170, 0.12);
+  --hairline: rgba(205, 160, 86, 0.38);
+  --hairline-hi: rgba(232, 190, 110, 0.7);
+  --ink: #f6ead2;
+  --ink-soft: #d2b98e;
+  --ink-dim: #a08a66;
+  --amber: #f3c552;
+  --mint: #9fe08a;
+  --rose: #ff8a6e;
+  --shadow: 0 8px 26px rgba(10, 5, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 3px rgba(232, 190, 110, 0.12), inset 0 1px 0 4px rgba(255, 230, 180, 0.05);
+  --lift: 0 18px 50px rgba(10, 5, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 3px rgba(232, 190, 110, 0.12);
+  --chu-khac: "Cinzel", "Trajan Pro", Georgia, serif;
+}
+.glass, .dock, .wave, .card, .toast { border-color: var(--hairline); }
+.card, .dock { box-shadow: var(--lift); }
+
+/* Tiêu đề và tên nút: chữ khắc, giãn chữ một chút như dòng chữ trên bia. */
+.card h2, .sheet-head strong, button.primary, .tab {
+  font-family: var(--chu-khac); letter-spacing: 0.04em;
+}
+.card h2 { font-weight: 800; color: #f8e3b0; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+.sheet-head strong { font-weight: 800; font-size: 16px; color: #f8e3b0; }
+.tile .tname { font-family: var(--chu-khac); font-weight: 700; letter-spacing: 0.05em; }
+
+/* Nút chính: tấm đồng đúc nổi, không phải ô chữ nhật phẳng. */
+button.primary {
+  border: 1px solid rgba(255, 214, 130, 0.75);
+  background: linear-gradient(180deg, #c99a45 0%, #9b6c26 52%, #7d531a 100%);
+  color: #2a1a08; text-shadow: 0 1px 0 rgba(255, 236, 190, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.55), inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 3px 10px rgba(0, 0, 0, 0.4);
+  font-weight: 800;
+}
+button.primary:hover { background: linear-gradient(180deg, #d9ab55 0%, #a8782e 52%, #8a5d1f 100%); }
+
+/* Dock: nút đang mở như tấm khiên đồng sáng lên; nút đủ tiền thắp viền vàng. */
+.tile { border-color: rgba(205, 160, 86, 0.16); }
+.tile.ready, .tile.on, .tile[aria-pressed="true"] {
+  border-color: rgba(243, 197, 82, 0.75);
+  background: linear-gradient(180deg, rgba(243, 197, 82, 0.2), rgba(243, 197, 82, 0.06));
+  box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.2), 0 0 14px rgba(243, 197, 82, 0.18);
+}
+.tab.on { background: linear-gradient(180deg, rgba(243, 197, 82, 0.22), rgba(243, 197, 82, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(243, 197, 82, 0.5); }
+
+/* Thanh đếm ngược đợt giặc: rãnh tối khắc vào gỗ, vạch chạy màu đồng. */
+.wave-bar { background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6); }
+.wave-bar i { background: linear-gradient(90deg, #8a6430, #e0b25a); }
+.wave.gan .wave-bar i { background: linear-gradient(90deg, #8a2a1a, #ff7a55); }
+
+/* Màn che phía sau thẻ: ám nâu chứ không ám xanh than. */
+.veil { background: rgba(20, 10, 2, 0.55); }
+.veil-soft { background: rgba(20, 10, 2, 0.4); }
