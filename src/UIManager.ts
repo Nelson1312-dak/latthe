@@ -17,7 +17,7 @@ import {
 } from './config';
 import { voyageSpec } from './voyage';
 import { waveKind } from './raids';
-import { CHUNK, biomeAt, chunkOf, waterAt } from './world';
+import { CHUNK, biomeAt, chunkOf, isFish, waterAt } from './world';
 import { SHIP_AGE, SHIP_COST, SORTIE_SECONDS, lairLoot, lairNeed } from './naval';
 import { rewardText } from './milestones';
 import { ico, iconSvg } from './icons';
@@ -1296,7 +1296,7 @@ export class UIManager {
     const res = RESOURCES[b.kind];
 
     const head = el('div', 'insp-head');
-    head.append(b.was ? ico('fish', 'insp-ico', FISH_COLOR) : ico(res.icon, 'insp-ico', res.color));
+    head.append(isFish(b) ? ico('fish', 'insp-ico', FISH_COLOR) : ico(res.icon, 'insp-ico', res.color));
     const t = el('div', 'insp-title');
     const live = el('small', 'live', this.patchLine(b));
     this.patchLive = live;
@@ -1315,7 +1315,7 @@ export class UIManager {
       return s;
     };
     // Bãi cá nói rõ nó cho gì: cá vào kho là lương thực.
-    row.append(b.was ? bit('fish', `Fish · counts as ${res.label.toLowerCase()}`) : bit(res.icon, res.label));
+    row.append(isFish(b) ? bit('fish', `Fish · counts as ${res.label.toLowerCase()}`) : bit(res.icon, res.label));
     /*
      * MỘT CHUYẾN ĐÁNG BAO NHIÊU VÀNG — chứ không phải hệ số giàu.
      *
@@ -1666,7 +1666,7 @@ export class UIManager {
     // đúng cỡ cho biết ngay chỗ nào đáng kéo camera tới.
     for (const b of this.game.map.patches) {
       if (!this.game.fog.isRevealed(b.center[0], b.center[2])) continue;
-      const mau = `#${(b.was ? FISH_COLOR : RESOURCES[b.kind].color).toString(16).padStart(6, '0')}`;
+      const mau = `#${(isFish(b) ? FISH_COLOR : RESOURCES[b.kind].color).toString(16).padStart(6, '0')}`;
       const r = Math.max(2.5, b.radius * px);
       ctx.beginPath();
       ctx.arc(tx(b.center[0]), tz(b.center[2]), r, 0, 7);

@@ -562,7 +562,10 @@ const PATCH_SPEC: Record<ResourceKind, { label: string; radius: number; spots: n
   wood: { label: 'Forest', radius: 5.6, spots: 6, base: 1 },
   food: { label: 'Field', radius: 5.2, spots: 5, base: 1 },
   stone: { label: 'Quarry', radius: 4.8, spots: 5, base: 0.9 },
-  gold: { label: 'Gold field', radius: 4.4, spots: 4, base: 0.5 },
+  // Vàng từng là 0,5 — tức đào vàng ra ÍT hơn chặt gỗ đem bán (gỗ bán được một vàng một
+  // khúc). Không ai nên đi đào một mỏ kiếm kém hơn cái rừng sau nhà; 1,0 cho ngang tay, và
+  // vàng đào thì không phải xếp hàng qua chợ.
+  gold: { label: 'Gold field', radius: 4.4, spots: 4, base: 1 },
   // Pha lê sản lượng thấp nhưng mỗi mảnh đáng bảy lần một khúc gỗ. Số cũ là 0,3 và đo ra
   // thì đó là một cái bẫy: rừng pha lê cách nhà 122 đơn vị có hệ số giàu 0,78 — THẤP HƠN
   // rừng gỗ ngay cạnh nhà (1,40) — nên ai đi xa lấy pha lê đều kiếm ít hơn người ở nhà.
@@ -575,6 +578,29 @@ const PATCH_SPEC: Record<ResourceKind, { label: string; radius: number; spots: n
 const FISH_AT = 0.6;
 /** Bãi cá cho nhiều hơn ruộng một nửa: phải lội ra tận nước, và thường nằm xa làng. */
 const FISH_BASE = 1.5;
+
+/*
+ * MỎ VÀNG GẦN NHÀ. Đồng cỏ quanh thủ phủ không có vàng (xem BIOME_MIX), nên giờ đầu vàng
+ * chỉ nhỏ giọt từ thuế và chợ — người chơi than "đợi vàng tăng tự nhiên lâu". Một số bãi gỗ
+ * hay lương thực trong vành 30–70 (và lưa thưa xa hơn) được đổi thành mỏ vàng.
+ *
+ * Đổi SAU KHI đã rút đủ số của loại cũ, đúng kiểu bãi cá: mã bãi, tâm bãi và chỗ đứng giữ
+ * nguyên (chúng nằm trong bản lưu), chỉ đổi thứ lấy được. Chọn bãi nào bằng hàm băm theo
+ * tâm (muối 113), không rút thêm số nào của khối.
+ */
+const MO_VANG_BASE = 1.4;
+
+function laMoVang(kind: ResourceKind, x: number, z: number): boolean {
+  if (kind !== 'wood' && kind !== 'food') return false;
+  const d = Math.hypot(x, z);
+  const h = hash2(Math.round(x), Math.round(z), 113);
+  return (d >= 30 && d <= 70 && h < 0.3) || (d > 70 && d <= 160 && h < 0.12);
+}
+
+/** Bãi cá: bãi đã đổi loại mà ra lương thực. Mỏ vàng đổi loại thì ra vàng. */
+export function isFish(p: Patch): boolean {
+  return p.was !== undefined && p.kind === 'food';
+}
 
 export function patchLabel(kind: ResourceKind): string {
   return PATCH_SPEC[kind].label;
@@ -626,6 +652,20 @@ function makePatch(
    * mọi bãi phía sau trong khối đổi mã.
    */
   const ca = waterAt(x, z) >= FISH_AT;
+  if (!ca && laMoVang(kind, x, z)) {
+    return {
+      id: `b_${cx}_${cz}_${k}`,
+      kind: 'gold',
+      label: 'Gold mine',
+      center: [x, levelAtCenter(x, z), z],
+      radius: spec.radius,
+      spots,
+      biome,
+      // Mỏ gần nhà cho hơn hẳn: nó là câu trả lời cho "vàng lên chậm" của giờ đầu.
+      richness: MO_VANG_BASE * richnessAt(x, z),
+      was: kind,
+    };
+  }
   return {
     id: `b_${cx}_${cz}_${k}`,
     kind: ca ? 'food' : kind,

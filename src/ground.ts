@@ -26,7 +26,7 @@
 import * as THREE from 'three';
 import type { BiomeId } from './types';
 import { BIOMES, PALETTE, POOL_COLORS, SEA_COLORS } from './config';
-import { fogPaint, grain, matte } from './materials';
+import { WIND, fogPaint, grain, matte } from './materials';
 import {
   CHUNK, GRID_STEP, biomeWeights, chunkOf, hash2, nodeHeight, nodePool, valueNoise, waterDepth,
 } from './world';
@@ -67,9 +67,15 @@ const LOP_CUA: Record<BiomeId, Lop> = {
   meadow: 'grass', highlands: 'grassRock', desert: 'sand', crags: 'rock',
   snow: 'snow', swamp: 'mud', ashland: 'ash',
 };
+/**
+ * Độ đậm vân của từng lớp (theo thứ tự LOP). Ảnh chụp không đều tay: "cỏ lẫn đá" chụp từ
+ * trên cao có những mảng sáng tối gắt, phóng lên cỡ một ô 11 đơn vị thì thành vệt loang
+ * cả cánh đồng. Ghìm nó lại cho cùng một độ "ồn" với cỏ thường.
+ */
+const VAN_DAM = [0.8, 0.5, 0.9, 0.9, 1, 0.8, 0.5, 0.9];
 /** Một ô vân phủ ngần này đơn vị, và lớp thứ hai (chống lặp) phủ ngần này. */
-const VAN_GAN = 11;
-const VAN_XA = 29;
+const VAN_GAN = 6;
+const VAN_XA = 17;
 /** Phần màu ảnh thật trộn vào; 0 là chỉ lấy vân, 1 là ảnh chụp nguyên màu. */
 const DAT_THAT = 0.15;
 /** Bật lại kiểu mặt gãy đa giác cũ (để so hai bên). */
@@ -255,6 +261,8 @@ export class Ground {
     const w0 = new Float32Array(tris * 12);
     const w1 = new Float32Array(tris * 12);
     const ws = new Float32Array(V * V * 8);
+    const nuoc = new Float32Array(tris * 3);
+    const ds = new Float32Array(V * V);
 
     // Cao độ và màu của từng đỉnh lưới, tính một lần rồi dùng cho tới bốn mặt quanh nó.
     const hs = new Float32Array(V * V);
@@ -281,6 +289,7 @@ export class Ground {
         this.nodeColor(i0 + i, j0 + j, c);
         cs[n * 3] = c.r; cs[n * 3 + 1] = c.g; cs[n * 3 + 2] = c.b;
         this.nodeLayers(i0 + i, j0 + j, l, ws, n * 8);
+        ds[n] = waterDepth((i0 + i) * GRID_STEP, (j0 + j) * GRID_STEP);
       }
     }
 
@@ -305,6 +314,7 @@ export class Ground {
         nor[k] = ns[n * 3]; nor[k + 1] = ns[n * 3 + 1]; nor[k + 2] = ns[n * 3 + 2];
         col[k] = cs[n * 3]; col[k + 1] = cs[n * 3 + 1]; col[k + 2] = cs[n * 3 + 2];
         for (let t = 0; t < 4; t += 1) { w0[kw + t] = ws[n * 8 + t]; w1[kw + t] = ws[n * 8 + 4 + t]; }
+        nuoc[kw / 4] = ds[n];
         k += 3;
         kw += 4;
       }
@@ -375,6 +385,7 @@ export class Ground {
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     geo.setAttribute('aW0', new THREE.BufferAttribute(w0, 4));
     geo.setAttribute('aW1', new THREE.BufferAttribute(w1, 4));
+    geo.setAttribute('aNuoc', new THREE.BufferAttribute(nuoc, 1));
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, this.mat);
     mesh.position.set(i0 * GRID_STEP, 0, j0 * GRID_STEP);
@@ -522,11 +533,38 @@ function datVan<T extends THREE.Material>(
     shader.uniforms.uDat = tex;
     shader.uniforms.uDatCo = co;
     shader.uniforms.uDatTb = tb;
-    shader.vertexShader = 'attribute vec4 aW0;\nattribute vec4 aW1;\nvarying vec4 vW0;\nvarying vec4 vW1;\n'
+    shader.uniforms.uDatK = { value: VAN_DAM };
+    shader.uniforms.uTime = WIND;
+    shader.vertexShader = 'attribute vec4 aW0;\nattribute vec4 aW1;\nattribute float aNuoc;\nvarying vec4 vW0;\nvarying vec4 vW1;\nvarying float vNuoc;\n'
       + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      vW0 = aW0; vW1 = aW1;`);
-    shader.fragmentShader = 'uniform highp sampler2DArray uDat;\nuniform vec4 uDatCo;\nuniform vec3 uDatTb[8];\nvarying vec4 vW0;\nvarying vec4 vW1;\n'
+      vW0 = aW0; vW1 = aW1; vNuoc = aNuoc;`);
+    shader.fragmentShader = 'uniform highp sampler2DArray uDat;\nuniform vec4 uDatCo;\nuniform vec3 uDatTb[8];\nuniform float uDatK[8];\nuniform float uTime;\nvarying float vNuoc;\nvarying vec4 vW0;\nvarying vec4 vW1;\n'
       + shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      /*
+       * MẶT NƯỚC. Nước là chính mặt đất hạ xuống SEA_Y và tô xanh (xem world.ts), nên nó ở
+       * luôn trong shader này: gợn sóng chạy (bẻ pháp tuyến theo hai lớp nhiễu trôi ngược
+       * chiều), mặt nước nhẵn bóng để nắng và bầu trời lấp lánh trên đó, và những vệt bọt
+       * trắng chạy vào bờ. Không thêm lưới, không thêm lệnh vẽ.
+       */
+      float mNuoc = vNuoc >= 1.0 ? 1.0 : vNuoc * vNuoc * (3.0 - 2.0 * vNuoc);
+      float datUot = smoothstep(0.32, 0.6, mNuoc);
+      vec2 songG = vec2(0.0);
+      if (datUot > 0.0) {
+        vec2 p1 = vVanXZ * 0.045 + vec2(uTime * 0.012, uTime * 0.008);
+        vec2 p2 = vVanXZ * 0.07 - vec2(uTime * 0.009, -uTime * 0.006);
+        float e = 0.012;
+        float n0 = texture2D(uVan, p1).r + texture2D(uVan, p2).r;
+        float nx = texture2D(uVan, p1 + vec2(e, 0.0)).r + texture2D(uVan, p2 + vec2(e, 0.0)).r;
+        float nz = texture2D(uVan, p1 + vec2(0.0, e)).r + texture2D(uVan, p2 + vec2(0.0, e)).r;
+        songG = vec2(nx - n0, nz - n0) / e * datUot;
+        // Bọt: những vệt chạy song song bờ, ở dải nước nông, đứt quãng theo nhiễu.
+        float bo = 1.0 - smoothstep(0.38, 0.7, mNuoc);
+        float vet = sin(vNuoc * 26.0 - uTime * 1.6 + n0 * 4.0);
+        float bot = smoothstep(0.72, 0.96, vet) * bo * smoothstep(0.3, 0.42, mNuoc)
+          * smoothstep(0.35, 0.75, n0);
+        vec3 gocN = max(vColor.rgb, vec3(0.02));
+        diffuseColor.rgb *= mix(vec3(1.0), vec3(0.92, 0.95, 0.96) / gocN, min(bot, 0.85));
+      }
       {
         // Lớp thứ hai xoay lệch và to hơn: hai lưới lặp khác nhịp thì mắt hết bắt được ô.
         vec2 uvA = vVanXZ * uDatCo.x;
@@ -541,7 +579,7 @@ function datVan<T extends THREE.Material>(
           vec3 a = texture(uDat, vec3(uvA, l)).rgb;
           if (uDatCo.w > 0.5) a = mix(a, texture(uDat, vec3(uvB, l)).rgb, 0.38);
           vec3 tb = max(uDatTb[i], vec3(0.02));
-          van += w * a / tb;
+          van += w * mix(vec3(1.0), a / tb, uDatK[i]);
           that += w * a;
           tong += w;
         }
@@ -552,6 +590,12 @@ function datVan<T extends THREE.Material>(
           vec3 heSo = mix(van / tong, that / tong * sang / goc, uDatCo.z);
           diffuseColor.rgb *= mix(vec3(1.0), heSo, min(tong, 1.0));
         }
+      }`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+      roughnessFactor = mix(roughnessFactor, 0.16, datUot);`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      if (datUot > 0.0) {
+        normal = normalize(normal + (viewMatrix * vec4(-songG.x, 0.0, -songG.y, 0.0)).xyz * 0.022);
       }`);
   };
   mat.customProgramCacheKey = () => `${khoaTruoc}|datvan`;

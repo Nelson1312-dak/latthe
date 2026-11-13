@@ -24,7 +24,7 @@ import type { BiomeId, Patch, Plot, Vec3 } from './types';
 import {
   CHUNK, KEEP_RADIUS, LOAD_RADIUS, PLOT_FLAT_R,
   GRID_STEP, biomeAt, chunkKey, chunkOf, chunkRng, groundAt, hash2, levelAtCenter,
-  nodePool, oldAxis, patchesOf, waterAt,
+  isFish, nodePool, oldAxis, patchesOf, waterAt,
 } from './world';
 
 /*
@@ -367,7 +367,7 @@ export class MapManager {
 
       chunk.patches.forEach((p, i) => {
         put('halo', this.haloMatrix(p, t === undefined ? 1 : this.kQuang(t, i)),
-          this.color.setHex(p.was ? FISH_COLOR : RESOURCES[p.kind].color));
+          this.color.setHex(isFish(p) ? FISH_COLOR : RESOURCES[p.kind].color));
       });
       chunk.props.forEach((pr, i) => {
         put(pr.key, this.propMatrix(pr, t === undefined ? 1 : this.kMoc(t, i)), this.color.setHex(pr.color));
@@ -688,6 +688,34 @@ export class MapManager {
       case 'relics':
         rai(9, (a, d) => put('spire', Math.cos(a) * d, 0, Math.sin(a) * d, 0.7 + r() * 0.9, PALETTE.crystal));
         break;
+    }
+
+    // Mỏ vàng đổi từ bãi gỗ/lương thực: đá vàng và quặng như mỏ thật, số lấy từ hàm băm theo
+    // tâm (muối 127) — chuỗi của khối đã rút đủ cho loại cũ ở trên.
+    if (ca && p.kind === 'gold') {
+      const g = (n: number): number => hash2(Math.round(x) * 29 + n, Math.round(z) * 13 - n, 127);
+      const vong = (n: number, i: number): [number, number] => {
+        const a = g(i * 2 + n) * Math.PI * 2;
+        const d = Math.sqrt(g(i * 2 + n + 1)) * p.radius * 0.7;
+        return [Math.cos(a) * d, Math.sin(a) * d];
+      };
+      for (let i = 0; i < 8; i += 1) {
+        const [dx, dz] = vong(0, i);
+        layout.props.push({ key: 'rock', pos: [x + dx, 0.3, z + dz], scale: 0.45 + g(100 + i) * 0.45,
+          rot: g(120 + i) * 6, color: mauVung(p.biome, 'rock', PALETTE.sand) });
+      }
+      for (let i = 0; i < 9; i += 1) {
+        const [dx, dz] = vong(40, i);
+        const sc = 0.35 + g(140 + i) * 0.35;
+        const dy = 0.7 + g(160 + i) * 0.6;
+        layout.props.push({ key: 'ore', pos: [x + dx, dy, z + dz], scale: sc,
+          rot: g(180 + i) * 6, color: PALETTE.goldOre });
+        const lui = 0.6 * sc;
+        layout.props.push({ key: 'glow',
+          pos: [x + dx - VIEW.x * lui, dy - VIEW.y * lui, z + dz - VIEW.z * lui],
+          scale: 1.4 * sc, rot: 0, color: PALETTE.goldOre });
+      }
+      return;
     }
 
     // Đồ của bãi cá: một vòng phao lưới và hai chiếc thuyền chài. Số lấy từ hàm băm theo tâm
