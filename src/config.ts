@@ -211,8 +211,10 @@ export const STARTING: Record<ResourceKind, number> =
 const REU_RAT_TOI = 0x47603f;
 const REU_TOI = 0x5f7d5f;
 const REU = 0x83a383;
-const REU_SANG = 0x9ab393;
-const REU_NHAT = 0xa8bfa0;
+// Cỏ đồng nhà: từ bản có vân đất thật, xanh đậm và tươi hơn hẳn màu rêu pastel cũ — vân
+// ảnh chụp đã lo phần "đất thật", màu thì phải ra màu cỏ AoE1 chứ không phải màu giấy.
+const REU_SANG = 0x84a65a;
+const REU_NHAT = 0x93b268;
 
 const DAT_RAT_TOI = 0x6b4a34;
 const DAT_TOI = 0x835b40;
@@ -238,7 +240,11 @@ const VANG = 0xd9a441;
  * Vị trí camera so với tâm ngắm. Camera chỉ trượt và thu phóng, không bao giờ xoay, nên hướng
  * nhìn là hằng số — những thứ cần quay mặt về phía camera (quầng sáng) tính một lần là xong.
  */
-export const CAMERA_OFFSET = [60, 70, 60] as const;
+/*
+ * Góc nhìn chừng 30 độ trên mặt đất, đúng góc chéo của AoE1 (bản cũ gần 40 độ, nhìn như
+ * bản đồ trải bàn). Thấp hơn thì nhà cửa lộ mặt tường, có chiều cao, ra dáng một ngôi làng.
+ */
+export const CAMERA_OFFSET = [60, 50, 60] as const;
 /** Khoảng cách từ camera tới tâm ngắm — hằng số, vì camera chỉ trượt chứ không đổi góc. */
 export const CAM_DIST = Math.hypot(...CAMERA_OFFSET);
 

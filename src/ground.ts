@@ -24,6 +24,7 @@
  *     đỉnh là mỗi lần vén một khối lại phải ghi lại cả một mảng. Cả hai nằm trong shader.
  */
 import * as THREE from 'three';
+import type { BiomeId } from './types';
 import { BIOMES, PALETTE, POOL_COLORS, SEA_COLORS } from './config';
 import { fogPaint, grain, matte } from './materials';
 import {
@@ -46,6 +47,34 @@ const V = N + 1;
  * hình khối lớn (sườn đồi, bậc vách đá) vẫn nguyên vì nó nằm ở phần mượt.
  */
 const MAT_NGHIENG = 0.3;
+
+/*
+ * ĐẤT CÓ VÂN THẬT (giai đoạn 1 của bản nâng hình kiểu AoE1).
+ *
+ * Tám ảnh đất chụp thật (CC0, Poly Haven — xem public/tex/CREDITS.txt) gói thành MỘT dải
+ * 512 × 4096, nạp vào một texture mảng: một lần tải, một bộ lấy mẫu cho cả tám lớp. Mỗi
+ * đỉnh mang tám trọng số (hai vec4), shader trộn đúng những lớp có mặt.
+ *
+ * Màu KHÔNG lấy thẳng từ ảnh: ảnh chụp thật nhạt và xám hơn hẳn bảng màu ấm của game. Ảnh
+ * chỉ góp VÂN — chia cho màu trung bình của chính nó (mip nhỏ nhất) rồi nhân vào màu biến
+ * sinh thái — cộng thêm một phần màu thật (DAT_THAT) cho bớt "tô màu". Nhờ vậy bảng màu,
+ * lớp lọc ấm và minimap vẫn nói cùng một thứ tiếng.
+ */
+const LOP = ['grass', 'grassRock', 'dirt', 'sand', 'rock', 'snow', 'mud', 'ash'] as const;
+type Lop = typeof LOP[number];
+/** Lớp vân của từng biến sinh thái. */
+const LOP_CUA: Record<BiomeId, Lop> = {
+  meadow: 'grass', highlands: 'grassRock', desert: 'sand', crags: 'rock',
+  snow: 'snow', swamp: 'mud', ashland: 'ash',
+};
+/** Một ô vân phủ ngần này đơn vị, và lớp thứ hai (chống lặp) phủ ngần này. */
+const VAN_GAN = 11;
+const VAN_XA = 29;
+/** Phần màu ảnh thật trộn vào; 0 là chỉ lấy vân, 1 là ảnh chụp nguyên màu. */
+const DAT_THAT = 0.15;
+/** Bật lại kiểu mặt gãy đa giác cũ (để so hai bên). */
+const MAT_PHANG = false;
+
 /** Bán kính giữ mảnh, tính bằng mảnh. 2 phủ 450×450, rộng hơn vùng nạp 330×330. */
 const KEEP = 2;
 
@@ -87,7 +116,71 @@ export class Ground {
     // Thứ tự bọc có nghĩa: `grain` khai báo varying toạ độ thế giới mà lớp sương dùng lại,
     // nên nó phải ở trong cùng.
     this.mat = fogPaint(
-      grain(m, 6, 0.18), this.fogTex, this.fogOrigin, FOG_SPAN, PALETTE.fogLand);
+      datVan(grain(m, 6, 0.07), this.vanTex, this.vanTb, this.vanCo), this.fogTex, this.fogOrigin,
+      FOG_SPAN, PALETTE.fogLand);
+    napVan(this.vanTex, this.vanTb);
+  }
+
+  /** Màu trung bình (tuyến tính) của từng lớp, tính một lần lúc nạp ảnh. */
+  private readonly vanTb = { value: Array.from({ length: 8 }, () => new THREE.Vector3(1, 1, 1)) };
+  /** (1/cỡ gần, 1/cỡ xa, phần màu thật, có lấy mẫu lớp xa không). */
+  private readonly vanCo = { value: new THREE.Vector4(1 / VAN_GAN, 1 / VAN_XA, DAT_THAT, 1) };
+
+  /**
+   * Máy yếu chỉ lấy MỘT mẫu mỗi lớp thay vì hai: mặt đất phủ gần hết màn hình, nên mỗi
+   * lần lấy mẫu bớt đi là bớt trên từng ấy điểm ảnh. Đổi lại thấy ô lặp rõ hơn một chút.
+   */
+  setDetail(full: boolean): void {
+    this.vanCo.value.w = full ? 1 : 0;
+  }
+
+  /** Texture mảng tám lớp. Lúc chưa tải xong là một tấm 1×1 trắng: đất về đúng màu cũ. */
+  private readonly vanTex = { value: vanTam() as THREE.Texture };
+
+  /**
+   * Trọng số tám lớp vân ở một đỉnh. Cùng trọng số biến sinh thái với màu và cao độ, cộng:
+   * mảng đất trơ lốm đốm trên cỏ (kiểu AoE1), đá lộ ra ở sườn dốc, cát dọc bờ, và vân mờ
+   * dần khi xuống nước hay vào vũng — dưới nước là việc của màu.
+   */
+  private nodeLayers(i: number, j: number, ny: number, out: Float32Array, o: number): void {
+    const x = i * GRID_STEP;
+    const z = j * GRID_STEP;
+    for (let k = 0; k < 8; k += 1) out[o + k] = 0;
+    let co = false;
+    for (const [b, w] of biomeWeights(x, z)) {
+      out[o + LOP.indexOf(LOP_CUA[b])] += w;
+      if (b === 'swamp' || b === 'ashland') co = true;
+    }
+    // Mảng đất trơ trên cỏ. Muối 109 của valueNoise là của riêng phần hình này.
+    const tro = Math.min(1, Math.max(0, (valueNoise(x, z, 38, 109) - 0.64) / 0.12)) * 0.85;
+    if (tro > 0) {
+      const co2 = out[o] + out[o + 1];
+      out[o] *= 1 - tro; out[o + 1] *= 1 - tro;
+      out[o + 2] += co2 * tro;
+    }
+    // Sườn dốc lộ đá: dốc chừng 17 độ trở lên bắt đầu thấy đá.
+    const doc = Math.min(1, Math.max(0, (1 - ny - 0.045) / 0.1));
+    if (doc > 0) {
+      for (let k = 0; k < 8; k += 1) if (k !== 4 && k !== 5) out[o + k] *= 1 - doc;
+      out[o + 4] += doc;
+    }
+    let con = 1;
+    if (co) {
+      const ngap = nodePool(i, j);
+      if (ngap !== 0) con *= 1 - Math.min(1, 0.55 + Math.abs(ngap) * 0.6);
+    }
+    const d = waterDepth(x, z);
+    if (d > 0) {
+      const m = d >= 1 ? 1 : d * d * (3 - 2 * d);
+      const cat = Math.min(1, m * 2.4);
+      for (let k = 0; k < 8; k += 1) if (k !== 3) out[o + k] *= 1 - cat;
+      out[o + 3] += cat;
+      if (m > 0.3) con *= 1 - Math.min(1, (m - 0.3) / 0.45);
+    }
+    let tong = 0;
+    for (let k = 0; k < 8; k += 1) tong += out[o + k];
+    const ti = tong > 0 ? con / tong : 0;
+    for (let k = 0; k < 8; k += 1) out[o + k] *= ti;
   }
 
   /**
@@ -159,6 +252,9 @@ export class Ground {
     const pos = new Float32Array(tris * 9);
     const nor = new Float32Array(tris * 9);
     const col = new Float32Array(tris * 9);
+    const w0 = new Float32Array(tris * 12);
+    const w1 = new Float32Array(tris * 12);
+    const ws = new Float32Array(V * V * 8);
 
     // Cao độ và màu của từng đỉnh lưới, tính một lần rồi dùng cho tới bốn mặt quanh nó.
     const hs = new Float32Array(V * V);
@@ -184,15 +280,35 @@ export class Ground {
         ns[n * 3] = -dx * l; ns[n * 3 + 1] = l; ns[n * 3 + 2] = -dz * l;
         this.nodeColor(i0 + i, j0 + j, c);
         cs[n * 3] = c.r; cs[n * 3 + 1] = c.g; cs[n * 3 + 2] = c.b;
+        this.nodeLayers(i0 + i, j0 + j, l, ws, n * 8);
       }
     }
 
     let k = 0;
+    let kw = 0;
     const ax = new THREE.Vector3();
     const bx = new THREE.Vector3();
     const nv = new THREE.Vector3();
     const dat = (i: number, j: number): [number, number, number] =>
       [i * GRID_STEP, hs[j * V + i], j * GRID_STEP];
+    /*
+     * BỎ MẶT PHẲNG. Hồi đất còn tô một màu thì hình khối phải dựng bằng mặt gãy và hệ số
+     * sáng riêng từng mặt (xem đoạn dưới, giữ lại để biết vì sao từng làm thế). Giờ vân ảnh
+     * thật làm việc ấy, còn mặt gãy thì đọc ra ngay là "đồ chơi đa giác" — thứ người chơi
+     * nói là thiếu thực tế. Nên mỗi ĐỈNH mang pháp tuyến mượt, màu và trọng số vân của nó.
+     */
+    const muot = (p: [number, number, number][], ns3: number[]): void => {
+      for (let q = 0; q < 3; q += 1) {
+        const n = ns3[q];
+        const pp = p[q];
+        pos[k] = pp[0]; pos[k + 1] = pp[1]; pos[k + 2] = pp[2];
+        nor[k] = ns[n * 3]; nor[k + 1] = ns[n * 3 + 1]; nor[k + 2] = ns[n * 3 + 2];
+        col[k] = cs[n * 3]; col[k + 1] = cs[n * 3 + 1]; col[k + 2] = cs[n * 3 + 2];
+        for (let t = 0; t < 4; t += 1) { w0[kw + t] = ws[n * 8 + t]; w1[kw + t] = ws[n * 8 + 4 + t]; }
+        k += 3;
+        kw += 4;
+      }
+    };
 
     const mat = (
       p0: [number, number, number], p1: [number, number, number], p2: [number, number, number],
@@ -234,12 +350,21 @@ export class Ground {
         const r1 = 0.93 + hash2(i0 + i, j0 + j, 29) * 0.14;
         const r2 = 0.93 + hash2(i0 + i, j0 + j, 53) * 0.14;
         // Chéo so le: một chiều chéo duy nhất cho ra một dải xương cá chạy khắp bản đồ.
-        if (((i + j) & 1) === 0) {
-          mat(A, D, B, nA, nD, nB, r1);
-          mat(A, C, D, nA, nC, nD, r2);
+        // (Vẫn giữ: groundAt tra đúng tam giác theo luật này, nên lưới phải theo nó.)
+        if (MAT_PHANG) {
+          if (((i + j) & 1) === 0) {
+            mat(A, D, B, nA, nD, nB, r1);
+            mat(A, C, D, nA, nC, nD, r2);
+          } else {
+            mat(A, C, B, nA, nC, nB, r1);
+            mat(B, C, D, nB, nC, nD, r2);
+          }
+        } else if (((i + j) & 1) === 0) {
+          muot([A, D, B], [nA, nD, nB]);
+          muot([A, C, D], [nA, nC, nD]);
         } else {
-          mat(A, C, B, nA, nC, nB, r1);
-          mat(B, C, D, nB, nC, nD, r2);
+          muot([A, C, B], [nA, nC, nB]);
+          muot([B, C, D], [nB, nC, nD]);
         }
       }
     }
@@ -248,6 +373,8 @@ export class Ground {
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('aW0', new THREE.BufferAttribute(w0, 4));
+    geo.setAttribute('aW1', new THREE.BufferAttribute(w1, 4));
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, this.mat);
     mesh.position.set(i0 * GRID_STEP, 0, j0 * GRID_STEP);
@@ -317,4 +444,116 @@ export class Ground {
   static chunkAt(x: number, z: number): [number, number] {
     return [chunkOf(x), chunkOf(z)];
   }
+}
+
+// ------------------------------------------------------------------ vân đất
+
+/** Tấm tạm 1×1×8 trắng: shader chia cho trung bình nên ra hệ số 1 — đất y như chưa có vân. */
+function vanTam(): THREE.DataArrayTexture {
+  const t = new THREE.DataArrayTexture(new Uint8Array(4 * 8).fill(255), 1, 1, 8);
+  t.needsUpdate = true;
+  return t;
+}
+
+/**
+ * Tải dải vân và dựng texture mảng. Ảnh webp nạp qua thẻ img rồi vẽ ra canvas để lấy điểm
+ * ảnh — texture mảng của three nhận mảng byte, không nhận ảnh. Tải hỏng thì đất cứ giữ tấm
+ * tạm: xấu hơn nhưng không vỡ gì.
+ */
+function napVan(u: { value: THREE.Texture }, tb: { value: THREE.Vector3[] }): void {
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => {
+    const n = img.width;
+    const so = Math.round(img.height / n);
+    const cv = document.createElement('canvas');
+    cv.width = n;
+    cv.height = n * so;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    if (!g) return;
+    g.drawImage(img, 0, 0);
+    const px = g.getImageData(0, 0, n, n * so).data;
+    // Trung bình tính trên CPU một lần, ở không gian tuyến tính như shader thấy sau khi giải
+    // mã sRGB. Lấy từ mip nhỏ nhất trong shader thì tốn thêm một lần lấy mẫu mỗi lớp mỗi điểm
+    // ảnh, chỉ để ra cùng một con số.
+    const bang = new Float32Array(256);
+    for (let v = 0; v < 256; v += 1) {
+      const c = v / 255;
+      bang[v] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    }
+    for (let l = 0; l < Math.min(so, 8); l += 1) {
+      let r = 0; let gg = 0; let b = 0; let dem = 0;
+      const dau = l * n * n * 4;
+      // Bước 7 điểm ảnh: ba vạn mẫu mỗi lớp là thừa cho một con số trung bình.
+      for (let p = dau; p < dau + n * n * 4; p += 28) {
+        r += bang[px[p]]; gg += bang[px[p + 1]]; b += bang[px[p + 2]];
+        dem += 1;
+      }
+      tb.value[l].set(r / dem, gg / dem, b / dem);
+    }
+    const t = new THREE.DataArrayTexture(new Uint8Array(px.buffer), n, n, so);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    t.magFilter = THREE.LinearFilter;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    t.generateMipmaps = true;
+    t.anisotropy = 4;
+    t.needsUpdate = true;
+    u.value = t;
+  };
+  img.src = "/tex/ground.webp";
+}
+
+/**
+ * Lớp bọc shader: trộn tám lớp vân theo trọng số đỉnh, hai cỡ lấy mẫu chống lặp ô.
+ *
+ * Chèn ở `map_fragment` — TRƯỚC `color_fragment` — và nhân vào diffuseColor một hệ số sao
+ * cho sau khi color_fragment nhân màu đỉnh vào thì ra đúng màu vân. Chèn sau color_fragment
+ * thì phải đứng sau cả lớp sương (fogPaint cũng chèn ở đó), tức là vân sẽ in lên cả mây.
+ */
+function datVan<T extends THREE.Material>(
+  mat: T, tex: { value: THREE.Texture }, tb: { value: THREE.Vector3[] }, co: { value: THREE.Vector4 },
+): T {
+  const khoaTruoc = mat.customProgramCacheKey();
+  const truoc = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader, renderer) => {
+    truoc?.call(mat, shader, renderer);
+    shader.uniforms.uDat = tex;
+    shader.uniforms.uDatCo = co;
+    shader.uniforms.uDatTb = tb;
+    shader.vertexShader = 'attribute vec4 aW0;\nattribute vec4 aW1;\nvarying vec4 vW0;\nvarying vec4 vW1;\n'
+      + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vW0 = aW0; vW1 = aW1;`);
+    shader.fragmentShader = 'uniform highp sampler2DArray uDat;\nuniform vec4 uDatCo;\nuniform vec3 uDatTb[8];\nvarying vec4 vW0;\nvarying vec4 vW1;\n'
+      + shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      {
+        // Lớp thứ hai xoay lệch và to hơn: hai lưới lặp khác nhịp thì mắt hết bắt được ô.
+        vec2 uvA = vVanXZ * uDatCo.x;
+        vec2 uvB = mat2(0.8, -0.6, 0.6, 0.8) * vVanXZ * uDatCo.y;
+        vec3 van = vec3(0.0);
+        vec3 that = vec3(0.0);
+        float tong = 0.0;
+        for (int i = 0; i < 8; i++) {
+          float w = i < 4 ? vW0[i] : vW1[i - 4];
+          if (w < 0.004) continue;
+          float l = float(i);
+          vec3 a = texture(uDat, vec3(uvA, l)).rgb;
+          if (uDatCo.w > 0.5) a = mix(a, texture(uDat, vec3(uvB, l)).rgb, 0.38);
+          vec3 tb = max(uDatTb[i], vec3(0.02));
+          van += w * a / tb;
+          that += w * a;
+          tong += w;
+        }
+        if (tong > 0.0) {
+          vec3 goc = max(vColor.rgb, vec3(0.02));
+          // Ảnh chụp thật tối hơn bảng màu: kéo độ sáng về đúng màu đỉnh trước khi trộn.
+          float sang = dot(goc, vec3(0.299, 0.587, 0.114)) / max(dot(that / tong, vec3(0.299, 0.587, 0.114)), 0.02);
+          vec3 heSo = mix(van / tong, that / tong * sang / goc, uDatCo.z);
+          diffuseColor.rgb *= mix(vec3(1.0), heSo, min(tong, 1.0));
+        }
+      }`);
+  };
+  mat.customProgramCacheKey = () => `${khoaTruoc}|datvan`;
+  return mat;
 }

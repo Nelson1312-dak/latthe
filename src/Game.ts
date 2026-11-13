@@ -529,6 +529,8 @@ export class Game {
    * không đổi được sau khi đã cấp phát, và đổi bậc là việc hiếm.
    */
   private applyQuality(tier: Tier): void {
+    // Bậc thấp: mặt đất lấy một mẫu vân mỗi lớp thay vì hai.
+    this.dat.setDetail(TIERS[tier].bevel);
     const q = TIERS[tier];
     this.tier = tier;
     this.spec = q;
