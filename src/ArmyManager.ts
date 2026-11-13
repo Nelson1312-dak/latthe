@@ -41,6 +41,20 @@ const MAU_LINH = 0x5f7f9c;
 
 interface Vet { x0: number; z0: number; x1: number; z1: number; t: number }
 
+/**
+ * Trạng thái BƯỚC ĐI của một người trên bãi — thuần để vẽ, không bao giờ quay lại luật.
+ * `px, pz` là chỗ đứng ở bước trận TRƯỚC (để nội suy), `pha` là nhịp bước, tăng theo quãng
+ * đường đã đi chứ không theo đồng hồ: đi nhanh thì bước nhanh, đứng lại là chân thôi đưa.
+ */
+interface Buoc { px: number; pz: number; lx: number; lz: number; pha: number; di: number }
+
+/** Một bước chân dài chừng này đơn vị (một chu kỳ hai chân = 2π pha). */
+const SAI_BUOC = 0.55;
+/** Người ít nhất phải nhích ngần này mỗi khung mới tính là đang đi. */
+const DANG_DI = 0.004;
+/** Biên độ đưa chân: góc tối đa (radian). */
+const DUA_CHAN = 0.8;
+
 export class ArmyManager {
   readonly group = new THREE.Group();
   private readonly map: MapManager;
@@ -52,6 +66,14 @@ export class ArmyManager {
   private readonly beastBoss: THREE.InstancedMesh;
   /** Đồng hồ diễn, chỉ để cho quái nhún bước — không bao giờ là đầu vào của luật. */
   private t = 0;
+  /** Hai chân của mỗi người đứng thẳng (giáo, cung, pháp sư) — hai cái một người. */
+  private readonly legs: THREE.InstancedMesh;
+  private buoc = new WeakMap<object, Buoc>();
+  private readonly qx = new THREE.Quaternion();
+  private readonly qz = new THREE.Quaternion();
+  private readonly ox = new THREE.Vector3(1, 0, 0);
+  private readonly oz = new THREE.Vector3(0, 0, 1);
+  private readonly hip = new THREE.Vector3();
 
   private s: BattleState | null = null;
   private acc = 0;
@@ -81,10 +103,21 @@ export class ArmyManager {
     this.bodies = bodies;
     this.shots = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.09, 0.09, 1), matte(PALETTE.wheat, true), SHOT_CAP);
+    /*
+     * CHÂN. Thân người lính là một cái áo choàng hình trụ chạm đất, nên đi tới đâu nó TRƯỢT
+     * tới đó như quân cờ — người chơi chê đúng câu "đi lướt lướt". Giờ cả người nhấc lên một
+     * chút và hai bàn chân thò ra dưới vạt áo, đưa trước đưa sau theo đúng quãng đường đi.
+     * Khớp xoay ở hông: hình chân dời xuống để đỉnh nằm ở gốc toạ độ.
+     */
+    // Dài vừa khít từ hông xuống mặt đất (thân nhấc 0,1 + hông 0,04, cùng nhân NGUOI), nên
+    // chân đứng thẳng thì chạm đất, đưa ra thì bàn chân nhấc lên — không lún, không lơ lửng.
+    const chan = new THREE.BoxGeometry(0.12, 0.14, 0.17);
+    chan.translate(0, -0.07, 0.02);
+    this.legs = new THREE.InstancedMesh(chan, matte(0x2e2420), CAP * 4);
     this.beastMinion = new THREE.InstancedMesh(beastGeometry(0, false), than, CAP);
     this.beastBoss = new THREE.InstancedMesh(beastGeometry(0, true), than, 2);
     for (const mesh of [...TROOP_KINDS.map((k) => this.bodies[k]), this.shots,
-      this.beastMinion, this.beastBoss]) {
+      this.beastMinion, this.beastBoss, this.legs]) {
       mesh.count = 0;
       mesh.castShadow = true;
       mesh.frustumCulled = false;
@@ -205,6 +238,7 @@ export class ArmyManager {
       this.beastBoss.geometry = beastGeometry(seed.horde, true);
     }
     this.s = battleStart(seed);
+    this.buoc = new WeakMap();
     this.acc = 0;
     this.xong = 0;
     this.vet.length = 0;
@@ -222,8 +256,41 @@ export class ArmyManager {
     for (const k of TROOP_KINDS) this.bodies[k].count = 0;
     this.beastMinion.count = 0;
     this.beastBoss.count = 0;
+    this.legs.count = 0;
     this.shots.count = 0;
     this.vet.length = 0;
+  }
+
+  /** Ghi chỗ đứng hiện tại làm "bước trước" cho mọi người — gọi ngay trước mỗi battleStep. */
+  private ghiTruoc(s: BattleState): void {
+    for (const f of [...s.raiders, ...s.guards] as { x: number; z: number }[]) {
+      const b = this.buoc.get(f);
+      if (b) { b.px = f.x; b.pz = f.z; } else {
+        this.buoc.set(f, { px: f.x, pz: f.z, lx: f.x, lz: f.z, pha: (f.x * 1.7 + f.z * 2.3) % 6.3, di: 0 });
+      }
+    }
+  }
+
+  /**
+   * Chỗ VẼ của một người: nội suy giữa bước trận trước và bước hiện tại theo phần dư của bộ
+   * tích. Trận bước 0,1 giây một lần, nên vẽ thẳng toạ độ trận là mười cú nhảy mỗi giây —
+   * nhìn ra giật cục. Nội suy chỉ chạm tới HÌNH, luật vẫn chạy đúng bước nguyên.
+   */
+  private choVe(f: { x: number; z: number }, a: number): Buoc {
+    let b = this.buoc.get(f);
+    if (!b) {
+      b = { px: f.x, pz: f.z, lx: f.x, lz: f.z, pha: (f.x * 1.7 + f.z * 2.3) % 6.3, di: 0 };
+      this.buoc.set(f, b);
+    }
+    const x = b.px + (f.x - b.px) * a;
+    const z = b.pz + (f.z - b.pz) * a;
+    const d = Math.hypot(x - b.lx, z - b.lz);
+    b.pha += (d / SAI_BUOC) * Math.PI;
+    // Mức "đang đi" mềm dần chứ không bật tắt: dừng lại thì chân khép về trong vài khung.
+    b.di += ((d > DANG_DI ? 1 : 0) - b.di) * 0.25;
+    b.lx = x;
+    b.lz = z;
+    return b;
   }
 
   update(dt: number): void {
@@ -237,6 +304,7 @@ export class ArmyManager {
       this.acc += Math.min(dt, 0.5);
       let guard = 0;
       while (!s.done && this.acc >= TICK && guard < 40) {
+        this.ghiTruoc(s);
         battleStep(s);
         for (const sh of s.shots) this.vet.push({ ...sh, t: 0 });
         this.acc -= TICK;
@@ -260,13 +328,45 @@ export class ArmyManager {
     const s = this.s;
     if (!s) return;
     const n = noTroops();
+    const a = s.done ? 1 : Math.min(1, this.acc / TICK);
+    let chan = 0;
 
     const than = (f: { x: number; z: number; face: number; kind: TroopKind },
       hex: number, cui: number): void => {
       const i = n[f.kind];
       if (i >= CAP) return;
-      this.v.set(f.x, this.map.groundY(f.x, f.z), f.z);
+      const b = this.choVe(f, a);
+      const x = b.lx;
+      const z = b.lz;
+      const sin = Math.sin(b.pha);
+      const dung = f.kind !== 'horse' && f.kind !== 'siege';
+      // Nhún hai lần mỗi chu kỳ (mỗi bước một lần), lắc người sang bên chân đang trụ, và hơi
+      // chúi về trước khi đi. Ngựa thì nhấp nhô theo nước kiệu, xe pháo chỉ rung trên đường.
+      const nhun = Math.abs(sin) * b.di;
+      const nhac = dung ? 0.1 * NGUOI : 0;
+      const y = this.map.groundY(x, z) + nhac
+        + nhun * (f.kind === 'horse' ? 0.12 : f.kind === 'siege' ? 0.025 : 0.07);
+      this.v.set(x, y, z);
       this.q.setFromAxisAngle(this.axis, f.face);
+      if (dung) {
+        this.qz.setFromAxisAngle(this.oz, sin * 0.09 * b.di);
+        this.qx.setFromAxisAngle(this.ox, 0.07 * b.di);
+        this.q.multiply(this.qx).multiply(this.qz);
+      } else if (f.kind === 'horse') {
+        this.qx.setFromAxisAngle(this.ox, Math.sin(b.pha * 2) * 0.05 * b.di);
+        this.q.multiply(this.qx);
+      }
+      if (dung && chan + 2 <= CAP * 4) {
+        // Hai bàn chân ngược pha nhau, khớp ở hông ngay dưới vạt áo.
+        for (const [lech, dau] of [[-0.11, 1], [0.11, -1]] as const) {
+          this.hip.set(lech * NGUOI, 0.04 * NGUOI, 0).applyQuaternion(this.q).add(this.v);
+          this.qx.setFromAxisAngle(this.ox, dau * sin * DUA_CHAN * b.di);
+          const qc = this.qz.copy(this.q).multiply(this.qx);
+          this.sc.set(NGUOI, NGUOI, NGUOI);
+          this.legs.setMatrixAt(chan, this.m.compose(this.hip, qc, this.sc));
+          chan += 1;
+        }
+      }
       this.sc.set(NGUOI, NGUOI * cui, NGUOI);
       this.m.compose(this.v, this.q, this.sc);
       this.bodies[f.kind].setMatrixAt(i, this.m);
@@ -285,9 +385,16 @@ export class ArmyManager {
         const mesh = r.boss ? this.beastBoss : this.beastMinion;
         const k = r.boss ? trum : nho;
         if (k >= (r.boss ? 2 : CAP)) continue;
-        const nhun = r.state === 'loot' ? 0 : Math.abs(Math.sin(this.t * (r.boss ? 6 : 11) + i * 1.7));
-        this.v.set(r.x, this.map.groundY(r.x, r.z) + nhun * 0.07 * co, r.z);
+        // Bước của quái cũng theo quãng đường, và sải dài theo cỡ con vật: con trùm to bước
+        // chậm mà nặng, đám nhỏ lon ton.
+        const b = this.choVe(r, a);
+        const nhip = b.pha / Math.max(0.6, co * 0.7);
+        const nhun = Math.abs(Math.sin(nhip)) * b.di;
+        this.v.set(b.lx, this.map.groundY(b.lx, b.lz) + nhun * 0.09 * co, b.lz);
         this.q.setFromAxisAngle(this.axis, r.face);
+        this.qx.setFromAxisAngle(this.ox, Math.sin(nhip * 2) * 0.06 * b.di);
+        this.qz.setFromAxisAngle(this.oz, Math.sin(nhip) * 0.07 * b.di);
+        this.q.multiply(this.qx).multiply(this.qz);
         const cui = r.state === 'loot' ? 0.85 : 1;
         this.sc.set(NGUOI * co, NGUOI * co * cui, NGUOI * co);
         mesh.setMatrixAt(k, this.m.compose(this.v, this.q, this.sc));
@@ -298,6 +405,8 @@ export class ArmyManager {
       // Tên đang khuân hàng thì khom lưng xuống — nhìn một cái là biết đứa nào đang vơ vét.
       than(r, MAU_GIAC, r.state === 'loot' ? 0.82 : 1);
     }
+    this.legs.count = chan;
+    this.legs.instanceMatrix.needsUpdate = true;
     for (const [mesh, n0] of [[this.beastMinion, nho], [this.beastBoss, trum]] as const) {
       mesh.count = n0;
       mesh.instanceMatrix.needsUpdate = true;
