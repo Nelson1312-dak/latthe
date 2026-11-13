@@ -10,10 +10,10 @@
  * bản trước chiếm chỗ mà chẳng làm gì.
  */
 import {
-  AGES, AGE_DEFENCE, AGE_FARM, AGE_STORAGE, BIOMES, BUILDINGS, FISH_COLOR, BUILD_GROUPS, BUILD_LIMIT, BUILD_MIN_AGE, BUILD_MIN_LEVEL, FOOTPRINT, KHAC,
+  AGES, BIOMES, BUILDINGS, FISH_COLOR, BUILD_GROUPS, BUILD_LIMIT, BUILD_MIN_AGE, BUILD_MIN_LEVEL, FOOTPRINT, KHAC,
   MINIMAP_SPAN, ORDER_HOLD_SECONDS, RESOURCES, TAX_PER_VILLAGER, BEASTS, DEN_FEAR, DEN_YIELD,
   SMITH_ARMOUR, SMITH_ATTACK, TROOPS, VILLAGE_COLORS, VOYAGES, WAVE_WARN_SECONDS,
-  ageBonus, tenLangNgauNhien,
+  tenLangNgauNhien,
 } from './config';
 import { voyageSpec } from './voyage';
 import { waveKind } from './raids';
@@ -905,7 +905,7 @@ export class UIManager {
   private khoaNha(t: BuildingType): string | null {
     const e = this.economy;
     if (e.state.age < (BUILD_MIN_AGE[t] ?? 0)) return `Needs ${AGES[(BUILD_MIN_AGE[t] ?? 1) - 1].label}`;
-    if (e.state.level < (BUILD_MIN_LEVEL[t] ?? 0)) return `Needs base level ${BUILD_MIN_LEVEL[t]}`;
+    if (e.state.level < (BUILD_MIN_LEVEL[t] ?? 0)) return `Needs village level ${BUILD_MIN_LEVEL[t]}`;
     const tran = BUILD_LIMIT[t];
     if (tran !== undefined && e.countOf(t) >= tran) return `Limit ${tran} — upgrade the ones you have`;
     return null;
@@ -1534,77 +1534,39 @@ export class UIManager {
 
     head.append(ico(BUILDINGS[b.type].icon, 'insp-ico'));
     const t = el('div', 'insp-title');
-    // Thẻ thủ phủ mang luôn tên thời đại: nó là thứ "lên đời", nên tên đời nằm ở tên nhà.
-    t.append(el('strong', undefined, b.type === 'townhall'
-      ? `${BUILDINGS[b.type].label} · ${this.economy.ageSpec().label}` : BUILDINGS[b.type].label),
-      el('small', undefined, `Level ${b.level} · ${BUILDINGS[b.type].describe(b.level)}`));
+    /*
+     * THẺ GỌN. Người chơi nói đọc thẻ thủ phủ "tẩu hoả nhập ma": một dòng chỉ số, một dòng
+     * vàng từ đâu, một nút lên đời bị khoá kèm cả đoạn giải thích, một dòng "cấp sau được
+     * gì", ba ô có/cần, rồi nút GATHER. Giờ thẻ chỉ còn: tên, cấp, MỘT việc nên làm tiếp,
+     * và nút nâng cấp có giá đi kèm. Chi tiết nào không đổi được quyết định thì bỏ.
+     */
+    const e = this.economy;
+    t.append(el('strong', undefined, BUILDINGS[b.type].label),
+      el('small', undefined, b.type === 'townhall'
+        ? `Level ${b.level} · ${e.ageSpec().label}` : `Level ${b.level}`));
     head.append(t);
 
-    /*
-     * Chợ nghẽn là thứ người chơi KHÔNG nhìn thấy được: kho cứ đầy lên, vàng nhỏ giọt, và
-     * chẳng gì nói cho họ biết nút cần bấm nằm ở đây. Nói thẳng ra, ngay trên cái thẻ có
-     * nút nâng cấp.
-     */
-    // Thẻ thủ phủ là nơi vàng sinh ra, nên nó nói luôn vàng đang về bao nhiêu và từ đâu.
+    // Lên đời: chỉ hiện NÚT khi đủ cấp căn cứ; chưa đủ thì một dòng hẹn ngắn.
     if (b.type === 'townhall') {
-      const vang = el('p', 'insp-next');
-      vang.append(ico('gold', 'bico'), el('span', undefined,
-        `Gold comes from taxes (+${this.economy.taxRate().toFixed(1)}/s now)`
-        + ' and from spare goods sold here'));
-      body.append(vang);
-    }
-    /*
-     * LÊN ĐỜI Ở CHÍNH THỦ PHỦ, kiểu Đế Chế: bấm vào nhà chính là thấy đời kế tiếp tên gì,
-     * giá bao nhiêu, còn thiếu gì, và lên rồi thì được gì. Bản trước chỉ có dòng này trong
-     * ngăn Quân — một chỗ không ai nghĩ tới khi muốn "nâng nhà chính".
-     */
-    if (b.type === 'townhall') {
-      const e = this.economy;
       const sau = e.nextAge();
       if (e.state.ageLeft > 0) {
         body.append(el('p', 'sheet-note',
-          `Advancing to ${AGES[e.state.age].label} — ${Math.ceil(e.state.ageLeft)}s left.`));
+          `Advancing to ${AGES[e.state.age].label} · ${Math.ceil(e.state.ageLeft)}s`));
+      } else if (sau && e.state.level < sau.level) {
+        body.append(el('p', 'sheet-note', `${sau.label} unlocks at village level ${sau.level} (now ${e.state.level})`));
       } else if (sau) {
         body.append(this.row('age', `Advance to ${sau.label}`, `Unlocks ${sau.opens.toLowerCase()}`,
           sau.cost, e.ageBlock(), () => { e.advanceAge(); this.renderInspector(); }));
-        body.append(el('p', 'sheet-note',
-          `Each age rebuilds every building in a newer style, and adds +${Math.round(AGE_DEFENCE * 100)}%`
-          + ` tower and Town Hall damage, +${Math.round(AGE_FARM * 100)}% farm output and`
-          + ` +${Math.round(AGE_STORAGE * 100)}% storage.`));
-      } else {
-        body.append(el('p', 'sheet-note', 'Final age reached.'));
       }
+      if (e.marketBusy) body.append(el('p', 'sheet-note', 'Market is full — upgrade to sell faster.'));
     }
-    // Chòi canh nói ra phần thưởng thời đại nó đang hưởng — không thì "+20% mỗi đời" chỉ là
-    // một câu hứa trên thẻ thủ phủ.
-    if (b.type === 'watchtower' && this.economy.state.age > 1) {
-      const them = Math.round((ageBonus(this.economy.state.age, AGE_DEFENCE) - 1) * 100);
-      const dong = el('p', 'insp-next');
-      dong.append(ico('shield', 'bico'), el('span', undefined,
-        `${this.economy.ageSpec().label}: +${them}% damage`));
-      body.append(dong);
-    }
-    /*
-     * MỖI NHÀ QUÂN RA ĐÚNG MỘT LOẠI LÍNH, và nút nuôi nằm ngay trên thẻ của nó: doanh trại
-     * ra lính giáo, trường bắn ra cung thủ, chuồng ngựa ra kỵ binh, tháp phép ra pháp sư,
-     * xưởng ra xe pháo. Ngăn Quân vẫn còn đủ cả năm dòng — đó là bảng tổng, đây là chỗ làm.
-     */
+    // Nhà quân: nút nuôi lính của nó, mỗi nhà một loại.
     for (const k of TROOP_KINDS) {
       const sp = TROOPS[k];
       if (sp.from !== b.type) continue;
-      const e = this.economy;
       const dang = e.state.train.filter((x) => x.kind === k).length;
-      const khac = TROOP_KINDS.filter((o) => KHAC[k][o] > 1.2).map((o) => TROOPS[o].label.toLowerCase());
       body.append(this.row(sp.icon, `Train ${sp.label.toLowerCase()} · ${e.state.army[k]}/${e.troopCap(k)}`,
-        `Beats ${khac.join(' and ') || 'no one'}${dang ? ` · training ${dang}` : ''}`,
-        sp.cost, e.trainBlock(k), () => { e.train(k); this.renderInspector(); }));
-    }
-    if (b.type === 'townhall' && this.economy.marketBusy) {
-      const canh = el('p', 'insp-warn');
-      canh.append(ico('warn', 'bico'), el('strong', undefined, 'Market is backed up'),
-        el('span', undefined, ' — goods arrive faster than they sell.'
-          + ' Upgrade the Town Hall to sell faster.'));
-      body.append(canh);
+        dang ? `Training ${dang}` : '', sp.cost, e.trainBlock(k), () => { e.train(k); this.renderInspector(); }));
     }
 
     // Nút dời đứng cạnh nút nâng cấp: cả hai đều là "làm gì với căn nhà NÀY".
@@ -1620,16 +1582,8 @@ export class UIManager {
       body.append(el('p', 'insp-note', 'Max level.'));
     } else {
       const cost = this.economy.costFor(b.type, b.level);
-      // Nói trước nâng cấp thì ĐƯỢC GÌ. Bản trước chỉ có giá và một cái nút, nên người chơi
-      // trả tiền rồi mới biết mình vừa mua cái gì.
-      const nay = BUILDINGS[b.type].describe(b.level);
-      const sau = BUILDINGS[b.type].describe(b.level + 1);
-      if (sau !== nay) {
-        const ke = el('p', 'insp-next');
-        ke.append(ico('up', 'bico'), el('span', undefined, `Level ${b.level + 1}: ${sau}`));
-        body.append(ke);
-      }
-      body.append(this.costRow(cost));
+      // Một hàng giá gọn (chỉ số cần, đỏ khi thiếu) thay cho ba ô có/cần.
+      body.append(this.costRow(cost, true));
       hang.append(this.bigButton('UPGRADE', cost, `${BUILDINGS[b.type].label} level ${b.level + 1}`,
         () => this.economy.upgrade(b)));
     }
@@ -1662,11 +1616,13 @@ export class UIManager {
   private bigButton(label: string, cost: Cost, what: string, run: () => boolean): HTMLButtonElement {
     const ok = this.economy.canAfford(cost);
     const b = el('button', 'insp-go' + (ok ? ' pulse' : ' want')) as HTMLButtonElement;
-    b.textContent = ok ? label : 'GATHER';
-    b.title = ok ? '' : 'The village will gather what is missing';
+    // Luôn ghi đúng việc nút làm. Thiếu hàng thì bấm vẫn được: dân đi gom phần còn thiếu,
+    // và một dòng báo nói ra điều đó — chữ "GATHER" trên nút thì không ai đoán ra nghĩa.
+    b.textContent = label;
     b.addEventListener('click', () => {
-      if (ok) run();
-      else this.economy.setDemand(cost, what);
+      if (ok) { run(); return; }
+      this.economy.setDemand(cost, what);
+      this.toast('Not enough yet — villagers are gathering the rest', 'hammer');
     });
     return b;
   }

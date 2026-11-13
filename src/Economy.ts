@@ -628,7 +628,7 @@ export class Economy {
     }
     if (this.buildingNear(cx, cz, r, boQua)) return 'Overlaps another building';
     if (this.state.level < (BUILD_MIN_LEVEL[type] ?? 0)) {
-      return `Needs base level ${BUILD_MIN_LEVEL[type]}`;
+      return `Needs village level ${BUILD_MIN_LEVEL[type]}`;
     }
     const doi = BUILD_MIN_AGE[type] ?? 0;
     if (this.state.age < doi) return `Needs ${AGES[doi - 1].label}`;
@@ -1013,7 +1013,7 @@ export class Economy {
     const n = this.nextAge();
     if (!n) return 'Final age reached';
     if (this.state.ageLeft > 0) return 'Advancing…';
-    if (this.state.level < n.level) return `Needs base level ${n.level}`;
+    if (this.state.level < n.level) return `Needs village level ${n.level}`;
     if (n.need && !this.state.buildings.some((b) => b.type === n.need)) {
       return `Requires ${BUILDINGS[n.need].label.toLowerCase()}`;
     }
