@@ -402,7 +402,10 @@ export const BIOMES: Record<BiomeId, Biome> = {
   highlands: {
     id: 'highlands', label: 'Mystic Highlands',
     // Cũng sáng lên nửa bậc vì cùng lý do; pha lê vẫn nổi nhờ tự phát sáng.
-    ground: [0x4a4070, 0x5b4f80], minimap: '#4a4070',
+    // Đồng thạch thảo: xanh xám ngả tím nhạt. Bản trước tím đậm (0x4a4070) nhân với vân rêu vàng
+    // của lớp "cỏ lẫn đá" cho ra hai màu đánh nhau — tím sẫm với vàng chanh — nên cả vùng loang lổ
+    // như giấy xé. Gần màu vân hơn thì vân chỉ còn là kết cấu chứ không phải một màu thứ hai.
+    ground: [0x757a70, 0x858a7c], minimap: '#4a4070',
     yields: ['relics'],
   },
   swamp: {

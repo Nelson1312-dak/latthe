@@ -46,7 +46,7 @@ const V = N + 1;
  * mặt vẫn bắt sáng khác nhau chừng một phần mười — đủ đọc ra là đất nặn có mặt phẳng, mà
  * hình khối lớn (sườn đồi, bậc vách đá) vẫn nguyên vì nó nằm ở phần mượt.
  */
-const MAT_NGHIENG = 0.3;
+const MAT_NGHIENG = 0.22;
 
 /*
  * ĐẤT CÓ VÂN THẬT (giai đoạn 1 của bản nâng hình kiểu AoE1).
@@ -72,7 +72,14 @@ const LOP_CUA: Record<BiomeId, Lop> = {
  * trên cao có những mảng sáng tối gắt, phóng lên cỡ một ô 11 đơn vị thì thành vệt loang
  * cả cánh đồng. Ghìm nó lại cho cùng một độ "ồn" với cỏ thường.
  */
-const VAN_DAM = [0.8, 0.5, 0.9, 0.9, 1, 0.8, 0.5, 0.9];
+const VAN_DAM = [0.8, 0.35, 0.55, 0.9, 0.6, 0.8, 0.5, 0.9];
+/**
+ * Cỡ ô vân riêng từng lớp, nhân vào cỡ chung. Ảnh ĐÁ là mặt vách chụp cận cảnh — nứt, rêu, gờ
+ * sáng tối cỡ vài chục phân — mà lát mỗi 6 đơn vị thì mỗi vết nứt rộng cả ô đất, và từ camera
+ * này cả vùng vách đá đọc ra là những nét nguệch ngoạc tím xám chồng lên nhau, như giấy xé.
+ * Lát thưa gấp đôi thì chi tiết mịn lại và chỉ còn là kết cấu.
+ */
+const VAN_CO = [1, 1, 1, 1, 0.5, 0.8, 1, 1];
 /** Một ô vân phủ ngần này đơn vị, và lớp thứ hai (chống lặp) phủ ngần này. */
 const VAN_GAN = 6;
 const VAN_XA = 17;
@@ -175,14 +182,25 @@ export class Ground {
       if (b === 'swamp' || b === 'ashland') co = true;
     }
     // Mảng đất trơ trên cỏ. Muối 109 của valueNoise là của riêng phần hình này.
-    const tro = Math.min(1, Math.max(0, (valueNoise(x, z, 38, 109) - 0.64) / 0.12)) * 0.85;
+    const tro = Math.min(1, Math.max(0, (valueNoise(x, z, 38, 109) - 0.64) / 0.12)) * 0.55;
     if (tro > 0) {
       const co2 = out[o] + out[o + 1];
       out[o] *= 1 - tro; out[o + 1] *= 1 - tro;
       out[o + 2] += co2 * tro;
     }
-    // Sườn dốc lộ đá: dốc chừng 17 độ trở lên bắt đầu thấy đá.
-    const doc = Math.min(1, Math.max(0, (1 - ny - 0.045) / 0.1));
+    /*
+     * Sườn dốc lộ đá — nhưng đo độ dốc trên cao độ ĐÃ LÀM MƯỢT, không trên pháp tuyến từng đỉnh.
+     * Mỗi đỉnh bị xô lệch ±0,35 để mặt đất có mặt phẳng bắt sáng; đo dốc ở đúng cỡ ấy thì cả
+     * cao nguyên gồ ghề đọc ra là "dốc hơn mười bảy độ" khắp nơi, và lớp ĐÁ (tương phản mạnh,
+     * vằn vện) loang ra thành những vệt rách như giấy xé. Lấy trung bình trên khoảng cách
+     * hai đỉnh mỗi phía thì nhiễu từng đỉnh tự triệt, còn sườn đồi thật và vách đá thật thì
+     * vẫn còn nguyên. `ny` của tham số chỉ còn dùng cho vị trí, không dùng cho đá nữa.
+     */
+    void ny;
+    const gx = (nodeHeight(i + 2, j) - nodeHeight(i - 2, j)) / (4 * GRID_STEP);
+    const gz = (nodeHeight(i, j + 2) - nodeHeight(i, j - 2)) / (4 * GRID_STEP);
+    const nyMuot = 1 / Math.hypot(gx, 1, gz);
+    const doc = Math.min(1, Math.max(0, (1 - nyMuot - 0.07) / 0.12));
     if (doc > 0) {
       for (let k = 0; k < 8; k += 1) if (k !== 4 && k !== 5) out[o + k] *= 1 - doc;
       out[o + 4] += doc;
@@ -214,7 +232,9 @@ export class Ground {
   private nodeColor(i: number, j: number, out: THREE.Color): void {
     const x = i * GRID_STEP;
     const z = j * GRID_STEP;
-    const k = valueNoise(x, z, 14, 31) * 0.75 + hash2(i, j, 11) * 0.25;
+    // Phần nhiễu từng đỉnh chỉ còn 8%: vân ảnh đã lo kết cấu, nên màu từng mặt lệch nhau nhiều
+    // thì thành lốm đốm chứ không còn là hình khối.
+    const k = valueNoise(x, z, 14, 31) * 0.92 + hash2(i, j, 11) * 0.08;
     this.acc.setRGB(0, 0, 0);
     let coVung = false;
     for (const [b, w] of biomeWeights(x, z)) {
@@ -573,11 +593,12 @@ function datVan<T extends THREE.Material>(
     shader.uniforms.uDatCo = co;
     shader.uniforms.uDatTb = tb;
     shader.uniforms.uDatK = { value: VAN_DAM };
+    shader.uniforms.uDatS = { value: VAN_CO };
     shader.uniforms.uTime = WIND;
     shader.vertexShader = 'attribute vec4 aW0;\nattribute vec4 aW1;\nattribute float aNuoc;\nvarying vec4 vW0;\nvarying vec4 vW1;\nvarying float vNuoc;\n'
       + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       vW0 = aW0; vW1 = aW1; vNuoc = aNuoc;`);
-    shader.fragmentShader = 'uniform highp sampler2DArray uDat;\nuniform vec4 uDatCo;\nuniform vec3 uDatTb[8];\nuniform float uDatK[8];\nuniform float uTime;\nvarying float vNuoc;\nvarying vec4 vW0;\nvarying vec4 vW1;\n'
+    shader.fragmentShader = 'uniform highp sampler2DArray uDat;\nuniform vec4 uDatCo;\nuniform vec3 uDatTb[8];\nuniform float uDatK[8];\nuniform float uDatS[8];\nuniform float uTime;\nvarying float vNuoc;\nvarying vec4 vW0;\nvarying vec4 vW1;\n'
       + shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       /*
        * MẶT NƯỚC. Nước là chính mặt đất hạ xuống SEA_Y và tô xanh (xem world.ts), nên nó ở
@@ -606,8 +627,8 @@ function datVan<T extends THREE.Material>(
       }
       {
         // Lớp thứ hai xoay lệch và to hơn: hai lưới lặp khác nhịp thì mắt hết bắt được ô.
-        vec2 uvA = vVanXZ * uDatCo.x;
-        vec2 uvB = mat2(0.8, -0.6, 0.6, 0.8) * vVanXZ * uDatCo.y;
+        vec2 uvA0 = vVanXZ * uDatCo.x;
+        vec2 uvB0 = mat2(0.8, -0.6, 0.6, 0.8) * vVanXZ * uDatCo.y;
         vec3 van = vec3(0.0);
         vec3 that = vec3(0.0);
         float tong = 0.0;
@@ -615,8 +636,8 @@ function datVan<T extends THREE.Material>(
           float w = i < 4 ? vW0[i] : vW1[i - 4];
           if (w < 0.004) continue;
           float l = float(i);
-          vec3 a = texture(uDat, vec3(uvA, l)).rgb;
-          if (uDatCo.w > 0.5) a = mix(a, texture(uDat, vec3(uvB, l)).rgb, 0.38);
+          vec3 a = texture(uDat, vec3(uvA0 * uDatS[i], l)).rgb;
+          if (uDatCo.w > 0.5) a = mix(a, texture(uDat, vec3(uvB0 * uDatS[i], l)).rgb, 0.38);
           vec3 tb = max(uDatTb[i], vec3(0.02));
           van += w * mix(vec3(1.0), a / tb, uDatK[i]);
           that += w * a;
