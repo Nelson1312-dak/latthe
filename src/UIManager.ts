@@ -30,11 +30,14 @@ import type { Den } from './dens';
 import type { Game } from './Game';
 import type { Choice } from './quality';
 import type {
-  BiomeId, BuildingType, Cost, Inventory, OfflineReport, Patch, ResourceKind, Unit, VoyageBand,
+  BiomeId, BuildingType, Cost, Inventory, OfflineReport, Patch, ResourceKind, Troops, Unit, VoyageBand,
   VoyageResult, WaveResult,
 } from './types';
 import { eliteOf } from './battle';
-import { RESOURCE_KINDS, TROOP_KINDS } from './types';
+import { ONLINE, Online } from './online';
+import { MAX_SENT } from './assault';
+import type { AttackReply, Opponent, RaidNote } from './assault';
+import { RESOURCE_KINDS, TROOP_KINDS, noTroops } from './types';
 
 const STAT_MS = 200;
 const MAP_MS = 200;
@@ -175,10 +178,17 @@ export class UIManager {
       game.playBattle(seed);
     };
     game.onBattleEnd = () => {
+      if (this.raidSau) { this.showRaid(this.raidSau); this.raidSau = null; return; }
       if (!this.waveSauTran) return;
       this.showWave(this.waveSauTran);
       this.waveSauTran = null;
     };
+    if (ONLINE) {
+      this.online = new Online(economy);
+      // Bị người khác cướp lúc vắng mặt: nói rõ ai, lấy gì — không thì kho tự nhiên vơi đi.
+      this.online.onRaided = (notes) => this.showRaided(notes);
+      this.online.start();
+    }
     economy.onVoyage = (r) => this.showVoyage(r);
     economy.onShip = () => {
       this.toast(`Warship launched · ${this.economy.state.fleet} at the dock`, 'ship');
@@ -268,6 +278,10 @@ export class UIManager {
   private waveCho: WaveResult | null = null;
   /** Kết quả đang giữ lại trong lúc trận còn đang diễn trên bản đồ. */
   private waveSauTran: WaveResult | null = null;
+  /** Chế độ online: máy khách (null khi bản build không bật), và trạng thái bảng Raid. */
+  private online: Online | null = null;
+  private raid = { list: null as Opponent[] | null, busy: false, msg: '', frac: 1, lane: 0 };
+  private raidSau: { reply: AttackReply; got: Partial<Record<ResourceKind, number>> } | null = null;
 
   /**
    * Bảng mùa bão, vẽ lại mỗi 200ms cùng phần còn lại của HUD.
@@ -1143,6 +1157,127 @@ export class UIManager {
         e.smithCost(s.smith.armour), e.smithBlock('armour'),
         () => { e.buySmith('armour'); this.renderInspector(); }));
     }
+    if (this.online) this.renderRaid(sheet);
+  }
+
+  // ------------------------------------------------------------------ chế độ online
+
+  /** Hai hoặc bốn nút chọn một: dùng cho "gửi bao nhiêu quân" và "đổ bộ làn nào". */
+  private chonMot(nhan: string[], dang: number, chon: (i: number) => void, cot: number): HTMLElement {
+    const t = el('div', 'tabs');
+    t.style.gridTemplateColumns = `repeat(${cot}, 1fr)`;
+    nhan.forEach((n, i) => {
+      const b = el('button', 'tab' + (i === dang ? ' on' : ''), n) as HTMLButtonElement;
+      b.addEventListener('click', () => chon(i));
+      t.append(b);
+    });
+    return t;
+  }
+
+  /** Số lính mang đi theo tỉ lệ đã chọn, chặn ở trần một lượt. */
+  private doiQuanDi(): Troops {
+    const army = this.economy.state.army;
+    const out = noTroops();
+    let tong = 0;
+    for (const k of TROOP_KINDS) {
+      out[k] = Math.floor(army[k] * this.raid.frac);
+      tong += out[k];
+    }
+    if (tong > MAX_SENT) {
+      const he = MAX_SENT / tong;
+      for (const k of TROOP_KINDS) out[k] = Math.floor(out[k] * he);
+    }
+    return out;
+  }
+
+  private renderRaid(sheet: HTMLElement): void {
+    const r = this.raid;
+    const quan = this.economy.armySize();
+    sheet.append(el('p', 'sheet-note',
+      'Raid other villages · your troops march in, grab what they can and run. Fallen troops are lost.'));
+    sheet.append(this.chonMot(['All troops', 'Half'], r.frac === 1 ? 0 : 1, (i) => {
+      r.frac = i === 0 ? 1 : 0.5;
+      this.renderInspector();
+    }, 2));
+    sheet.append(el('p', 'sheet-note', 'Approach from — the screen corner your troops come in by:'));
+    sheet.append(this.chonMot(['↘', '↙', '↖', '↗'], r.lane, (i) => { r.lane = i; this.renderInspector(); }, 4));
+    if (r.msg) sheet.append(el('p', 'sheet-note', r.msg));
+    const lam = r.busy ? 'Working…' : null;
+    const tim = (nhan: string): HTMLElement => this.row('compass', nhan,
+      'Villages of similar strength, with their shields down', null, lam, () => { void this.raidFind(); });
+    if (!r.list) { sheet.append(tim('Find villages to raid')); return; }
+    if (r.list.length === 0) sheet.append(el('p', 'sheet-note', 'No village to raid right now — try again later.'));
+    const NHAN = { easy: 'Easy', fair: 'Fair fight', hard: 'Hard', deadly: 'Deadly' };
+    for (const o of r.list) {
+      const chan = r.busy ? 'Working…' : quan <= 0 ? 'Train some troops first'
+        : o.wait > 0 ? `Raided recently · ${Math.ceil(o.wait / 60)} min` : null;
+      sheet.append(this.row('skull', `${o.name} · Lv ${o.level}`,
+        `${NHAN[o.difficulty]} · up to ${this.lootText(o.loot)}`, null, chan, () => { void this.raidGo(o); }));
+    }
+    sheet.append(tim('Refresh the list'));
+  }
+
+  private async raidFind(): Promise<void> {
+    const r = this.raid;
+    if (!this.online || r.busy) return;
+    r.busy = true;
+    r.msg = '';
+    this.renderInspector();
+    try {
+      r.list = (await this.online.opponents()).list;
+    } catch (e) {
+      r.msg = (e as Error).message;
+    }
+    r.busy = false;
+    this.renderInspector();
+  }
+
+  private async raidGo(o: Opponent): Promise<void> {
+    const r = this.raid;
+    if (!this.online || r.busy) return;
+    const troops = this.doiQuanDi();
+    if (TROOP_KINDS.every((k) => troops[k] === 0)) { r.msg = 'Send at least one soldier.'; this.renderInspector(); return; }
+    r.busy = true;
+    r.msg = '';
+    this.renderInspector();
+    try {
+      const reply = await this.online.attack(o.id, troops, r.lane);
+      const got = this.economy.settleAssault(reply.outcome.fell, reply.loot);
+      this.raidSau = { reply, got };
+      r.list = null;
+      r.busy = false;
+      // Xem trận diễn lại trước, báo kết quả sau — như đợt giặc thường.
+      this.dongNgan();
+      this.game.playBattle(reply.seed);
+      return;
+    } catch (e) {
+      r.msg = (e as Error).message;
+    }
+    r.busy = false;
+    this.renderInspector();
+  }
+
+  private showRaid(x: { reply: AttackReply; got: Partial<Record<ResourceKind, number>> }): void {
+    const o = x.reply.outcome;
+    const lost = TROOP_KINDS.reduce((a, k) => a + o.fell[k], 0);
+    const sent = TROOP_KINDS.reduce((a, k) => a + o.sent[k], 0);
+    const thu = this.lootText(x.got);
+    const thang = o.lootFrac >= 0.25;
+    const bits: string[] = [];
+    bits.push(thu ? `looted ${thu}` : 'came back empty-handed');
+    bits.push(`lost ${lost} of ${sent} troops`);
+    this.bao('skull', thang ? `Raided ${x.reply.targetName}` : `Raid on ${x.reply.targetName} failed`,
+      bits.join(' · '), thang ? 'won' : 'lost');
+    this.renderAll();
+  }
+
+  private showRaided(notes: RaidNote[]): void {
+    const tong: Partial<Inventory> = {};
+    for (const n of notes) for (const k of RESOURCE_KINDS) tong[k] = (tong[k] ?? 0) + n.loot[k];
+    const mat = this.lootText(tong);
+    const ai = notes.length === 1 ? notes[0].byName : `${notes.length} raiders`;
+    this.bao('skull', `${ai} raided your village`, mat ? `lost ${mat}` : 'but found nothing worth taking', 'lost');
+    this.renderAll();
   }
 
   /**

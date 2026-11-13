@@ -421,6 +421,26 @@ export class Economy {
     return this.state.inv[kind] / Math.max(1, this.state.storageLimit);
   }
 
+  /** Hàng bị người chơi khác cướp (chế độ online): trừ khỏi kho, không xuống dưới không. */
+  pillage(loot: Partial<Record<ResourceKind, number>>): void {
+    for (const k of RESOURCE_KINDS) {
+      this.state.inv[k] = Math.max(0, this.state.inv[k] - Math.floor(loot[k] ?? 0));
+    }
+    this.save();
+  }
+
+  /**
+   * Chốt một trận mình đi đánh (chế độ online): quân ngã bị trừ khỏi đội, hàng cướp cất vào
+   * kho (chặn ở trần). Trả về phần thực sự vào kho để báo cho người chơi.
+   */
+  settleAssault(fell: Troops, loot: Partial<Record<ResourceKind, number>>): Record<ResourceKind, number> {
+    for (const k of TROOP_KINDS) this.state.army[k] = Math.max(0, this.state.army[k] - (fell[k] ?? 0));
+    const got = {} as Record<ResourceKind, number>;
+    for (const k of RESOURCE_KINDS) got[k] = this.deposit(k, Math.floor(loot[k] ?? 0));
+    this.save();
+    return got;
+  }
+
   /** Bỏ hàng vào kho chính, chặn ở trần. Trả về số thực sự vào được. */
   deposit(kind: ResourceKind, amount: number): number {
     const taken = Math.min(amount, this.space(kind));

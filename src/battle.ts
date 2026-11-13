@@ -122,6 +122,13 @@ export interface BattleSeed {
   horde?: number;
   tier?: number;
   minions?: number;
+  /**
+   * Trận TẤN CÔNG: người chơi mang quân sang làng khác. Cùng một luật, chỉ đảo vai — quân
+   * của người tấn công vào chỗ "giặc", còn tháp, quân thường trực, dân ở nhà là của làng bị
+   * đánh (các trường bên trên). `smith` của hạt giống là bậc rèn của BÊN THỦ; bậc rèn của
+   * bên công nằm ở đây. `lane` là làn đổ bộ do người đánh chọn, 0 tới 3.
+   */
+  assault?: { troops: Troops; smith: { attack: number; armour: number }; lane: number };
 }
 
 export type RaiderState = 'march' | 'loot' | 'flee';
@@ -174,6 +181,8 @@ export interface BattleState {
   reached: number;
   /** Con trùm của đợt quái đã ngã chưa. */
   bossDown: boolean;
+  /** Số bên công đã ngã, theo loại — trận tấn công cần biết người đánh mất những quân nào. */
+  fell: Troops;
 }
 
 export interface BattleOutcome {
@@ -284,9 +293,46 @@ function hordeRaiders(seed: BattleSeed, lanes: readonly (readonly [number, numbe
   return out;
 }
 
+/** Bốn hướng đổ bộ, cùng thứ tự với `lanesOf`: làn người đánh chọn là chỉ số vào đây. */
+const HUONG_DO_BO = [[1, 0], [0, 1], [-1, 0], [0, -1]] as const;
+
+/**
+ * Bên công của trận tấn công: đúng quân người chơi đã mang theo, chỉ số lấy thẳng từ TROOPS
+ * (không nhân xuống như giặc — đây là lính thật, không phải đám đông vô danh). Bậc rèn của
+ * họ cộng vào đòn; giáp thì quy ra máu, vì `damage` chỉ biết giáp của bên thủ.
+ */
+function assaultRaiders(seed: BattleSeed, lane: readonly [number, number]): Raider[] {
+  const a = seed.assault!;
+  const giap = 1 / (1 - Math.min(0.6, SMITH_ARMOUR * a.smith.armour));
+  const dam = 1 + SMITH_ATTACK * a.smith.attack;
+  // Bộ binh đi đầu, rồi kỵ binh, cung và phép, xe pháo đi cuối — hàng sau bắn xa nên được che.
+  const thuTu: readonly TroopKind[] = ['spear', 'horse', 'archer', 'mage', 'siege'];
+  const out: Raider[] = [];
+  const [lx, lz] = lane;
+  const HANG = 6;
+  let i = 0;
+  for (const kind of thuTu) {
+    const sp = TROOPS[kind];
+    for (let n = 0; n < a.troops[kind]; n += 1, i += 1) {
+      const doc = SPAWN_DIST + Math.floor(i / HANG) * 2.6;
+      const ngang = ((i % HANG) - (HANG - 1) / 2) * 2.2
+        + (hash2(seed.wave * 131 + i, 7, 0xba02) - 0.5) * 1.2;
+      out.push({
+        x: lx * doc + lz * ngang, z: lz * doc + lx * ngang,
+        hp: sp.hp * giap, kind, state: 'march', loaded: false, work: 0, cool: 0,
+        face: Math.atan2(-lx, -lz),
+        atk: sp.dps * dam, spd: sp.speed, rng: sp.range, spl: sp.splash ?? 0,
+      });
+    }
+  }
+  return out;
+}
+
 export function battleStart(seed: BattleSeed): BattleState {
   const mix = waveMix(seed.power, seed.age);
-  const lanes = lanesOf(seed.wave);
+  const lanes = seed.assault
+    ? [HUONG_DO_BO[Math.max(0, Math.min(3, Math.floor(seed.assault.lane)))]]
+    : lanesOf(seed.wave);
   /*
    * ĐỘI HÌNH, KHÔNG PHẢI HÀNG MỘT. Bản đầu rải mỗi con lùi thêm 2,4 đơn vị, nên một đợt ba
    * sáu tên kéo dài một trăm ba chục đơn vị — chúng lũ lượt bước vào tầm bắn từng đứa một
@@ -294,9 +340,10 @@ export function battleStart(seed: BattleSeed): BattleState {
    * MỘT mục tiêu một lúc, nên sức mạnh thật của giặc nằm ở chỗ chúng tới CÙNG LÚC.
    */
   const HANG = 6;
-  const raiders: Raider[] = seed.horde !== undefined ? hordeRaiders(seed, lanes) : [];
+  const raiders: Raider[] = seed.assault ? assaultRaiders(seed, lanes[0])
+    : seed.horde !== undefined ? hordeRaiders(seed, lanes) : [];
   const danh: TroopKind[] = [];
-  if (seed.horde !== undefined) { mix.spear = 0; mix.archer = 0; mix.horse = 0; }
+  if (seed.horde !== undefined || seed.assault) { mix.spear = 0; mix.archer = 0; mix.horse = 0; }
   for (let i = 0; i < mix.spear; i += 1) danh.push('spear');
   for (let i = 0; i < mix.archer; i += 1) danh.push('archer');
   for (let i = 0; i < mix.horse; i += 1) danh.push('horse');
@@ -358,6 +405,7 @@ export function battleStart(seed: BattleSeed): BattleState {
     escaped: 0,
     reached: 0,
     bossDown: false,
+    fell: noTroops(),
   };
 }
 
@@ -534,6 +582,7 @@ export function battleStep(s: BattleState): void {
     const r = s.raiders[i];
     if (r.hp <= 0) {
       s.killed += 1;
+      s.fell[r.kind] += 1;
       if (r.boss) s.bossDown = true;
       s.raiders.splice(i, 1);
       continue;

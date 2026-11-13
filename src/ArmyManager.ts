@@ -322,14 +322,15 @@ export class ArmyManager {
         continue;
       }
       // Tên đang khuân hàng thì khom lưng xuống — nhìn một cái là biết đứa nào đang vơ vét.
-      than(r, MAU_GIAC, r.state === 'loot' ? 0.82 : 1);
+      than(r, s.seed.assault ? MAU_LINH : MAU_GIAC, r.state === 'loot' ? 0.82 : 1);
     }
     for (const [mesh, n0] of [[this.beastMinion, nho], [this.beastBoss, trum]] as const) {
       mesh.count = n0;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
-    for (const g of s.guards) than(g, MAU_LINH, 1);
+    // Trận tấn công đảo vai: quân MÌNH là bên công (xanh), làng bị đánh giữ nhà (đỏ).
+    for (const g of s.guards) than(g, s.seed.assault ? MAU_GIAC : MAU_LINH, 1);
     for (const c of this.chans.values()) {
       c.mesh.count = c.n;
       c.mesh.instanceMatrix.needsUpdate = true;
