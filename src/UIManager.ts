@@ -292,16 +292,28 @@ export class UIManager {
     const gan = t.next <= WAVE_WARN_SECONDS;
     const e = this.el;
 
-    e.waveIco.innerHTML = iconSvg(kind === 'storm' ? 'storm' : 'raid');
-    e.waveKind.textContent = kind === 'storm' ? 'Storm' : 'Raid';
+    const bay = this.economy.nextHorde();
+    e.waveIco.innerHTML = iconSvg(kind === 'storm' ? 'storm' : kind === 'beast' ? 'paw' : 'raid');
+    e.waveKind.textContent = kind === 'storm' ? 'Storm'
+      : bay ? `${bay.spec.name} ★${bay.tier}` : 'Raid';
     const giay = Math.max(0, Math.ceil(t.next));
     e.waveClock.textContent = `${Math.floor(giay / 60)}:${String(giay % 60).padStart(2, '0')}`;
 
     // Thành phần đợt: biểu tượng kèm số. Luật khắc chế chỉ có nghĩa khi nhìn thấy trước.
     const mix = this.economy.waveMix();
     e.waveMix.innerHTML = '';
+    if (bay) {
+      // Bầy quái: một con trùm và cả bầy. Nói tên ra để người chơi biết sắp gặp con gì.
+      const trum = el('span');
+      trum.title = `${bay.spec.boss} ★${bay.tier}`;
+      trum.append(ico('skull', 'gico'), el('b', undefined, '1'));
+      const dan = el('span');
+      dan.title = bay.spec.minion;
+      dan.append(ico('paw', 'gico'), el('b', undefined, String(bay.minions)));
+      e.waveMix.append(trum, dan);
+    }
     for (const k of TROOP_KINDS) {
-      if (mix[k] <= 0) continue;
+      if (bay || mix[k] <= 0) continue;
       const sp = el('span');
       sp.title = TROOPS[k].label;
       sp.append(ico(TROOPS[k].icon, 'gico'), el('b', undefined, String(mix[k])));
@@ -310,7 +322,7 @@ export class UIManager {
     // Giặc tinh nhuệ: số tên đã chạm trần nên con số bên trên đứng yên, còn từng tên thì
     // dày da lên. Không nói ra thì người chơi thấy "vẫn 36 tên" mà thua không hiểu vì sao.
     const tinh = eliteOf(power);
-    if (tinh > 1.05) {
+    if (!bay && tinh > 1.05) {
       const sp = el('span');
       sp.title = 'Elite raiders: tougher, hit harder';
       sp.append(el('b', undefined, `×${tinh.toFixed(1)}`));
@@ -380,9 +392,15 @@ export class UIManager {
     let title: string;
     const bits: string[] = [`${r.killed}/${r.count} downed`];
     if (r.won) {
-      title = r.kind === 'storm' ? 'Storm weathered' : 'Raid repelled';
+      title = r.kind === 'storm' ? 'Storm weathered'
+        : r.beast ? (r.beast.bossDown ? `${r.beast.boss} slain` : `${r.beast.name} driven off`)
+        : 'Raid repelled';
       const thu = this.lootText(r.reward);
       if (thu) bits.push(`looted ${thu}`);
+    } else if (r.beast) {
+      title = mat ? `The ${r.beast.name.toLowerCase()} ravaged the stores` : `The ${r.beast.name.toLowerCase()} broke through`;
+      if (r.beast.bossDown) bits.push(`${r.beast.boss} slain`);
+      if (mat) bits.push(`lost ${mat}`);
     } else if (r.kind === 'storm') {
       title = r.levels > 0 ? `Storm knocked off ${r.levels} building levels` : 'Storm swept the village';
       if (mat) bits.push(`lost ${mat}`);
@@ -398,7 +416,7 @@ export class UIManager {
       if (r.sea.sunk > 0) bits.push(`${r.sea.sunk} warship${r.sea.sunk > 1 ? 's' : ''} sunk`);
     }
     if (r.away) bits.push('while you were away');
-    this.bao(r.kind === 'storm' ? 'storm' : 'raid', title, bits.join(' · '),
+    this.bao(r.kind === 'storm' ? 'storm' : r.beast ? 'paw' : 'raid', title, bits.join(' · '),
       r.won ? 'won' : 'lost');
     // Cú đập: thua bão rung mạnh nhất, đẩy lui được thì chỉ giật một cái cho biết.
     this.game.shake(r.won ? 0.3 : r.kind === 'storm' ? 1 : 0.6);
@@ -810,6 +828,71 @@ export class UIManager {
     return b;
   }
 
+  /**
+   * Một dòng có nút − và +, cho những con số người chơi chỉnh từng nấc (số dân theo loại
+   * hàng, số người khám phá). Bấm là lưu ngay và vẽ lại bảng.
+   */
+  private buoc(icon: IconName, mau: number | null, ten: string, phu: string, so: number,
+    doi: (d: number) => void): HTMLElement {
+    const r = el('div', 'buoc');
+    const ic = ico(icon, 'gico');
+    if (mau !== null) ic.style.color = `#${mau.toString(16).padStart(6, '0')}`;
+    const col = el('div', 'col');
+    col.append(el('b', undefined, ten), el('small', undefined, phu));
+    const tru = el('button', 'buoc-nut', '−') as HTMLButtonElement;
+    const cong = el('button', 'buoc-nut', '+') as HTMLButtonElement;
+    tru.disabled = so <= 0;
+    tru.setAttribute('aria-label', `Fewer: ${ten}`);
+    cong.setAttribute('aria-label', `More: ${ten}`);
+    tru.addEventListener('click', () => doi(-1));
+    cong.addEventListener('click', () => doi(1));
+    r.append(ic, col, tru, el('span', 'buoc-so', String(so)), cong);
+    return r;
+  }
+
+  /**
+   * DÂN THEO LOẠI HÀNG + NGƯỜI KHÁM PHÁ + TỰ THUÊ.
+   *
+   * Người chơi thấy "điều dân đi farm hơi khó": cách cũ là chạm một người, rồi chạm một bãi,
+   * từng người một. Giờ nói thẳng con số: "4 người lấy lương thực" — máy tự tìm bãi lời nhất
+   * cho đủ số ấy, phần còn lại vẫn tự cân như cũ.
+   */
+  private renderLamViec(sheet: HTMLElement): void {
+    const e = this.economy;
+    const tong = e.villagers().length;
+    const dang = this.game.workers.kindCount();
+    sheet.append(el('p', 'sheet-note', 'Work focus · villagers fill these first, the rest pick their own work'));
+    for (const k of RESOURCE_KINDS) {
+      const muon = e.state.focus[k] ?? 0;
+      const co = dang.get(k) ?? 0;
+      sheet.append(this.buoc(RESOURCES[k].icon, RESOURCES[k].color, RESOURCES[k].label,
+        muon > 0 ? `${co} working · keep ${muon} on it` : `${co} working · auto`, muon, (d) => {
+          const moi = Math.max(0, Math.min(tong, muon + d));
+          if (moi > 0) e.state.focus[k] = moi; else delete e.state.focus[k];
+          e.save();
+          this.renderInspector();
+        }));
+    }
+    const di = this.game.workers.explorers();
+    sheet.append(this.buoc('compass', null, 'Explorers',
+      `${di} out exploring · wherever they walk, the map opens`, e.state.scouts, (d) => {
+        e.state.scouts = Math.max(0, Math.min(20, e.state.scouts + d));
+        e.save();
+        this.renderInspector();
+      }));
+    const tu = e.state.autoHire;
+    const nut = this.row(tu ? 'crew' : 'hand', tu ? 'Auto-hire: on' : 'Auto-hire: off',
+      tu ? 'The village grows by itself when there is room and spare food — even while you are away'
+        : 'Only hire when you tap Hire', null, null, () => {
+        e.state.autoHire = !e.state.autoHire;
+        e.save();
+        this.toast(e.state.autoHire ? 'Auto-hire on' : 'Auto-hire off', 'crew');
+        this.renderInspector();
+      });
+    nut.classList.toggle('on', tu);
+    sheet.append(nut);
+  }
+
   private sheetHead(ten: string, phu: string): HTMLElement {
     const h = el('div', 'sheet-head');
     // Nút đóng ngay trên ngăn. Bấm lại nút dock cũng đóng được, nhưng nút dock lúc ấy nằm
@@ -837,6 +920,7 @@ export class UIManager {
         `One more pair of hands · +${TAX_PER_VILLAGER.toFixed(2)} gold/s tax`,
         e.hireCost(), e.canHire() ? null : 'No room — build a house',
         () => { e.hire((h) => this.game.workers.spawnVillager(h)); this.renderInspector(); }));
+      this.renderLamViec(sheet);
       sheet.append(this.row('boot', `Faster feet · tier ${e.state.speedLevel}`,
         'Everyone moves 10% faster', e.trainSpeedCost(), null,
         () => { e.trainSpeed(); this.renderInspector(); }));
@@ -1155,6 +1239,11 @@ export class UIManager {
             if (this.game.chonNhom(nhom > 1) === truoc) this.game.chonNhom(true);
           });
       }
+      nut('compass', 'Explore', 'Walk into the dark and open the map until released', () => {
+        const n = this.game.khamPha();
+        this.toast(n > 1 ? `${n} villagers set off exploring` : 'Off exploring', 'compass');
+        this.renderInspector();
+      });
       const dangLenh = u.targetId === LENH || u.targetId === CHO || !!u.pin;
       if (dangLenh || nhom > 1) {
         nut('stop', 'Release', 'Drop the order and pin; back to auto', () => {
@@ -1446,7 +1535,7 @@ export class UIManager {
         return 'Idle';
       case 'moving': {
         if (u.targetId === LENH) return 'Heading where you pointed';
-        if (u.targetId === 'scout') return 'Scouting the fog';
+        if (u.targetId === 'scout') return 'Exploring';
         const n = u.targetId ? this.game.map.patchById(u.targetId) : null;
         return n ? `Heading to the ${n.label.toLowerCase()}` : 'On the way';
       }
@@ -1654,7 +1743,7 @@ export class UIManager {
       }
     }
     // Mây phủ những khối chưa vén.
-    ctx.fillStyle = 'rgba(236,243,250,0.92)';
+    ctx.fillStyle = 'rgba(16,17,20,0.94)';
     for (let cx = chunkOf(ox); cx <= chunkOf(ox + span); cx += 1) {
       for (let cz = chunkOf(oz); cz <= chunkOf(oz + span); cz += 1) {
         if (this.game.fog.isRevealed(cx * CHUNK + 1, cz * CHUNK + 1)) continue;

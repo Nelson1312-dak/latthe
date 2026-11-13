@@ -22,6 +22,7 @@ import {
   LOOKOUT_RANGE_PER_LEVEL, MARKET_PRICE_CAP, MARKET_PRICE_PER_LEVEL, MARKET_RATE_PER_LEVEL,
   WELL_SPEED_CAP, WELL_SPEED_PER_LEVEL, BUILD_LIMIT,
   RESERVE_STORAGE_SHARE, TAX_PER_HALL_LEVEL, TAX_PER_VILLAGER, tenLangSangAnh,
+  AUTO_HIRE_MARGIN, AUTO_HIRE_SECONDS,
 } from './config';
 import type {
   Building, BuildingType, Cost, GameState, Inventory, OfflineReport, ResourceKind, Threat,
@@ -35,6 +36,8 @@ import type { Den } from './dens';
 import { guardOf, mercPrice, stormTargets, waveKind, waveOutcome, wavePower } from './raids';
 import { raiderCount, resolveBattle, waveMix } from './battle';
 import type { BattleSeed } from './battle';
+import { HORDES, bossTitle, hordeTier, minionCount, pickHorde } from './beasthorde';
+import type { HordeSpec } from './beasthorde';
 import { RESOURCE_KINDS } from './types';
 import {
   SHIP_AGE, SHIP_COST, SHIP_PER_DOCK, SHIP_SECONDS, SORTIE_SECONDS,
@@ -93,6 +96,9 @@ function freshState(): GameState {
     demand: null,
     assignments: {},
     autoFarm: true,
+    focus: {},
+    scouts: 1,
+    autoHire: true,
     speedMult: 1,
     maxReach: 0,
   };
@@ -105,6 +111,12 @@ export class Economy {
 
   readonly rates: Inventory = emptyInv();
   readonly fullKinds = new Set<ResourceKind>();
+  /**
+   * Gọi khi làng tự thuê được một người — Game nối vào WorkerManager.spawnVillager. Để trống
+   * (như trong bản chạy thử) thì không tự thuê.
+   */
+  onSpawnVillager: ((home: Building) => void) | null = null;
+  private hireClock = 0;
   private gained: Inventory = emptyInv();
 
   constructor(state: GameState) {
@@ -141,6 +153,16 @@ export class Economy {
           state.demand = parsed.demand ?? null;
           state.assignments = parsed.assignments ?? {};
           state.autoFarm = parsed.autoFarm !== false;
+          // Ba trường của bản "chơi văn phòng". Bản lưu cũ: không dồn ai, một người đi khám
+          // phá (đúng như máy vẫn tự cắt trước đây), và tự thuê dân bật sẵn.
+          state.focus = {};
+          for (const k of RESOURCE_KINDS) {
+            const n = Math.floor(Number(parsed.focus?.[k]) || 0);
+            if (n > 0) state.focus[k] = Math.min(99, n);
+          }
+          state.scouts = parsed.scouts === undefined ? 1
+            : Math.max(0, Math.min(20, Math.floor(Number(parsed.scouts) || 0)));
+          state.autoHire = parsed.autoHire !== false;
           state.maxReach = Number(parsed.maxReach) || 0;
           // Bản lưu cũ không có làng: để trống thì màn lập làng tự hiện ra, người chơi đang
           // chơi dở vẫn được đặt tên cho chỗ mình đã xây.
@@ -899,7 +921,7 @@ export class Economy {
         towers.push({ x: b.position[0], z: b.position[2], level: b.level });
       }
     }
-    return {
+    const seed: BattleSeed = {
       wave,
       kind: waveKind(wave),
       power: wavePower(wave, this.state.level),
@@ -910,6 +932,28 @@ export class Economy {
       smith: { ...this.state.smith },
       age: this.state.age,
     };
+    if (seed.kind === 'beast') {
+      const h = this.hordeOf(wave);
+      seed.horde = h.index;
+      seed.tier = h.tier;
+      seed.minions = h.minions;
+    }
+    return seed;
+  }
+
+  /** Bầy quái của một đợt: bầy nào, bậc mấy, bao nhiêu con nhỏ — theo cấp làng LÚC NÀY. */
+  hordeOf(wave: number): { index: number; spec: HordeSpec; tier: number; minions: number } {
+    const index = pickHorde(wave, this.state.level);
+    return {
+      index, spec: HORDES[index], tier: hordeTier(this.state.level),
+      minions: minionCount(this.state.level),
+    };
+  }
+
+  /** Bầy quái của đợt sắp tới, hoặc null nếu đợt tới không phải quái. */
+  nextHorde(): { index: number; spec: HordeSpec; tier: number; minions: number } | null {
+    const w = this.state.threat.wave + 1;
+    return waveKind(w) === 'beast' ? this.hordeOf(w) : null;
   }
 
   private runWave(away: boolean): WaveResult {
@@ -931,6 +975,13 @@ export class Economy {
     const bat = resolveBattle(seed);
     const { result, take, levels } = waveOutcome(t.wave, power, guard, bat, this.state.inv, away);
     if (clash.power > 0) result.sea = clash;
+    if (seed.horde !== undefined) {
+      const spec = HORDES[seed.horde];
+      result.beast = {
+        name: spec.name, boss: bossTitle(spec, seed.tier ?? 1), tier: seed.tier ?? 1,
+        minions: seed.minions ?? 0, bossDown: bat.bossDown,
+      };
+    }
     for (const k of RESOURCE_KINDS) {
       const n = take[k];
       if (n) this.state.inv[k] = Math.max(0, this.state.inv[k] - n);
@@ -974,7 +1025,12 @@ export class Economy {
     if (this.lastSeed) this.onWave?.(r, this.lastSeed);
   }
 
-  tick(dt: number): void {
+  /**
+   * Một nhịp kinh tế. `vang = true` khi tua bù giờ vắng mặt: mùa bão, chuyến biển và hạm đội
+   * đã có luật vắng mặt riêng trong collectOffline (một đợt duy nhất, cập bến theo giờ thật),
+   * nên ở đây bỏ qua ba thứ ấy — còn lại chạy y như lúc đang nhìn.
+   */
+  tick(dt: number, vang = false): void {
     // Ruộng ra lúa TRƯỚC khi lính ăn: thứ tự ngược lại thì một nhịp nào đó kho về 0 và
     // lính bỏ đi, dù trong cùng nhịp ấy ruộng đã kịp bù.
     const lua = this.farmRate();
@@ -983,11 +1039,14 @@ export class Economy {
     // kiếm, hiện lên con số "mỗi giây" của HUD, và chạy cả trong lúc vắng mặt.
     const thue = this.taxRate();
     if (thue > 0) this.deposit('gold', thue * dt);
-    this.tickThreat(dt);
-    this.tickVoyage(dt);
+    if (!vang) {
+      this.tickThreat(dt);
+      this.tickVoyage(dt);
+    }
     this.tickAge(dt);
     this.tickArmy(dt);
-    this.tickFleet(dt);
+    if (!vang) this.tickFleet(dt);
+    this.tickAutoHire(dt);
     this.checkDemand();
     this.sellSurplus(dt);
     const k = Math.min(1, dt / RATE_TAU);
@@ -997,6 +1056,24 @@ export class Economy {
     }
   }
 
+
+  /**
+   * TỰ THUÊ DÂN. Làng lớn lên trong lúc người chơi đi họp: còn chỗ ở, không có đơn xây nào
+   * đang gom, và kho dư hơn giá một khoảng thì thuê thêm một người. Dư một khoảng chứ không
+   * vừa khít, để không vét sạch lương thực mà lính đang ăn.
+   */
+  private tickAutoHire(dt: number): void {
+    if (!this.state.autoHire || !this.onSpawnVillager) return;
+    this.hireClock -= dt;
+    if (this.hireClock > 0) return;
+    this.hireClock = AUTO_HIRE_SECONDS;
+    if (!this.canHire() || this.state.demand) return;
+    const gia = this.hireCost();
+    for (const k of RESOURCE_KINDS) {
+      if (this.state.inv[k] < (gia[k] ?? 0) * AUTO_HIRE_MARGIN) return;
+    }
+    this.hire(this.onSpawnVillager);
+  }
 
   // ----------------------------------------------------------------- thời đại
 
@@ -1371,10 +1448,21 @@ export class Economy {
       / WAVE_EVERY_SECONDS) + (elapsedSeconds >= this.state.threat.next ? 1 : 0);
     const full = new Set<ResourceKind>();
 
-    const STEP = 0.5;
+    /*
+     * Bước tua dãn theo độ dài vắng mặt: tối đa 14.400 vòng dù vắng hai hay tám tiếng, để mở
+     * máy không phải đợi lâu hơn chừng hai giây. Tám tiếng là bước 2 giây — người dân vẫn
+     * tới đúng chỗ (step() kẹp ở đích), chỉ thô hơn một chút ở lúc đứng hái.
+     *
+     * KINH TẾ CŨNG PHẢI CHẠY. Bản trước chỉ tua người dân và màn mây, quên hẳn economy.tick:
+     * suốt lúc vắng mặt không có thuế, ruộng không ra lúa, chợ không bán hàng dư ra vàng —
+     * kho đầy rồi thì dân đứng chơi tới lúc quay lại. Đó là phần lớn của câu "offline chưa ra
+     * gì".
+     */
+    const STEP = Math.max(0.5, creditedSeconds / 14400);
     const steps = Math.floor(creditedSeconds / STEP);
     for (let i = 0; i < steps; i += 1) {
       step(STEP);
+      this.tick(STEP, true);
       for (const kind of this.fullKinds) full.add(kind);
     }
 

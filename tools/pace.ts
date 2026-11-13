@@ -270,6 +270,10 @@ const hang = (n: number, w: number) => String(Math.floor(n)).padStart(w);
 
 /** Mùa bão: đếm thắng thua và tổng thiệt hại, để biết luật có cân hay không. */
 const dot = { thang: 0, thua: 0, cap: 0, mat: 0, thuong: 0, den: 0, ha: 0, thoat: 0 };
+/** Đợt quái thú: số đợt, số thắng, số lần hạ trùm, và bầy nào đã tới. */
+const quai = { dot: 0, thang: 0, trum: 0, bay: new Map<string, number>() };
+/** Thắng/tổng theo từng loại đợt. */
+const loaiDot = new Map<string, [number, number]>();
 const bien = { chuyen: 0, trung: 0, khong: 0, mat: 0, vang: 0, manh: 0 };
 const theoTam: Record<string, number> = {};
 /** Quan: ra lo bao nhieu, bo di bao nhieu. Quan cuoi van bang 0 co the la chua nuoi noi
@@ -288,6 +292,14 @@ economy.onLair = (r) => {
   if (r.won) hai.hang += 1; else hai.thuaHang += 1;
 };
 economy.onWave = (r) => {
+  const ld = loaiDot.get(r.kind) ?? [0, 0];
+  loaiDot.set(r.kind, [ld[0] + (r.won ? 1 : 0), ld[1] + 1]);
+  if (r.beast) {
+    quai.dot += 1;
+    if (r.won) quai.thang += 1;
+    if (r.beast.bossDown) quai.trum += 1;
+    quai.bay.set(r.beast.name, (quai.bay.get(r.beast.name) ?? 0) + 1);
+  }
   if (r.sea) {
     hai.cuop += 1;
     hai.chan += r.sea.stopped;
@@ -453,6 +465,9 @@ console.log(`  bản lưu ${(JSON.stringify(economy.state).length / 1024).toFixe
 console.log('');
 console.log('--- mùa bão ---');
 console.log(`  ${dot.thang + dot.thua} đợt · đẩy lui ${dot.thang} · thua ${dot.thua}`);
+console.log('  theo loại: ' + [...loaiDot].map(([k, [a, b]]) => `${k} ${a}/${b}`).join(' · '));
+console.log(`  quái thú ${quai.dot} đợt · thắng ${quai.thang} · hạ trùm ${quai.trum} · `
+  + [...quai.bay].map(([t, n]) => `${t} ${n}`).join(', '));
 console.log(`  mất ${Math.round(dot.mat)} món hàng và ${dot.cap} cấp công trình`
   + ` · nhặt được ${Math.round(dot.thuong)} từ xác tàu`);
 console.log(`  giặc tới ${dot.den} tên · hạ ${dot.ha}`

@@ -17,15 +17,26 @@ export const MAX_FRAME_DELTA = 0.1;
 
 // ------------------------------------------------------------------ nhịp chơi
 
-export const AFK_CAP_SECONDS = 7200;
+/*
+ * CHƠI VĂN PHÒNG: mở máy buổi sáng, tắt đi họp, chiều quay lại. Trần hai tiếng với hiệu suất
+ * 85% nghĩa là cả buổi chiều vắng mặt chỉ được tính bằng một bữa trưa, và người chơi phàn
+ * nàn đúng câu ấy: "chưa đáp ứng tiêu chí offline to play". Tám tiếng, đủ một ngày làm việc,
+ * và không trừ phần trăm nào — vắng mặt không phải lỗi của người chơi.
+ */
+export const AFK_CAP_SECONDS = 28800;
 export const AFK_MIN_SECONDS = 30;
-export const AFK_EFFICIENCY = 0.85;
+export const AFK_EFFICIENCY = 1;
 
 export const BASE_SPEED = 3.4;
 export const SPEED_PER_LEVEL = 0.1;
-export const BASE_CAPACITY = 10;
+/*
+ * Một chuyến hái mang về 13 món sau 1,3 giây đứng hái (trước là 10 món, 2 giây). Người chơi
+ * thấy "tài nguyên vẫn hơi chậm": phần lớn thời gian của một người dân là đi bộ, nên rút
+ * ngắn lúc đứng hái và cho vác nhiều hơn là hai chỗ đẩy thu nhập mà không phải đổi bản đồ.
+ */
+export const BASE_CAPACITY = 13;
 export const CAPACITY_PER_LEVEL = 0.25;
-export const GATHER_SECONDS = 2.0;
+export const GATHER_SECONDS = 1.3;
 
 /**
  * Trần kho. Để 200 thì mọi loại chạm trần trong vài phút và dân đứng chơi; nhưng kho lẫm
@@ -33,7 +44,7 @@ export const GATHER_SECONDS = 2.0;
  */
 export const BASE_STORAGE = 400;
 export const STORAGE_PER_GRANARY = 260;
-export const HOUSING_PER_HOUSE = 2;
+export const HOUSING_PER_HOUSE = 3;
 
 /**
  * Thủ phủ bán phần DƯ ra vàng.
@@ -113,8 +124,8 @@ export const SURPLUS_RATE_PER_LEVEL = 2.2;
  *   0,3 + 0,10 → 49 · 0,2 + 0,10 → 51 · 0,2 + 0,05 → 47.
  * Cao hơn nữa là vàng thừa nuôi lính thừa, và các đợt giặc thành tiền cho không.
  */
-export const TAX_PER_HALL_LEVEL = 0.2;
-export const TAX_PER_VILLAGER = 0.05;
+export const TAX_PER_HALL_LEVEL = 0.3;
+export const TAX_PER_VILLAGER = 0.06;
 /*
  * Mức giữ không bao giờ được cao hơn phần này của kho, trừ khi chính món đắt nhất đòi hơn.
  *
@@ -127,7 +138,7 @@ export const RESERVE_STORAGE_SHARE = 0.8;
  * Thu phu tu no chua duoc may nguoi. Khong co dong nay thi vua mo game da thay 1/0 - mot dan
  * dang lam viec trong khi cho o bang khong - nhin nhu loi chu khong nhu luat choi.
  */
-export const HOUSING_FROM_TOWNHALL = 2;
+export const HOUSING_FROM_TOWNHALL = 4;
 
 /** Xe thồ: sức mang gấp năm thợ, và cứ chừng này giây lại rời trạm một chuyến. */
 export const CART_CAPACITY_MULT = 5;
@@ -141,13 +152,15 @@ export const CART_INTERVAL_SECONDS = 26;
 export const OUTPOST_RANGE = 22;
 
 /**
- * Bán kính vén mây quanh một người.
+ * TẦM NHÌN của một người: đi tới đâu thì mọi khối trong tầm này mở ra tới đó, KHÔNG phải
+ * đứng lại khảo sát nữa.
  *
- * Để 5 thì đo được: 36 ô sương sạch bong trước phút thứ 10, tức cả cơ chế khám phá biến mất
- * đúng lúc người chơi mới bắt đầu. Hạ xuống 1,5 nghĩa là phải thực sự ĐI VÀO vùng đó, nên
- * mở bản đồ trở thành việc tốn thời gian thật chứ không phải hiệu ứng trang trí.
+ * Bản cũ bắt đứng hai mươi giây trong vòng 1,5 đơn vị — người chơi phải nhìn mây co lại từ
+ * từ, và muốn mở bản đồ thì điều người đi rồi đợi. Người chơi xin đúng kiểu Đế Chế: "dân đi
+ * đến đâu sẽ mở map đến đấy". Giữ chừng tám bước để người đi dọc mép một khối thì khối bên
+ * cạnh cũng mở, nhưng người hái ở giữa đồng không vô tình mở cả vùng.
  */
-export const REVEAL_RADIUS = 1.5;
+export const REVEAL_RADIUS = 8;
 
 /** Dưới ngần này dân thì không ai được cắt đi thám hiểm — còn phải lo cái ăn đã. */
 export const SCOUT_MIN_VILLAGERS = 3;
@@ -156,20 +169,13 @@ export const SCOUT_MIN_VILLAGERS = 3;
  * Phải dài hơn `SURVEY_SECONDS` một khoảng thoải mái: điều dân đi khám phá mà họ quay đầu
  * trước khi mây kịp tan thì lệnh ấy vô nghĩa.
  */
-export const ORDER_HOLD_SECONDS = 45;
+export const ORDER_HOLD_SECONDS = 8;
 /** Người thám hiểm chỉ đi xa thủ phủ tới chừng này, và chân trời nở ra theo số dân. */
-export const SCOUT_RANGE_BASE = 80;
+export const SCOUT_RANGE_BASE = 100;
 export const SCOUT_RANGE_PER_VILLAGER = 22;
 
-/**
- * Giây phải ĐỨNG LẠI khảo sát trước khi một ô sương tan.
- *
- * Chỉ cần đi ngang qua là vén thì đo được: cả 36 ô sạch bong trong chưa tới ba phút kể từ
- * lúc có người thám hiểm đầu tiên — khám phá xong trước khi người chơi kịp nhận ra có thứ
- * để khám phá. Hai mươi giây mỗi ô kéo việc mở bản đồ ra khoảng mười lăm phút, đủ để nó
- * thành một mạch chơi chứ không phải một hiệu ứng thoáng qua.
- */
-export const SURVEY_SECONDS = 20;
+/** Đi tới là mở ngay — giữ hằng số để FogOfWar còn chỗ nối nếu sau này muốn chậm lại. */
+export const SURVEY_SECONDS = 0;
 /** Cạnh một ô sương. 60 chia 10 là lưới 6×6, tức 36 ô. */
 export const FOG_CHUNK = 10;
 
@@ -305,7 +311,8 @@ export const PALETTE = {
    * Màu đất CHƯA VÉN được pha về phía này 72%. Ấm và nhạt như giấy bản đồ chưa vẽ; vẫn giữ
    * một chút màu gốc nên đồng cỏ, vách đá, cao nguyên còn nhận ra được bóng dáng.
    */
-  fogLand: 0xe4e1d6,
+  // Đất chưa ai tới: tối gần đen như Đế Chế, không còn là giấy bản đồ màu kem.
+  fogLand: 0x15171b,
 } as const;
 
 /**
@@ -608,10 +615,12 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   watchtower: { gold: 110, wood: 70 },
   // Ba trại quân đắt dần theo thứ tự mở ra; lò rèn rẻ hơn vì nó không nuôi ai, chỉ bán
   // nâng cấp, và bắt trả tiền hai lần cho cùng một thứ thì chẳng ai xây nó.
-  barracks: { gold: 220, wood: 150, stone: 60 },
-  archery: { gold: 320, wood: 240, stone: 90 },
-  stable: { gold: 600, wood: 320, stone: 180 },
-  smithy: { gold: 260, wood: 120, stone: 160 },
+  // Nhà quân bớt chừng 40% vàng so với bản trước: "build quân đội mà cứ phải có cả một
+  // đống vàng". Phần bớt chuyển sang gỗ — thứ dân tự chặt được.
+  barracks: { gold: 130, wood: 170, stone: 50 },
+  archery: { gold: 190, wood: 260, stone: 80 },
+  stable: { gold: 360, wood: 360, stone: 160 },
+  smithy: { gold: 170, wood: 150, stone: 140 },
   // Hạ tầng. Ruộng và giếng KHÔNG đòi đá, cùng lý do với chòi canh: đá chỉ đào được từ
   // phút 13, mà hai thứ này là để mở đầu ván.
   farm: { gold: 50, wood: 60 },
@@ -619,8 +628,8 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   market: { gold: 200, wood: 120, stone: 40 },
   lookout: { gold: 120, wood: 140 },
   dock: { gold: 400, wood: 300, stone: 80 },
-  magetower: { gold: 700, wood: 260, stone: 320 },
-  workshop: { gold: 900, wood: 600, stone: 420 },
+  magetower: { gold: 430, wood: 320, stone: 300 },
+  workshop: { gold: 540, wood: 680, stone: 400 },
 };
 
 /**
@@ -637,8 +646,17 @@ export const BUILD_MIN_LEVEL: Partial<Record<keyof typeof BUILDINGS, number>> = 
   outpost: 4,
 };
 
-export const HIRE_COST: Cost = { gold: 80, food: 25 };
-export const HIRE_GROWTH = 1.25;
+/*
+ * Thuê dân trả bằng LƯƠNG THỰC là chính, vàng chỉ một ít. Giá cũ 80 vàng và tăng 25% mỗi
+ * người: người thứ mười hai đã đòi gần nghìn vàng, tức là thêm dân phải đợi cả giờ — đúng
+ * câu "thêm dân thì cũng phải đợi rất lâu". Lương thực thì dân tự hái được, nên làng lớn
+ * theo chính sức làm của nó.
+ */
+export const HIRE_COST: Cost = { food: 60, gold: 25 };
+export const HIRE_GROWTH = 1.14;
+/** Tự thuê dân (bật mặc định): cứ chừng này giây xét một lần, và phải dư hơn giá chừng này lần. */
+export const AUTO_HIRE_SECONDS = 15;
+export const AUTO_HIRE_MARGIN = 1.25;
 export const TRAIN_COST: Cost = { gold: 120 };
 export const TRAIN_GROWTH = 1.3;
 
@@ -900,17 +918,17 @@ export const TROOPS: Record<TroopKind, TroopSpec> = {
   spear: {
     label: 'Spearmen', icon: 'spear', from: 'barracks',
     hp: 34, dps: 7, speed: 2.7, range: 1.4,
-    cost: { food: 40, wood: 20 }, seconds: 12, upkeep: 0.028, perLevel: 3,
+    cost: { food: 30, wood: 15 }, seconds: 6, upkeep: 0.028, perLevel: 3,
   },
   archer: {
     label: 'Archers', icon: 'bow', from: 'archery',
-    hp: 20, dps: 6, speed: 2.5, range: 9, cost: { food: 30, wood: 45 },
-    seconds: 16, upkeep: 0.034, perLevel: 3,
+    hp: 20, dps: 6, speed: 2.5, range: 9, cost: { food: 25, wood: 35 },
+    seconds: 8, upkeep: 0.034, perLevel: 3,
   },
   horse: {
     label: 'Cavalry', icon: 'horse', from: 'stable',
-    hp: 58, dps: 10, speed: 4.4, range: 1.6, cost: { food: 80, gold: 60 },
-    seconds: 24, upkeep: 0.058, perLevel: 2,
+    hp: 58, dps: 10, speed: 4.4, range: 1.6, cost: { food: 70, gold: 25 },
+    seconds: 12, upkeep: 0.058, perLevel: 2,
   },
   /*
    * Pháp sư: bắn xa như cung thủ nhưng khắc đúng hai thứ cung thủ sợ — bộ binh và kỵ binh
@@ -919,8 +937,8 @@ export const TROOPS: Record<TroopKind, TroopSpec> = {
    */
   mage: {
     label: 'Mages', icon: 'mage', from: 'magetower',
-    hp: 18, dps: 9, speed: 2.4, range: 8, cost: { food: 50, gold: 70 },
-    seconds: 20, upkeep: 0.046, perLevel: 2,
+    hp: 18, dps: 9, speed: 2.4, range: 8, cost: { food: 50, gold: 35 },
+    seconds: 10, upkeep: 0.046, perLevel: 2,
   },
   /*
    * Xe pháo: chậm nhất, bắn xa nhất, và là loại duy nhất NỔ LAN — một phát trúng cả cụm.
@@ -929,8 +947,8 @@ export const TROOPS: Record<TroopKind, TroopSpec> = {
    */
   siege: {
     label: 'Cannon carts', icon: 'cannon', from: 'workshop',
-    hp: 70, dps: 12, speed: 1.6, range: 13, cost: { wood: 120, gold: 110 },
-    seconds: 30, upkeep: 0.062, perLevel: 2, splash: 2.4,
+    hp: 70, dps: 12, speed: 1.6, range: 13, cost: { wood: 110, gold: 60 },
+    seconds: 15, upkeep: 0.062, perLevel: 2, splash: 2.4,
   },
 };
 

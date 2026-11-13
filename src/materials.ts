@@ -342,7 +342,9 @@ export function fogPaint<T extends THREE.Material>(
       + shader.fragmentShader.replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-      float kvSuong = texture2D(uSuong, (vVanXZ - uSuongGoc) * uSuongTi).r;
+      // Thu hẹp dải chuyển: lọc tuyến tính giữa hai tâm khối trải mép ra cả ba chục đơn vị,
+      // nên một khối vừa mở sẽ tối lờ mờ tới tận giữa. Ép lại còn chừng một phần ba.
+      float kvSuong = smoothstep(0.3, 0.7, texture2D(uSuong, (vVanXZ - uSuongGoc) * uSuongTi).r);
       diffuseColor.rgb = mix(uSuongMau, diffuseColor.rgb, kvSuong);`)
         /*
          * Đất chưa vén còn phải thôi ĂN NẮNG nữa. Chỉ pha màu trước khi chiếu sáng thì nắng
@@ -353,7 +355,7 @@ export function fogPaint<T extends THREE.Material>(
         .replace(
           '#include <opaque_fragment>',
           `#include <opaque_fragment>
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, uSuongMau * 0.6, (1.0 - kvSuong) * 0.8);`);
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, uSuongMau, (1.0 - kvSuong) * 0.93);`);
   };
   mat.customProgramCacheKey = () => `${khoaTruoc}|suong`;
   return mat;

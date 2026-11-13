@@ -22,6 +22,8 @@ import { PALETTE } from './config';
 import type { MapManager } from './MapManager';
 import { matte, tinted } from './materials';
 import { han, paint } from './shapes';
+import { HORDES, bossScale } from './beasthorde';
+import { beastGeometry } from './beastModels';
 
 /** Trần số thân vẽ được. Giặc tối đa 36, lính thuê hiếm khi quá vài chục. */
 const CAP = 96;
@@ -45,6 +47,11 @@ export class ArmyManager {
 
   private readonly bodies: Record<TroopKind, THREE.InstancedMesh>;
   private readonly shots: THREE.InstancedMesh;
+  /** Bầy quái: đám nhỏ và con trùm. Hình đổi theo bầy mỗi lần play(). */
+  private readonly beastMinion: THREE.InstancedMesh;
+  private readonly beastBoss: THREE.InstancedMesh;
+  /** Đồng hồ diễn, chỉ để cho quái nhún bước — không bao giờ là đầu vào của luật. */
+  private t = 0;
 
   private s: BattleState | null = null;
   private acc = 0;
@@ -74,7 +81,10 @@ export class ArmyManager {
     this.bodies = bodies;
     this.shots = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.09, 0.09, 1), matte(PALETTE.wheat, true), SHOT_CAP);
-    for (const mesh of [...TROOP_KINDS.map((k) => this.bodies[k]), this.shots]) {
+    this.beastMinion = new THREE.InstancedMesh(beastGeometry(0, false), than, CAP);
+    this.beastBoss = new THREE.InstancedMesh(beastGeometry(0, true), than, 2);
+    for (const mesh of [...TROOP_KINDS.map((k) => this.bodies[k]), this.shots,
+      this.beastMinion, this.beastBoss]) {
       mesh.count = 0;
       mesh.castShadow = true;
       mesh.frustumCulled = false;
@@ -190,6 +200,10 @@ export class ArmyManager {
 
   /** Bắt đầu diễn lại một trận. Gọi lại khi đang diễn thì bỏ trận cũ, lấy trận mới. */
   play(seed: BattleSeed): void {
+    if (seed.horde !== undefined) {
+      this.beastMinion.geometry = beastGeometry(seed.horde, false);
+      this.beastBoss.geometry = beastGeometry(seed.horde, true);
+    }
     this.s = battleStart(seed);
     this.acc = 0;
     this.xong = 0;
@@ -206,6 +220,8 @@ export class ArmyManager {
   stop(): void {
     this.s = null;
     for (const k of TROOP_KINDS) this.bodies[k].count = 0;
+    this.beastMinion.count = 0;
+    this.beastBoss.count = 0;
     this.shots.count = 0;
     this.vet.length = 0;
   }
@@ -213,6 +229,7 @@ export class ArmyManager {
   update(dt: number): void {
     const s = this.s;
     if (!s) return;
+    this.t += dt;
 
     if (!s.done) {
       // Kẹp ở ĐẦU VÀO, không bao giờ xả bộ tích: tab bị bóp một giây thì bản diễn chạy
@@ -257,9 +274,34 @@ export class ArmyManager {
       n[f.kind] = i + 1;
     };
 
-    for (const r of s.raiders) {
+    const bay = s.seed.horde !== undefined ? HORDES[s.seed.horde] : null;
+    let nho = 0;
+    let trum = 0;
+    for (let i = 0; i < s.raiders.length; i += 1) {
+      const r = s.raiders[i];
+      if (bay && r.atk !== undefined) {
+        // Quái: cỡ theo bầy (trùm to thêm theo sao), nhún theo bước chạy, cúi xuống khi vồ mồi.
+        const co = r.boss ? bossScale(bay, s.seed.tier ?? 1) : bay.minionSize;
+        const mesh = r.boss ? this.beastBoss : this.beastMinion;
+        const k = r.boss ? trum : nho;
+        if (k >= (r.boss ? 2 : CAP)) continue;
+        const nhun = r.state === 'loot' ? 0 : Math.abs(Math.sin(this.t * (r.boss ? 6 : 11) + i * 1.7));
+        this.v.set(r.x, this.map.groundY(r.x, r.z) + nhun * 0.07 * co, r.z);
+        this.q.setFromAxisAngle(this.axis, r.face);
+        const cui = r.state === 'loot' ? 0.85 : 1;
+        this.sc.set(NGUOI * co, NGUOI * co * cui, NGUOI * co);
+        mesh.setMatrixAt(k, this.m.compose(this.v, this.q, this.sc));
+        mesh.setColorAt(k, this.color.setHex(0xffffff));
+        if (r.boss) trum += 1; else nho += 1;
+        continue;
+      }
       // Tên đang khuân hàng thì khom lưng xuống — nhìn một cái là biết đứa nào đang vơ vét.
       than(r, MAU_GIAC, r.state === 'loot' ? 0.82 : 1);
+    }
+    for (const [mesh, n0] of [[this.beastMinion, nho], [this.beastBoss, trum]] as const) {
+      mesh.count = n0;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
     for (const g of s.guards) than(g, MAU_LINH, 1);
     for (const kind of TROOP_KINDS) {

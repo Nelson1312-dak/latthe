@@ -21,6 +21,7 @@ import {
   AGE_DEFENCE, AGE_RAIDER_HP, KHAC, SMITH_ARMOUR, SMITH_ATTACK, SPLASH_SHARE, TROOPS, ageBonus,
 } from './config';
 import { hash2 } from './world';
+import { BOSS_DPS_SHARE, BOSS_HP_SHARE, HORDES, HORDE_DPS, HORDE_HP, swarmJitter } from './beasthorde';
 import type { TroopKind, Troops, WaveKind } from './types';
 import { TROOP_KINDS, noTroops } from './types';
 
@@ -117,6 +118,10 @@ export interface BattleSeed {
   smith: { attack: number; armour: number };
   /** Thời đại, quyết định đội hình giặc. */
   age: number;
+  /** Đợt quái thú: chỉ số bầy trong HORDES, bậc, và số con nhỏ. Thiếu là đợt người. */
+  horde?: number;
+  tier?: number;
+  minions?: number;
 }
 
 export type RaiderState = 'march' | 'loot' | 'flee';
@@ -134,6 +139,16 @@ export interface Raider extends Fighter {
   state: RaiderState;
   loaded: boolean;
   work: number;
+  /*
+   * Chỉ số riêng của QUÁI THÚ. Giặc người đọc mọi thứ từ TROOPS theo `kind`; quái thì `kind`
+   * chỉ còn là hạng khắc chế, còn đòn, tốc độ, tầm và nổ lan nằm ở đây.
+   */
+  boss?: boolean;
+  /** Sát thương mỗi giây, đã gồm hệ số giặc và tinh nhuệ. */
+  atk?: number;
+  spd?: number;
+  rng?: number;
+  spl?: number;
 }
 
 export interface Guard extends Fighter {
@@ -157,6 +172,8 @@ export interface BattleState {
   killed: number;
   escaped: number;
   reached: number;
+  /** Con trùm của đợt quái đã ngã chưa. */
+  bossDown: boolean;
 }
 
 export interface BattleOutcome {
@@ -171,6 +188,7 @@ export interface BattleOutcome {
   mix: Troops;
   /** Quân người chơi nằm lại, đếm từ chính bản diễn chứ không đoán. */
   lost: Troops;
+  bossDown: boolean;
 }
 
 // ------------------------------------------------------------------ dựng trận
@@ -218,6 +236,54 @@ function lanesOf(wave: number): readonly (readonly [number, number])[] {
   return [a, [-a[0], -a[1]] as const];
 }
 
+/** Tổng máu và tổng đòn của một đợt CƯỚP cùng sức — đợt quái chia lại đúng hai con số này. */
+function raidTotals(seed: BattleSeed): { hp: number; dps: number } {
+  const mix = waveMix(seed.power, seed.age);
+  const tinh = eliteOf(seed.power);
+  let hp = 0;
+  let dps = 0;
+  for (const k of TROOP_KINDS) {
+    hp += mix[k] * TROOPS[k].hp * RAIDER_HP * ageBonus(seed.age, AGE_RAIDER_HP) * tinh ** ELITE_HP;
+    dps += mix[k] * TROOPS[k].dps * RAIDER_DPS * tinh ** ELITE_DPS;
+  }
+  return { hp, dps };
+}
+
+/**
+ * Bầy quái: con trùm đi đầu làn thứ nhất, đám nhỏ ùa theo thành một đám lộn xộn tám con một
+ * hàng — thú không đi đội hình thẳng tắp như lính.
+ */
+function hordeRaiders(seed: BattleSeed, lanes: readonly (readonly [number, number])[]): Raider[] {
+  const spec = HORDES[Math.max(0, Math.min(HORDES.length - 1, seed.horde ?? 0))];
+  const m = Math.max(1, seed.minions ?? 20);
+  const tong = raidTotals(seed);
+  const hp = tong.hp * HORDE_HP;
+  const dps = tong.dps * HORDE_DPS;
+  const out: Raider[] = [];
+  const [bx, bz] = lanes[0];
+  out.push({
+    x: bx * (SPAWN_DIST - 3), z: bz * (SPAWN_DIST - 3),
+    hp: hp * BOSS_HP_SHARE, kind: spec.bossKind, state: 'march', loaded: false, work: 0, cool: 0,
+    face: Math.atan2(-bx, -bz),
+    boss: true, atk: dps * BOSS_DPS_SHARE, spd: spec.bossSpeed, rng: spec.bossRange, spl: spec.bossSplash,
+  });
+  const mau = (hp * (1 - BOSS_HP_SHARE)) / m;
+  const don = (dps * (1 - BOSS_DPS_SHARE)) / m;
+  for (let i = 0; i < m; i += 1) {
+    const [lx, lz] = lanes[i % lanes.length];
+    const k = Math.floor(i / lanes.length);
+    const doc = SPAWN_DIST + 1 + Math.floor(k / 8) * 2.1 + swarmJitter(seed.wave, i, 1) * 2.8;
+    const ngang = ((k % 8) - 3.5) * 1.9 + swarmJitter(seed.wave, i, 2) * 2.8;
+    out.push({
+      x: lx * doc + lz * ngang, z: lz * doc + lx * ngang,
+      hp: mau, kind: spec.minionKind, state: 'march', loaded: false, work: 0, cool: 0,
+      face: Math.atan2(-lx, -lz),
+      atk: don, spd: spec.minionSpeed, rng: spec.minionRange, spl: 0,
+    });
+  }
+  return out;
+}
+
 export function battleStart(seed: BattleSeed): BattleState {
   const mix = waveMix(seed.power, seed.age);
   const lanes = lanesOf(seed.wave);
@@ -228,8 +294,9 @@ export function battleStart(seed: BattleSeed): BattleState {
    * MỘT mục tiêu một lúc, nên sức mạnh thật của giặc nằm ở chỗ chúng tới CÙNG LÚC.
    */
   const HANG = 6;
-  const raiders: Raider[] = [];
+  const raiders: Raider[] = seed.horde !== undefined ? hordeRaiders(seed, lanes) : [];
   const danh: TroopKind[] = [];
+  if (seed.horde !== undefined) { mix.spear = 0; mix.archer = 0; mix.horse = 0; }
   for (let i = 0; i < mix.spear; i += 1) danh.push('spear');
   for (let i = 0; i < mix.archer; i += 1) danh.push('archer');
   for (let i = 0; i < mix.horse; i += 1) danh.push('horse');
@@ -290,6 +357,7 @@ export function battleStart(seed: BattleSeed): BattleState {
     killed: 0,
     escaped: 0,
     reached: 0,
+    bossDown: false,
   };
 }
 
@@ -327,8 +395,8 @@ function toward(e: Fighter, tx: number, tz: number, speed: number): number {
  * Luật khắc chế áp CHO CẢ HAI BÊN: cung thủ của giặc cũng sợ kỵ binh đúng như cung thủ của
  * người chơi. Một luật chỉ đúng một chiều thì người chơi không học được nó.
  */
-function damage(s: BattleState, kind: TroopKind, target: TroopKind, ta: boolean): number {
-  const base = TROOPS[kind].dps * (ta ? 1 : RAIDER_DPS * eliteOf(s.seed.power) ** ELITE_DPS);
+function damage(s: BattleState, kind: TroopKind, target: TroopKind, ta: boolean, atk?: number): number {
+  const base = atk ?? TROOPS[kind].dps * (ta ? 1 : RAIDER_DPS * eliteOf(s.seed.power) ** ELITE_DPS);
   const d = base * KHAC[kind][target];
   if (ta) return d * (1 + SMITH_ATTACK * s.seed.smith.attack);
   return d * (1 - Math.min(0.6, SMITH_ARMOUR * s.seed.smith.armour));
@@ -337,25 +405,39 @@ function damage(s: BattleState, kind: TroopKind, target: TroopKind, ta: boolean)
 /** Đánh một đòn theo nhịp: cung thủ dồn sát thương vào một phát, bộ binh rỉ đều. */
 function strike(s: BattleState, me: Fighter, you: Fighter, ta: boolean): void {
   me.face = Math.atan2(you.x - me.x, you.z - me.z);
-  if (TROOPS[me.kind].range > 3) {
-    // Bắn xa: một phát mỗi 1,2 giây, và có vệt để nhìn thấy đường tên.
-    if (me.cool > 0) { me.cool -= 1; return; }
-    you.hp -= damage(s, me.kind, you.kind, ta) * 1.2;
+  // Quái mang chỉ số riêng; người (cả hai phe) đọc từ TROOPS.
+  const q = me as Raider;
+  const atk = ta ? undefined : q.atk;
+  const tam = (!ta && q.rng !== undefined) ? q.rng : TROOPS[me.kind].range;
+  const lan = (!ta && q.atk !== undefined) ? q.spl ?? 0 : TROOPS[me.kind].splash ?? 0;
+  const danLan = (): void => {
     // Nổ lan: mọi kẻ cùng phe đứng quanh mục tiêu ăn một phần. Người chết được quét ở cuối
     // bước, nên trừ máu ở đây là đủ.
-    const lan = TROOPS[me.kind].splash ?? 0;
-    if (lan > 0) {
-      const phe: readonly Fighter[] = ta ? s.raiders : s.guards;
-      for (const o of phe) {
-        if (o === you || Math.hypot(o.x - you.x, o.z - you.z) > lan) continue;
-        o.hp -= damage(s, me.kind, o.kind, ta) * 1.2 * SPLASH_SHARE;
-      }
+    if (lan <= 0) return;
+    const phe: readonly Fighter[] = ta ? s.raiders : s.guards;
+    for (const o of phe) {
+      if (o === you || Math.hypot(o.x - you.x, o.z - you.z) > lan) continue;
+      o.hp -= damage(s, me.kind, o.kind, ta, atk) * 1.2 * SPLASH_SHARE;
     }
+  };
+  if (tam > 3) {
+    // Bắn xa: một phát mỗi 1,2 giây, và có vệt để nhìn thấy đường tên.
+    if (me.cool > 0) { me.cool -= 1; return; }
+    you.hp -= damage(s, me.kind, you.kind, ta, atk) * 1.2;
+    danLan();
     s.shots.push({ x0: me.x, z0: me.z, x1: you.x, z1: you.z });
     me.cool = Math.round(1.2 / TICK);
     return;
   }
-  you.hp -= damage(s, me.kind, you.kind, ta) * TICK;
+  // Trùm cận chiến nổ lan theo nhịp (cú gậy, cú vồ) thay vì rỉ đều: một cú mỗi 1,2 giây.
+  if (lan > 0) {
+    if (me.cool > 0) { me.cool -= 1; return; }
+    you.hp -= damage(s, me.kind, you.kind, ta, atk) * 1.2;
+    danLan();
+    me.cool = Math.round(1.2 / TICK);
+    return;
+  }
+  you.hp -= damage(s, me.kind, you.kind, ta, atk) * TICK;
 }
 
 /**
@@ -416,11 +498,13 @@ export function battleStep(s: BattleState): void {
   for (let i = 0; i < s.raiders.length; i += 1) {
     const r = s.raiders[i];
     const spec = TROOPS[r.kind];
+    const tocDo = r.spd ?? spec.speed;
+    const tamDanh = r.rng ?? spec.range;
     if (r.state === 'flee') {
       const d = Math.hypot(r.x, r.z);
       const ux = d > 1e-4 ? r.x / d : 1;
       const uz = d > 1e-4 ? r.z / d : 0;
-      toward(r, r.x + ux * 10, r.z + uz * 10, spec.speed);
+      toward(r, r.x + ux * 10, r.z + uz * 10, tocDo);
       continue;
     }
     // Có quân chắn trong tầm thì dừng lại mà đánh.
@@ -431,13 +515,13 @@ export function battleStep(s: BattleState): void {
       const d = (g.x - r.x) * (g.x - r.x) + (g.z - r.z) * (g.z - r.z);
       if (d < bd) { bd = d; k = j; }
     }
-    if (k >= 0 && Math.sqrt(bd) <= spec.range) { strike(s, r, s.guards[k], false); continue; }
+    if (k >= 0 && Math.sqrt(bd) <= tamDanh) { strike(s, r, s.guards[k], false); continue; }
     if (r.state === 'loot') {
       r.work -= 1;
       if (r.work <= 0) { r.state = 'flee'; r.loaded = true; }
       continue;
     }
-    const con = toward(r, 0, 0, spec.speed);
+    const con = toward(r, 0, 0, tocDo);
     if (con <= LOOT_RANGE) {
       r.state = 'loot';
       r.work = Math.round(LOOT_SECONDS / TICK);
@@ -448,7 +532,12 @@ export function battleStep(s: BattleState): void {
   // --- dọn xác, đếm sổ
   for (let i = s.raiders.length - 1; i >= 0; i -= 1) {
     const r = s.raiders[i];
-    if (r.hp <= 0) { s.killed += 1; s.raiders.splice(i, 1); continue; }
+    if (r.hp <= 0) {
+      s.killed += 1;
+      if (r.boss) s.bossDown = true;
+      s.raiders.splice(i, 1);
+      continue;
+    }
     if (r.state === 'flee' && Math.hypot(r.x, r.z) >= ESCAPE_DIST) {
       if (r.loaded) s.escaped += 1;
       s.raiders.splice(i, 1);
@@ -495,6 +584,7 @@ export function resolveBattle(seed: BattleSeed): BattleOutcome {
     leak: count === 0 ? 0 : Math.min(1, escaped / count),
     mix: waveMix(seed.power, seed.age),
     lost,
+    bossDown: s.bossDown,
   };
 }
 

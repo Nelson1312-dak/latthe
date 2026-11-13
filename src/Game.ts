@@ -402,6 +402,8 @@ export class Game {
       economy.save();
     };
     this.workers = new WorkerManager(economy, this.map, this.fog);
+    // Làng tự thuê dân (cả lúc vắng mặt) thì người mới hiện ra ở nhà như khi bấm tay.
+    economy.onSpawnVillager = (h) => this.workers.spawnVillager(h);
     // Man may song lau hon trang thai game, nen lam lai tu dau phai phu may lai cho khop.
     const prevReset = economy.onReset;
     economy.onReset = () => {
@@ -1309,6 +1311,11 @@ export class Game {
     const quan = this.dieuDuoc();
     for (const u of quan) this.workers.release(u);
     return quan.length;
+  }
+
+  /** Điều những người đang chọn đi khám phá. Trả về số người đã đi. */
+  khamPha(): number {
+    return this.workers.explore(this.dieuDuoc());
   }
 
   get selectedPatch(): string | null {

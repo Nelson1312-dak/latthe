@@ -13,8 +13,12 @@ import {
 import type { Building, Inventory, WaveKind, WaveResult } from './types';
 import { RESOURCE_KINDS } from './types';
 
-/** Đợt chẵn là bão, đợt lẻ là cướp. Xen kẽ cố định để người chơi biết trước mà phòng. */
+/**
+ * Đợt lẻ là cướp, đợt chẵn là bão, và cứ đợt thứ ba là một BẦY QUÁI THÚ (xem beasthorde.ts).
+ * Cố định để người chơi biết trước mà phòng: đợt 3 (phút 18) là bầy quái đầu tiên.
+ */
 export function waveKind(wave: number): WaveKind {
+  if (wave > 0 && wave % 3 === 0) return 'beast';
   return wave % 2 === 1 ? 'raid' : 'storm';
 }
 
@@ -78,16 +82,24 @@ export function waveOutcome(
   };
 
   if (won) {
-    base.reward = { relics: Math.max(1, Math.round(power * 0.22)), gold: Math.round(power * 2.6) };
+    // Hạ được bầy quái thì có thưởng đậm hơn: con trùm mang theo cả kho báu của hang.
+    const thu = kind === 'beast' ? 1.35 : 1;
+    base.reward = {
+      relics: Math.max(1, Math.round(power * 0.22 * thu)), gold: Math.round(power * 2.6 * thu),
+    };
     return { result: base, take: {}, levels: 0 };
   }
 
   const thieu = Math.min(1, bat.leak);
   const take: Partial<Inventory> = {};
-  // Cướp khuân hàng, bão chỉ cuốn đi một ít — cái đau của bão nằm ở công trình.
+  // Cướp khuân hàng, bão chỉ cuốn đi một ít — cái đau của bão nằm ở công trình. Quái thú
+  // vồ lương thực là chính (chuồng trại, kho lúa), các thứ khác chỉ bị giẫm nát một ít.
   const phan = kind === 'raid' ? Math.min(0.45, thieu * 0.55) : Math.min(0.15, thieu * 0.2);
   for (const k of RESOURCE_KINDS) {
-    const n = Math.floor(inv[k] * phan);
+    const p = kind === 'beast'
+      ? (k === 'food' ? Math.min(0.5, thieu * 0.6) : Math.min(0.15, thieu * 0.2))
+      : phan;
+    const n = Math.floor(inv[k] * p);
     if (n > 0) take[k] = n;
   }
   base.lost = take;

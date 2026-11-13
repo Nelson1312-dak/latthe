@@ -108,12 +108,28 @@ export interface TrainSlot {
 // ------------------------------------------------------------------ mùa bão
 
 /** Bão phá công trình, cướp khuân hàng. Hai mối hoạ khác nhau nên phải phòng khác nhau. */
-export type WaveKind = 'storm' | 'raid';
+export type WaveKind = 'storm' | 'raid' | 'beast';
+
+/** Đợt quái thú: một con trùm và cả bầy theo sau. Chỉ để kể lại, luật nằm ở beasthorde.ts. */
+export interface BeastNote {
+  /** Tên bầy, ví dụ "Wolf pack". */
+  name: string;
+  /** Tên con trùm, ví dụ "Dire Wolf Alpha". */
+  boss: string;
+  /** Bậc của bầy, lớn dần theo cấp làng. */
+  tier: number;
+  /** Số con nhỏ đi theo. */
+  minions: number;
+  /** Trùm có bị hạ không. */
+  bossDown: boolean;
+}
 
 /** Chuyện đã xảy ra ở một đợt. Lưu lại để kể cho người chơi, kể cả lúc họ vắng mặt. */
 export interface WaveResult {
   wave: number;
   kind: WaveKind;
+  /** Đợt quái thú: bầy nào, trùm có ngã không. */
+  beast?: BeastNote;
   /** Sức của đợt và sức thủ lúc đối đầu. Hiện cả hai để người chơi biết còn thiếu bao nhiêu. */
   power: number;
   guard: number;
@@ -295,6 +311,15 @@ export interface GameState {
   assignments: Record<string, number>;
   /** Bat thi phan dan khong co han ngach se tu can theo kho nao voi nhat. */
   autoFarm: boolean;
+  /**
+   * Số dân người chơi muốn dành cho từng loại hàng (bảng Dân làng, nút − +). Máy chia việc
+   * lấp đủ các con số này trước rồi mới tự cân phần còn lại. Thiếu loại nào là không đặt.
+   */
+  focus: Partial<Record<ResourceKind, number>>;
+  /** Số người đi khám phá. Họ đi tới chỗ chưa ai tới, và đi tới đâu đất mở ra tới đó. */
+  scouts: number;
+  /** Bật thì làng tự thuê thêm dân khi còn chỗ ở và dư lương thực — cả lúc vắng mặt. */
+  autoHire: boolean;
   /** Hệ số tốc độ game: 1 hoặc 2. */
   speedMult: number;
   /**

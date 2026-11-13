@@ -22,7 +22,7 @@ export type IconName =
   | 'hammer' | 'close' | 'spear' | 'bow' | 'horse' | 'anvil' | 'age'
   | 'farm' | 'well' | 'market' | 'lookout' | 'dock'
   | 'move' | 'flag' | 'paw' | 'sword' | 'check' | 'map' | 'up' | 'people' | 'stop'
-  | 'mage' | 'cannon' | 'fish' | 'ship';
+  | 'mage' | 'cannon' | 'fish' | 'ship' | 'skull';
 
 /** Phần bên trong <svg>. Giữ mỗi icon trong vài nét, đừng thêm chi tiết. */
 const PATH: Record<IconName, string> = {
@@ -111,6 +111,8 @@ const PATH: Record<IconName, string> = {
     + '<path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
   flag: '<path d="M6 21V3.5"/><path d="M6 4.5h11.5l-2.5 4 2.5 4H6"/>',
   /** Dấu chân thú. */
+  skull: '<path d="M12 3c-4.4 0-8 3.1-8 7.5 0 2.4 1.1 4 2.5 5V19h11v-3.5c1.4-1 2.5-2.6 2.5-5C20 6.1 16.4 3 12 3z"/>'
+    + '<circle cx="9" cy="11" r="1.6"/><circle cx="15" cy="11" r="1.6"/><path d="M10 19v2M14 19v2"/>',
   paw: '<circle cx="6.5" cy="10" r="1.7"/><circle cx="17.5" cy="10" r="1.7"/>'
     + '<circle cx="10" cy="5.8" r="1.7"/><circle cx="14" cy="5.8" r="1.7"/>'
     + '<path d="M12 11.5c-3 0-5.3 2.9-5.3 5.3 0 1.7 1.3 2.7 2.9 2.7 1 0 1.5-.5 2.4-.5s1.4.5 2.4.5'

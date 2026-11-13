@@ -80,7 +80,12 @@ export class FogOfWar {
     }), CAP);
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
-    this.group.add(this.mesh);
+    /*
+     * KHÔNG thêm mây vào cảnh nữa. Người chơi muốn bỏ lớp sương mây: đất chưa ai tới giờ là
+     * một màn tối trên mặt đất (xem fogPaint), như Đế Chế. Lưới mây vẫn dựng để bộ máy ô
+     * sương — danh sách ô, ô chưa vén gần nhất cho người khám phá — chạy y nguyên.
+     */
+    this.mesh.visible = false;
   }
 
   private readonly geos: THREE.BufferGeometry[] = [];
@@ -227,7 +232,7 @@ export class FogOfWar {
   surveying(): { key: string; progress: number } | null {
     let best: Slot | null = null;
     for (const s of this.slots.values()) if (s.survey > 0 && (!best || s.survey > best.survey)) best = s;
-    return best ? { key: best.key, progress: best.survey / SURVEY_SECONDS } : null;
+    return best ? { key: best.key, progress: Math.min(1, best.survey / Math.max(1e-6, SURVEY_SECONDS)) } : null;
   }
 
   /**

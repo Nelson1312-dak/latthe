@@ -39,6 +39,11 @@ const ARRIVE = 0.35;
 export const LENH = 'lenh';
 /** Đã tới điểm ấy, đang đứng chờ (đếm bằng `gatherTimer`). */
 export const CHO = 'cho';
+/**
+ * Ghim "đi khám phá" — đặt vào `pin` như một mã bãi. Người mang ghim này cứ đi tới chỗ chưa
+ * ai tới cho tới khi được thả; hết chỗ trong tầm thì tạm đi hái, tầm nở ra thì lại đi tiếp.
+ */
+export const KHAM_PHA = 'kham-pha';
 const MAX_UNITS = 220;
 /** Sức chứa của lưới xe thồ. */
 const CART_CAP = 24;
@@ -438,6 +443,18 @@ export class WorkerManager {
   private dispatch(u: Unit): void {
     // Cái ghim của người chơi đứng trên mọi phép chia việc của máy. Chỉ nhường khi kho của
     // món ấy đã đầy — lúc đó đào thêm là đổ đi, và người chơi cũng không muốn thế.
+    const villagers0 = this.economy.villagers();
+    // Người được điều đi khám phá: tầm xa hơn người máy tự cắt, vì đây là ý người chơi.
+    if (u.pin === KHAM_PHA) {
+      const spot = this.fog.nearestUnrevealed(u.position, (SCOUT_RANGE_BASE
+        + SCOUT_RANGE_PER_VILLAGER * villagers0.length) * 1.6);
+      if (spot) {
+        u.targetId = 'scout';
+        u.targetPos = spot;
+        u.state = 'moving';
+        return;
+      }
+    }
     const ghim = u.pin ? this.map.patchById(u.pin) : undefined;
     if (ghim && !this.economy.isFull(ghim.kind)) {
       u.targetId = ghim.id;
@@ -453,12 +470,19 @@ export class WorkerManager {
      * ấy quay lại — mãi mãi. Đo bằng pace: chín dân đứng ở một trạm suốt ba tiếng, kho gỗ
      * đầy tràn còn đá thì không ai đi lấy, làng kẹt ở đời II. Hàng ở trạm là việc của xe thồ.
      */
-    const villagers = this.economy.villagers();
-    const scoutIndex = villagers.length >= SCOUT_MIN_VILLAGERS ? villagers.length - 1 : -1;
+    const villagers = villagers0;
+    /*
+     * NGƯỜI KHÁM PHÁ do người chơi đặt số (bảng Dân làng). Lấy những người CUỐI danh sách, và
+     * luôn chừa ít nhất hai người đi hái — làng ba người thì một người đi, đúng như bản cũ máy
+     * tự cắt.
+     */
+    const soDi = Math.min(this.economy.state.scouts,
+      Math.max(0, villagers.length - (SCOUT_MIN_VILLAGERS - 1)));
+    const viTri = villagers.indexOf(u);
     // Hạn ngạch là mệnh lệnh trực tiếp của người chơi, nên nó đứng TRÊN việc đi thám hiểm:
     // giao ba người cho một bãi mà máy vẫn rút một người đi vén mây thì người chơi chỉ thấy
     // lệnh của mình bị phớt lờ.
-    if (villagers.indexOf(u) === scoutIndex && !this.quotaUnmet()) {
+    if (soDi > 0 && viTri >= villagers.length - soDi && !this.quotaUnmet()) {
       // Chân trời nở theo làng: đông dân hơn thì dám đi xa hơn. Để thả lỏng thì người thám
       // hiểm biến mất khỏi nền kinh tế ngay trong giờ đầu.
       const spot = this.fog.nearestUnrevealed(u.position, SCOUT_RANGE_BASE
@@ -492,6 +516,39 @@ export class WorkerManager {
       if (n > (dem.get(id) ?? 0)) return true;
     }
     return false;
+  }
+
+  /** Số dân đang làm từng loại hàng, trừ một người (người đang nhận việc). */
+  kindCount(tru?: Unit): Map<ResourceKind, number> {
+    const out = new Map<ResourceKind, number>();
+    for (const v of this.economy.villagers()) {
+      if (v === tru || v.state === 'voyage') continue;
+      const b = v.targetId ? this.map.patchById(v.targetId) : undefined;
+      const k = b ? b.kind : v.state === 'delivering' ? v.carryingKind : null;
+      if (k) out.set(k, (out.get(k) ?? 0) + 1);
+    }
+    return out;
+  }
+
+  /** Số người đang trên đường khám phá (máy cắt hay người chơi điều). */
+  explorers(): number {
+    return this.economy.villagers().filter((u) => u.targetId === 'scout').length;
+  }
+
+  /** Điều những người này đi khám phá cho tới khi được thả. */
+  explore(us: Unit[]): number {
+    let n = 0;
+    for (const u of us) {
+      if (u.kind !== 'villager' || u.state === 'voyage') continue;
+      u.pin = KHAM_PHA;
+      // Đang vác hàng thì đổ xong đã, như orderPatch.
+      if (u.carrying > 0) { if (u.state !== 'delivering') this.veKho(u); } else {
+        u.state = 'idle';
+        u.targetId = null;
+      }
+      n += 1;
+    }
+    return n;
   }
 
   /** Số dân đang nhắm từng bãi — để biết hạn ngạch nào còn thiếu người. */
@@ -536,6 +593,32 @@ export class WorkerManager {
       .filter((x) => x.d > 0)
       .sort((a, z) => z.d - a.d);
     if (thieu.length > 0) return thieu[0].b;
+
+    /*
+     * DÂN THEO LOẠI HÀNG: người chơi đặt "4 người lấy lương thực" ở bảng Dân làng. Loại nào
+     * còn thiếu người nhất thì người này đi, tới bãi lời nhất của loại đó. Đếm không tính
+     * chính người đang nhận việc, nên mỗi chuyến về là một lần chia lại cho đúng.
+     */
+    const muon = this.economy.state.focus;
+    let loai: ResourceKind | null = null;
+    let hut = 0;
+    if (Object.keys(muon).length > 0) {
+      const co = this.kindCount(u);
+      for (const k of RESOURCE_KINDS) {
+        const d = (muon[k] ?? 0) - (co.get(k) ?? 0);
+        if (d > hut && seen.some((b) => b.kind === k && con(b))) { hut = d; loai = k; }
+      }
+    }
+    if (loai) {
+      let tot: Patch | null = null;
+      let diemTot = -1;
+      for (const b of seen) {
+        if (b.kind !== loai || !con(b)) continue;
+        const diem = this.rateOf(u, b);
+        if (diem > diemTot) { diemTot = diem; tot = b; }
+      }
+      if (tot) return tot;
+    }
 
     if (!this.economy.state.autoFarm) return null;
 
