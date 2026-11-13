@@ -8,14 +8,16 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "pace": "esbuild tools/pace.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/pace.mjs --log-level=error && node node_modules/.cache/pace.mjs",
-    "server": "esbuild server/main.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/server.mjs --log-level=error && node node_modules/.cache/server.mjs",
+    "server": "esbuild server/main.ts --bundle --platform=node --format=esm --packages=external --target=node22 --outfile=node_modules/.cache/server.mjs --log-level=error && node --env-file-if-exists=.env.online node_modules/.cache/server.mjs",
     "build:online": "tsc --noEmit && vite build --outDir dist-online"
   },
   "dependencies": {
+    "pg": "^8.23.1",
     "three": "0.169.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
     "@types/three": "0.169.0",
     "typescript": "5.6.3",
     "vite": "5.4.10"

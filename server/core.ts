@@ -1,9 +1,8 @@
 /**
- * Máy chủ chế độ online — LUẬT, không dính HTTP hay đĩa.
+ * Máy chủ chế độ online — LUẬT, không dính HTTP hay SQL.
  *
- * Mọi hàm ở đây nhận `Db` (một object JSON thuần) và trả về kết quả hoặc ném `HttpError`.
- * Lớp HTTP và lớp lưu trữ nằm ở main.ts, nên muốn đổi sang Postgres hay hàm serverless chỉ
- * phải viết lại hai chỗ đó, còn luật giữ nguyên.
+ * Mọi hàm nhận một `Store` (xem store.ts) và trả về kết quả hoặc ném `HttpError`. Lớp HTTP ở
+ * main.ts bọc mọi thao tác ghi trong `store.tx`, nên ở đây không phải nghĩ tới tranh chấp.
  *
  * ĐÂY LÀ BẢN THỬ, và nó có một giới hạn thẳng thắn phải nói ra: ảnh chụp làng (quân, tháp,
  * kho) do TRÌNH DUYỆT gửi lên, vì kinh tế của game chạy hết ở trình duyệt. Máy chủ kẹp mọi
@@ -17,85 +16,48 @@ import {
   LOOT_SHARE, MAX_SENT, REPEAT_COOLDOWN, SHIELD_SECONDS, SHIELD_SECONDS_LIGHT, armyPowerOf,
   assaultSeed, difficultyOf, lootOf, powerOf, resolveAssault, sanitizeSnapshot, sanitizeTroops,
 } from '../src/assault';
-import type { AttackReply, Loot, Opponent, VillageSnapshot } from '../src/assault';
+import type { AttackReply, Opponent } from '../src/assault';
 import { RESOURCE_KINDS, TROOP_KINDS } from '../src/types';
 import type { Troops } from '../src/types';
+import type { Player, RaidEvent, Store } from './store';
 
 export class HttpError extends Error {
   constructor(readonly status: number, message: string) { super(message); }
 }
 
-export interface Player {
-  id: string;
-  tokenHash: string;
-  created: number;
-  updated: number;
-  snapshot: VillageSnapshot | null;
-  /** Thời điểm hết che chắn (ms). Đang che thì không ai đánh được. */
-  shieldUntil: number;
-  /** Lần cuối đánh từng đối thủ (ms), để chặn cày một làng liên tục. */
-  lastHit: Record<string, number>;
-}
-
-export interface RaidEvent {
-  id: number;
-  at: number;
-  targetId: string;
-  byName: string;
-  lootFrac: number;
-  loot: Loot;
-  claimed: boolean;
-}
-
-export interface Db {
-  players: Record<string, Player>;
-  events: RaidEvent[];
-  nextEvent: number;
-  nextNonce: number;
-}
-
-export const emptyDb = (): Db => ({ players: {}, events: [], nextEvent: 1, nextNonce: 1 });
-
 const hash = (t: string): string => createHash('sha256').update(t).digest('hex');
 
-export function register(db: Db, now: number): { id: string; token: string } {
+export async function register(store: Store, now: number): Promise<{ id: string; token: string }> {
   const id = randomBytes(6).toString('hex');
   const token = randomBytes(24).toString('hex');
-  db.players[id] = {
+  await store.createPlayer({
     id, tokenHash: hash(token), created: now, updated: now, snapshot: null, shieldUntil: 0, lastHit: {},
-  };
+  });
   return { id, token };
 }
 
-export function authenticate(db: Db, header: string | undefined): Player {
+export async function authenticate(store: Store, header: string | undefined): Promise<Player> {
   const m = /^Bearer ([0-9a-f]{48})$/.exec(header ?? '');
   if (!m) throw new HttpError(401, 'Missing token');
-  const h = hash(m[1]);
-  for (const p of Object.values(db.players)) if (p.tokenHash === h) return p;
-  throw new HttpError(401, 'Unknown token');
-}
-
-/** Hàng đang chờ bị trừ khỏi kho một làng: các vụ cướp chưa được trình duyệt của nó nhận. */
-function pendingLoss(db: Db, id: string): Loot {
-  const out = Object.fromEntries(RESOURCE_KINDS.map((k) => [k, 0])) as Loot;
-  for (const e of db.events) {
-    if (e.targetId !== id || e.claimed) continue;
-    for (const k of RESOURCE_KINDS) out[k] += e.loot[k];
-  }
-  return out;
+  const p = await store.playerByToken(hash(m[1]));
+  if (!p) throw new HttpError(401, 'Unknown token');
+  return p;
 }
 
 /**
  * Lưu ảnh chụp làng. Kho lưu ở đây đã TRỪ phần bị cướp mà trình duyệt chưa nhận: nếu không,
  * một trình duyệt chậm gửi ảnh cũ lên là xoá mất vụ cướp, và kẻ cướp được hàng hai lần.
  */
-export function putVillage(db: Db, me: Player, raw: unknown, now: number): { power: number; shieldUntil: number } {
+export async function putVillage(
+  store: Store, me: Player, raw: unknown, now: number,
+): Promise<{ power: number; shieldUntil: number }> {
   const snap = sanitizeSnapshot(raw);
   if (!snap) throw new HttpError(400, 'Bad village');
-  const lo = pendingLoss(db, me.id);
+  const lo = await store.pendingLoss(me.id);
   for (const k of RESOURCE_KINDS) snap.inv[k] = Math.max(0, snap.inv[k] - lo[k]);
   me.snapshot = snap;
   me.updated = now;
+  await store.savePlayer(me);
   return { power: powerOf(snap), shieldUntil: me.shieldUntil };
 }
 
@@ -106,12 +68,14 @@ const ACTIVE_MS = 30 * 24 * 3600 * 1000;
  * độ gần của "độ khó" tới mức cân tài cân sức (0,5), để người ta thấy ngay những trận đáng
  * đánh trước.
  */
-export function opponents(db: Db, me: Player, now: number): { sent: number; list: Opponent[] } {
+export async function opponents(
+  store: Store, me: Player, now: number,
+): Promise<{ sent: number; list: Opponent[] }> {
   if (!me.snapshot) throw new HttpError(400, 'Sync your village first');
   const mine = armyPowerOf(me.snapshot.army, me.snapshot.smith);
   const list: Opponent[] = [];
-  for (const p of Object.values(db.players)) {
-    if (p.id === me.id || !p.snapshot || p.shieldUntil > now || now - p.updated > ACTIVE_MS) continue;
+  for (const p of await store.candidates(me.id, now, now - ACTIVE_MS, 200)) {
+    if (!p.snapshot) continue;
     const pw = powerOf(p.snapshot);
     const loot = lootOf(p.snapshot.inv, 1);
     // Làng không có gì để cướp (kho còn trong phần được giữ) thì không đáng mang quân tới.
@@ -128,10 +92,10 @@ export function opponents(db: Db, me: Player, now: number): { sent: number; list
   return { sent: mine, list: list.slice(0, 8) };
 }
 
-export function attack(db: Db, me: Player, body: unknown, now: number): AttackReply {
+export async function attack(store: Store, me: Player, body: unknown, now: number): Promise<AttackReply> {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
   if (!me.snapshot) throw new HttpError(400, 'Sync your village first');
-  const target = typeof b.targetId === 'string' ? db.players[b.targetId] : undefined;
+  const target = typeof b.targetId === 'string' ? await store.player(b.targetId) : null;
   if (!target || !target.snapshot) throw new HttpError(404, 'No such village');
   if (target.id === me.id) throw new HttpError(400, 'Cannot raid yourself');
   if (target.shieldUntil > now) throw new HttpError(409, 'That village is shielded');
@@ -148,8 +112,7 @@ export function attack(db: Db, me: Player, body: unknown, now: number): AttackRe
   if (total > MAX_SENT) throw new HttpError(400, `At most ${MAX_SENT} soldiers per raid`);
   const lane = typeof b.lane === 'number' ? Math.floor(b.lane) : 0;
 
-  const seed = assaultSeed(target.snapshot, { troops, smith: me.snapshot.smith }, lane, db.nextNonce);
-  db.nextNonce += 1;
+  const seed = assaultSeed(target.snapshot, { troops, smith: me.snapshot.smith }, lane, await store.nextNonce());
   const outcome = resolveAssault(seed);
   const loot = lootOf(target.snapshot.inv, outcome.lootFrac);
 
@@ -160,11 +123,11 @@ export function attack(db: Db, me: Player, body: unknown, now: number): AttackRe
   me.shieldUntil = 0;
   me.lastHit[target.id] = now;
   target.shieldUntil = now + 1000 * (outcome.lootFrac >= LOOT_SHARE ? SHIELD_SECONDS : SHIELD_SECONDS_LIGHT);
-  db.events.push({
-    id: db.nextEvent, at: now, targetId: target.id, byName: me.snapshot.name,
-    lootFrac: outcome.lootFrac, loot, claimed: false,
+  await store.savePlayer(target);
+  await store.savePlayer(me);
+  await store.addEvent({
+    at: now, targetId: target.id, byName: me.snapshot.name, lootFrac: outcome.lootFrac, loot,
   });
-  db.nextEvent += 1;
   return { seed, outcome, loot, targetName: target.snapshot.name, shieldUntil: target.shieldUntil };
 }
 
@@ -172,11 +135,8 @@ export function attack(db: Db, me: Player, body: unknown, now: number): AttackRe
  * Giao các vụ cướp chưa nhận cho chủ làng, và đánh dấu đã nhận NGAY TRONG LÚC TRẢ. Nếu
  * trình duyệt chết giữa chừng thì mất một thông báo chứ không bị trừ hàng hai lần.
  */
-export function claimInbox(db: Db, me: Player, now: number): { events: RaidEvent[]; shieldUntil: number } {
-  const events = db.events.filter((e) => e.targetId === me.id && !e.claimed);
-  for (const e of events) e.claimed = true;
-  // Giữ nhật ký ngắn: bỏ những vụ đã nhận cũ hơn một ngày.
-  const han = now - 24 * 3600 * 1000;
-  db.events = db.events.filter((e) => !e.claimed || e.at > han);
-  return { events, shieldUntil: me.shieldUntil };
+export async function claimInbox(
+  store: Store, me: Player, now: number,
+): Promise<{ events: RaidEvent[]; shieldUntil: number }> {
+  return { events: await store.claimEvents(me.id, now), shieldUntil: me.shieldUntil };
 }

@@ -1,42 +1,36 @@
 /**
- * Máy chủ chế độ online — lớp HTTP và lớp lưu trữ.
+ * Máy chủ chế độ online — lớp HTTP.
  *
- *     npm run server        (cổng 8787, dữ liệu ở server/data/online.json)
+ *     npm run server        (cổng 8787; đọc cấu hình từ .env.online)
  *
- * Không phụ thuộc gói nào ngoài Node. Luật nằm ở core.ts; file này chỉ biết đọc JSON từ
- * request, gọi đúng hàm, ghi đĩa, và biến lỗi thành mã HTTP. Trình duyệt gọi cùng nguồn
- * (`/api/...`) qua proxy của Vite, nên không cần CORS và CSP `connect-src 'self'` vẫn đúng.
+ * Có `ONLINE_DB_URL` thì lưu bằng Postgres; không có thì chạy trong bộ nhớ (mất hết khi tắt) và
+ * nói rõ ra. Luật nằm ở core.ts, SQL ở store.ts; file này chỉ biết đọc JSON từ request, gọi
+ * đúng hàm, và biến lỗi thành mã HTTP. Trình duyệt gọi cùng nguồn (`/api/...`) qua proxy của
+ * Vite, nên không cần CORS và CSP `connect-src 'self'` vẫn đúng.
+ *
+ * Chỉ nghe ở 127.0.0.1: muốn người ngoài vào được phải qua một đường hầm (tunnel) hoặc reverse
+ * proxy do chủ máy chủ chủ động bật — xem server/README.md.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import {
-  HttpError, attack, authenticate, claimInbox, emptyDb, opponents, putVillage, register,
-} from './core';
-import type { Db } from './core';
+import { HttpError, attack, authenticate, claimInbox, opponents, putVillage, register } from './core';
+import { MemStore, PgStore } from './store';
+import type { Store } from './store';
 
 const PORT = Number(process.env.PORT ?? 8787);
-const FILE = resolve(process.env.ONLINE_DATA ?? 'server/data/online.json');
 const MAX_BODY = 64 * 1024;
 
-function load(): Db {
-  try {
-    if (existsSync(FILE)) return { ...emptyDb(), ...JSON.parse(readFileSync(FILE, 'utf8')) } as Db;
-  } catch (e) {
-    console.error('Cannot read data file, starting empty:', (e as Error).message);
-  }
-  return emptyDb();
-}
-
-const db = load();
-
-/** Ghi qua file tạm rồi đổi tên: mất điện giữa chừng không để lại một file cụt. */
-function save(): void {
-  mkdirSync(dirname(FILE), { recursive: true });
-  const tmp = `${FILE}.tmp`;
-  writeFileSync(tmp, JSON.stringify(db));
-  renameSync(tmp, FILE);
+const url = process.env.ONLINE_DB_URL;
+let pgClose: (() => Promise<void>) | null = null;
+let store: Store;
+if (url) {
+  const pg = await PgStore.open(url);
+  store = pg;
+  pgClose = () => pg.close();
+  console.log('storage: postgres');
+} else {
+  store = new MemStore();
+  console.warn('storage: MEMORY ONLY (set ONLINE_DB_URL to keep data)');
 }
 
 function body(req: IncomingMessage): Promise<unknown> {
@@ -67,37 +61,35 @@ function limited(ip: string, now: number): boolean {
 
 async function route(req: IncomingMessage): Promise<{ status: number; json: unknown }> {
   const now = Date.now();
-  const url = new URL(req.url ?? '/', 'http://x');
-  const path = url.pathname;
+  const path = new URL(req.url ?? '/', 'http://x').pathname;
   const m = req.method ?? 'GET';
   if (limited(req.socket.remoteAddress ?? '?', now)) throw new HttpError(429, 'Slow down');
+  const auth = req.headers.authorization;
 
+  if (m === 'GET' && path === '/api/health') return { status: 200, json: { ok: true } };
   if (m === 'POST' && path === '/api/register') {
-    const r = register(db, now);
-    save();
-    return { status: 201, json: r };
+    return { status: 201, json: await store.tx((s) => register(s, now)) };
   }
-  const me = authenticate(db, req.headers.authorization);
+  // Mọi việc cần đăng nhập đều xác thực BÊN TRONG giao dịch: người chơi đọc ra là bản mới
+  // nhất sau khi nắm khoá, không phải bản cũ từ trước lúc chờ.
   if (m === 'PUT' && path === '/api/village') {
-    const r = putVillage(db, me, await body(req), now);
-    save();
-    return { status: 200, json: r };
+    const b = await body(req);
+    return { status: 200, json: await store.tx(async (s) => putVillage(s, await authenticate(s, auth), b, now)) };
   }
-  if (m === 'GET' && path === '/api/opponents') return { status: 200, json: opponents(db, me, now) };
+  if (m === 'GET' && path === '/api/opponents') {
+    return { status: 200, json: await opponents(store, await authenticate(store, auth), now) };
+  }
   if (m === 'POST' && path === '/api/attack') {
-    const r = attack(db, me, await body(req), now);
-    save();
-    return { status: 200, json: r };
+    const b = await body(req);
+    return { status: 200, json: await store.tx(async (s) => attack(s, await authenticate(s, auth), b, now)) };
   }
   if (m === 'POST' && path === '/api/inbox/claim') {
-    const r = claimInbox(db, me, now);
-    save();
-    return { status: 200, json: r };
+    return { status: 200, json: await store.tx(async (s) => claimInbox(s, await authenticate(s, auth), now)) };
   }
   throw new HttpError(404, 'Not found');
 }
 
-createServer((req: IncomingMessage, res: ServerResponse) => {
+const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   route(req).then(({ status, json }) => {
     res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     res.end(JSON.stringify(json));
@@ -107,4 +99,12 @@ createServer((req: IncomingMessage, res: ServerResponse) => {
     if (!res.headersSent) res.writeHead(err.status, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ error: err.message }));
   });
-}).listen(PORT, '127.0.0.1', () => console.log(`online server on http://127.0.0.1:${PORT}  data: ${FILE}`));
+});
+server.listen(PORT, '127.0.0.1', () => console.log(`online server on http://127.0.0.1:${PORT}`));
+
+// Tắt êm: đóng cổng rồi trả kết nối về cho Postgres, để khoá và giao dịch dở không bị bỏ lại.
+for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(sig, () => {
+    server.close(() => { void (pgClose?.() ?? Promise.resolve()).then(() => process.exit(0)); });
+  });
+}
