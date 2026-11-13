@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 import { matte, tinted } from './materials';
 import { han, paint } from './shapes';
+import { DAN_TAY, DAN_VAI, danLang, tayRoi } from './rigs';
 import {
   CART_CAPACITY_MULT, CART_INTERVAL_SECONDS, DEN_YIELD, GATHER_SECONDS, ORDER_HOLD_SECONDS, OUTPOST_RANGE,
   PALETTE, RESOURCES, SCOUT_MIN_VILLAGERS, SCOUT_RANGE_BASE, SCOUT_RANGE_PER_VILLAGER,
@@ -60,8 +61,13 @@ const CART_CAP = 24;
 const NGUOI = 1.35;
 const WHEEL_R = 0.26;
 const WHEELS: readonly (readonly [number, number])[] = [[-0.32, -0.42], [-0.32, 0.42], [0.32, -0.42], [0.32, 0.42]];
-/** Tay phải của dân làng. Mặt hướng +Z cục bộ, nên bên phải là −X. */
-const HAND: Vec3 = [-0.27, 0.3, 0.05];
+/**
+ * Cỡ vẽ dân làng. Dáng mới có tỉ lệ thật (cao hơn dáng chibi cũ), nên nhân bớt một chút để
+ * người vẫn đứng vừa cửa nhà.
+ */
+const DAN = NGUOI * 0.92;
+/** Bộ xương dân làng: thân, chân rời, khớp hông. */
+const RIG = danLang();
 
 type Role = ResourceKind | 'scout' | null;
 
@@ -78,6 +84,12 @@ export class WorkerManager {
   private readonly tools: THREE.InstancedMesh;
   /** Bánh xe tách khỏi thân xe để lăn được. */
   private readonly wheels: THREE.InstancedMesh;
+  /** Hai chân và hai tay của mỗi người — lưới rời để bước và vung tay thật. */
+  private readonly legs: THREE.InstancedMesh;
+  private readonly arms: THREE.InstancedMesh;
+  /** Quãng đường đã đi và mức "đang đi" của từng người, để chân bước đúng nhịp, không trượt. */
+  private readonly buocDan = new Map<string, { x: number; z: number; quang: number; di: number }>();
+  private readonly mChi = new THREE.Matrix4();
   /** Việc của từng người, nhớ theo đích để khỏi tra bãi mỗi khung. */
   private readonly roles = new Map<string, { t: string; kind: ResourceKind | null }>();
   /** Góc đã lăn của bánh từng xe, và chỗ xe đứng ở khung trước. */
@@ -110,7 +122,12 @@ export class WorkerManager {
     // Áo trắng trong hình nên nhận màu của bản (màu theo việc); mặt, tay, nón giữ màu đỉnh.
     const nguoi = tinted(matte());
     nguoi.vertexColors = true;
-    this.bodies = new THREE.InstancedMesh(this.villagerGeometry(), nguoi, MAX_UNITS);
+    this.bodies = new THREE.InstancedMesh(RIG.body, nguoi, MAX_UNITS);
+    const quan = matte();
+    quan.vertexColors = true;
+    this.legs = new THREE.InstancedMesh(RIG.leg!, quan, MAX_UNITS * 2);
+    // Tay áo nhận màu việc như thân áo; bàn tay giữ màu da.
+    this.arms = new THREE.InstancedMesh(tayRoi(), nguoi, MAX_UNITS * 2);
     this.cargo = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.38, 0.38, 0.3),
       matte(), MAX_UNITS);
@@ -122,7 +139,7 @@ export class WorkerManager {
     this.tools = new THREE.InstancedMesh(this.toolGeometry(), go, MAX_UNITS);
     this.wheels = new THREE.InstancedMesh(this.wheelGeometry(), go, CART_CAP * 4);
 
-    for (const mesh of [this.bodies, this.cargo, this.carts, this.tools, this.wheels]) {
+    for (const mesh of [this.bodies, this.cargo, this.carts, this.tools, this.wheels, this.legs, this.arms]) {
       mesh.count = 0;
       mesh.castShadow = true;
       mesh.frustumCulled = false;
@@ -142,27 +159,6 @@ export class WorkerManager {
 
   // ----------------------------------------------------------- hình học
 
-  /**
-   * Dân làng kiểu CHIBI: đầu to gần bằng thân, mắt chấm, hai bàn tay, nón lá rộng vành.
-   *
-   * Bản trước một màu kem từ nón tới chân — nhìn xa là một hạt gạo, gần cũng chẳng ra người.
-   * Giờ áo mang màu của việc đang làm (gỗ, lúa, đá, vàng, pha lê — đúng màu trên thanh tài
-   * nguyên), nên liếc bãi nào cũng đọc được ai đang làm gì mà không cần bấm vào.
-   */
-  private villagerGeometry(): THREE.BufferGeometry {
-    const parts: THREE.BufferGeometry[] = [];
-    const add = (g: THREE.BufferGeometry, x: number, y: number, z: number, hex: number | null): void => {
-      g.translate(x, y, z);
-      parts.push(paint(g, hex));
-    };
-    add(new THREE.CylinderGeometry(0.2, 0.27, 0.44, 8), 0, 0.22, 0, null);
-    add(new THREE.SphereGeometry(0.31, 12, 9), 0, 0.72, 0, PALETTE.skin);
-    for (const x of [-0.11, 0.11]) add(new THREE.BoxGeometry(0.055, 0.075, 0.04), x, 0.74, 0.29, PALETTE.eye);
-    for (const x of [-0.27, 0.27]) add(new THREE.SphereGeometry(0.075, 6, 5), x, 0.3, 0.05, PALETTE.skin);
-    add(new THREE.CylinderGeometry(0.44, 0.44, 0.05, 12), 0, 0.96, 0, PALETTE.hat);
-    add(new THREE.ConeGeometry(0.3, 0.26, 12), 0, 1.1, 0, PALETTE.hat);
-    return han(parts);
-  }
 
   /**
    * Xe thồ: sàn gỗ có thành, đống hàng (trắng — nhận màu loại hàng), càng xe và con bò.
@@ -797,48 +793,75 @@ export class WorkerManager {
       if (u.state === 'voyage') continue;
       if (vi >= MAX_UNITS) break;
 
-      // Nhịp đi nướng thẳng vào ma trận: lệch pha theo chỉ số nên cả đoàn không bước răm rắp.
+      /*
+       * BƯỚC ĐI THẬT. Nhịp chân tính theo QUÃNG ĐƯỜNG đã đi chia cho sải bước, nên người đi
+       * nhanh bước nhanh, đứng lại thì chân khép — không còn cảnh trượt trên đất. Tay vung
+       * ngược chân; lúc hái thì tay phải giơ cuốc lên quá đầu rồi bổ xuống.
+       */
       const walking = u.state === 'moving' || u.state === 'delivering';
-      const phase = this.elapsed * 12 + vi * 1.7;
-      const nhun = Math.abs(Math.sin(phase));
-      const lift = walking ? nhun * 0.1 : 0;
-      const tilt = walking ? Math.sin(phase) * 0.15 : 0;
+      let bc = this.buocDan.get(u.id);
+      if (!bc) {
+        bc = { x: u.position[0], z: u.position[2], quang: vi * 0.37, di: 0 };
+        this.buocDan.set(u.id, bc);
+      }
+      const dq = Math.hypot(u.position[0] - bc.x, u.position[2] - bc.z);
+      bc.quang += dq;
+      bc.x = u.position[0];
+      bc.z = u.position[2];
+      bc.di += ((walking && dq > 1e-4 ? 1 : 0) - bc.di) * Math.min(1, dt * 12);
+      const di = bc.di;
+      const nhip = (bc.quang / (RIG.stride * DAN)) * Math.PI;
+      const sin = Math.sin(nhip);
+      const nhun = Math.abs(sin) * di;
       const dap = u.state === 'gathering' ? Math.max(0, Math.sin(this.elapsed * 7 + vi * 0.9)) : 0;
-      const chop = dap * 0.5;
+      const mang = u.carrying > 0 && !!u.carryingKind;
 
       const y = this.yOf(u.id, u.position[0], u.position[2], dt);
-      this.v.set(u.position[0], y + lift, u.position[2]);
-      this.q.setFromEuler(this.euler.set(chop, u.facing, tilt, 'YXZ'));
-      // Nhún kiểu hoạt hình: chạm đất thì bè ra, bật lên thì thon lại.
-      const co = walking ? (nhun - 0.5) * 0.08 : 0;
-      this.s.set(NGUOI * (1 - co * 0.6), NGUOI * (1 + co), NGUOI * (1 - co * 0.6));
+      this.v.set(u.position[0], y + nhun * 0.035 * DAN, u.position[2]);
+      this.q.setFromEuler(this.euler.set(0.06 * di + dap * 0.2, u.facing, sin * 0.05 * di, 'YXZ'));
+      this.s.set(DAN, DAN, DAN);
       this.m.compose(this.v, this.q, this.s);
       this.bodies.setMatrixAt(vi, this.m);
 
       const vai = this.roleOf(u);
-      this.bodies.setColorAt(vi, this.color.setHex(
-        vai === 'scout' ? PALETTE.water : vai ? RESOURCES[vai].color : PALETTE.villager));
+      this.color.setHex(vai === 'scout' ? PALETTE.water : vai ? RESOURCES[vai].color : PALETTE.villager);
+      this.bodies.setColorAt(vi, this.color);
 
-      // Dụng cụ ở tay phải: vác ngả ra sau khi đi, giơ lên rồi bổ xuống theo nhịp khi đào.
-      if (vai && vai !== 'scout') {
-        const vung = u.state === 'gathering' ? -1.1 + 2.3 * dap : walking ? -0.75 : -0.35;
-        this.mPart.makeTranslation(HAND[0], HAND[1], HAND[2]);
-        this.mPart.multiply(this.mRot.makeRotationZ(0.15));
-        this.mPart.multiply(this.mRot.makeRotationX(vung));
-        this.tools.setMatrixAt(ti, this.mTmp.multiplyMatrices(this.m, this.mPart));
-        ti += 1;
+      // Hai chân ngược pha, khớp ở hông.
+      for (let j = 0; j < 2; j += 1) {
+        const [hx, hy, hz, lech] = RIG.hips[j];
+        this.mRot.makeRotationX(Math.sin(nhip + lech) * RIG.amp * di);
+        this.mPart.makeTranslation(hx, hy, hz).multiply(this.mRot);
+        this.legs.setMatrixAt(vi * 2 + j, this.mTmp.multiplyMatrices(this.m, this.mPart));
+      }
+      // Hai tay: vung ngược chân khi đi, ôm hàng trước ngực khi mang, bổ cuốc khi hái.
+      const traiGoc = mang ? -0.95 : u.state === 'gathering' ? -0.75 + 0.45 * dap : -sin * 0.45 * di;
+      const phaiGoc = mang ? -0.95 : u.state === 'gathering' ? -2.5 + 2.0 * dap
+        : vai && vai !== 'scout' ? -0.35 + sin * 0.25 * di : sin * 0.45 * di;
+      for (let j = 0; j < 2; j += 1) {
+        const [sx, sy, sz] = DAN_VAI[j];
+        this.mRot.makeRotationX(j === 0 ? traiGoc : phaiGoc);
+        this.mPart.makeTranslation(sx, sy, sz).multiply(this.mRot);
+        this.mChi.multiplyMatrices(this.m, this.mPart);
+        this.arms.setMatrixAt(vi * 2 + j, this.mChi);
+        this.arms.setColorAt(vi * 2 + j, this.color);
+        // Dụng cụ nằm trong bàn tay phải: lúc hái thì lưỡi chĩa ra trước để bổ xuống; lúc đi
+        // thì dựng cán dọc theo cánh tay, lưỡi lên trên — chĩa ngang thì trông như cầm súng.
+        if (j === 1 && vai && vai !== 'scout' && !mang) {
+          this.mPart.makeTranslation(DAN_TAY[0], DAN_TAY[1], DAN_TAY[2])
+            .multiply(this.mRot.makeRotationX(u.state === 'gathering' ? Math.PI / 2 - 0.25 : 0.35));
+          this.tools.setMatrixAt(ti, this.mTmp.multiplyMatrices(this.mChi, this.mPart));
+          ti += 1;
+        }
       }
 
-      if (u.carrying > 0 && u.carryingKind) {
-        // Kiện hàng đặt theo toạ độ THẾ GIỚI chứ không phải cục bộ như dụng cụ, nên hệ số
-        // phải nhân tay vào cả chỗ đặt lẫn cỡ hộp, không thì nó lọt vào trong vai.
-        this.v.set(
-          u.position[0] - Math.sin(u.facing) * 0.33 * NGUOI,
-          y + 0.5 * NGUOI + lift,
-          u.position[2] - Math.cos(u.facing) * 0.33 * NGUOI);
-        this.s.set(NGUOI, NGUOI, NGUOI);
-        this.cargo.setMatrixAt(vi, this.m.compose(this.v, this.q, this.s));
-        this.cargo.setColorAt(vi, this.color.setHex(RESOURCES[u.carryingKind].color));
+      if (mang) {
+        // Bó hàng ôm trước ngực, theo đúng thân người (nghiêng, nhún cùng).
+        this.mPart.makeTranslation(0, 0.78, 0.27);
+        this.mRot.makeScale(0.85, 0.75, 0.75);
+        this.mPart.multiply(this.mRot);
+        this.cargo.setMatrixAt(vi, this.mTmp.multiplyMatrices(this.m, this.mPart));
+        this.cargo.setColorAt(vi, this.color.setHex(RESOURCES[u.carryingKind!].color));
       } else {
         this.cargo.setMatrixAt(vi, this.hidden);
       }
@@ -851,6 +874,8 @@ export class WorkerManager {
      * giác mỗi khung cho đúng một người.
      */
     this.bodies.count = vi;
+    this.legs.count = vi * 2;
+    this.arms.count = vi * 2;
     this.cargo.count = vi;
     this.carts.count = ci;
     this.wheels.count = ci * 4;
@@ -861,9 +886,13 @@ export class WorkerManager {
       for (const id of this.yVe.keys()) if (!con.has(id)) this.yVe.delete(id);
       for (const id of this.roles.keys()) if (!con.has(id)) this.roles.delete(id);
       for (const id of this.wheelTurn.keys()) if (!con.has(id)) this.wheelTurn.delete(id);
+      for (const id of this.buocDan.keys()) if (!con.has(id)) this.buocDan.delete(id);
     }
 
     this.bodies.instanceMatrix.needsUpdate = true;
+    this.legs.instanceMatrix.needsUpdate = true;
+    this.arms.instanceMatrix.needsUpdate = true;
+    if (this.arms.instanceColor) this.arms.instanceColor.needsUpdate = true;
     this.cargo.instanceMatrix.needsUpdate = true;
     this.carts.instanceMatrix.needsUpdate = true;
     this.tools.instanceMatrix.needsUpdate = true;

@@ -11,6 +11,7 @@ import { denOf } from './dens';
 import type { Den } from './dens';
 import { matte, tinted } from './materials';
 import { han, paint } from './shapes';
+import { thuHoang } from './rigs';
 import { chunkOf, hash2 } from './world';
 
 /** Quét hang trong ngần này khối quanh tâm ngắm. */
@@ -24,22 +25,6 @@ function hop(w: number, h: number, d: number, x: number, y: number, z: number, m
   return paint(g, mau);
 }
 
-/** Một con thú bốn chân, mặt quay về +Z. Thân để trắng cho nhận màu của loài. */
-function thuGeometry(): THREE.BufferGeometry {
-  const toi = 0x2b2622;
-  return han([
-    hop(0.44, 0.42, 0.98, 0, 0.56, 0, null),
-    hop(0.36, 0.34, 0.38, 0, 0.74, 0.6, null),
-    hop(0.2, 0.16, 0.2, 0, 0.67, 0.86, toi),
-    hop(0.09, 0.14, 0.08, -0.12, 0.96, 0.5, toi),
-    hop(0.09, 0.14, 0.08, 0.12, 0.96, 0.5, toi),
-    hop(0.12, 0.36, 0.12, -0.15, 0.18, 0.33, toi),
-    hop(0.12, 0.36, 0.12, 0.15, 0.18, 0.33, toi),
-    hop(0.12, 0.36, 0.12, -0.15, 0.18, -0.33, toi),
-    hop(0.12, 0.36, 0.12, 0.15, 0.18, -0.33, toi),
-    hop(0.1, 0.1, 0.36, 0, 0.7, -0.62, null),
-  ]);
-}
 
 /** Cái hang: một ụ đá sáu cạnh, một miệng hang tối, và hai khúc xương trước cửa. */
 function hangGeometry(): THREE.BufferGeometry {
@@ -81,7 +66,9 @@ export class Beasts {
     this.hang = new THREE.InstancedMesh(hangGeometry(), da, DEN_CAP);
     const long = tinted(matte(undefined, true));
     long.vertexColors = true;
-    this.thu = new THREE.InstancedMesh(thuGeometry(), long, BEAST_CAP);
+    // Dáng thú bốn chân mới (rigs.ts): ngực sâu, cổ chếch, mõm dài, chân có khớp — thay cho
+    // khối hộp cũ. Thân để trắng nên vẫn nhận màu từng loài.
+    this.thu = new THREE.InstancedMesh(thuHoang(), long, BEAST_CAP);
     for (const mesh of [this.hang, this.thu]) {
       mesh.count = 0;
       mesh.castShadow = true;
