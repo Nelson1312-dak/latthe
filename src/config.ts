@@ -620,7 +620,9 @@ export const BUILD_COST: Record<keyof typeof BUILDINGS, Cost> = {
   // nâng cấp, và bắt trả tiền hai lần cho cùng một thứ thì chẳng ai xây nó.
   // Nhà quân bớt chừng 40% vàng so với bản trước: "build quân đội mà cứ phải có cả một
   // đống vàng". Phần bớt chuyển sang gỗ — thứ dân tự chặt được.
-  barracks: { gold: 130, wood: 170, stone: 50 },
+  // Doanh trại KHÔNG đòi đá, cùng lý do với chòi canh ở trên: đá chỉ vào kho từ phút 11, mà
+  // doanh trại là cái cổng duy nhất tới mọi loại lính — đòi đá là đóng cổng thêm mười phút.
+  barracks: { gold: 110, wood: 130 },
   archery: { gold: 190, wood: 260, stone: 80 },
   stable: { gold: 360, wood: 360, stone: 160 },
   smithy: { gold: 170, wood: 150, stone: 140 },
@@ -841,7 +843,13 @@ export interface AgeSpec {
 export const AGES: readonly AgeSpec[] = [
   { label: 'Settler Age', level: 1, need: null, cost: {}, seconds: 0,
     opens: 'House, farm, well, granary, watchtower' },
-  { label: 'Frontier Age', level: 4, need: null, cost: { food: 400, wood: 300 }, seconds: 90,
+  /*
+   * Cửa vào quân đội — và là chỗ người chơi kẹt lâu nhất. Bản cũ đòi cấp 4, 400 lương và 300
+   * gỗ, 90 giây; thêm doanh trại 170 gỗ và 50 đá nữa mới có lính giáo đầu tiên: đo bằng npm
+   * run pace là chừng phút 21, trong khi đợt giặc đầu đã tới từ lâu. Gỗ là thứ cạn nhất đầu
+   * ván (kho gỗ về 0 ở phút 10), nên giờ hạ cả cấp, giá lẫn thời gian chờ.
+   */
+  { label: 'Frontier Age', level: 3, need: null, cost: { food: 250, wood: 150 }, seconds: 45,
     opens: 'Barracks, smithy, market and lookout' },
   { label: 'Fortress Age', level: 9, need: 'barracks',
     cost: { food: 1200, gold: 900, stone: 400 }, seconds: 150,

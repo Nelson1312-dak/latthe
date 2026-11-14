@@ -1123,6 +1123,16 @@ export class Economy {
     return null;
   }
 
+  /** Phần còn thiếu của một khoản chi so với kho hiện có (0 ở những loại đã đủ). */
+  shortOf(cost: Cost): Partial<Record<ResourceKind, number>> {
+    const out: Partial<Record<ResourceKind, number>> = {};
+    for (const k of RESOURCE_KINDS) {
+      const thieu = (cost[k] ?? 0) - this.state.inv[k];
+      if (thieu > 0) out[k] = Math.ceil(thieu);
+    }
+    return out;
+  }
+
   advanceAge(): boolean {
     const n = this.nextAge();
     if (!n || this.ageBlock()) return false;

@@ -1128,8 +1128,12 @@ export class UIManager {
       sheet.append(el('p', 'sheet-note',
         `Advancing to ${AGES[s.age].label} — ${Math.ceil(s.ageLeft)}s left.`));
     } else if (sau) {
+      // Nút xám chỉ ghi "Not enough resources" thì người chơi không biết thiếu gì để đi kiếm:
+      // nói thẳng ra còn thiếu bao nhiêu của loại nào.
+      const chan = e.ageBlock();
+      const thieu = chan === 'Not enough resources' ? this.lootText(e.shortOf(sau.cost), 3) : '';
       sheet.append(this.row('age', `Advance to ${sau.label}`, sau.opens, sau.cost,
-        e.ageBlock(), () => { e.advanceAge(); this.renderInspector(); }));
+        chan && thieu ? `${chan} · short ${thieu}` : chan, () => { e.advanceAge(); this.renderInspector(); }));
     }
 
     // --- năm loại lính
@@ -1138,9 +1142,14 @@ export class UIManager {
       const cap = e.troopCap(k);
       const dang = s.train.filter((x) => x.kind === k).length;
       const khac = TROOP_KINDS.filter((o) => KHAC[k][o] > 1.2).map((o) => TROOPS[o].label.toLowerCase());
+      // "Requires barracks" mà không nói barracks mở khi nào thì người chơi đi tìm nút xây ở
+      // thời đại một, nơi nó chưa tồn tại. Nói rõ đời nào mở ra.
+      let chan = e.trainBlock(k);
+      const mo = BUILD_MIN_AGE[sp.from] ?? 1;
+      if (chan && s.age < mo) chan = `${chan} · unlocks in ${AGES[mo - 1].label}`;
       sheet.append(this.row(sp.icon, `${sp.label} · ${s.army[k]}/${cap}`,
         `Beats ${khac.join(' and ') || 'no one'}${dang ? ` · training ${dang}` : ''}`,
-        sp.cost, e.trainBlock(k), () => { e.train(k); this.renderInspector(); }));
+        sp.cost, chan, () => { e.train(k); this.renderInspector(); }));
     }
     if (e.trainLeft() > 0) {
       sheet.append(el('p', 'sheet-note', `Next soldier in ${Math.ceil(e.trainLeft())}s.`));
