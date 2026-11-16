@@ -6,11 +6,13 @@ import './ui/screens/screens.css';
 
 import { loadPieces } from './board/sprite.ts';
 import { icon, type IconName } from './ui/icons.ts';
+import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton } from './app/session.ts';
 import { home } from './ui/screens/home.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { review } from './ui/screens/review.ts';
 import { train } from './ui/screens/train.ts';
 import { online } from './ui/screens/online.ts';
+import { account } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
 type Screen = { title: string; render: () => string };
@@ -21,6 +23,7 @@ const SCREENS: Record<string, Screen> = {
   'xem-lai': { title: 'Xem lại ván', render: review },
   'on-tap': { title: 'Ôn tập', render: train },
   ban: { title: 'Ván với bạn', render: online },
+  'tai-khoan': { title: 'Tài khoản', render: account },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
 };
 
@@ -36,14 +39,19 @@ function route(): string {
   return r in SCREENS ? r : '';
 }
 
+function navItem(route: string, label: string, name: IconName, current: string): string {
+  return `<a class="nav-item${route === current ? ' is-active' : ''}" href="#/${route}">${icon(name, 22)}<span>${label}</span></a>`;
+}
+
 function nav(current: string): string {
-  const item = (route: string, label: string, name: IconName) =>
-    `<a class="nav-item${route === current ? ' is-active' : ''}" href="#/${route}">${icon(name, 22)}<span>${label}</span></a>`;
+  // Nav hẹp: lấy từ cuối của tên (người Việt gọi nhau bằng tên, không phải họ)
+  const who = auth.user ? (auth.user.name.trim().split(/\s+/).pop() ?? 'Tôi') : auth.offline ? 'Ngoại tuyến' : 'Đăng nhập';
   return (
     `<nav class="nav" aria-label="Chính">` +
-    NAV.map((n) => item(n.route, n.label, n.icon)).join('') +
+    NAV.map((n) => navItem(n.route, n.label, n.icon, current)).join('') +
     `<span class="nav-spacer"></span>` +
-    item('thiet-ke', 'Thiết kế', 'book') +
+    navItem('tai-khoan', who, 'user', current) +
+    navItem('thiet-ke', 'Thiết kế', 'book', current) +
     `</nav>`
   );
 }
@@ -55,9 +63,21 @@ function render(): void {
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
   app.innerHTML = nav(r) + `<main>${screen.render()}</main>`;
+  if (r === 'tai-khoan' && !auth.user && !auth.offline) {
+    const slot = document.querySelector<HTMLElement>('#google-btn');
+    if (slot) void renderGoogleButton(slot, showLoginError);
+  }
 }
 
-/* Giao diện sáng/tối: nhớ lựa chọn, mặc định theo máy. */
+function showLoginError(msg: string): void {
+  const el = document.querySelector<HTMLElement>('#login-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+/* ---------------- Giao diện sáng/tối ---------------- */
+
 export function applyTheme(theme: 'dark' | 'light'): void {
   document.documentElement.dataset.theme = theme;
   try {
@@ -78,17 +98,42 @@ function initTheme(): void {
   applyTheme(saved === 'light' ? 'light' : 'dark');
 }
 
+/* ---------------- Bắt sự kiện ---------------- */
+
 document.addEventListener('click', (e) => {
-  const el = (e.target as HTMLElement).closest<HTMLElement>('[data-set-theme], [data-set-board]');
-  if (!el) return;
-  if (el.dataset.setTheme) applyTheme(el.dataset.setTheme as 'dark' | 'light');
-  if (el.dataset.setBoard) document.documentElement.dataset.board = el.dataset.setBoard;
-  render();
+  const el = e.target as HTMLElement;
+
+  const themed = el.closest<HTMLElement>('[data-set-theme], [data-set-board]');
+  if (themed) {
+    if (themed.dataset.setTheme) applyTheme(themed.dataset.setTheme as 'dark' | 'light');
+    if (themed.dataset.setBoard) document.documentElement.dataset.board = themed.dataset.setBoard;
+    render();
+    return;
+  }
+
+  const btn = el.closest<HTMLButtonElement>('button');
+  if (!btn) return;
+  const label = btn.textContent?.trim();
+  if (label === 'Đăng xuất') {
+    void logout().then(render);
+  } else if (label === 'Vào thử') {
+    const name = document.querySelector<HTMLInputElement>('#dev-name')?.value.trim() || 'Nelson';
+    btn.disabled = true;
+    void devLogin(name)
+      .then(() => {
+        location.hash = '#/';
+        render();
+      })
+      .catch((err: Error) => {
+        btn.disabled = false;
+        showLoginError(err.message);
+      });
+  }
 });
 
 initTheme();
+onAuthChange(render);
 window.addEventListener('hashchange', render);
-loadPieces()
-  .catch((err) => console.error(err))
-  .finally(render);
 render();
+void loadPieces().catch((err) => console.error(err));
+void loadMe();

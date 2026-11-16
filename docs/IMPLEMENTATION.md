@@ -225,12 +225,19 @@ Chi tiết ở DESIGN.md mục 8.
 Những gì GĐ0 **chưa** có, đúng như kế hoạch: chưa đi được quân, chưa có engine chạy trong trình duyệt,
 chưa có server, chưa có đăng nhập. Các màn hình là bản dựng tĩnh để chốt giao diện.
 
-### GĐ1 — Server, database, đăng nhập (M)
-- [ ] `server/main.ts`, `db.ts`, migration `001_init.sql`, phục vụ file tĩnh
-- [ ] Đăng nhập Google + phiên + `/api/me`; đăng nhập giả cho test
-- [ ] Hướng dẫn bạn tạo OAuth client ID (bạn tự làm trên Google Cloud Console)
-- [ ] Khung app thật: nav, router, trạng thái đăng nhập/đăng xuất
-- **Kiểm tra:** đăng nhập bằng tài khoản Google thật trên localhost; khởi động lại server vẫn còn phiên; test xác minh token (token sai `aud`, hết hạn, sai chữ ký đều bị từ chối).
+### GĐ1 — Server, database, đăng nhập (M) — **đã làm**
+- [x] `server/main.ts`, `db.ts`, `auth.ts`, migration `001_init.sql`, phục vụ `dist/`
+- [x] Đăng nhập Google + phiên + `/api/me`; đăng nhập thử cho lúc phát triển
+- [x] [docs/GOOGLE-LOGIN.md](GOOGLE-LOGIN.md): hướng dẫn bạn tự tạo OAuth client ID
+- [x] Màn Tài khoản, nav hiện tên người đăng nhập, đăng xuất
+- [x] 23 test mới: xác minh token (sai `aud`, hết hạn, sai chữ ký, sai `iss` đều bị từ chối), phiên, cookie, migration
+- **Còn lại để bạn làm:** đăng nhập bằng tài khoản Google thật (cần Client ID của bạn).
+  Mình đã chạy thử hết phần còn lại: đăng nhập thử, phiên sống qua lần khởi động lại server, đăng xuất.
+
+Ba chỗ vấp khi làm, đã sửa:
+- Server đọc `PORT` thì bị trình xem trước của IDE đặt đè thành cổng của Vite; đổi sang `API_PORT`.
+- Trên Windows, chạy `node.exe` qua shell bị hỏng vì đường dẫn có dấu cách.
+- Vite nghe trên `::1`, nên gọi `127.0.0.1:5173` bị từ chối; phải dùng `localhost`.
 
 ### GĐ2 — Bàn cờ chơi được (M)
 - [ ] `shared/chess.ts` + test: nhập thành, bắt tốt qua đường, phong cấp, các kiểu hòa, PGN/FEN

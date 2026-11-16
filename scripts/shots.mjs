@@ -9,6 +9,7 @@ const ROUTES = [
   ['xem-lai', 'xem-lai'],
   ['on-tap', 'on-tap'],
   ['van-voi-ban', 'ban'],
+  ['tai-khoan', 'tai-khoan'],
   ['trang-thiet-ke', 'thiet-ke'],
 ];
 const VIEWS = [

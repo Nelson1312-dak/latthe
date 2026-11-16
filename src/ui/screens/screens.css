@@ -451,3 +451,80 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------- Tài khoản ---------------- */
+.account-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--s-8);
+  align-items: start;
+}
+.account-id {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-3);
+  border-bottom: 1px solid var(--line);
+}
+.account-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-3);
+  overflow: hidden;
+}
+.account-avatar img {
+  display: block;
+  border-radius: var(--r-sm);
+}
+.account-name {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.account-name b {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+.account-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+.prose {
+  max-width: 62ch;
+  margin-bottom: var(--s-3);
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--text-2);
+}
+.field {
+  height: 34px;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-1);
+  min-width: 0;
+}
+.google-btn {
+  min-height: 44px;
+  margin-bottom: var(--s-3);
+}
+@media (max-width: 767px) {
+  .account-cols {
+    grid-template-columns: 1fr;
+    gap: var(--s-6);
+  }
+  .field {
+    height: 44px;
+  }
+}

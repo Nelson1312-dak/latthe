@@ -1,0 +1,176 @@
+// Xác minh ID token của Google: ký bằng một cặp khoá tạo tại chỗ rồi kiểm tra
+// server có từ chối đúng những token đáng phải từ chối không.
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type JWK } from 'jose';
+import { openDb, upsertGoogleUser, type Db } from '../server/db.ts';
+import {
+  createSession,
+  destroySession,
+  loginWithGoogle,
+  purgeExpiredSessions,
+  readCookie,
+  sessionCookie,
+  userForSession,
+  verifyGoogleToken,
+} from '../server/auth.ts';
+
+const CLIENT_ID = '1234567890-abc.apps.googleusercontent.com';
+const ISSUER = 'https://accounts.google.com';
+
+let keys: { priv: CryptoKey; jwks: ReturnType<typeof createLocalJWKSet> };
+let otherKey: CryptoKey;
+
+async function setupKeys() {
+  const pair = await generateKeyPair('RS256', { extractable: true });
+  const jwk = (await exportJWK(pair.publicKey)) as JWK;
+  jwk.kid = 'test-key';
+  jwk.alg = 'RS256';
+  keys = { priv: pair.privateKey, jwks: createLocalJWKSet({ keys: [jwk] }) };
+  otherKey = (await generateKeyPair('RS256', { extractable: true })).privateKey;
+}
+
+interface TokenOpts {
+  aud?: string;
+  iss?: string;
+  expSeconds?: number;
+  key?: CryptoKey;
+  claims?: Record<string, unknown>;
+  sub?: string;
+}
+
+function token(o: TokenOpts = {}): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  return new SignJWT({ name: 'Nelson', picture: 'https://example.test/a.png', email_verified: true, ...o.claims })
+    .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
+    .setIssuer(o.iss ?? ISSUER)
+    .setAudience(o.aud ?? CLIENT_ID)
+    .setSubject(o.sub ?? 'google-sub-1')
+    .setIssuedAt(now)
+    .setExpirationTime(now + (o.expSeconds ?? 3600))
+    .sign(o.key ?? keys.priv);
+}
+
+describe('verifyGoogleToken', () => {
+  beforeEach(setupKeys);
+
+  it('chấp nhận token hợp lệ', async () => {
+    const id = await verifyGoogleToken(await token(), CLIENT_ID, keys.jwks);
+    expect(id).toMatchObject({ sub: 'google-sub-1', name: 'Nelson', emailVerified: true });
+  });
+
+  it('chấp nhận iss dạng không có https', async () => {
+    const id = await verifyGoogleToken(await token({ iss: 'accounts.google.com' }), CLIENT_ID, keys.jwks);
+    expect(id.sub).toBe('google-sub-1');
+  });
+
+  it('từ chối token của ứng dụng khác', async () => {
+    await expect(verifyGoogleToken(await token({ aud: 'khac.apps.googleusercontent.com' }), CLIENT_ID, keys.jwks))
+      .rejects.toThrow();
+  });
+
+  it('từ chối token đã hết hạn', async () => {
+    await expect(verifyGoogleToken(await token({ expSeconds: -60 }), CLIENT_ID, keys.jwks)).rejects.toThrow();
+  });
+
+  it('từ chối token ký bằng khoá khác', async () => {
+    await expect(verifyGoogleToken(await token({ key: otherKey }), CLIENT_ID, keys.jwks)).rejects.toThrow();
+  });
+
+  it('từ chối token sai nơi phát hành', async () => {
+    await expect(verifyGoogleToken(await token({ iss: 'https://evil.test' }), CLIENT_ID, keys.jwks)).rejects.toThrow();
+  });
+
+  it('từ chối khi server chưa đặt GOOGLE_CLIENT_ID', async () => {
+    await expect(verifyGoogleToken(await token(), '', keys.jwks)).rejects.toThrow(/GOOGLE_CLIENT_ID/);
+  });
+
+  it('không có name thì lấy phần trước @ của email', async () => {
+    const t = await token({ claims: { name: undefined, email: 'nelson@example.test' } });
+    expect((await verifyGoogleToken(t, CLIENT_ID, keys.jwks)).name).toBe('nelson');
+  });
+});
+
+describe('phiên đăng nhập', () => {
+  let db: Db;
+  beforeEach(async () => {
+    await setupKeys();
+    db = openDb(':memory:');
+  });
+  afterEach(() => db.close());
+
+  it('tạo phiên rồi tra lại ra đúng người', () => {
+    const u = upsertGoogleUser(db, 'sub-1', 'Nelson');
+    const s = createSession(db, u.id);
+    expect(userForSession(db, s.token)?.id).toBe(u.id);
+  });
+
+  it('mã sai thì không ra ai', () => {
+    upsertGoogleUser(db, 'sub-1', 'Nelson');
+    expect(userForSession(db, 'khong-phai-ma-that')).toBeNull();
+    expect(userForSession(db, undefined)).toBeNull();
+  });
+
+  it('không lưu mã phiên dạng thô trong database', () => {
+    const u = upsertGoogleUser(db, 'sub-1', 'Nelson');
+    const s = createSession(db, u.id);
+    const rows = db.prepare('SELECT token_hash FROM sessions').all() as { token_hash: string }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].token_hash).not.toBe(s.token);
+    expect(rows[0].token_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('phiên hết hạn bị từ chối và bị xoá', () => {
+    const u = upsertGoogleUser(db, 'sub-1', 'Nelson');
+    const s = createSession(db, u.id);
+    const sau = new Date(Date.now() + 31 * 86400_000);
+    expect(userForSession(db, s.token, sau)).toBeNull();
+    expect(db.prepare('SELECT count(*) c FROM sessions').get()).toMatchObject({ c: 0 });
+  });
+
+  it('đăng xuất thì phiên mất tác dụng', () => {
+    const u = upsertGoogleUser(db, 'sub-1', 'Nelson');
+    const s = createSession(db, u.id);
+    destroySession(db, s.token);
+    expect(userForSession(db, s.token)).toBeNull();
+  });
+
+  it('dọn phiên hết hạn', () => {
+    const u = upsertGoogleUser(db, 'sub-1', 'Nelson');
+    createSession(db, u.id, -1);
+    createSession(db, u.id, 30);
+    expect(purgeExpiredSessions(db)).toBe(1);
+    expect(db.prepare('SELECT count(*) c FROM sessions').get()).toMatchObject({ c: 1 });
+  });
+
+  it('đăng nhập Google hai lần dùng chung một tài khoản', async () => {
+    const a = await loginWithGoogle(db, await token(), CLIENT_ID, keys.jwks);
+    const b = await loginWithGoogle(db, await token({ claims: { name: 'Nelson Đ.' } }), CLIENT_ID, keys.jwks);
+    expect(b.user.id).toBe(a.user.id);
+    expect(b.user.display_name).toBe('Nelson Đ.');
+    expect(db.prepare('SELECT count(*) c FROM users').get()).toMatchObject({ c: 1 });
+    // Hai lần đăng nhập là hai phiên khác nhau, cả hai cùng dùng được.
+    expect(a.session.token).not.toBe(b.session.token);
+    expect(userForSession(db, a.session.token)?.id).toBe(a.user.id);
+  });
+
+  it('token hỏng thì không tạo tài khoản nào', async () => {
+    await expect(loginWithGoogle(db, await token({ key: otherKey }), CLIENT_ID, keys.jwks)).rejects.toThrow();
+    expect(db.prepare('SELECT count(*) c FROM users').get()).toMatchObject({ c: 0 });
+  });
+});
+
+describe('cookie', () => {
+  it('đọc đúng cookie trong chuỗi nhiều cookie', () => {
+    expect(readCookie('a=1; cv_session=abc; b=2', 'cv_session')).toBe('abc');
+    expect(readCookie('a=1', 'cv_session')).toBeUndefined();
+    expect(readCookie(undefined, 'cv_session')).toBeUndefined();
+  });
+
+  it('cookie phiên có HttpOnly và SameSite, chỉ có Secure khi chạy HTTPS', () => {
+    const exp = new Date('2030-01-01T00:00:00Z');
+    expect(sessionCookie('abc', exp, false)).toContain('HttpOnly');
+    expect(sessionCookie('abc', exp, false)).toContain('SameSite=Lax');
+    expect(sessionCookie('abc', exp, false)).not.toContain('Secure');
+    expect(sessionCookie('abc', exp, true)).toContain('Secure');
+  });
+});
