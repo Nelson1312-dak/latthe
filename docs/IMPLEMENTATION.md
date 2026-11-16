@@ -30,6 +30,7 @@ Database này chứa thứ làm nên "học không giới hạn":
 | Gói | Phiên bản | Giấy phép | Dùng cho |
 |---|---|---|---|
 | vite | 8.3.8 | MIT | Dev server, build |
+| @fontsource/ibm-plex-{sans,mono,serif} | 5.3.0 | OFL-1.1 | Font tự host, đủ dấu tiếng Việt |
 | typescript | 7.0.2 | Apache-2.0 | |
 | vitest | 5.1.0 | MIT | Unit test |
 | @playwright/test | 1.65.1 | Apache-2.0 | Test end-to-end, chụp ảnh duyệt design |
@@ -213,6 +214,12 @@ Chi tiết ở DESIGN.md mục 8.
 - [x] 5 màn hình tĩnh với dữ liệu thật do Stockfish phân tích (`npm run fixtures`)
 - [x] `npm run shots` chụp 24 ảnh; `npm run check:design` tự rà danh sách cấm
 - [x] Đã chạy: `shared/winrate.ts` và `shared/fen.ts` có unit test (17 test)
+- [x] **Vòng tút lại sau lần duyệt đầu** (bạn nhận xét "vẫn hơi AI"): bỏ kiểu mỗi mẩu
+      thông tin một thẻ bo góc, gộp về một mặt nền mỗi cột chia bằng nét kẻ; bỏ ô số liệu
+      kiểu bảng điều khiển; bỏ lời chào ở trang chủ; nước đi viết bằng ký hiệu hình; lời bình
+      chuyển sang chữ có chân, trình bày như chú thích bên lề sách cờ; bên cầm quân hiện bằng
+      con Vua nhỏ thay cho ô vuông tô màu (bị đọc nhầm thành ô tích chọn); việc phụ gom thành
+      nhóm nút dính liền
 - **Xong khi:** bạn duyệt giao diện. Chưa duyệt thì chưa sang GĐ1.
 
 Những gì GĐ0 **chưa** có, đúng như kế hoạch: chưa đi được quân, chưa có engine chạy trong trình duyệt,

@@ -1,56 +1,78 @@
-// Sảnh: tiếp tục việc đang dở, vào chơi, và những ván gần đây.
+// Sảnh: vào việc ngay, không có lời chào hay khẩu hiệu.
+// Trái là việc hôm nay, phải là sổ ván đã chơi.
 import { boardSvg } from '../../board/Board.ts';
-import { button } from '../components/index.ts';
+import { button, classBadge, figurine, rule, sheet, sideGlyph, toolbar } from '../components/index.ts';
 import { fx, squaresOf } from '../../mock/index.ts';
-import { icon } from '../icons.ts';
 
 export function home(): string {
   const g = fx.game1;
-  const last = g.moves[g.moves.length - 1];
   const blunder = g.moves.find((m) => m.cls === 'blunder')!;
+  const [, to] = squaresOf(blunder.uci);
+  const last = g.moves[g.moves.length - 1];
 
-  const row = (opponent: string, result: 'w' | 'l' | 'd', text: string, when: string, acc: number) =>
-    `<div class="game-row"><span>${opponent}</span>` +
-    `<span class="result-${result}">${text}</span>` +
-    `<span class="muted mono">${acc}% · ${when}</span></div>`;
+  const gameRow = (opponent: string, side: 'w' | 'b', result: 'w' | 'l' | 'd', how: string, acc: number, when: string) =>
+    `<a class="log-row" href="#/xem-lai">
+      ${sideGlyph(side)}
+      <span class="log-name">${opponent}</span>
+      <span class="log-result result-${result}">${how}</span>
+      <span class="log-acc mono">${acc}%</span>
+      <span class="log-when">${when}</span>
+    </a>`;
 
-  return `<div class="screen">
-    <div class="hero">
-      <div class="hero-text">
-        <h1>Chào Nelson</h1>
-        <p>Ván gần nhất bạn mất quân ở nước 11.Qg4. Ôn lại thế đó trước khi chơi tiếp.</p>
-        <div class="spec-row" style="margin-top:var(--s-4)">
-          ${button({ label: 'Chơi với máy', kind: 'primary', icon: 'play' })}
-          ${button({ label: 'Mời bạn chơi', icon: 'friends' })}
-        </div>
-      </div>
-      <div class="hero-board">
-        ${boardSvg({ fen: blunder.fenAfter, lastMove: squaresOf(blunder.uci), badge: { square: squaresOf(blunder.uci)[1], cls: 'blunder' }, coordinates: false, label: 'Thế cờ sau nước 11.Qg4' })}
-      </div>
+  return `<div class="screen screen-narrow">
+    <div class="screen-head">
+      <h1>Cờ vua</h1>
+      <span class="head-meta"><span class="mono">1180</span> · chuỗi 5 ngày</span>
+      ${toolbar([button({ label: 'Chơi với máy', kind: 'primary', icon: 'play' })], [button({ label: 'Mời bạn', icon: 'friends' })])}
     </div>
 
-    <h2 style="margin-bottom:var(--s-3)">Hôm nay</h2>
-    <div class="grid grid-2" style="margin-bottom:var(--s-6)">
-      <div class="continue">
-        ${icon('cards', 22)}
-        <div class="stat"><span class="stat-value">7</span><span class="label">thẻ ôn tập đến hạn</span></div>
-        ${button({ label: 'Ôn tập', kind: 'primary' })}
-      </div>
-      <div class="continue">
-        <div class="continue-board">
-          ${boardSvg({ fen: last.fenAfter, coordinates: false, label: 'Ván đang dở' })}
+    <div class="home-cols">
+      <div>
+        ${rule('Hôm nay')}
+        <div class="task-list">
+          <a class="task" href="#/on-tap">
+            <span class="task-board">${boardSvg({ fen: blunder.fenAfter, lastMove: squaresOf(blunder.uci), badge: { square: to, cls: 'blunder' }, coordinates: false, label: 'Thế cờ sau nước 11.Qg4' })}</span>
+            <span class="task-text">
+              <b>7 thẻ ôn tập đến hạn</b>
+              <span>Bắt đầu bằng nước ${figurine('Qg4', 'w')} trong ván với máy cấp 4 ${classBadge('blunder')}</span>
+            </span>
+            <span class="task-go">${button({ label: 'Ôn tập' })}</span>
+          </a>
+          <a class="task" href="#/choi">
+            <span class="task-board">${boardSvg({ fen: last.fenAfter, coordinates: false, label: 'Ván còn dở' })}</span>
+            <span class="task-text">
+              <b>Ván còn dở · máy cấp 4</b>
+              <span>Đến lượt bạn ở nước 18, bạn đang kém một Xe</span>
+            </span>
+            <span class="task-go">${button({ label: 'Chơi tiếp' })}</span>
+          </a>
         </div>
-        <div class="stat"><span class="stat-value">Nước 17</span><span class="label">ván với máy cấp 4 còn dở</span></div>
-        ${button({ label: 'Chơi tiếp' })}
-      </div>
-    </div>
 
-    <h2 style="margin-bottom:var(--s-3)">Ván gần đây</h2>
-    <div class="panel recent">
-      ${row('Máy cấp 4', 'l', 'Thua · chiếu hết', '2 giờ trước', 90.6)}
-      ${row('Hùng', 'w', 'Thắng · hết giờ', 'hôm qua', 84.2)}
-      ${row('Máy cấp 3', 'w', 'Thắng · đầu hàng', 'hôm qua', 88.1)}
-      ${row('Minh', 'd', 'Hòa · 3 lần lặp', '2 ngày trước', 91.4)}
+        ${rule('Chủ đề bạn hay sai', '<a class="rule-link" href="#/on-tap">Luyện</a>')}
+        <ul class="tag-list">
+          <li>Để hở quân <b class="mono">6</b></li>
+          <li>Đòn đôi <b class="mono">4</b></li>
+          <li>Bỏ lỡ chiếu hết <b class="mono">2</b></li>
+        </ul>
+      </div>
+
+      <div>
+        ${rule('Ván đã chơi', '<a class="rule-link" href="#/xem-lai">Tất cả 24 ván</a>')}
+        ${sheet(
+          `<div class="log">
+            ${gameRow('Máy cấp 4', 'w', 'l', 'Thua · chiếu hết', 90.6, '2 giờ')}
+            ${gameRow('Hùng', 'b', 'w', 'Thắng · hết giờ', 84.2, 'hôm qua')}
+            ${gameRow('Máy cấp 3', 'w', 'w', 'Thắng · đầu hàng', 88.1, 'hôm qua')}
+            ${gameRow('Minh', 'w', 'd', 'Hòa · 3 lần lặp', 91.4, '2 ngày')}
+            ${gameRow('Máy cấp 4', 'b', 'l', 'Thua · đầu hàng', 79.8, '3 ngày')}
+            ${gameRow('Hùng', 'w', 'w', 'Thắng · chiếu hết', 86.0, '4 ngày')}
+            ${gameRow('Máy cấp 3', 'b', 'w', 'Thắng · hết giờ', 85.3, '4 ngày')}
+            ${gameRow('Minh', 'b', 'l', 'Thua · chiếu hết', 77.2, '5 ngày')}
+            ${gameRow('Máy cấp 2', 'w', 'w', 'Thắng · chiếu hết', 93.7, '6 ngày')}
+            ${gameRow('Hùng', 'b', 'd', 'Hòa · hết nước đi', 89.5, '1 tuần')}
+          </div>`,
+        )}
+      </div>
     </div>
   </div>`;
 }

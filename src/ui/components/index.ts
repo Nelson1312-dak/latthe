@@ -1,4 +1,8 @@
-// Bộ component dùng chung. Mỗi hàm trả về HTML; màn hình ghép chúng lại.
+// Bộ component dùng chung.
+//
+// Nguyên tắc sau lần tút lại: **ít hộp, nhiều nhịp**. Thông tin được tách bằng
+// nét kẻ mảnh và khoảng trắng, không phải bằng việc nhét mỗi thứ vào một thẻ bo góc.
+// Mỗi cột chỉ có MỘT mặt nền (.sheet), bên trong chia bằng <hr>.
 // Mọi component phải có mặt đầy đủ trạng thái trên trang /#/thiet-ke.
 
 import { icon, type IconName } from '../icons.ts';
@@ -7,6 +11,40 @@ import { formatScore, type MoveClass, type Score } from '../../../shared/winrate
 import type { PieceCode } from '../../../shared/fen.ts';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+/** Quân cờ nhỏ lấy từ sprite, dùng trong ký hiệu nước đi và danh sách quân đã ăn. */
+export function pieceGlyph(code: PieceCode, cls = 'fig'): string {
+  return `<svg class="${cls}" viewBox="0 0 40 40" aria-hidden="true"><use href="#${code}"/></svg>`;
+}
+
+/**
+ * Ký hiệu bên cầm quân: một con Vua nhỏ. Ô vuông tô màu dễ bị đọc nhầm thành
+ * ô tích chọn, còn con Vua thì không lẫn vào đâu được.
+ */
+export function sideGlyph(side: 'w' | 'b'): string {
+  return (
+    `<span class="side-mark" role="img" aria-label="${side === 'w' ? 'cầm quân Trắng' : 'cầm quân Đen'}">` +
+    pieceGlyph((side + 'k') as PieceCode, 'side-piece') +
+    `</span>`
+  );
+}
+
+/** Tên quân đọc được, cho trình đọc màn hình. */
+const PIECE_WORD: Record<string, string> = { K: 'Vua', Q: 'Hậu', R: 'Xe', B: 'Tượng', N: 'Mã' };
+
+/**
+ * Ký hiệu hình: `Nf3` hiện thành hình con Mã rồi `f3`, như sách cờ và như
+ * chess.com/Lichess. Dễ đọc hơn chữ cái với người mới, và đúng màu quân đang đi.
+ */
+export function figurine(san: string, side: 'w' | 'b'): string {
+  const first = san[0];
+  if (!PIECE_WORD[first]) return `<span class="san">${esc(san)}</span>`; // tốt, nhập thành
+  const code = (side + first.toLowerCase()) as PieceCode;
+  return (
+    `<span class="san"><span class="sr">${PIECE_WORD[first]} </span>` +
+    `${pieceGlyph(code)}${esc(san.slice(1))}</span>`
+  );
+}
 
 /* ---------------- Button ---------------- */
 export interface ButtonOptions {
@@ -27,18 +65,21 @@ export function button(o: ButtonOptions): string {
   return (
     `<button class="${cls}"${o.disabled ? ' disabled' : ''}${o.pressed ? ' aria-pressed="true"' : ''}` +
     `${o.title ? ` title="${esc(o.title)}"` : ''}>` +
-    (o.icon ? icon(o.icon, 18) : '') +
-    `<span>${esc(o.label)}</span>` +
-    (o.loading ? '<span class="spinner" aria-hidden="true"></span>' : '') +
-    `</button>`
+    (o.loading ? '<span class="spinner" aria-hidden="true"></span>' : o.icon ? icon(o.icon, 17) : '') +
+    `<span>${esc(o.label)}</span></button>`
   );
 }
 
 export function iconButton(name: IconName, title: string, opts: { disabled?: boolean; pressed?: boolean } = {}): string {
   return (
     `<button class="btn btn-icon" title="${esc(title)}" aria-label="${esc(title)}"` +
-    `${opts.disabled ? ' disabled' : ''}${opts.pressed ? ' aria-pressed="true"' : ''}>${icon(name, 20)}</button>`
+    `${opts.disabled ? ' disabled' : ''}${opts.pressed ? ' aria-pressed="true"' : ''}>${icon(name, 19)}</button>`
   );
+}
+
+/** Nhóm nút phụ dính liền nhau, ngăn bằng nét kẻ — gọn hơn một hàng nút rời rạc. */
+export function toolbar(...groups: string[][]): string {
+  return `<div class="toolbar">${groups.map((g) => `<span class="tool-group">${g.join('')}</span>`).join('')}</div>`;
 }
 
 /* ---------------- Clock ---------------- */
@@ -48,35 +89,40 @@ export function clock(ms: number, state: ClockState = 'idle'): string {
   const total = Math.max(0, ms);
   const m = Math.floor(total / 60000);
   const s = Math.floor((total % 60000) / 1000);
-  const tenth = Math.floor((total % 1000) / 100);
-  const text = state === 'low' ? `${m}:${String(s).padStart(2, '0')}.${tenth}` : `${m}:${String(s).padStart(2, '0')}`;
-  return `<div class="clock mono clock-${state}">${text}</div>`;
+  const body = `${m}:${String(s).padStart(2, '0')}`;
+  const tenth = state === 'low' ? `<small>.${Math.floor((total % 1000) / 100)}</small>` : '';
+  return `<div class="clock mono clock-${state}">${body}${tenth}</div>`;
 }
 
 /* ---------------- PlayerStrip ---------------- */
 export interface PlayerOptions {
   name: string;
+  /** Bên cầm quân: hiện bằng một ô cờ nhỏ, hữu ích hơn ảnh đại diện chung chung. */
+  side: 'w' | 'b';
   rating?: number | string;
-  avatar?: 'user' | 'engine';
+  bot?: boolean;
   clockMs?: number;
   clockState?: ClockState;
   took?: PieceCode[];
   diff?: number;
   status?: string;
   you?: boolean;
+  /** Độ chính xác cả ván, chỉ có ở màn xem lại. */
+  accuracy?: number;
 }
 
 export function playerStrip(o: PlayerOptions): string {
-  const taken = (o.took ?? [])
-    .map((p) => `<svg class="mini-piece" viewBox="0 0 40 40" aria-hidden="true"><use href="#${p}"/></svg>`)
-    .join('');
+  const taken = (o.took ?? []).map((p) => pieceGlyph(p, 'took-piece')).join('');
   return (
-    `<div class="player">` +
-    `<span class="avatar">${icon(o.avatar === 'engine' ? 'engine' : 'user', 18)}</span>` +
-    `<span class="player-name">${esc(o.name)}${o.you ? '<span class="tag-you">bạn</span>' : ''}</span>` +
+    `<div class="player${o.clockState === 'running' ? ' is-turn' : ''}">` +
+    sideGlyph(o.side) +
+    `<span class="player-name">${esc(o.name)}</span>` +
+    (o.you ? '<span class="tag">bạn</span>' : '') +
+    (o.bot ? '<span class="tag">máy</span>' : '') +
     (o.rating !== undefined ? `<span class="player-rating mono">${esc(String(o.rating))}</span>` : '') +
-    (taken || o.diff
-      ? `<span class="taken">${taken}${o.diff && o.diff > 0 ? `<span class="diff mono">+${o.diff}</span>` : ''}</span>`
+    (taken || o.diff ? `<span class="took">${taken}${o.diff && o.diff > 0 ? `<b class="mono">+${o.diff}</b>` : ''}</span>` : '') +
+    (o.accuracy !== undefined
+      ? `<span class="player-acc"><b class="mono">${o.accuracy}%</b> chính xác</span>`
       : '') +
     (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
     (o.clockMs !== undefined ? clock(o.clockMs, o.clockState) : '') +
@@ -92,27 +138,39 @@ export function classBadge(cls: MoveClass, size: 'sm' | 'md' = 'sm'): string {
   return `<span class="badge badge-${size}" style="--badge:var(--cls-${cls})" title="${CLASS_LABEL[cls]}">${CLASS_SYMBOL[cls]}</span>`;
 }
 
-/* ---------------- MoveList ---------------- */
+/* ---------------- Sổ nước đi ---------------- */
 export interface MoveRow {
   san: string;
   cls?: MoveClass;
+  /** Điểm sau nước đi; hiện ở cột phải khi xem lại. */
+  score?: Score;
 }
 
-export function moveList(moves: MoveRow[], currentPly?: number): string {
-  const cell = (m: MoveRow | undefined, ply: number) =>
-    m
-      ? `<button class="move${ply === currentPly ? ' is-current' : ''}" data-ply="${ply}">` +
-        `<span class="move-san">${esc(m.san)}</span>${m.cls ? classBadge(m.cls) : ''}</button>`
-      : '<span class="move move-empty"></span>';
+/**
+ * Sổ ghi ván: số nước treo ra lề trái, hai cột Trắng/Đen, huy hiệu xếp loại
+ * bám sát nước, cột điểm bên phải khi có. Dòng đang xem có vạch nhấn.
+ */
+export function moveList(moves: MoveRow[], currentPly?: number, opts: { scores?: boolean } = {}): string {
+  const cell = (m: MoveRow | undefined, ply: number) => {
+    if (!m) return '<span class="move move-empty"></span>';
+    const side = ply % 2 === 1 ? 'w' : 'b';
+    return (
+      `<button class="move${ply === currentPly ? ' is-current' : ''}" data-ply="${ply}">` +
+      figurine(m.san, side) +
+      (m.cls ? classBadge(m.cls) : '') +
+      (opts.scores && m.score ? `<span class="move-score mono">${formatScore(m.score)}</span>` : '') +
+      `</button>`
+    );
+  };
 
   const rows: string[] = [];
   for (let i = 0; i < moves.length; i += 2) {
     rows.push(
-      `<div class="move-row"><span class="move-no mono">${i / 2 + 1}.</span>` +
+      `<div class="move-row"><span class="move-no mono">${i / 2 + 1}</span>` +
         `${cell(moves[i], i + 1)}${cell(moves[i + 1], i + 2)}</div>`,
     );
   }
-  return `<div class="move-list">${rows.join('')}</div>`;
+  return `<div class="move-list${opts.scores ? ' has-scores' : ''}">${rows.join('')}</div>`;
 }
 
 /* ---------------- EvalBar ---------------- */
@@ -128,42 +186,51 @@ export function evalBar(score: Score, orientation: 'vertical' | 'horizontal' = '
   );
 }
 
-/* ---------------- CoachPanel ---------------- */
+/* ---------------- Lời bình của Huấn luyện viên ---------------- */
 export interface CoachOptions {
   cls?: MoveClass;
+  /** Nước đi dạng "11.Qg4". */
   move?: string;
+  side?: 'w' | 'b';
   text: string;
-  better?: string;
+  better?: { san: string; side: 'w' | 'b'; why: string };
   source: 'llm' | 'template' | 'typing';
   actions?: string;
 }
 
+/**
+ * Trình bày như lời bình bên lề một ván cờ in: vạch dọc bên trái, đầu đề là
+ * nước đi viết bằng ký hiệu hình, phần giải thích dùng chữ serif cho dễ đọc
+ * thành câu. Không khung, không biểu tượng robot.
+ */
 export function coachPanel(o: CoachOptions): string {
-  const srcText =
-    o.source === 'template'
-      ? 'Phân tích của engine · lời bình mẫu'
-      : o.source === 'typing'
-        ? 'Phân tích của engine · đang soạn lời bình'
-        : 'Phân tích của engine · lời bình tạo tự động';
+  const srcText = {
+    llm: 'Engine chấm nước · máy viết lời bình',
+    template: 'Engine chấm nước · lời bình mẫu',
+    typing: 'Engine chấm nước · đang viết',
+  }[o.source];
+  const head = o.move
+    ? `<p class="note-move">${o.move.replace(/^(\d+\.{1,3})/, '<span class="mono">$1</span>')
+        .replace(/([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8][+#=A-Z]*|O-O-O|O-O)$/, (san) => figurine(san, o.side ?? 'w'))}` +
+      (o.cls ? `${classBadge(o.cls, 'md')}<span class="note-verdict">${CLASS_LABEL[o.cls]}</span>` : '') +
+      `</p>`
+    : '<p class="note-move"><span class="note-verdict">Huấn luyện viên</span></p>';
   return (
-    `<section class="coach panel" aria-live="polite">` +
-    `<header class="coach-head">${icon('coach', 18)}<h3>Huấn luyện viên</h3>` +
-    (o.cls && o.move
-      ? `<span class="coach-move">${classBadge(o.cls, 'md')}<span class="mono">${esc(o.move)}</span>` +
-        `<span class="muted">${CLASS_LABEL[o.cls]}</span></span>`
+    `<section class="note" aria-live="polite">` +
+    head +
+    `<p class="note-text${o.source === 'typing' ? ' is-typing' : ''}">${esc(o.text)}</p>` +
+    (o.better
+      ? `<p class="note-better">Tốt hơn ${figurine(o.better.san, o.better.side)} — ${esc(o.better.why)}</p>`
       : '') +
-    `</header>` +
-    `<p class="coach-text${o.source === 'typing' ? ' is-typing' : ''}">${esc(o.text)}</p>` +
-    (o.better ? `<p class="coach-better">Tốt hơn: <span class="mono">${esc(o.better)}</span></p>` : '') +
-    (o.actions ? `<div class="coach-actions">${o.actions}</div>` : '') +
-    `<p class="coach-source label">${srcText}</p>` +
+    (o.actions ? `<div class="note-actions">${o.actions}</div>` : '') +
+    `<p class="note-source">${srcText}</p>` +
     `</section>`
   );
 }
 
 /* ---------------- HintButton ---------------- */
 export function hintButton(used: 0 | 1 | 2 | 3): string {
-  const labels = ['Gợi ý', 'Gợi ý: quân nào', 'Gợi ý: nước cụ thể', 'Đã dùng hết gợi ý'];
+  const labels = ['Gợi ý', 'Gợi ý: quân nào', 'Gợi ý: nước cụ thể', 'Hết gợi ý'];
   return (
     `<div class="hint">` +
     button({ label: labels[used], icon: 'hint', disabled: used === 3 }) +
@@ -173,14 +240,34 @@ export function hintButton(used: 0 | 1 | 2 | 3): string {
   );
 }
 
-/* ---------------- Toast và Dialog ---------------- */
-export function toast(text: string, kind: 'info' | 'danger' = 'info'): string {
-  return `<div class="toast toast-${kind}" role="status">${esc(text)}</div>`;
+/* ---------------- Mặt nền và nhịp ---------------- */
+/** Một cột chỉ nên có một mặt nền; bên trong chia bằng rule(). */
+export function sheet(...parts: string[]): string {
+  return `<section class="sheet">${parts.join('')}</section>`;
+}
+
+/** Tiêu đề nhỏ kèm nét kẻ kéo hết chiều ngang. */
+export function rule(label: string, right = ''): string {
+  return `<div class="rule"><span class="rule-label">${esc(label)}</span><i></i>${right}</div>`;
+}
+
+/** Số liệu viết thành dòng, không phải ô dashboard. */
+export function stats(items: [string, string][]): string {
+  return (
+    `<dl class="stats">` +
+    items.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="mono">${esc(v)}</dd></div>`).join('') +
+    `</dl>`
+  );
+}
+
+/** Dòng trạng thái trong luồng nội dung, không phải hộp nổi. */
+export function notice(text: string, kind: 'info' | 'danger' | 'locked' = 'info', iconName?: IconName): string {
+  return `<p class="notice notice-${kind}">${iconName ? icon(iconName, 16) : ''}${esc(text)}</p>`;
 }
 
 export function dialog(title: string, body: string, actions: string): string {
   return (
-    `<div class="dialog-backdrop"><div class="dialog panel" role="dialog" aria-modal="true" aria-label="${esc(title)}">` +
+    `<div class="dialog-backdrop"><div class="dialog" role="dialog" aria-modal="true" aria-label="${esc(title)}">` +
     `<h2>${esc(title)}</h2><div class="dialog-body">${body}</div><div class="dialog-actions">${actions}</div></div></div>`
   );
 }

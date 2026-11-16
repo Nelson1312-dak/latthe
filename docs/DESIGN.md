@@ -32,10 +32,22 @@ Danh sách **cấm**, dùng để duyệt mọi màn hình:
 
 Thay vào đó:
 
+- **Ít hộp, nhiều nhịp.** Đây là luật quan trọng nhất. Thứ làm giao diện trông như máy sinh ra
+  là nhét mỗi mẩu thông tin vào một thẻ bo góc riêng. Mỗi cột chỉ có **một** mặt nền (`.sheet`),
+  bên trong chia bằng nét kẻ 1px. Tiêu đề phần là chữ nhỏ kèm nét kẻ (`rule()`), không phải
+  tiêu đề to.
+- **Số liệu viết thành dòng** (`stats()`), không phải ô to kiểu bảng điều khiển. Không có
+  "nhãn xám nhỏ + số mono to" xếp thành lưới.
 - **Mật độ thông tin cao, bề mặt phẳng.** Tách lớp bằng độ sáng của nền (4 bậc), không dùng bóng đổ.
-- **Bo góc nhỏ**: 4px cho nút/ô nhập, 6px cho bảng.
+  Chỉ hộp thoại được nổi lên và có bóng, vì nó chặn thao tác.
+- **Bo góc nhỏ**: 4px cho nút/ô nhập, 6px cho mặt nền.
 - **Chữ là chữ của người chơi cờ**: chiếu, chiếu hết, nhập thành, phong cấp, bắt tốt qua đường, khai cuộc, trung cuộc, tàn cuộc. AI tư vấn gọi là **"Huấn luyện viên"**, nói ngắn, như một người thầy ngồi cạnh, không có hình robot.
-- **Icon tự vẽ** khoảng 20 cái trên lưới 24px, nét 1,5px, đầu nét vuông, cùng một bộ.
+- **Icon tự vẽ** 26 cái trên lưới 24px, nét 1,5px, đầu nét vuông, cùng một bộ.
+- **Dùng từ vựng hình của cờ**: nước đi viết bằng hình quân (`Nf3` → hình Mã + `f3`), bên cầm
+  quân hiện bằng một con Vua nhỏ chứ không phải ảnh đại diện chung chung hay ô vuông tô màu
+  (dễ bị nhầm thành ô tích chọn).
+- **Việc phụ gom thành nhóm nút dính liền** (`toolbar()`), không phải một hàng nút rời rạc
+  cùng cỡ.
 - **Dữ liệu thật** ở mọi chỗ, kể cả trang mẫu: thế cờ thật, ván thật, tên khai cuộc thật.
 
 ## 3. Bố cục
@@ -133,7 +145,10 @@ Thang màu xanh → vàng → cam → đỏ là quy ước chung; giá trị mà
 
 ### 4.4 Chữ
 
-- **IBM Plex Sans** cho toàn bộ giao diện; **IBM Plex Mono** cho đồng hồ, điểm đánh giá, FEN/PGN. Cả hai hỗ trợ đầy đủ tiếng Việt (đã kiểm tra) và có số đều độ rộng.
+- **IBM Plex Sans** cho giao diện; **IBM Plex Mono** cho đồng hồ, điểm đánh giá, FEN/PGN;
+  **IBM Plex Serif** cho lời bình của Huấn luyện viên và chữ đọc thành câu. Ba kiểu chữ cùng
+  một họ nên đi với nhau được, mà chữ có chân ở phần lời bình tạo cảm giác chú thích trong
+  sách cờ thay vì khung chat của trợ lý. Cả ba có đủ dấu tiếng Việt (đã kiểm tra).
 - Tự host file woff2 (bộ ký tự Latin + Việt) trong `public/fonts/`, không gọi Google Fonts lúc chạy.
 
 | Token | Cỡ / dòng | Độ đậm | Dùng cho |
@@ -169,7 +184,7 @@ Bốn âm ngắn: đi quân, ăn quân, chiếu, kết thúc ván; thêm tiếng
 | Phần | Quy định |
 |---|---|
 | Màu ô | 3 chủ đề: **Gỗ** `#EAD8B6 / #B08A62` (mặc định), **Xanh** `#E8E9D0 / #7A9A5C`, **Đá** `#DADFE3 / #8697A6` |
-| Quân | Bộ **cburnett** (giấy phép tự do, kiểm tra lại file giấy phép trước khi đưa vào). Sau có thể thêm bộ khác |
+| Quân | Bộ **cburnett** (CC BY-SA 3.0, xem `public/pieces/LICENSE.txt`). Hình quân nhỏ trong chữ có quầng mảnh (`--piece-halo`) để quân cùng tông với nền vẫn đọc được |
 | Tọa độ | Chữ `--fs-xs` nằm trong góc ô biên, màu là màu ô đối diện |
 | Nước vừa đi | Phủ `rgb(232 196 80 / .42)` lên ô đi và ô đến |
 | Ô đang chọn | Phủ `rgb(232 196 80 / .55)` |
@@ -185,19 +200,23 @@ Mỗi component có đủ trạng thái (thường, hover, nhấn, focus, vô hi
 
 | Component | Ghi chú chính |
 |---|---|
-| `Button` | 3 kiểu: chính (nền nhấn), phụ (nền `--bg-2`), chữ. Cao 36px desktop, 44px điện thoại |
-| `PlayerStrip` | Avatar 32px, tên, rating, cờ trạng thái (đang nghĩ, mất kết nối), quân đã ăn + chênh lệch vật chất, đồng hồ |
+| `Button` | 4 kiểu: chính (nền nhấn), phụ, chữ, nguy hiểm. Cao 34px desktop, 44px điện thoại |
+| `toolbar` | Gom nút phụ thành nhóm dính liền, ngăn bằng nét kẻ |
+| `sheet` / `rule` / `stats` | Mặt nền chung, tiêu đề nhỏ kèm nét kẻ, số liệu viết thành dòng |
+| `figurine` | Nước đi viết bằng hình quân, kèm tên quân cho trình đọc màn hình |
+| `PlayerStrip` | Con Vua chỉ bên cầm quân, tên, rating, trạng thái, quân đã ăn xếp chồng + chênh lệch vật chất, đồng hồ hoặc độ chính xác |
 | `Clock` | Mono, bên đang đi có nền sáng hơn; dưới 20 giây chuyển đỏ và hiện phần mười giây |
-| `MoveList` | Bảng 2 cột, số thứ tự cột riêng, hình quân thay chữ, huy hiệu xếp loại, dòng đang xem được tô, tự cuộn |
+| `MoveList` | Sổ ghi ván: số nước treo ra lề, hai cột Trắng/Đen, ký hiệu hình, huy hiệu xếp loại, cột điểm khi xem lại, dòng đang xem có vạch nhấn |
 | `EvalBar` | Dọc (desktop) hoặc ngang (điện thoại), hiển thị `+1.4` / `M3`, chuyển 300ms |
 | `EvalGraph` | Biểu đồ vùng theo nước, chấm màu ở nước Sai/Sai nghiêm trọng, bấm để nhảy tới |
-| `CoachPanel` | Lời bình HLV: nhãn xếp loại + câu giải thích + nút "Xem nước tốt hơn" / "Thử lại". Chữ hiện dần khi đang sinh. Có dòng nhỏ cho biết nguồn ("Phân tích của engine · lời bình tạo tự động") |
+| `CoachPanel` | Lời bình như chú thích bên lề sách cờ: vạch dọc bên trái, đầu đề là nước đi + xếp loại, phần giải thích dùng chữ có chân. Chữ hiện dần khi đang sinh. Luôn có dòng nhỏ cho biết nguồn ("Engine chấm nước · máy viết lời bình") |
 | `HintButton` | 3 nấc, mỗi lần bấm mở thêm một nấc; hiện số nấc đã dùng |
 | `GameResult` | Hộp thoại cuối ván: kết quả, lý do, độ chính xác hai bên, nút "Xem lại ván" là nút chính |
 | `InviteCard` | Link mời, nút sao chép, trạng thái "Đang chờ đối thủ…" |
 | `ReviewQueueItem` | Thẻ ôn tập: thế cờ thu nhỏ, chủ đề, lần ôn kế tiếp |
 | `Nav` | Dọc trên desktop, dưới trên điện thoại; mục đang chọn có vạch nhấn 3px |
-| `Toast` | Góc dưới, 1 dòng, tự tắt sau 4 giây; không dùng cho lỗi cần xử lý |
+| `sideGlyph` | Con Vua nhỏ cho biết bên cầm quân |
+| `notice` | Dòng trạng thái nằm trong luồng nội dung, không nổi lên trên |
 | `Dialog` | Chỉ cho quyết định (đầu hàng, đề nghị hòa, phong cấp) |
 
 ## 7. Trợ năng
@@ -228,3 +247,8 @@ Mỗi component có đủ trạng thái (thường, hover, nhấn, focus, vô hi
 
 Vài token đã phải đổi để qua được phần tương phản: `--text-3`, `--danger`, `--cls-blunder`,
 `--cls-inaccuracy`, và mực trên huy hiệu (`--on-badge`) đổi theo giao diện sáng/tối.
+
+Máy **không** kiểm được "trông có giống sản phẩm AI không" — phần đó vẫn phải nhìn bằng mắt.
+Những thứ chỉ phát hiện được khi xem ảnh chụp: mọi thứ đều là hộp bo góc giống nhau, số liệu
+bị nhét vào ô kiểu bảng điều khiển, lời chào kiểu trợ lý ở trang chủ, và ô vuông tô màu bị
+đọc nhầm thành ô tích chọn.

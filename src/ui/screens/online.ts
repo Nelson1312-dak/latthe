@@ -1,27 +1,36 @@
 // Ván với bạn qua mạng: đồng hồ đang chạy, engine và Huấn luyện viên bị tắt.
 import { boardSvg } from '../../board/Board.ts';
-import { button, iconButton, moveList, playerStrip, toast } from '../components/index.ts';
+import { button, iconButton, moveList, notice, playerStrip, rule, sheet, sideGlyph, toolbar } from '../components/index.ts';
 import { fx } from '../../mock/index.ts';
-import { icon } from '../icons.ts';
 import { material } from '../../../shared/fen.ts';
 
 export function online(): string {
   const o = fx.online;
   const mat = material(o.fen);
 
+  const row = (name: string, side: 'w' | 'b', result: 'w' | 'l' | 'd', how: string, when: string) =>
+    `<a class="log-row" href="#/xem-lai">
+      ${sideGlyph(side)}
+      <span class="log-name">${name}</span>
+      <span class="log-result result-${result}">${how}</span>
+      <span class="log-when">${when}</span>
+    </a>`;
+
   return `<div class="screen">
     <div class="screen-head">
       <h1>Ván với bạn</h1>
-      <span class="muted">5+0 · ván xếp hạng</span>
-      ${iconButton('flip', 'Lật bàn cờ')}
-      ${button({ label: 'Đề nghị hòa', icon: 'draw' })}
-      ${button({ label: 'Đầu hàng', kind: 'danger', icon: 'resign' })}
+      <span class="head-meta">5+0 · ván xếp hạng</span>
+      ${toolbar(
+        [iconButton('flip', 'Lật bàn cờ'), iconButton('sound', 'Âm thanh', { pressed: true })],
+        [button({ label: 'Đề nghị hòa', icon: 'draw' }), button({ label: 'Đầu hàng', kind: 'danger', icon: 'resign' })],
+      )}
     </div>
 
     <div class="game">
       <div class="game-board">
         ${playerStrip({
           name: 'Hùng',
+          side: 'b',
           rating: 1240,
           clockMs: 34200,
           clockState: 'low',
@@ -29,13 +38,12 @@ export function online(): string {
           took: mat.blackTook,
           diff: -mat.diff,
         })}
-        <div class="board-row">${boardSvg({
-          fen: o.fen,
-          lastMove: ['f6', 'd5'],
-          label: 'Bàn cờ ván với bạn, lượt của Trắng',
-        })}</div>
+        <div class="board-row">
+          ${boardSvg({ fen: o.fen, lastMove: ['f6', 'd5'], label: 'Bàn cờ ván với bạn, lượt của Trắng' })}
+        </div>
         ${playerStrip({
           name: 'Nelson',
+          side: 'w',
           you: true,
           rating: 1180,
           clockMs: 183000,
@@ -46,39 +54,39 @@ export function online(): string {
       </div>
 
       <div class="game-side">
-        <div class="locked">${icon('engine', 16)} Engine tắt trong ván</div>
-        <div class="locked">${icon('coach', 16)} Huấn luyện viên mở lại sau khi ván kết thúc</div>
-
-        <div class="panel move-panel">
-          ${moveList(o.history.map((san) => ({ san })), o.history.length)}
-          <div class="move-bar">
+        ${sheet(
+          notice('Hùng mất kết nối · còn 47 giây để vào lại', 'danger', 'clock'),
+          moveList(
+            o.history.map((san) => ({ san })),
+            o.history.length,
+          ),
+          `<div class="move-bar">
             ${iconButton('first', 'Về đầu ván')}
             ${iconButton('prev', 'Lùi một nước')}
             ${iconButton('next', 'Tiến một nước', { disabled: true })}
             ${iconButton('last', 'Tới nước mới nhất', { disabled: true })}
-          </div>
+          </div>`,
+          `<div class="locked-block">
+            ${notice('Engine và Huấn luyện viên mở lại sau khi ván kết thúc', 'locked', 'engine')}
+          </div>`,
+        )}
+
+        ${rule('Mời bạn chơi')}
+        <div class="invite">
+          <code>co.vn/v/7KQ2M9</code>
+          ${button({ label: 'Sao chép', icon: 'copy' })}
         </div>
 
-        ${toast('Hùng mất kết nối · còn 47 giây để vào lại', 'danger')}
-
-        <div class="card">
-          <span class="label">Mời thêm bạn</span>
-          <div class="invite">
-            ${icon('friends', 18)}
-            <code>co.vn/v/7KQ2M9</code>
-            ${button({ label: 'Sao chép', icon: 'copy' })}
-          </div>
-          <span class="muted" style="font-size:var(--fs-sm)">Ván mới sẽ dùng cùng mức thời gian 5+0.</span>
-        </div>
-
-        <div class="card">
-          <span class="label">5 ván gần nhất với bạn bè</span>
-          <div class="game-row"><span>Hùng</span><span class="result-w">Thắng</span><span class="muted mono">hôm qua</span></div>
-          <div class="game-row"><span>Minh</span><span class="result-d">Hòa</span><span class="muted mono">2 ngày</span></div>
-          <div class="game-row"><span>Hùng</span><span class="result-l">Thua</span><span class="muted mono">4 ngày</span></div>
-          <div class="game-row"><span>Minh</span><span class="result-w">Thắng</span><span class="muted mono">5 ngày</span></div>
-          <div class="game-row"><span>Hùng</span><span class="result-w">Thắng</span><span class="muted mono">6 ngày</span></div>
-        </div>
+        ${rule('5 ván gần nhất với bạn bè')}
+        ${sheet(
+          `<div class="log">
+            ${row('Hùng', 'w', 'w', 'Thắng · chiếu hết', 'hôm qua')}
+            ${row('Minh', 'b', 'd', 'Hòa · thiếu quân', '2 ngày')}
+            ${row('Hùng', 'b', 'l', 'Thua · hết giờ', '4 ngày')}
+            ${row('Minh', 'w', 'w', 'Thắng · đầu hàng', '5 ngày')}
+            ${row('Hùng', 'w', 'w', 'Thắng · hết giờ', '6 ngày')}
+          </div>`,
+        )}
       </div>
     </div>
   </div>`;

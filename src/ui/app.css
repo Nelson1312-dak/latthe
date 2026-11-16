@@ -13,8 +13,7 @@
 .game-board,
 .game-side,
 .board-row,
-.move-panel,
-.card,
+.sheet,
 .player {
   min-width: 0;
 }
@@ -60,11 +59,16 @@
   padding: var(--s-6);
   max-width: 1500px;
 }
+.screen-narrow {
+  max-width: 1100px;
+}
 .screen-head {
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  margin-bottom: var(--s-4);
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-6);
+  border-bottom: 1px solid var(--line);
 }
 .screen-head h1 {
   margin-right: auto;
@@ -86,16 +90,23 @@
    Trừ đi hai thanh người chơi, tiêu đề màn hình và lề. */
 .board-row {
   display: flex;
-  gap: var(--s-2);
+  gap: 0;
   align-items: stretch;
   width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+/* Cả hàng (thanh đánh giá + bàn cờ) rộng bằng bàn cờ cộng thanh, để bàn cờ
+   dính sát thanh thay vì bị đẩy ra giữa khoảng trống. */
+.board-row,
+.game-board .player {
+  width: min(100%, calc(100vh - 188px));
 }
 .board-row > .board {
-  width: min(100%, calc(100vh - 210px));
-  margin: 0 auto;
-}
-.game-board .player {
-  width: min(100%, calc(100vh - 210px));
+  flex: 1;
+  min-width: 0;
+  width: auto;
 }
 .evalbar-wrap {
   flex: none;
@@ -103,91 +114,17 @@
 }
 .game-side {
   display: grid;
-  gap: var(--s-3);
+  gap: var(--s-4);
   align-content: start;
 }
-.side-tabs {
-  display: flex;
-  gap: var(--s-1);
-  border-bottom: 1px solid var(--line);
-}
-.tab {
-  padding: var(--s-2) var(--s-3);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--text-3);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  cursor: pointer;
-}
-.tab.is-active {
-  color: var(--text-1);
-  border-bottom-color: var(--accent);
-}
-.move-panel {
-  display: grid;
-  grid-template-rows: 1fr auto;
-}
-.move-panel .move-list {
-  max-height: 320px;
-}
-.move-bar {
-  display: flex;
-  gap: var(--s-1);
-  padding: var(--s-2);
-  border-top: 1px solid var(--line);
-}
-.move-bar .btn-icon {
-  width: 32px;
-  height: 32px;
+/* Sổ nước đi không được đẩy phần còn lại của cột xuống quá xa */
+.game-side .move-list {
+  max-height: 300px;
 }
 
 /* ---------------- Thẻ và lưới dùng chung ---------------- */
-.grid {
-  display: grid;
-  gap: var(--s-3);
-}
-.grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-.grid-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-.card {
-  display: grid;
-  gap: var(--s-2);
-  padding: var(--s-3);
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-}
-.card-row {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-}
-.stat {
-  display: grid;
-  gap: 2px;
-}
-.stat-value {
-  font-size: var(--fs-xl);
-  line-height: var(--lh-xl);
-  font-weight: 600;
-  font-family: var(--font-mono);
-}
 
 /* ---------------- Biểu đồ đánh giá ---------------- */
-.evalgraph {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 96px;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-}
 
 /* ---------------- Điện thoại ---------------- */
 @media (max-width: 1023px) {
@@ -240,12 +177,8 @@
   .game-side {
     gap: var(--s-2);
   }
-  .move-panel .move-list {
-    max-height: 180px;
-  }
-  .grid-2,
-  .grid-3 {
-    grid-template-columns: 1fr;
+  .move-list {
+    max-height: 200px;
   }
 }
 

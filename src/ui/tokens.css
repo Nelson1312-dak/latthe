@@ -20,6 +20,8 @@
   --accent: #e2a03f;
   --accent-hover: #edb25a;
   --accent-dim: #4a3a1c;
+  /* Màu nhấn khi dùng làm MÀU CHỮ: giao diện sáng cần đậm hơn để đủ tương phản */
+  --accent-text: #e2a03f;
   --on-accent: #1a1917;
   --danger: #e4685c;
   --danger-dim: #4a221e;
@@ -47,10 +49,14 @@
   --mark-check: #cf4034;
   --arrow-coach: #5fa36a;
   --arrow-user: #e2873a;
+  --board-edge: rgb(0 0 0 / 0.35);
+  /* Quầng quanh hình quân nhỏ để quân cùng tông với nền vẫn đọc được */
+  --piece-halo: rgb(236 232 225 / 0.85);
 
   /* ---- Chữ ---- */
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-serif: 'IBM Plex Serif', Georgia, serif;
   --fs-xs: 12px;
   --lh-xs: 16px;
   --fs-sm: 13px;
@@ -63,7 +69,7 @@
   --lh-xl: 28px;
   --fs-2xl: 28px;
   --lh-2xl: 34px;
-  --fs-clock: 24px;
+  --fs-clock: 22px;
 
   /* ---- Khoảng cách, bo góc ---- */
   --s-1: 4px;
@@ -100,6 +106,7 @@
   --accent: #b2761a;
   --accent-hover: #9c6614;
   --accent-dim: #f3e4c8;
+  --accent-text: #85550b;
   --on-accent: #1a1917;
   --danger: #b5352b;
   --danger-dim: #f6dedb;
@@ -115,6 +122,8 @@
   --cls-blunder: #b5352b;
   --cls-miss: #9b453c;
   --on-badge: #ffffff;
+  --board-edge: rgb(0 0 0 / 0.28);
+  --piece-halo: rgb(29 27 24 / 0.55);
 
   --shadow-float: 0 8px 24px rgb(60 50 35 / 0.18);
   color-scheme: light;

@@ -14,8 +14,9 @@ let faces = '';
 for (const [family, pkg, cssName] of [
   ['IBM Plex Sans', '@fontsource/ibm-plex-sans', 'ibm-plex-sans'],
   ['IBM Plex Mono', '@fontsource/ibm-plex-mono', 'ibm-plex-mono'],
+  ['IBM Plex Serif', '@fontsource/ibm-plex-serif', 'ibm-plex-serif'],
 ]) {
-  for (const w of WEIGHTS) {
+  for (const w of family === 'IBM Plex Serif' ? [400] : WEIGHTS) {
     for (const s of SUBSETS) {
       const file = `${cssName}-${s}-${w}-normal.woff2`;
       const src = join('node_modules', pkg, 'files', file);

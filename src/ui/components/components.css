@@ -1,11 +1,70 @@
-/* CSS của bộ component. Bề mặt phẳng, bo góc nhỏ, không bóng đổ (trừ hộp thoại). */
+/* CSS của bộ component.
+   Ít hộp: tách bằng nét kẻ mảnh và khoảng trắng. Một cột một mặt nền. */
+
+/* ---------------- Mặt nền và nhịp ---------------- */
+.sheet {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.sheet > * {
+  padding: var(--s-3);
+}
+.sheet > * + * {
+  border-top: 1px solid var(--line);
+}
+.sheet > .move-list {
+  padding: 0;
+}
+
+.rule {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-bottom: var(--s-2);
+}
+.rule-label {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.rule > i {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Số liệu viết thành dòng, không phải ô dashboard */
+.stats {
+  margin: 0;
+  display: grid;
+  gap: var(--s-1);
+}
+.stats > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+.stats dt {
+  color: var(--text-2);
+}
+.stats dd {
+  margin: 0 0 0 auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---------------- Button ---------------- */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  height: 36px;
+  height: 34px;
   padding: 0 var(--s-3);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-sm);
@@ -20,21 +79,23 @@
 .btn:hover:not(:disabled) {
   background: var(--bg-3);
 }
-.btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 .btn .icon {
   flex: none;
+  color: var(--text-3);
 }
 
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--on-accent);
+  font-weight: 600;
+}
+.btn-primary .icon {
+  color: inherit;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
@@ -43,8 +104,11 @@
 
 .btn-danger {
   background: transparent;
-  border-color: var(--danger);
+  border-color: transparent;
   color: var(--danger);
+}
+.btn-danger .icon {
+  color: inherit;
 }
 .btn-danger:hover:not(:disabled) {
   background: var(--danger-dim);
@@ -54,21 +118,29 @@
   background: transparent;
   border-color: transparent;
   padding: 0 var(--s-2);
+  color: var(--text-2);
 }
 .btn-text:hover:not(:disabled) {
   background: var(--bg-2);
+  color: var(--text-1);
 }
 
 .btn-icon {
-  width: 36px;
+  width: 34px;
   padding: 0;
   justify-content: center;
 }
+.btn-icon .icon {
+  color: var(--text-2);
+}
 
+/* Nút đang bật chỉ cần viền và màu chữ, không cần tô nền kêu như nút chính */
 .btn[aria-pressed='true'] {
-  background: var(--accent-dim);
   border-color: var(--accent);
-  color: var(--text-1);
+  color: var(--accent-text);
+}
+.btn[aria-pressed='true'] .icon {
+  color: inherit;
 }
 
 .btn-full {
@@ -76,9 +148,34 @@
   justify-content: center;
 }
 
+/* Nhóm nút phụ dính liền, ngăn bằng nét kẻ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.tool-group {
+  display: inline-flex;
+}
+.tool-group .btn {
+  border-radius: 0;
+  border-left-width: 0;
+}
+.tool-group .btn:first-child {
+  border-left-width: 1px;
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+.tool-group .btn:last-child {
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.tool-group .btn:only-child {
+  border-radius: var(--r-sm);
+}
+
 .spinner {
   width: 13px;
   height: 13px;
+  flex: none;
   border: 1.5px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
@@ -105,17 +202,36 @@
   }
 }
 
+/* ---------------- Quân cờ nhỏ ---------------- */
+.fig,
+.took-piece {
+  filter: drop-shadow(0 0 0.6px var(--piece-halo)) drop-shadow(0 0 0.6px var(--piece-halo));
+}
+.fig {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.19em;
+  margin-right: 1px;
+}
+.took-piece {
+  width: 17px;
+  height: 17px;
+}
+
 /* ---------------- Clock ---------------- */
 .clock {
-  min-width: 78px;
-  padding: 2px var(--s-2);
+  min-width: 68px;
+  padding: 1px var(--s-2);
   border-radius: var(--r-sm);
-  background: var(--bg-2);
   color: var(--text-2);
   font-size: var(--fs-clock);
   font-weight: 500;
-  text-align: center;
-  letter-spacing: -0.01em;
+  text-align: right;
+  letter-spacing: -0.02em;
+}
+.clock small {
+  font-size: 0.6em;
+  font-weight: 400;
 }
 .clock-running {
   background: var(--bg-3);
@@ -124,7 +240,6 @@
 .clock-low {
   background: var(--danger-dim);
   color: var(--danger);
-  min-width: 96px;
 }
 .clock-flagged {
   background: var(--danger);
@@ -137,57 +252,55 @@
   align-items: center;
   gap: var(--s-2);
   padding: var(--s-2) 0;
+  min-height: 42px;
 }
-.avatar {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
+.side-mark {
+  display: inline-flex;
   flex: none;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: var(--bg-2);
-  color: var(--text-2);
+}
+.side-piece {
+  width: 18px;
+  height: 18px;
 }
 .player-name {
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
+  font-weight: 600;
 }
-.tag-you {
-  padding: 1px 5px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
+.tag {
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
   font-size: var(--fs-xs);
-  font-weight: 500;
   color: var(--text-3);
 }
 .player-rating {
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: var(--fs-sm);
 }
-.player-status {
-  font-size: var(--fs-sm);
-  color: var(--text-3);
-}
-.taken {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  margin-left: var(--s-1);
-}
-.mini-piece {
-  width: 18px;
-  height: 18px;
-  opacity: 0.9;
-}
-.diff {
-  margin-left: var(--s-1);
+.player-status,
+.player-acc {
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
-.player .clock {
+.player-acc b {
+  color: var(--text-1);
+}
+.took {
+  display: flex;
+  align-items: center;
+  margin-left: var(--s-1);
+}
+/* Quân đã ăn xếp chồng nhẹ lên nhau như gạt sang mép bàn */
+.took-piece + .took-piece {
+  margin-left: -6px;
+}
+.took b {
+  margin-left: var(--s-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+.player .clock,
+.player-acc {
   margin-left: auto;
 }
 
@@ -203,33 +316,35 @@
   line-height: 1;
 }
 .badge-sm {
-  width: 16px;
-  height: 16px;
-  font-size: 9px;
+  width: 15px;
+  height: 15px;
+  font-size: 8.5px;
 }
 .badge-md {
-  width: 22px;
-  height: 22px;
-  font-size: 12px;
+  width: 21px;
+  height: 21px;
+  font-size: 11px;
 }
 .badge-book {
   background: transparent;
   color: var(--cls-book);
 }
 
-/* ---------------- MoveList ---------------- */
+/* ---------------- Sổ nước đi ---------------- */
 .move-list {
   overflow-y: auto;
   font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
 }
 .move-row {
   display: grid;
-  grid-template-columns: 34px 1fr 1fr;
+  grid-template-columns: 30px 1fr 1fr;
   align-items: stretch;
 }
-.move-row:nth-child(odd) {
+.move-row:nth-child(even) {
   background: var(--bg-row);
 }
+/* Số nước treo ra lề, nhạt hơn, như sổ ghi ván */
 .move-no {
   display: flex;
   align-items: center;
@@ -241,7 +356,7 @@
 .move {
   display: flex;
   align-items: center;
-  gap: var(--s-1);
+  gap: 5px;
   padding: 3px var(--s-2);
   border: 0;
   border-left: 2px solid transparent;
@@ -262,8 +377,13 @@
 .move-empty {
   cursor: default;
 }
-.move-san {
-  font-variant-numeric: tabular-nums;
+.san {
+  white-space: nowrap;
+}
+.move-score {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
 }
 
 /* ---------------- EvalBar ---------------- */
@@ -271,17 +391,15 @@
   position: relative;
   min-width: 0;
   background: #26241f;
-  border: 1px solid var(--line);
-  border-radius: 2px;
   overflow: hidden;
 }
 .evalbar-vertical {
-  width: 24px;
+  width: 22px;
   height: 100%;
 }
 .evalbar-horizontal {
   width: 100%;
-  height: 20px;
+  height: 18px;
 }
 .evalbar-white {
   position: absolute;
@@ -302,7 +420,7 @@
 }
 .evalbar-text {
   position: absolute;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 600;
   letter-spacing: -0.05em;
 }
@@ -320,7 +438,7 @@
   color: #e8e4db;
 }
 .evalbar-horizontal .evalbar-text {
-  top: 3px;
+  top: 2px;
 }
 .evalbar-horizontal .on-white {
   left: 5px;
@@ -331,37 +449,36 @@
   color: #e8e4db;
 }
 
-/* ---------------- CoachPanel ---------------- */
-.coach {
-  padding: var(--s-3);
+/* ---------------- Lời bình ---------------- */
+.note {
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--accent);
 }
-.coach-head {
+.note-move {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--s-2);
   margin-bottom: var(--s-2);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.note-verdict {
+  font-weight: 400;
   color: var(--text-2);
 }
-.coach-head h3 {
+/* Lời bình đọc thành câu nên dùng chữ có chân, như chú thích trong sách cờ */
+.note-text {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 23px;
   color: var(--text-1);
 }
-.coach-move {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  margin-left: auto;
-  font-size: var(--fs-sm);
-}
-.coach-text {
-  font-size: var(--fs-lg);
-  line-height: var(--lh-lg);
-}
-.coach-text.is-typing::after {
+.note-text.is-typing::after {
   content: '';
   display: inline-block;
-  width: 7px;
-  height: 15px;
+  width: 6px;
+  height: 14px;
   margin-left: 2px;
   background: var(--accent);
   vertical-align: text-bottom;
@@ -372,24 +489,26 @@
     opacity: 0;
   }
 }
-.coach-better {
+.note-better {
   margin-top: var(--s-2);
-  font-size: var(--fs-sm);
+  font-family: var(--font-serif);
+  font-size: 14px;
   color: var(--text-2);
 }
-.coach-better .mono {
-  color: var(--cls-best);
+.note-better .san {
   font-weight: 600;
+  color: var(--cls-best);
 }
-.coach-actions {
+.note-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-2);
   margin-top: var(--s-3);
 }
-.coach-source {
+.note-source {
   margin-top: var(--s-3);
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--line);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
 }
 
 /* ---------------- HintButton ---------------- */
@@ -403,8 +522,8 @@
   gap: var(--s-1);
 }
 .hint-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
 }
@@ -413,18 +532,26 @@
   border-color: var(--accent);
 }
 
-/* ---------------- Toast ---------------- */
-.toast {
-  display: inline-block;
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--line-strong);
-  border-left: 3px solid var(--text-3);
-  border-radius: var(--r-sm);
-  background: var(--bg-1);
+/* ---------------- Dòng trạng thái ---------------- */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
   font-size: var(--fs-sm);
+  color: var(--text-2);
 }
-.toast-danger {
-  border-left-color: var(--danger);
+.notice .icon {
+  flex: none;
+  color: var(--text-3);
+}
+.notice-danger {
+  color: var(--danger);
+}
+.notice-danger .icon {
+  color: inherit;
+}
+.notice-locked {
+  color: var(--text-3);
 }
 
 /* ---------------- Dialog ---------------- */
@@ -436,12 +563,16 @@
 }
 .dialog {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
   padding: var(--s-4);
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
   box-shadow: var(--shadow-float);
 }
 .dialog-body {
   margin-top: var(--s-2);
+  font-family: var(--font-serif);
   color: var(--text-2);
 }
 .dialog-actions {
@@ -456,6 +587,4 @@
   display: block;
   width: 100%;
   height: auto;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
 }

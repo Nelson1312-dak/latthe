@@ -32,4 +32,4 @@ npm run dev     # http://localhost:5173
 
 - Mã nguồn: chưa chốt. **Stockfish là GPL-3**, nên khi đưa engine vào ở giai đoạn 3 thì mã nguồn phải công khai theo GPL-3.
 - Bộ quân cburnett: CC BY-SA 3.0, xem `public/pieces/LICENSE.txt`.
-- Font IBM Plex: OFL-1.1.
+- Font IBM Plex Sans / Mono / Serif: OFL-1.1.
