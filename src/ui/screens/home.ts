@@ -20,8 +20,9 @@ export function home(): string {
     </a>`;
 
   return `<div class="screen screen-narrow">
+    <!-- Tên app đã nằm trên header, ở đây không lặp lại nữa -->
+    <h1 class="sr">Sảnh</h1>
     <div class="screen-head">
-      <h1>Cờ vua</h1>
       <span class="head-meta"><span class="mono">1180</span> · chuỗi 5 ngày</span>
       ${toolbar([button({ label: 'Chơi với máy', kind: 'primary', icon: 'play' })], [button({ label: 'Mời bạn', icon: 'friends' })])}
     </div>

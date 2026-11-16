@@ -52,32 +52,53 @@ Thay vào đó:
 
 ## 3. Bố cục
 
+### Header chung
+
+Mọi màn hình đều nằm dưới một header cao 56px:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ♘ Cờ vua   Chơi  Xem lại  Ôn tập  Bạn bè    Thiết kế  Nelson │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- **Tên app là thứ to nhất trên header** (21px, đậm) kèm một con Mã làm dấu nhận diện,
+  bấm vào về sảnh. Không màn nào lặp lại tên app trong tiêu đề của mình.
+- Mục điều hướng đang mở có vạch nhấn 2px sát đáy header — quy ước quen thuộc của
+  chess.com và Lichess.
+- Tài khoản nằm bên phải, hiện tên gọi của người đang đăng nhập.
+- Dưới 1100px: nhãn các mục ẩn đi, chỉ còn icon. Dưới 768px: điều hướng chuyển
+  hẳn xuống thanh đáy cho vừa tầm ngón tay, header chỉ còn tên app và tài khoản.
+
 ### Desktop (từ 1024px)
 
 ```
-┌──────┬─────────────────────────────────┬──────────────────────┐
-│      │ [avatar] Máy cấp 4        08:41 │  Tab: Nước đi | HLV   │
-│ Nav  │ ┌─┬───────────────────────────┐ │ ┌──────────────────┐ │
-│ dọc  │ │E│                           │ │ │ 1. e4     e5     │ │
-│ 64px │ │v│                           │ │ │ 2. ♘f3    ♘c6    │ │
-│      │ │a│        BÀN CỜ             │ │ │ 3. ♗c4 ?! ♘f6    │ │
-│ Chơi │ │l│   (vuông, cao tối đa      │ │ │ ...              │ │
-│ Ôn   │ │ │    = chiều cao cửa sổ     │ │ └──────────────────┘ │
-│ Học  │ │ │    trừ 2 thanh người chơi)│ │  |◀  ◀  ▶  ▶|  ⟲     │
-│ Bạn  │ └─┴───────────────────────────┘ │ ┌──────────────────┐ │
-│      │ [avatar] Bạn              09:12 │ │ Huấn luyện viên  │ │
-│      │                                 │ │ (lời bình)       │ │
-└──────┴─────────────────────────────────┴──┴──────────────────┴─┘
+┌──────────────────────────────────────────────────────────────┐
+│ ♘ Cờ vua   Chơi  Xem lại  Ôn tập  Bạn bè           Nelson    │
+├──────────────────────────────────────────────────────────────┤
+│ Xem lại ván                    Phòng thủ hai Mã · C55  [nút] │
+│                                                               │
+│ ♚ Máy cấp 4  1550              96.1%   │ Huấn luyện viên      │
+│ ┌─┬─────────────────────────────────┐  │ (lời bình)           │
+│ │E│                                 │  ├──────────────────────┤
+│ │v│            BÀN CỜ               │  │ Diễn biến (biểu đồ)  │
+│ │a│   (vuông, cao tối đa = chiều    │  ├──────────────────────┤
+│ │l│    cao cửa sổ trừ header và     │  │ 1. e4     e5         │
+│ │ │    hai thanh người chơi)        │  │ 2. ♘f3    ♘c6        │
+│ └─┴─────────────────────────────────┘  │ ...                  │
+│ ♔ Nelson  1180                 90.6%   │ |◀ ◀ ▶ ▶|            │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-- Thanh đánh giá rộng 20px, sát cạnh trái bàn cờ.
-- Bảng bên phải rộng 360–400px, cố định; bàn cờ co giãn theo phần còn lại.
-- Nav dọc: icon + nhãn chữ nhỏ bên dưới (không chỉ icon).
+- Thanh đánh giá rộng 22px, **dính sát** cạnh trái bàn cờ (cùng trong một khung viền).
+- Bảng bên phải rộng 380px, cố định; bàn cờ co giãn theo phần còn lại.
 
 ### Điện thoại (dưới 768px)
 
 ```
 ┌───────────────────────┐
+│ ♘ Cờ vua      📖  👤 │  header rút gọn
+├───────────────────────┤
 │ Máy cấp 4       08:41 │
 │ ┌───────────────────┐ │
 │ │      BÀN CỜ       │ │  rộng hết màn hình
@@ -93,7 +114,7 @@ Thay vào đó:
 └───────────────────────┘
 ```
 
-Máy tính bảng (768–1023px): như desktop nhưng nav thu thành icon, bảng bên phải 320px.
+Máy tính bảng (768–1100px): như desktop nhưng các mục trên header chỉ còn icon, bảng bên phải 320px.
 
 ## 4. Token
 
@@ -214,7 +235,8 @@ Mỗi component có đủ trạng thái (thường, hover, nhấn, focus, vô hi
 | `GameResult` | Hộp thoại cuối ván: kết quả, lý do, độ chính xác hai bên, nút "Xem lại ván" là nút chính |
 | `InviteCard` | Link mời, nút sao chép, trạng thái "Đang chờ đối thủ…" |
 | `ReviewQueueItem` | Thẻ ôn tập: thế cờ thu nhỏ, chủ đề, lần ôn kế tiếp |
-| `Nav` | Dọc trên desktop, dưới trên điện thoại; mục đang chọn có vạch nhấn 3px |
+| `siteHeader` | Header chung: tên app, điều hướng, tài khoản. Mục đang chọn có vạch nhấn 2px sát đáy header |
+| `Nav` | Thanh đáy, chỉ trên điện thoại; mục đang chọn có vạch nhấn 3px |
 | `sideGlyph` | Con Vua nhỏ cho biết bên cầm quân |
 | `notice` | Dòng trạng thái nằm trong luồng nội dung, không nổi lên trên |
 | `Dialog` | Chỉ cho quyết định (đầu hàng, đề nghị hòa, phong cấp) |

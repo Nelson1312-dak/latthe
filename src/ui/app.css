@@ -1,8 +1,9 @@
 /* Bố cục khung app và màn hình ván cờ. */
 
+/* Trang có một header chung trên cùng (tên app + điều hướng), nội dung nằm dưới. */
 .app {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-rows: auto 1fr;
   min-height: 100vh;
 }
 /* Ô lưới và ô flex mặc định không co dưới min-content, làm cả trang phình ngang.
@@ -18,23 +19,111 @@
   min-width: 0;
 }
 
-/* ---------------- Nav ---------------- */
-.nav {
+/* ---------------- Header ---------------- */
+.site-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-3) var(--s-2);
-  border-right: 1px solid var(--line);
+  align-items: stretch;
+  gap: var(--s-4);
+  height: var(--head-h);
+  padding: 0 var(--s-6);
   background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* Tên app: thứ to nhất trên header, kèm một con Mã làm dấu nhận diện */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: none;
+  color: var(--text-1);
+  text-decoration: none;
+  font-size: var(--fs-brand);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+.brand:hover {
+  color: var(--accent-text);
+}
+
+.top-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.top-nav::-webkit-scrollbar {
+  display: none;
+}
+.top-link {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-3);
+  /* Vạch nhấn nằm sát đáy header, đúng kiểu thanh điều hướng của trang cờ */
+  border-bottom: 2px solid transparent;
+  color: var(--text-2);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.top-link:hover {
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+.top-link.is-active {
+  color: var(--text-1);
+  border-bottom-color: var(--accent);
+}
+.top-link .icon {
+  color: var(--text-3);
+}
+.top-link.is-active .icon {
+  color: var(--accent-text);
+}
+.site-right {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin-left: auto;
+  flex: none;
+}
+.site-right .top-link span {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------- Thanh dưới (chỉ điện thoại) ---------------- */
+.nav {
+  display: none;
+  gap: var(--s-1);
+  padding: var(--s-1) var(--s-2);
+  border-top: 1px solid var(--line);
+  background: var(--bg-1);
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
 }
 .nav-item {
   display: grid;
   justify-items: center;
   gap: 3px;
   min-width: 0;
+  flex: 1;
   padding: var(--s-2) 0;
   border: 0;
-  border-left: 3px solid transparent;
+  border-bottom: 3px solid transparent;
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-3);
@@ -56,11 +145,8 @@
 }
 .nav-item.is-active {
   background: var(--bg-2);
-  border-left-color: var(--accent);
+  border-bottom-color: var(--accent);
   color: var(--text-1);
-}
-.nav-spacer {
-  flex: 1;
 }
 
 .screen {
@@ -79,6 +165,10 @@
   border-bottom: 1px solid var(--line);
 }
 .screen-head h1 {
+  margin-right: auto;
+}
+/* Màn nào không có tiêu đề riêng (tên app đã ở header) thì phần meta nhận chỗ đó */
+.screen-head > .head-meta:first-child {
   margin-right: auto;
 }
 
@@ -109,7 +199,7 @@
    dính sát thanh thay vì bị đẩy ra giữa khoảng trống. */
 .board-row,
 .game-board .player {
-  width: min(100%, calc(100vh - 188px));
+  width: min(100%, calc(100vh - var(--head-h) - 188px));
 }
 .board-row > .board {
   flex: 1;
@@ -134,47 +224,33 @@
 
 /* ---------------- Biểu đồ đánh giá ---------------- */
 
-/* ---------------- Điện thoại ---------------- */
-@media (max-width: 1023px) {
+/* ---------------- Màn hình vừa ---------------- */
+@media (max-width: 1100px) {
   .game {
     grid-template-columns: 1fr 320px;
   }
-  .nav-item span {
-    display: none;
+  .site-head {
+    padding: 0 var(--s-4);
+    gap: var(--s-3);
   }
-  .app {
-    grid-template-columns: 56px 1fr;
+  .top-link span {
+    display: none;
   }
 }
 
 @media (max-width: 767px) {
   .app {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto 1fr auto;
+  }
+  /* Điện thoại: điều hướng xuống đáy cho vừa tầm ngón tay, header chỉ còn tên app */
+  .top-nav {
+    display: none;
   }
   .nav {
-    position: sticky;
-    bottom: 0;
-    flex-direction: row;
-    justify-content: space-around;
-    border-right: 0;
-    border-top: 1px solid var(--line);
-    padding: var(--s-1) var(--s-2);
+    display: flex;
   }
-  .nav-item {
-    flex: 1;
-    border-left: 0;
-    border-bottom: 3px solid transparent;
-  }
-  .nav-item span {
-    display: block;
-  }
-  .nav-item.is-active {
-    border-left-color: transparent;
-    border-bottom-color: var(--accent);
-  }
-  .nav-spacer {
-    display: none;
+  .site-head {
+    padding: 0 var(--s-3);
   }
   .screen {
     padding: var(--s-3);

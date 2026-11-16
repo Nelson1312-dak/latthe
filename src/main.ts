@@ -39,19 +39,45 @@ function route(): string {
   return r in SCREENS ? r : '';
 }
 
-function navItem(route: string, label: string, name: IconName, current: string): string {
-  return `<a class="nav-item${route === current ? ' is-active' : ''}" href="#/${route}">${icon(name, 22)}<span>${label}</span></a>`;
+/** Tên gọi ngắn để hiện trên header: người Việt gọi nhau bằng tên, không phải họ. */
+function shortName(): string {
+  if (auth.offline) return 'Ngoại tuyến';
+  if (!auth.user) return 'Đăng nhập';
+  return auth.user.name.trim().split(/\s+/).pop() ?? 'Tôi';
 }
 
-function nav(current: string): string {
-  // Nav hẹp: lấy từ cuối của tên (người Việt gọi nhau bằng tên, không phải họ)
-  const who = auth.user ? (auth.user.name.trim().split(/\s+/).pop() ?? 'Tôi') : auth.offline ? 'Ngoại tuyến' : 'Đăng nhập';
+function topLink(route: string, label: string, name: IconName, current: string): string {
   return (
-    `<nav class="nav" aria-label="Chính">` +
-    NAV.map((n) => navItem(n.route, n.label, n.icon, current)).join('') +
-    `<span class="nav-spacer"></span>` +
-    navItem('tai-khoan', who, 'user', current) +
-    navItem('thiet-ke', 'Thiết kế', 'book', current) +
+    `<a class="top-link${route === current ? ' is-active' : ''}" href="#/${route}"` +
+    `${route === current ? ' aria-current="page"' : ''}>${icon(name, 18)}<span>${label}</span></a>`
+  );
+}
+
+/** Header chung: tên app bên trái, điều hướng ở giữa, tài khoản bên phải. */
+function siteHeader(current: string): string {
+  return (
+    `<header class="site-head">` +
+    `<a class="brand" href="#/" aria-label="Cờ vua — về sảnh">` +
+    `<svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><use href="#wn"/></svg>` +
+    `<span>Cờ vua</span></a>` +
+    `<nav class="top-nav" aria-label="Chính">` +
+    NAV.map((n) => topLink(n.route, n.label, n.icon, current)).join('') +
+    `</nav>` +
+    `<div class="site-right">` +
+    topLink('thiet-ke', 'Thiết kế', 'book', current) +
+    topLink('tai-khoan', shortName(), 'user', current) +
+    `</div></header>`
+  );
+}
+
+/** Thanh điều hướng dưới đáy, chỉ hiện trên điện thoại. */
+function bottomNav(current: string): string {
+  const item = (route: string, label: string, name: IconName) =>
+    `<a class="nav-item${route === current ? ' is-active' : ''}" href="#/${route}">${icon(name, 22)}<span>${label}</span></a>`;
+  return (
+    `<nav class="nav" aria-label="Chính (điện thoại)">` +
+    NAV.map((n) => item(n.route, n.label, n.icon)).join('') +
+    item('tai-khoan', shortName(), 'user') +
     `</nav>`
   );
 }
@@ -62,7 +88,7 @@ function render(): void {
   document.title = r ? `${screen.title} · Cờ vua` : 'Cờ vua';
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
-  app.innerHTML = nav(r) + `<main>${screen.render()}</main>`;
+  app.innerHTML = siteHeader(r) + `<main>${screen.render()}</main>` + bottomNav(r);
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');
     if (slot) void renderGoogleButton(slot, showLoginError);
