@@ -12,7 +12,7 @@ và cũng không nên có quyền.
 2. Tạo một project mới (góc trên bên trái, chỗ chọn project → **New Project**). Đặt tên gì cũng được, ví dụ `co-vua`.
 3. Vào **APIs & Services → OAuth consent screen**:
    - Kiểu người dùng: **External**.
-   - Điền tên app (`Cờ vua`), email hỗ trợ, email liên hệ. Các mục khác để trống được.
+   - Điền tên app (`Lật Cờ`), email hỗ trợ, email liên hệ. Các mục khác để trống được.
    - Phần **Test users**: thêm chính địa chỉ Gmail của bạn. Khi app còn ở trạng thái *Testing*,
      chỉ những địa chỉ trong danh sách này mới đăng nhập được — thêm bạn bè vào đây nếu muốn họ thử.
 4. Vào **APIs & Services → Credentials → Create Credentials → OAuth client ID**:

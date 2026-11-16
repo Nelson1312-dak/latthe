@@ -310,4 +310,4 @@ GĐ0 -> GĐ1 -> GĐ2 -> GĐ3 -> GĐ4 -> GĐ5 ----> GĐ8
 | Tải file puzzle 310 MB | Đầu GĐ6 | Mình hỏi lại trước khi tải |
 | Tên miền cố định cho tunnel | GĐ8 (nên chốt sớm) | Tên miền tĩnh miễn phí của ngrok |
 | Project Vercel cũ | GĐ8 | Giữ nguyên, không đụng tới |
-| Tên app | Trước khi duyệt design | Tạm gọi "Cờ vua" |
+| ~~Tên app~~ | đã chốt 16/11/2026 | **Lật Cờ**, đặt theo bộ với latbai.vn |

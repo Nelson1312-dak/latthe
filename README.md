@@ -1,4 +1,4 @@
-# Cờ vua
+# Lật Cờ
 
 Web game cờ vua để học: chơi với máy, xem lại từng nước có Huấn luyện viên giải thích, và ôn tập bằng chính lỗi của mình. Xem [docs/PLAN.md](docs/PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 

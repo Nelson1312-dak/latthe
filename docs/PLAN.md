@@ -1,4 +1,4 @@
-# Kế hoạch: Game cờ vua đào tạo có AI tư vấn
+# Kế hoạch: Lật Cờ — game cờ vua đào tạo có AI tư vấn
 
 Lập ngày 16/11/2026, cập nhật cùng ngày theo 2 chế độ chơi. Thay thế toàn bộ game Quần Đảo Vô Tận cũ.
 
@@ -92,4 +92,4 @@ Trình duyệt người chơi                       Máy này (Windows)
 2. **Google OAuth client ID**: bạn tạo trên Google Cloud Console (mình sẽ hướng dẫn từng bước ở GĐ1).
 3. **Giấy phép GPL-3** (do Stockfish): mã game công khai theo GPL-3.
 4. **Project Vercel `latthe`** vẫn chạy game đảo cũ ở **latbai.vn**, không bị đụng tới. Bản thiết kế cờ vua deploy sang project riêng **co-vua** (`https://co-vua-mu.vercel.app`), và thư mục này giờ liên kết với project đó. Khi app cờ vua chạy được thật thì nó cần server trên máy này, không chạy trên Vercel — lúc đó mới quyết định latbai.vn đi về đâu.
-5. **Tên app.**
+5. ~~Tên app~~ — đã chốt: **Lật Cờ**, đặt theo bộ với latbai.vn.

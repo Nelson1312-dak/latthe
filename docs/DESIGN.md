@@ -58,7 +58,7 @@ Mọi màn hình đều nằm dưới một header cao 56px:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ ♘ Cờ vua   Chơi  Xem lại  Ôn tập  Bạn bè    Thiết kế  Nelson │
+│ ♘ Lật Cờ   Chơi  Xem lại  Ôn tập  Bạn bè    Thiết kế  Nelson │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,7 +74,7 @@ Mọi màn hình đều nằm dưới một header cao 56px:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ ♘ Cờ vua   Chơi  Xem lại  Ôn tập  Bạn bè           Nelson    │
+│ ♘ Lật Cờ   Chơi  Xem lại  Ôn tập  Bạn bè           Nelson    │
 ├──────────────────────────────────────────────────────────────┤
 │ Xem lại ván                    Phòng thủ hai Mã · C55  [nút] │
 │                                                               │
@@ -97,7 +97,7 @@ Mọi màn hình đều nằm dưới một header cao 56px:
 
 ```
 ┌───────────────────────┐
-│ ♘ Cờ vua      📖  👤 │  header rút gọn
+│ ♘ Lật Cờ      📖  👤 │  header rút gọn
 ├───────────────────────┤
 │ Máy cấp 4       08:41 │
 │ ┌───────────────────┐ │

@@ -15,6 +15,9 @@ import { online } from './ui/screens/online.ts';
 import { account } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
+/** Tên app, đặt theo bộ với latbai.vn. Đổi ở đây là đổi cả header lẫn tiêu đề tab. */
+export const APP_NAME = 'Lật Cờ';
+
 type Screen = { title: string; render: () => string };
 
 const SCREENS: Record<string, Screen> = {
@@ -57,9 +60,9 @@ function topLink(route: string, label: string, name: IconName, current: string):
 function siteHeader(current: string): string {
   return (
     `<header class="site-head">` +
-    `<a class="brand" href="#/" aria-label="Cờ vua — về sảnh">` +
+    `<a class="brand" href="#/" aria-label="${APP_NAME} — về sảnh">` +
     `<svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><use href="#wn"/></svg>` +
-    `<span>Cờ vua</span></a>` +
+    `<span>${APP_NAME}</span></a>` +
     `<nav class="top-nav" aria-label="Chính">` +
     NAV.map((n) => topLink(n.route, n.label, n.icon, current)).join('') +
     `</nav>` +
@@ -85,7 +88,7 @@ function bottomNav(current: string): string {
 function render(): void {
   const r = route();
   const screen = SCREENS[r];
-  document.title = r ? `${screen.title} · Cờ vua` : 'Cờ vua';
+  document.title = r ? `${screen.title} · ${APP_NAME}` : APP_NAME;
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
   app.innerHTML = siteHeader(r) + `<main>${screen.render()}</main>` + bottomNav(r);
