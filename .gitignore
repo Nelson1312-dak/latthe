@@ -20,3 +20,5 @@ watchdog-proxy.beat
 .ngrok-restart.stamp
 infra/*.log
 infra/*.containers.txt
+
+.vercel

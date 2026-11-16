@@ -4,6 +4,8 @@ Web game cờ vua để học: chơi với máy, xem lại từng nước có Hu
 
 Đang ở **giai đoạn 0: design system**. Các màn hình hiện là bản dựng tĩnh, chưa có logic chơi cờ.
 
+Bản xem thử: **https://co-vua-mu.vercel.app** (project Vercel `co-vua`; thư mục này liên kết với project đó). Game đảo cũ vẫn ở latbai.vn, project `latthe`, không bị đụng tới.
+
 ## Chạy
 
 ```bash
