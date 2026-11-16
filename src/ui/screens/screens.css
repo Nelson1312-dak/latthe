@@ -1,0 +1,297 @@
+/* CSS riêng của từng màn hình. */
+
+/* ---------------- Sảnh ---------------- */
+.hero {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-6);
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s-6);
+}
+.hero-text {
+  max-width: 44ch;
+}
+.hero-text p {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+}
+.hero-board {
+  width: 168px;
+  flex: none;
+}
+.continue {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.continue-board {
+  width: 56px;
+  flex: none;
+}
+.continue .btn {
+  margin-left: auto;
+}
+.game-row {
+  display: grid;
+  max-width: 100%;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-sm);
+}
+.game-row:last-child {
+  border-bottom: 0;
+}
+.result-w {
+  color: var(--ok);
+  font-weight: 600;
+}
+.result-l {
+  color: var(--danger);
+  font-weight: 600;
+}
+.result-d {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+/* ---------------- Chọn cấp độ ---------------- */
+.levels {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+}
+.level {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.level.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+/* ---------------- Xem lại ---------------- */
+.acc-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+}
+.cls-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.cls-count {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.jump-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* ---------------- Ôn tập ---------------- */
+.queue-item {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.queue-item .board {
+  border-radius: 2px;
+}
+.queue-meta {
+  display: grid;
+  gap: 2px;
+}
+.theme-tag {
+  display: inline-block;
+  justify-self: start;
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+.box-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-2);
+  height: 72px;
+}
+.box-bar {
+  flex: 1;
+  display: grid;
+  gap: var(--s-1);
+  align-content: end;
+  text-align: center;
+}
+.box-bar i {
+  display: block;
+  background: var(--accent-dim);
+  border-top: 2px solid var(--accent);
+}
+
+/* ---------------- Ván với bạn ---------------- */
+.invite {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.invite code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.invite .btn {
+  margin-left: auto;
+}
+.locked {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+/* ---------------- Trang thiết kế ---------------- */
+.spec-section {
+  padding: var(--s-6) 0;
+  border-bottom: 1px solid var(--line);
+}
+.spec-section > h2 {
+  margin-bottom: var(--s-4);
+}
+.spec-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+.spec-note {
+  margin-bottom: var(--s-3);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  max-width: 70ch;
+}
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: var(--s-2);
+}
+.swatch {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.swatch i {
+  display: block;
+  height: 44px;
+}
+.swatch span {
+  display: block;
+  padding: var(--s-1) var(--s-2);
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  background: var(--bg-1);
+}
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--s-2);
+}
+.icon-cell {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.type-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-1) 0;
+}
+.type-row .label {
+  width: 96px;
+  flex: none;
+}
+.spec-boards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  max-width: 900px;
+}
+.spec-board-label {
+  margin-bottom: var(--s-1);
+}
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s-4);
+  align-items: start;
+}
+
+/* Bàn cờ bài tập không cần to bằng bàn chơi thật */
+.puzzle-board {
+  width: min(100%, 460px);
+  margin: 0 auto;
+}
+.recent {
+  max-width: 680px;
+}

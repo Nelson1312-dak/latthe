@@ -1,0 +1,142 @@
+/* Token của design system. Không component nào được viết màu cứng — chỉ dùng biến ở đây.
+   Giao diện tối là mặc định. Xem docs/DESIGN.md. */
+
+@import '/fonts/fonts.css';
+
+:root {
+  /* ---- Nền và chữ (tối) ---- */
+  --bg-0: #1a1917;
+  --bg-1: #22211e;
+  --bg-2: #2c2a27;
+  --bg-3: #37352f;
+  --bg-row: #262523;
+  --line: #3a3833;
+  --line-strong: #4a473f;
+  --text-1: #ece8e1;
+  --text-2: #b3ada3;
+  --text-3: #948d82;
+
+  /* ---- Màu nhấn và trạng thái ---- */
+  --accent: #e2a03f;
+  --accent-hover: #edb25a;
+  --accent-dim: #4a3a1c;
+  --on-accent: #1a1917;
+  --danger: #e4685c;
+  --danger-dim: #4a221e;
+  --on-danger: #1a1917;
+  --ok: #6fa35a;
+  --focus: #7fb2e5;
+
+  /* ---- Xếp loại nước đi ---- */
+  --cls-book: #a38b6d;
+  --cls-best: #5fa36a;
+  --cls-good: #8fb07a;
+  --cls-inaccuracy: #e3b53b;
+  --cls-mistake: #e2873a;
+  --cls-blunder: #dd5a4e;
+  --cls-miss: #c2675e;
+  /* Mực viết trên huy hiệu xếp loại: giao diện tối dùng nền sáng nên mực tối, và ngược lại */
+  --on-badge: #1a1917;
+
+  /* ---- Bàn cờ: 3 chủ đề ---- */
+  --sq-light: #ead8b6;
+  --sq-dark: #b08a62;
+  --mark-move: rgb(232 196 80 / 0.42);
+  --mark-select: rgb(232 196 80 / 0.55);
+  --mark-legal: rgb(0 0 0 / 0.2);
+  --mark-check: #cf4034;
+  --arrow-coach: #5fa36a;
+  --arrow-user: #e2873a;
+
+  /* ---- Chữ ---- */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --fs-xs: 12px;
+  --lh-xs: 16px;
+  --fs-sm: 13px;
+  --lh-sm: 18px;
+  --fs-md: 14px;
+  --lh-md: 20px;
+  --fs-lg: 16px;
+  --lh-lg: 24px;
+  --fs-xl: 20px;
+  --lh-xl: 28px;
+  --fs-2xl: 28px;
+  --lh-2xl: 34px;
+  --fs-clock: 24px;
+
+  /* ---- Khoảng cách, bo góc ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-12: 48px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.35);
+
+  /* ---- Chuyển động ---- */
+  --t-piece: 150ms;
+  --t-ui: 120ms;
+
+  color-scheme: dark;
+}
+
+/* ---- Giao diện sáng ---- */
+:root[data-theme='light'] {
+  --bg-0: #f3f1ec;
+  --bg-1: #ffffff;
+  --bg-2: #ece9e2;
+  --bg-3: #e2ded5;
+  --bg-row: #f1eee7;
+  --line: #d9d4c9;
+  --line-strong: #c3bcad;
+  --text-1: #1d1b18;
+  --text-2: #57524a;
+  --text-3: #6b6558;
+
+  --accent: #b2761a;
+  --accent-hover: #9c6614;
+  --accent-dim: #f3e4c8;
+  --on-accent: #1a1917;
+  --danger: #b5352b;
+  --danger-dim: #f6dedb;
+  --on-danger: #ffffff;
+  --ok: #4d7d3c;
+  --focus: #2f6ba6;
+
+  --cls-book: #806a4d;
+  --cls-best: #3d7a48;
+  --cls-good: #5a7f45;
+  --cls-inaccuracy: #8f6c0c;
+  --cls-mistake: #b05e17;
+  --cls-blunder: #b5352b;
+  --cls-miss: #9b453c;
+  --on-badge: #ffffff;
+
+  --shadow-float: 0 8px 24px rgb(60 50 35 / 0.18);
+  color-scheme: light;
+}
+
+/* ---- Chủ đề bàn cờ ---- */
+[data-board='wood'] {
+  --sq-light: #ead8b6;
+  --sq-dark: #b08a62;
+}
+[data-board='green'] {
+  --sq-light: #e8e9d0;
+  --sq-dark: #7a9a5c;
+}
+[data-board='stone'] {
+  --sq-light: #dadfe3;
+  --sq-dark: #8697a6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-piece: 60ms;
+    --t-ui: 0ms;
+  }
+}

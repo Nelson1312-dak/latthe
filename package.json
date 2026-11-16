@@ -1,0 +1,32 @@
+{
+  "name": "co-vua",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "fixtures": "node --experimental-strip-types --no-warnings scripts/gen-fixtures.ts",
+    "shots": "node scripts/shots.mjs",
+    "check:design": "node scripts/check-design.mjs",
+    "postinstall": "node scripts/copy-assets.mjs"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "chess.js": "1.4.0",
+    "cm-chessboard": "8.15.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "24.10.1",
+    "playwright": "1.65.1",
+    "stockfish": "19.0.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

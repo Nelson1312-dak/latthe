@@ -1,22 +1,22 @@
-.vercel
-.env*
-assets-src/
 node_modules/
-package-lock.json
-.DS_Store
-watchdog-proxy.log
-
-worker/logs/
-infra/*.log
-infra/*.containers.txt
-.ngrok-restart.stamp
-
-# File nhip tim cua watchdog: ghi moi phut, khong phai ma nguon
-watchdog-proxy.beat
-
-# San pham dung, Vercel tu build
 dist/
+data/
+assets-src/
+shots/
+test-results/
+playwright-report/
+public/engine/
+.DS_Store
+
+# Bí mật và cấu hình máy: không bao giờ commit
+.env*
+.vercel
 .claude/
 
-server/data/
-dist-online/
+# Còn lại từ dự án giao dịch Lật Bài chạy chung thư mục
+worker/logs/
+watchdog-proxy.log
+watchdog-proxy.beat
+.ngrok-restart.stamp
+infra/*.log
+infra/*.containers.txt

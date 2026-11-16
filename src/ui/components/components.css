@@ -1,0 +1,461 @@
+/* CSS của bộ component. Bề mặt phẳng, bo góc nhỏ, không bóng đổ (trừ hộp thoại). */
+
+/* ---------------- Button ---------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 36px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-ui), border-color var(--t-ui);
+}
+.btn:hover:not(:disabled) {
+  background: var(--bg-3);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn .icon {
+  flex: none;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-dim);
+}
+
+.btn-text {
+  background: transparent;
+  border-color: transparent;
+  padding: 0 var(--s-2);
+}
+.btn-text:hover:not(:disabled) {
+  background: var(--bg-2);
+}
+
+.btn-icon {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+.btn[aria-pressed='true'] {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text-1);
+}
+
+.btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+.spinner {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+
+@media (max-width: 767px) {
+  .btn {
+    height: 44px;
+    font-size: var(--fs-lg);
+  }
+  .btn-icon {
+    width: 44px;
+  }
+}
+
+/* ---------------- Clock ---------------- */
+.clock {
+  min-width: 78px;
+  padding: 2px var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: var(--fs-clock);
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+.clock-running {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+.clock-low {
+  background: var(--danger-dim);
+  color: var(--danger);
+  min-width: 96px;
+}
+.clock-flagged {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+/* ---------------- PlayerStrip ---------------- */
+.player {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) 0;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-2);
+}
+.player-name {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.tag-you {
+  padding: 1px 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-3);
+}
+.player-rating {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+.player-status {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.taken {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: var(--s-1);
+}
+.mini-piece {
+  width: 18px;
+  height: 18px;
+  opacity: 0.9;
+}
+.diff {
+  margin-left: var(--s-1);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.player .clock {
+  margin-left: auto;
+}
+
+/* ---------------- Huy hiệu xếp loại ---------------- */
+.badge {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--badge);
+  color: var(--on-badge);
+  font-weight: 700;
+  line-height: 1;
+}
+.badge-sm {
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+}
+.badge-md {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+}
+.badge-book {
+  background: transparent;
+  color: var(--cls-book);
+}
+
+/* ---------------- MoveList ---------------- */
+.move-list {
+  overflow-y: auto;
+  font-size: var(--fs-sm);
+}
+.move-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 1fr;
+  align-items: stretch;
+}
+.move-row:nth-child(odd) {
+  background: var(--bg-row);
+}
+.move-no {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--s-2);
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+.move {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 3px var(--s-2);
+  border: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.move:hover {
+  background: var(--bg-2);
+}
+.move.is-current {
+  background: var(--bg-3);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+.move-empty {
+  cursor: default;
+}
+.move-san {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- EvalBar ---------------- */
+.evalbar {
+  position: relative;
+  min-width: 0;
+  background: #26241f;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.evalbar-vertical {
+  width: 24px;
+  height: 100%;
+}
+.evalbar-horizontal {
+  width: 100%;
+  height: 20px;
+}
+.evalbar-white {
+  position: absolute;
+  background: #e8e4db;
+  transition: all 300ms ease-out;
+}
+.evalbar-vertical .evalbar-white {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--pct);
+}
+.evalbar-horizontal .evalbar-white {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--pct);
+}
+.evalbar-text {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+}
+.evalbar-vertical .evalbar-text {
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+.evalbar-vertical .on-white {
+  bottom: 3px;
+  color: #26241f;
+}
+.evalbar-vertical .on-black {
+  top: 3px;
+  color: #e8e4db;
+}
+.evalbar-horizontal .evalbar-text {
+  top: 3px;
+}
+.evalbar-horizontal .on-white {
+  left: 5px;
+  color: #26241f;
+}
+.evalbar-horizontal .on-black {
+  right: 5px;
+  color: #e8e4db;
+}
+
+/* ---------------- CoachPanel ---------------- */
+.coach {
+  padding: var(--s-3);
+}
+.coach-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+  color: var(--text-2);
+}
+.coach-head h3 {
+  color: var(--text-1);
+}
+.coach-move {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-left: auto;
+  font-size: var(--fs-sm);
+}
+.coach-text {
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
+}
+.coach-text.is-typing::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  background: var(--accent);
+  vertical-align: text-bottom;
+  animation: caret 900ms steps(2) infinite;
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+.coach-better {
+  margin-top: var(--s-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.coach-better .mono {
+  color: var(--cls-best);
+  font-weight: 600;
+}
+.coach-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+.coach-source {
+  margin-top: var(--s-3);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--line);
+}
+
+/* ---------------- HintButton ---------------- */
+.hint {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.hint-dots {
+  display: flex;
+  gap: var(--s-1);
+}
+.hint-dot {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+}
+.hint-dot.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------------- Toast ---------------- */
+.toast {
+  display: inline-block;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--text-3);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  font-size: var(--fs-sm);
+}
+.toast-danger {
+  border-left-color: var(--danger);
+}
+
+/* ---------------- Dialog ---------------- */
+.dialog-backdrop {
+  display: grid;
+  place-items: center;
+  padding: var(--s-6);
+  background: rgb(0 0 0 / 0.45);
+}
+.dialog {
+  width: 100%;
+  max-width: 380px;
+  padding: var(--s-4);
+  box-shadow: var(--shadow-float);
+}
+.dialog-body {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+/* ---------------- Bàn cờ ---------------- */
+.board {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+}

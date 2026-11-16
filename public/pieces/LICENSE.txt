@@ -1,0 +1,18 @@
+LICENSE
+=======
+
+Chess pieces
+~~~~~~~~~~~~
+
+The chess pieces in this sprite are copies from Wikimedia Commons
+https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces/Standard
+
+License: Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+https://creativecommons.org/licenses/by-sa/3.0/
+
+Authors:
+- https://en.wikipedia.org/wiki/User:Cburnett
+- https://en.wikipedia.org/wiki/User:Rfc1394
+
+modified by shaack (https://shaack.com) for the usage in cm-chessboard.
+https://github.com/shaack/cm-chessboard

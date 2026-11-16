@@ -1,0 +1,104 @@
+/* Nền tảng: reset nhẹ, kiểu chữ, và các lớp dùng chung. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 767px) {
+  body {
+    font-size: var(--fs-lg);
+    line-height: var(--lh-lg);
+  }
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+h1 {
+  font-size: var(--fs-xl);
+  line-height: var(--lh-xl);
+}
+h2 {
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
+}
+h3 {
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+}
+p {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Chỉ hiện cho trình đọc màn hình */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--text-2);
+}
+
+.label {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+}
+
+.panel {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 0;
+}
