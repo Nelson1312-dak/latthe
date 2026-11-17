@@ -85,13 +85,15 @@ export function toolbar(...groups: string[][]): string {
 /* ---------------- Clock ---------------- */
 export type ClockState = 'idle' | 'running' | 'low' | 'flagged';
 
-export function clock(ms: number, state: ClockState = 'idle'): string {
+export function clock(ms: number, state: ClockState = 'idle', id?: string): string {
   const total = Math.max(0, ms);
   const m = Math.floor(total / 60000);
   const s = Math.floor((total % 60000) / 1000);
   const body = `${m}:${String(s).padStart(2, '0')}`;
   const tenth = state === 'low' ? `<small>.${Math.floor((total % 1000) / 100)}</small>` : '';
-  return `<div class="clock mono clock-${state}">${body}${tenth}</div>`;
+  // data-clock để màn hình cập nhật đúng đồng hồ tại chỗ mỗi giây
+  const tag = id ? ` data-clock="${id}"` : '';
+  return `<div class="clock mono clock-${state}"${tag}>${body}${tenth}</div>`;
 }
 
 /* ---------------- PlayerStrip ---------------- */
@@ -103,6 +105,8 @@ export interface PlayerOptions {
   bot?: boolean;
   clockMs?: number;
   clockState?: ClockState;
+  /** Gắn vào đồng hồ để màn hình cập nhật tại chỗ ('w' hoặc 'b'). */
+  clockId?: string;
   took?: PieceCode[];
   diff?: number;
   status?: string;
@@ -125,7 +129,7 @@ export function playerStrip(o: PlayerOptions): string {
       ? `<span class="player-acc"><b class="mono">${o.accuracy}%</b> chính xác</span>`
       : '') +
     (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
-    (o.clockMs !== undefined ? clock(o.clockMs, o.clockState) : '') +
+    (o.clockMs !== undefined ? clock(o.clockMs, o.clockState, o.clockId) : '') +
     `</div>`
   );
 }

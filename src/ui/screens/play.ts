@@ -2,8 +2,10 @@
 // Engine chạy trong Web Worker ở máy người chơi, nên giao diện không bị đứng
 // trong lúc máy nghĩ.
 
-import { BoardView } from '../../board/BoardView.ts';
-import { Game, outcomeText, type Side, type Square } from '../../../shared/chess.ts';
+import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
+import { boardSvg } from '../../board/Board.ts';
+import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
+import { Game, START_FEN, outcomeText, type Side, type Square } from '../../../shared/chess.ts';
 import { material } from '../../../shared/fen.ts';
 import { formatScore, type Score } from '../../../shared/winrate.ts';
 import { playSound, soundEnabled } from '../../app/sound.ts';
@@ -11,6 +13,7 @@ import { engine } from '../../engine/engine.ts';
 import { LEVELS, levelById, thinkDelayMs } from '../../engine/levels.ts';
 import { splitUci } from '../../engine/uci.ts';
 import { saveFinishedGame } from '../../app/games.ts';
+import { auth } from '../../app/session.ts';
 import { offerReview } from './review.ts';
 import { buildFacts } from '../../../shared/advisor/facts.ts';
 import { detectMotifs } from '../../../shared/advisor/motifs.ts';
@@ -59,6 +62,8 @@ let animatedOrientation: Side = 'w';
 let hintLevel: 0 | 1 | 2 | 3 = 0;
 let hints: [string, string, string] | null = null;
 let hintLoading = false;
+/** Nước đã chọn đi trước trong lúc máy nghĩ; tới lượt mình thì đi luôn. */
+let premove: [Square, Square] | null = null;
 
 const PROMOTION_PIECES = [
   ['q', 'Hậu'],
@@ -75,6 +80,7 @@ function newGame(): void {
   void engine().cancel();
   game = new Game();
   pendingPromotion = null;
+  premove = null;
   ended = false;
   thinking = false;
   currentEval = null;
@@ -101,6 +107,7 @@ function setupScreen(): string {
       <span class="head-meta">Chọn đối thủ rồi bắt đầu</span>
     </div>
 
+    <div class="setup-wrap">
     <div class="setup">
       <div class="seg" role="group" aria-label="Đối thủ">
         <button class="seg-item${setup.mode === 'bot' ? ' is-active' : ''}" data-mode="bot">Đấu với máy</button>
@@ -125,6 +132,24 @@ function setupScreen(): string {
 
       <div class="setup-go">${button({ label: 'Bắt đầu ván', kind: 'primary', icon: 'play' })}</div>
       ${engineError ? notice(engineError, 'danger', 'engine') : ''}
+    </div>
+
+    <!-- Bàn cờ xem trước: lật theo bên đã chọn, để thấy ngay mình ngồi phía nào -->
+    <figure class="setup-preview only-desktop">
+      ${boardSvg({
+        fen: START_FEN,
+        orientation: setup.mode === 'bot' ? setup.side : 'w',
+        coordinates: true,
+        label: 'Bàn cờ xem trước',
+      })}
+      <figcaption>
+        ${
+          setup.mode === 'bot'
+            ? `<b>${levelById(setup.level).name}</b> · ${levelById(setup.level).hint}<br>Bạn cầm ${setup.side === 'w' ? 'Trắng, đi trước' : 'Đen'}`
+            : '<b>Hai người một máy</b> · thay nhau đi'
+        }
+      </figcaption>
+    </figure>
     </div>
   </div>`;
 }
@@ -156,7 +181,12 @@ function gameScreen(): string {
   const strip = (side: Side) => {
     const isBot = setup.mode === 'bot' && side === botSide();
     return playerStrip({
-      name: isBot ? levelById(setup.level).name : sideName(side),
+      // Đấu với máy thì bên mình mang tên mình, không phải chữ "Trắng"
+      name: isBot
+        ? levelById(setup.level).name
+        : setup.mode === 'bot' && side === setup.side && auth.user
+          ? auth.user.name
+          : sideName(side),
       side,
       bot: isBot,
       you: setup.mode === 'bot' && side === setup.side,
@@ -171,10 +201,23 @@ function gameScreen(): string {
     ? `<p class="game-result"><b>${outcomeText(result)}</b></p>
        <div class="setup-go" style="margin-top:var(--s-3)">${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' })}</div>`
     : thinking
-      ? notice(`${levelById(setup.level).name} đang nghĩ…`, 'info', 'engine')
+      ? notice(
+          premove
+            ? `${levelById(setup.level).name} đang nghĩ… Nước đi trước sẽ đi ngay khi tới lượt bạn.`
+            : `${levelById(setup.level).name} đang nghĩ… Bạn có thể đi trước.`,
+          'info',
+          'engine',
+        )
       : game.inCheck
         ? notice(`${sideName(game.turn)} đang bị chiếu`, 'danger', 'resign')
-        : notice('Chọn quân rồi chọn ô muốn đi', 'info', 'hint');
+        : notice(
+            // Màn cảm ứng không có chuột phải, nói tới nó chỉ làm rối
+            matchMedia('(pointer: coarse)').matches
+              ? 'Kéo quân, hoặc chạm quân rồi chạm ô muốn đi.'
+              : 'Kéo quân, hoặc bấm quân rồi bấm ô. Chuột phải để vẽ mũi tên.',
+            'info',
+            'hint',
+          );
 
   return `<div class="screen">
     <div class="screen-head">
@@ -258,6 +301,7 @@ export function mountPlay(rerender: () => void): void {
   if (!host) return;
 
   view = new BoardView(host, {
+    id: 'play',
     legalFrom: (from) => (canPlay() ? game.legalFrom(from) : { quiet: [], captures: [] }),
     canPick: (sq) => {
       if (!canPlay()) return false;
@@ -278,6 +322,21 @@ export function mountPlay(rerender: () => void): void {
       rerender();
       return true;
     },
+    // Đi trước chỉ có khi đấu với máy: hai người một máy thì ai cũng đang cầm chuột
+    premove:
+      setup.mode === 'bot'
+        ? {
+            active: () => !ended && game.atLive && game.turn === botSide(),
+            canPick: (sq) => ownsSquare(game.fen, sq, setup.side),
+            dests: (from) => premoveDests(game.fen, from),
+            set: (from, to) => {
+              premove = [from, to];
+            },
+            clear: () => {
+              premove = null;
+            },
+          }
+        : undefined,
   });
 
   drawBoard();
@@ -306,6 +365,7 @@ function drawBoard(): void {
       orientation,
       lastMove: last ? [last.from, last.to] : undefined,
       check: checked ?? undefined,
+      premove: premove ?? undefined,
       label: `Bàn cờ, lượt ${sideName(game.turn)}`,
     },
     stepped ? [last.from, last.to] : undefined,
@@ -381,9 +441,28 @@ async function askHint(rerender: () => void): Promise<void> {
   }
 }
 
-const PIECE_SLIDE_MS = 200;
 function rerenderAfterSlide(rerender: () => void): void {
   setTimeout(rerender, PIECE_SLIDE_MS);
+}
+
+/**
+ * Tới lượt mình mà có nước đi trước thì đi luôn, không chờ.
+ *
+ * Gọi SAU khi nước của máy đã trượt xong, để hai quân không trượt cùng một lúc.
+ * Lúc chọn đi trước chưa biết máy sẽ đi gì, nên giờ mới kiểm tra luật thật:
+ * không hợp lệ (bị chắn, bị ghim, quân đã bị ăn) thì bỏ, như Lichess.
+ */
+function playPremove(rerender: () => void): void {
+  if (!premove) return;
+  const [from, to] = premove;
+  premove = null;
+  if (ended || !game.atLive || game.turn !== setup.side) return rerender();
+  if (game.move(from, to)) {
+    hints = null;
+    hintLevel = 0;
+    afterMove(rerender);
+  }
+  rerender();
 }
 
 /** Máy nghĩ rồi đi. Giao diện vẫn dùng được trong lúc này. */
@@ -418,8 +497,9 @@ async function botMove(rerender: () => void): Promise<void> {
   } finally {
     thinking = false;
     rerender();
+    if (premove) setTimeout(() => playPremove(rerender), PIECE_SLIDE_MS);
     // Thanh đánh giá cập nhật sau, để không vẽ lại giữa lúc quân đang trượt
-    if (showEval) setTimeout(() => void refreshEval(rerender), PIECE_SLIDE_MS);
+    else if (showEval) setTimeout(() => void refreshEval(rerender), PIECE_SLIDE_MS);
   }
 }
 
@@ -514,6 +594,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     'Đi lại': () => {
       void engine().cancel();
       thinking = false;
+      premove = null;
       game.undo();
       if (setup.mode === 'bot' && game.length && game.turn !== setup.side) game.undo();
       ended = false;

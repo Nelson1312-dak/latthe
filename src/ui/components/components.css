@@ -23,6 +23,14 @@
   align-items: center;
   gap: var(--s-3);
   padding-bottom: var(--s-2);
+  /* Cao bằng nhau dù có link bên phải hay không, để hai cột cạnh nhau thẳng hàng */
+  min-height: 32px;
+}
+/* Tiêu đề mục đứng sau bất cứ thứ gì cũng phải có khoảng thở phía trên. Thiếu
+   dòng này thì tiêu đề dính sát dòng chữ ngay trên nó (màn Tài khoản: "Thẻ lỗi"
+   đè lên "LƯU Ở ĐÂU"). */
+* + .rule {
+  margin-top: var(--s-6);
 }
 .rule-label {
   font-size: var(--fs-xs);
@@ -592,5 +600,24 @@
 /* Quân cờ trượt về chỗ sau mỗi nước đi. Lớp .pc không có transform thuộc tính
    nên CSS transform ở đây không phá vị trí ô. */
 .pc.is-moving {
-  transition: transform var(--t-piece) ease-out;
+  transition: transform var(--t-piece) var(--ease-piece);
+}
+
+/* Quân đang được kéo: nằm trên cả trang, theo đúng con trỏ, không chặn chuột */
+.drag-piece {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  pointer-events: none;
+  will-change: transform;
+}
+.drag-piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+html.is-dragging-piece,
+html.is-dragging-piece * {
+  cursor: grabbing !important;
 }

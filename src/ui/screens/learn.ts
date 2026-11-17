@@ -61,7 +61,7 @@ export function learn(): string {
       const trong = LESSONS.filter((l) => l.chapter === ch);
       const sốXong = trong.filter((l) => done.has(l.id)).length;
       return `${rule(ch, `<span class="rule-note">${sốXong}/${trong.length}</span>`)}
-        <div style="margin-bottom:var(--s-6)">${sheet(`<div class="lesson-list">${trong.map(row).join('')}</div>`)}</div>`;
+        ${sheet(`<div class="lesson-list">${trong.map(row).join('')}</div>`)}`;
     }).join('')}
   </div>`;
 }

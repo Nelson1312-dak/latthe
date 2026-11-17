@@ -37,6 +37,60 @@
 }
 
 /* ---------------- Sảnh ---------------- */
+.home-head {
+  flex-wrap: wrap;
+}
+.home-head h1 {
+  margin-right: var(--s-4);
+}
+/* Ba con số có tên, nằm cạnh tên người chơi */
+.home-stats {
+  display: flex;
+  gap: var(--s-6);
+  margin: 0 auto 0 0;
+}
+.home-stats > div {
+  display: grid;
+  gap: 0;
+}
+.home-stats dt {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  color: var(--text-3);
+}
+.home-stats dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-1);
+}
+/* Bàn cờ bài tập: bấm vào là giải luôn */
+.home-puzzle {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-4);
+  width: 100%;
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.home-puzzle:hover {
+  background: var(--bg-2);
+  border-color: var(--line-strong);
+}
+.home-puzzle-cap {
+  display: grid;
+  gap: var(--s-1);
+}
+.home-puzzle-cap > span {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
 .home-cols {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -50,7 +104,6 @@
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   overflow: hidden;
-  margin-bottom: var(--s-8);
 }
 .task {
   display: flex;
@@ -234,7 +287,8 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-3) 0;
+  /* Có lề hai bên: nút Gợi ý từng dính sát mép hộp */
+  padding: var(--s-3);
   margin-bottom: var(--s-2);
   border-bottom: 1px solid var(--line);
 }
@@ -429,6 +483,13 @@
 }
 
 @media (max-width: 767px) {
+  .home-stats {
+    gap: var(--s-4);
+    width: 100%;
+  }
+  .home-puzzle {
+    grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
+  }
   .home-cols,
   .train-cols {
     grid-template-columns: 1fr;
@@ -569,10 +630,38 @@
 }
 
 /* ---------------- Chọn đối thủ trước ván ---------------- */
+/* Trái là các lựa chọn, phải là bàn cờ xem trước. Bản trước chỉ có cột trái,
+   một phần ba bên phải để trống. */
+.setup-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: var(--s-8);
+  align-items: start;
+}
 .setup {
   display: grid;
   gap: var(--s-6);
   max-width: 720px;
+}
+.setup-preview {
+  margin: 0;
+  display: grid;
+  gap: var(--s-3);
+}
+.setup-preview figcaption {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.setup-preview figcaption b {
+  color: var(--text-1);
+}
+@media (max-width: 900px) {
+  .setup-wrap {
+    grid-template-columns: 1fr;
+  }
+  .setup-preview {
+    display: none;
+  }
 }
 .setup-block {
   display: grid;
@@ -924,11 +1013,6 @@ button.log-row {
   margin-bottom: var(--s-4);
 }
 
-/* Nhịp dọc: tấm chắn rồi tới tiêu đề mục kế tiếp thì phải có khoảng thở,
-   nếu không ba mục trông như một khối liền. */
-.screen-narrow .sheet + .rule {
-  margin-top: var(--s-6);
-}
 /* Khoảng cách dưới ô mã mời là để tách nó với khối sau, mà nằm trong tấm
    chắn thì nó thành một dải trống vô nghĩa bên trong hộp. */
 .sheet .invite {

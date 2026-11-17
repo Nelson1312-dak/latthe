@@ -6,6 +6,16 @@
   grid-template-rows: auto 1fr;
   min-height: 100vh;
 }
+/* Chân trang phải nằm ở đáy trang. Trước đây nó đứng ngay dưới nội dung, nên
+   màn nào ít nội dung là chân trang lơ lửng giữa màn hình, bên dưới trống trơn. */
+.app > main {
+  display: flex;
+  flex-direction: column;
+}
+.app > main > .site-foot {
+  margin-top: auto;
+}
+
 /* Ô lưới và ô flex mặc định không co dưới min-content, làm cả trang phình ngang.
    Cho phép chúng co lại rồi tự xuống dòng. */
 .app > main,
@@ -149,9 +159,13 @@
   color: var(--text-1);
 }
 
+/* Nội dung nằm giữa trang. Bản trước chỉ có max-width mà không căn giữa, nên
+   trên màn hình rộng mọi thứ dồn sang trái, nửa phải bỏ trống. */
 .screen {
   padding: var(--s-6);
   max-width: 1500px;
+  width: 100%;
+  margin-inline: auto;
 }
 .screen-narrow {
   max-width: 1100px;
@@ -173,11 +187,29 @@
 }
 
 /* ---------------- Bố cục ván cờ ---------------- */
+/* Bàn cờ và cột bên đứng sát nhau, cả cụm nằm giữa — như chess.com và Lichess.
+   Bản trước cho bàn cờ một cột 1fr rồi căn bàn cờ vào giữa cột đó, nên trên màn
+   hình rộng bàn cờ trôi ra xa, cách cột bên một khoảng trống to.
+
+   --board-w: không cao quá cửa sổ (trừ header, tiêu đề màn và hai thanh người
+   chơi), và không rộng quá phần còn lại sau cột bên. */
+:root {
+  --side-w: 360px;
+  --board-w: min(
+    calc(100vh - var(--head-h) - 188px),
+    calc(100vw - var(--side-w) - 3 * var(--s-6) - 16px)
+  );
+}
 .game {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) 380px;
-  gap: var(--s-4);
+  grid-template-columns: var(--board-w) var(--side-w);
+  gap: var(--s-6);
+  justify-content: center;
   align-items: start;
+}
+/* Tiêu đề màn rộng đúng bằng cụm bàn cờ + cột bên, không thò ra hai bên */
+.screen:has(> .game) {
+  max-width: calc(var(--board-w) + var(--side-w) + 3 * var(--s-6));
 }
 .game-board {
   display: grid;
@@ -199,7 +231,7 @@
    dính sát thanh thay vì bị đẩy ra giữa khoảng trống. */
 .board-row,
 .game-board .player {
-  width: min(100%, calc(100vh - var(--head-h) - 188px));
+  width: 100%;
 }
 .board-row > .board {
   flex: 1;
@@ -226,8 +258,15 @@
 
 /* ---------------- Màn hình vừa ---------------- */
 @media (max-width: 1100px) {
+  /* Một cột: bàn cờ ở trên, cột bên xuống dưới và rộng bằng bàn cờ */
+  :root {
+    --board-w: min(calc(100vh - var(--head-h) - 188px), calc(100vw - 2 * var(--s-3)));
+  }
   .game {
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: minmax(0, var(--board-w));
+  }
+  .screen:has(> .game) {
+    max-width: calc(var(--board-w) + 2 * var(--s-3));
   }
   .site-head {
     padding: 0 var(--s-4);
@@ -289,6 +328,21 @@
   .screen-head h1 {
     width: 100%;
     margin-right: 0;
+  }
+  /* Màn có bàn cờ: thanh dưới đã cho biết đang ở mục nào, bỏ tiêu đề to để
+     bàn cờ và đồng hồ của mình lọt trong một màn hình, khỏi phải cuộn */
+  .screen:has(> .game) .screen-head h1 {
+    display: none;
+  }
+  .screen:has(> .game) .screen-head {
+    margin-bottom: var(--s-3);
+    padding-bottom: var(--s-2);
+  }
+  .screen:has(> .game) {
+    max-width: none;
+  }
+  :root {
+    --board-w: calc(100vw - 2 * var(--s-3));
   }
   .game-board .board,
   .game-board .player {

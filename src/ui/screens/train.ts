@@ -71,6 +71,16 @@ export function startLesson(l: Lesson): void {
   loadedOnce = false;
 }
 
+/** Bài tập người dùng vừa bấm ở Sảnh; mở đúng bài đó chứ không bốc bài khác. */
+let handedPuzzle: Puzzle | null = null;
+
+export function startPuzzle(p: Puzzle): void {
+  handedPuzzle = p;
+  lesson = null;
+  theme = undefined;
+  loadedOnce = false;
+}
+
 /** Thoát chế độ bài học, quay về ôn tập bình thường. */
 function exitLesson(): void {
   lesson = null;
@@ -86,14 +96,15 @@ async function loadNext(rerender: () => void): Promise<void> {
   lastResult = null;
   rerender();
 
-  // Thẻ lỗi của mình luôn được ưu tiên — trừ khi đang học một bài cụ thể
-  if (!lesson && !queue.length && auth.user) {
+  // Thẻ lỗi của mình luôn được ưu tiên — trừ khi đang học một bài cụ thể, hoặc
+  // vừa bấm vào một bài cụ thể ở Sảnh
+  if (!lesson && !handedPuzzle && !queue.length && auth.user) {
     const r = await dueCards();
     queue = r.cards;
     cardCount = { total: r.total, due: r.due };
   }
 
-  const card = queue.shift();
+  const card = handedPuzzle ? undefined : queue.shift();
   if (card) {
     const game = new Game(card.fen);
     task = {
@@ -110,7 +121,8 @@ async function loadNext(rerender: () => void): Promise<void> {
     return;
   }
 
-  const r = await nextPuzzle(theme);
+  const r = handedPuzzle ? { puzzle: handedPuzzle, kho: khoBai } : await nextPuzzle(theme);
+  handedPuzzle = null;
   khoBai = r.kho;
   if (!r.puzzle) {
     phase = 'empty';
@@ -358,6 +370,7 @@ export function mountTrain(rerender: () => void): void {
   if (!host || !task) return;
 
   view = new BoardView(host, {
+    id: 'train',
     legalFrom: (from) => (phase === 'solving' ? task!.game.legalFrom(from) : { quiet: [], captures: [] }),
     canPick: (sq) => {
       if (phase !== 'solving') return false;

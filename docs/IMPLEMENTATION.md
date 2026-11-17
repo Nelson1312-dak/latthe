@@ -376,6 +376,22 @@ Mấy chỗ sai đáng ghi lại:
 khởi động lại giữa ván là mất ván đó (hai bên quay về sảnh, không ai bị tính thua). Lưu
 phòng xuống database để khôi phục được là việc của GĐ8 nếu thấy cần.
 
+### Sau GĐ7 — thao tác bàn cờ và rà lại thiết kế (17/11/2026)
+- [x] Quân trượt 150 → 240ms, máy nghĩ 0,7–1,1 → 1,3–1,9 giây
+- [x] Kéo thả thật (quân bám con trỏ), vẽ mũi tên/khoanh ô bằng chuột phải, đi trước khi
+      đấu máy và đấu online — đã thử bằng chuột, bằng ngón tay (giả lập cảm ứng) và hai
+      trình duyệt
+- [x] Rà 16 màn hình (máy tính + điện thoại). Sửa những lỗi gốc chứ không vá từng màn:
+  - nội dung có max-width mà **không căn giữa** → mọi màn dồn trái, nửa phải bỏ trống
+  - chân trang đứng ngay dưới nội dung → màn ít chữ thì chân trang lơ lửng giữa màn hình
+  - bàn cờ có một cột `1fr` rồi căn giữa trong cột đó → trôi xa cột bên cạnh
+  - tiêu đề mục không có lề trên → dính vào dòng ngay trên (màn Tài khoản bị đè chữ)
+  - hai nút trên đầu Sảnh **không gắn vào đâu**: bấm không có gì xảy ra
+  - Sảnh có con số "1000" không nhãn; giờ có tên từng con số và một bài tập thật để giải
+  - màn Đấu dựng lại cả trang mỗi giây cho đồng hồ → có thể nuốt mất cú bấm "Đầu hàng"
+- Ảnh chụp toàn trang trên điện thoại vẽ thanh đầu/thanh dưới (sticky) vào giữa trang —
+  đó là lỗi của cách chụp, không phải của trang. Chụp đúng khung màn hình mới thấy thật.
+
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
 - [ ] Task Scheduler + giám sát, sao lưu hằng đêm

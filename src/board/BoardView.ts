@@ -1,35 +1,219 @@
-// Bàn cờ tương tác: bấm-chọn, kéo-thả, bàn phím.
+// Bàn cờ tương tác: bấm-chọn, kéo-thả, vẽ bằng chuột phải, đi trước, bàn phím.
 //
-// Phần vẽ dùng chung boardSvg() với các màn tĩnh, nên bàn cờ ở đâu cũng giống nhau.
-// Lớp này chỉ lo việc nhận thao tác của người chơi rồi báo ra ngoài.
+// Phần vẽ dùng chung boardSvg() với các màn tĩnh, nên bàn cờ ở đâu cũng giống
+// nhau. Lớp này chỉ nhận thao tác của người chơi rồi báo ra ngoài.
+//
+// Màn hình dựng lại toàn bộ HTML mỗi lần vẽ (màn Đấu còn vẽ lại mỗi giây cho
+// đồng hồ), nên một đối tượng BoardView chỉ sống tới lần vẽ sau. Những gì phải
+// sống qua các lần vẽ — đang kéo quân nào, ô nào đang chọn, nét vẽ của người
+// chơi — để ở cấp module, gắn theo `id` của bàn cờ. Con trỏ được theo dõi trên
+// `window` chứ không trên bàn cờ, để kéo dở mà bàn cờ bị thay vẫn kéo tiếp được.
 
-import { boardSvg, squareXY, type BoardOptions } from './Board.ts';
-import { FILES, squareOf, type Square } from '../../shared/fen.ts';
+import { boardSvg, squareXY, type Arrow, type BoardOptions, type Brush, type Circle } from './Board.ts';
+import { PIECE_SLIDE_MS } from './timing.ts';
+import { FILES, piecesFromFen, squareOf, type PieceCode, type Square } from '../../shared/fen.ts';
+
+export { PIECE_SLIDE_MS };
+
+/** Nhích quá chừng này mới tính là kéo, chưa tới thì vẫn là một cú bấm. */
+const DRAG_THRESHOLD_PX = 4;
+
+export interface PremoveHooks {
+  /** Đang được đi trước không (tức là chưa tới lượt mình). */
+  active: () => boolean;
+  /** Quân ở ô này có phải của mình không. */
+  canPick: (sq: Square) => boolean;
+  dests: (from: Square) => Square[];
+  set: (from: Square, to: Square) => void;
+  clear: () => void;
+}
 
 export interface BoardViewOptions {
+  /** Tên bàn cờ, để giữ ô đang chọn, nét vẽ và thao tác kéo qua các lần vẽ lại. */
+  id: string;
   /** Hỏi xem từ ô này đi được những đâu (rỗng nghĩa là không được cầm quân đó). */
   legalFrom: (from: Square) => { quiet: Square[]; captures: Square[] };
   /** Người chơi muốn đi một nước. Trả về false nếu nước không hợp lệ. */
   onMove: (from: Square, to: Square) => boolean;
   /** Ô này có quân của bên đang được phép đi không. */
   canPick: (square: Square) => boolean;
+  /** Cho phép đi trước khi chưa tới lượt. Bỏ trống là không có. */
+  premove?: PremoveHooks;
 }
+
+/* ---------------- Trạng thái sống qua các lần vẽ lại ---------------- */
+
+interface Drag {
+  viewId: string;
+  from: Square;
+  code: PieceCode;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  /** Đã nhích đủ xa để thành kéo chưa. */
+  started: boolean;
+  /** Quân này đã được chọn từ trước cú bấm — để bấm lần nữa thì bỏ chọn. */
+  wasSelected: boolean;
+  hover: Square | null;
+  ghost: HTMLElement | null;
+}
+
+interface Drawing {
+  viewId: string;
+  from: Square;
+  to: Square | null;
+  brush: Brush;
+  pointerId: number;
+}
+
+interface Notes {
+  fen: string;
+  arrows: Arrow[];
+  circles: Circle[];
+}
+
+let drag: Drag | null = null;
+let drawing: Drawing | null = null;
+/** BoardView mới nhất của mỗi bàn cờ. */
+const views = new Map<string, BoardView>();
+const selections = new Map<string, Square | null>();
+/** Nét vẽ của người chơi. Thế cờ đổi là xoá, như chess.com. */
+const notes = new Map<string, Notes>();
+/**
+ * Nước vừa thả bằng tay. Quân đã nằm sẵn ở ô đích dưới con trỏ, nên lần vẽ
+ * tiếp theo đừng cho nó trượt từ ô gốc tới nữa — trông như đi hai lần.
+ */
+let dropped: string | null = null;
+
+/** Đang kéo quân dở — màn hình có thể hoãn những lần vẽ lại không gấp. */
+export function isDragging(): boolean {
+  return Boolean(drag?.started);
+}
+
+function brushOf(e: PointerEvent): Brush {
+  if (e.shiftKey && e.altKey) return 'y';
+  if (e.shiftKey) return 'r';
+  if (e.altKey) return 'b';
+  return 'g';
+}
+
+function ghostFor(code: PieceCode): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'drag-piece';
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><use href="#${code}"/></svg>`;
+  document.body.append(el);
+  return el;
+}
+
+function endDrag(): void {
+  drag?.ghost?.remove();
+  drag = null;
+  document.documentElement.classList.remove('is-dragging-piece');
+}
+
+/* ---------------- Theo dõi con trỏ trên cả cửa sổ ---------------- */
+
+let wired = false;
+
+function wire(): void {
+  if (wired) return;
+  wired = true;
+
+  window.addEventListener('pointermove', (e) => {
+    if (drawing && e.pointerId === drawing.pointerId) {
+      const v = views.get(drawing.viewId);
+      const sq = v?.squareAt(e.clientX, e.clientY) ?? null;
+      if (v && sq !== drawing.to) {
+        drawing.to = sq;
+        v.draw();
+      }
+      return;
+    }
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const v = views.get(drag.viewId);
+    if (!v) return;
+    if (!drag.started) {
+      if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < DRAG_THRESHOLD_PX) return;
+      drag.started = true;
+      drag.ghost = ghostFor(drag.code);
+      document.documentElement.classList.add('is-dragging-piece');
+    }
+    v.placeGhost(drag.ghost!, e.clientX, e.clientY);
+    const sq = v.squareAt(e.clientX, e.clientY);
+    if (sq !== drag.hover) {
+      drag.hover = sq;
+      v.draw();
+    }
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if (drawing && e.pointerId === drawing.pointerId) {
+      const d = drawing;
+      drawing = null;
+      const v = views.get(d.viewId);
+      if (!v) return;
+      const to = v.squareAt(e.clientX, e.clientY);
+      if (to) v.toggleNote(d.from, to, d.brush);
+      v.draw();
+      return;
+    }
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const d = drag;
+    endDrag();
+    const v = views.get(d.viewId);
+    if (!v) return;
+
+    if (!d.started) {
+      // Chỉ là một cú bấm. Bấm lại quân đang chọn thì bỏ chọn.
+      if (d.wasSelected) v.select(null);
+      v.draw();
+      return;
+    }
+
+    const to = v.squareAt(e.clientX, e.clientY);
+    if (to && to !== d.from && v.destSet(d.from).has(to)) {
+      v.select(null);
+      if (v.commit(d.from, to, true)) return;
+    }
+    // Thả ra ngoài hoặc vào ô không đi được: quân về chỗ, vẫn giữ chọn
+    v.draw();
+  });
+
+  window.addEventListener('pointercancel', (e) => {
+    if (drawing && e.pointerId === drawing.pointerId) drawing = null;
+    if (drag && e.pointerId === drag.pointerId) {
+      const v = views.get(drag.viewId);
+      endDrag();
+      v?.draw();
+    }
+  });
+
+  // Kéo dở mà bấm Esc: thả quân về chỗ
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !drag) return;
+    const v = views.get(drag.viewId);
+    endDrag();
+    v?.draw();
+  });
+}
+
+/* ---------------- Bàn cờ ---------------- */
 
 export class BoardView {
   private host: HTMLElement;
   private o: BoardViewOptions;
   private state: BoardOptions = { fen: '' };
-  private selected: Square | null = null;
-  private dragging: { from: Square; pointerId: number } | null = null;
   /** Ô đang được bàn phím trỏ tới; chỉ hiện khi dùng bàn phím. */
   private focus: Square | null = null;
-
 
   constructor(host: HTMLElement, options: BoardViewOptions) {
     this.host = host;
     this.o = options;
+    views.set(options.id, this);
+    wire();
     this.host.addEventListener('pointerdown', this.onPointerDown);
-    this.host.addEventListener('pointerup', this.onPointerUp);
+    this.host.addEventListener('contextmenu', this.onContextMenu);
     this.host.addEventListener('keydown', this.onKeyDown);
     this.host.tabIndex = 0;
     this.host.setAttribute('role', 'application');
@@ -37,8 +221,9 @@ export class BoardView {
 
   destroy(): void {
     this.host.removeEventListener('pointerdown', this.onPointerDown);
-    this.host.removeEventListener('pointerup', this.onPointerUp);
+    this.host.removeEventListener('contextmenu', this.onContextMenu);
     this.host.removeEventListener('keydown', this.onKeyDown);
+    if (views.get(this.o.id) === this) views.delete(this.o.id);
   }
 
   /**
@@ -47,9 +232,24 @@ export class BoardView {
    * vẽ nên không tự nhớ được thế cờ trước.
    */
   render(state: BoardOptions, animate?: [Square, Square]): void {
+    const id = this.o.id;
+    const n = notes.get(id);
+    if (n && n.fen !== state.fen) notes.delete(id);
     this.state = state;
+
+    // Ô đang chọn không còn cầm được (đối thủ ăn mất, hết lượt...) thì bỏ
+    const sel = this.selected;
+    if (sel && !this.pickable(sel)) this.select(null);
+    // Đang kéo mà quân không còn cầm được nữa (ván xong) thì thả về
+    if (drag && drag.viewId === id && !this.pickable(drag.from)) endDrag();
+
     this.draw();
-    if (animate) this.animateMove(animate[0], animate[1], state.orientation ?? 'w');
+
+    if (animate) {
+      const key = animate[0] + animate[1];
+      if (dropped === key) dropped = null;
+      else this.animateMove(animate[0], animate[1], state.orientation ?? 'w');
+    }
   }
 
   /**
@@ -74,27 +274,130 @@ export class BoardView {
   }
 
   clearSelection(): void {
-    this.selected = null;
+    this.select(null);
     this.draw();
   }
 
-  private draw(): void {
-    const legal = this.selected ? this.o.legalFrom(this.selected) : { quiet: [], captures: [] };
+  /* ---- Những hàm dưới đây để phần theo dõi con trỏ ở trên gọi ---- */
+
+  get selected(): Square | null {
+    return selections.get(this.o.id) ?? null;
+  }
+
+  select(sq: Square | null): void {
+    selections.set(this.o.id, sq);
+  }
+
+  private premoving(): boolean {
+    return Boolean(this.o.premove?.active());
+  }
+
+  /** Cầm được quân ở ô này không — để đi ngay, hoặc để đi trước. */
+  pickable(sq: Square): boolean {
+    if (this.o.canPick(sq)) return true;
+    return this.premoving() && Boolean(this.o.premove?.canPick(sq));
+  }
+
+  /** Ô đi được từ `from`: nước thật nếu tới lượt, ô đi trước nếu chưa. */
+  dests(from: Square): { quiet: Square[]; captures: Square[] } {
+    if (this.o.canPick(from)) return this.o.legalFrom(from);
+    if (!this.premoving() || !this.o.premove?.canPick(from)) return { quiet: [], captures: [] };
+    const pieces = piecesFromFen(this.state.fen);
+    const quiet: Square[] = [];
+    const captures: Square[] = [];
+    for (const sq of this.o.premove.dests(from)) (pieces.has(sq) ? captures : quiet).push(sq);
+    return { quiet, captures };
+  }
+
+  destSet(from: Square): Set<Square> {
+    const d = this.dests(from);
+    return new Set([...d.quiet, ...d.captures]);
+  }
+
+  /**
+   * Đi (hoặc đặt đi trước) một nước. `byDrop` là nước thả bằng tay: quân đã ở
+   * sẵn ô đích nên không cho trượt lần nữa. Nước đi trước thì không đánh dấu,
+   * vì lúc nó thật sự được đi thì quân vẫn còn ở ô gốc, phải trượt.
+   */
+  commit(from: Square, to: Square, byDrop = false): boolean {
+    if (this.o.canPick(from)) {
+      if (byDrop) dropped = from + to;
+      const ok = this.o.onMove(from, to);
+      if (!ok && byDrop) dropped = null;
+      return ok;
+    }
+    if (this.premoving() && this.o.premove?.canPick(from) && this.destSet(from).has(to)) {
+      this.o.premove.set(from, to);
+      // Tự tô ô đi trước, không bắt màn hình vẽ lại cả trang chỉ vì việc này
+      this.state = { ...this.state, premove: [from, to] };
+      this.draw();
+      return true;
+    }
+    return false;
+  }
+
+  /** Huỷ nước đi trước (chuột phải, bấm ra ngoài, Esc). */
+  private cancelPremove(): void {
+    if (!this.state.premove) return;
+    this.o.premove?.clear();
+    this.state = { ...this.state, premove: undefined };
+  }
+
+  toggleNote(from: Square, to: Square, brush: Brush): void {
+    const id = this.o.id;
+    const n = notes.get(id) ?? { fen: this.state.fen, arrows: [], circles: [] };
+    if (from === to) {
+      const i = n.circles.findIndex((c) => c.square === from);
+      const same = i >= 0 && n.circles[i].brush === brush;
+      if (i >= 0) n.circles.splice(i, 1);
+      if (!same) n.circles.push({ square: from, brush });
+    } else {
+      const i = n.arrows.findIndex((a) => a.from === from && a.to === to);
+      const same = i >= 0 && n.arrows[i].brush === brush;
+      if (i >= 0) n.arrows.splice(i, 1);
+      if (!same) n.arrows.push({ from, to, brush });
+    }
+    notes.set(id, n);
+  }
+
+  draw(): void {
+    const id = this.o.id;
+    const sel = this.selected;
+    const legal = sel ? this.dests(sel) : { quiet: [], captures: [] };
+    const n = notes.get(id);
+    const preview: Arrow[] =
+      drawing && drawing.viewId === id && drawing.to && drawing.to !== drawing.from
+        ? [{ from: drawing.from, to: drawing.to, brush: drawing.brush }]
+        : [];
+    const kéo = drag && drag.viewId === id && drag.started ? drag : null;
     this.host.innerHTML = boardSvg({
       ...this.state,
-      selected: this.selected ?? undefined,
+      selected: sel ?? undefined,
       legal: legal.quiet,
       legalCaptures: legal.captures,
       focus: this.focus ?? undefined,
+      dragging: kéo?.from,
+      hover: kéo?.hover ?? undefined,
+      arrows: [...(this.state.arrows ?? []), ...(n?.arrows ?? []), ...preview],
+      circles: [...(this.state.circles ?? []), ...(n?.circles ?? [])],
     });
   }
 
+  /** Đặt quân đang kéo vào giữa con trỏ, to bằng một ô. */
+  placeGhost(ghost: HTMLElement, x: number, y: number): void {
+    const r = this.host.querySelector('svg')?.getBoundingClientRect();
+    const size = r ? r.width / 8 : 64;
+    ghost.style.width = `${size}px`;
+    ghost.style.height = `${size}px`;
+    ghost.style.transform = `translate(${x - size / 2}px, ${y - size / 2}px)`;
+  }
+
   /** Ô cờ dưới một điểm trên màn hình. */
-  private squareAt(clientX: number, clientY: number): Square | null {
+  squareAt(clientX: number, clientY: number): Square | null {
     const svg = this.host.querySelector('svg');
     if (!svg) return null;
     const r = svg.getBoundingClientRect();
-    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return null;
+    if (clientX < r.left || clientX >= r.right || clientY < r.top || clientY >= r.bottom) return null;
     const col = Math.floor(((clientX - r.left) / r.width) * 8);
     const row = Math.floor(((clientY - r.top) / r.height) * 8);
     if (col < 0 || col > 7 || row < 0 || row > 7) return null;
@@ -102,50 +405,65 @@ export class BoardView {
     return squareOf(flipped ? 7 - col : col, flipped ? row : 7 - row);
   }
 
-  /** Thử đi; nếu không hợp lệ thì coi như chọn lại quân khác. */
-  private tryMove(from: Square, to: Square): void {
-    if (from === to) {
-      this.selected = null;
-      this.draw();
-      return;
-    }
-    if (this.o.onMove(from, to)) {
-      this.selected = null;
-      // Màn hình gọi render() lại với thế cờ mới, không vẽ ở đây
-      return;
-    }
-    // Bấm sang quân khác của mình thì chuyển lựa chọn, còn lại thì bỏ chọn
-    this.selected = this.o.canPick(to) ? to : null;
-    this.draw();
-  }
+  /* ---------------- Sự kiện trên bàn cờ ---------------- */
+
+  private onContextMenu = (e: Event): void => {
+    // Chuột phải trên bàn cờ là để vẽ, không mở menu của trình duyệt
+    e.preventDefault();
+  };
 
   private onPointerDown = (e: PointerEvent): void => {
     const sq = this.squareAt(e.clientX, e.clientY);
     if (!sq) return;
     this.focus = null;
-    if (this.selected && this.selected !== sq) {
-      this.tryMove(this.selected, sq);
-      return;
-    }
-    if (!this.o.canPick(sq)) {
-      this.selected = null;
+    const id = this.o.id;
+
+    // Chuột phải: vẽ mũi tên / khoanh ô. Cũng là huỷ nước đi trước, như chess.com.
+    if (e.button === 2) {
+      e.preventDefault();
+      if (drag) endDrag();
+      this.cancelPremove();
+      this.select(null);
+      drawing = { viewId: id, from: sq, to: sq, brush: brushOf(e), pointerId: e.pointerId };
       this.draw();
       return;
     }
-    // Bấm lại quân đang chọn thì bỏ chọn
-    this.selected = this.selected === sq ? null : sq;
-    if (this.selected) this.dragging = { from: sq, pointerId: e.pointerId };
-    this.draw();
-  };
+    if (e.button !== 0) return;
+    e.preventDefault(); // không bôi đen chữ, không kéo ảnh kiểu trình duyệt
 
-  private onPointerUp = (e: PointerEvent): void => {
-    const drag = this.dragging;
-    this.dragging = null;
-    if (!drag || drag.pointerId !== e.pointerId) return;
-    const sq = this.squareAt(e.clientX, e.clientY);
-    // Thả ở đúng ô vừa nhấc thì đó là một cú bấm, giữ nguyên lựa chọn
-    if (!sq || sq === drag.from) return;
-    this.tryMove(drag.from, sq);
+    // Chuột trái thì xoá nét vẽ
+    notes.delete(id);
+
+    const sel = this.selected;
+    if (sel && sel !== sq && this.destSet(sel).has(sq)) {
+      // Đã chọn quân, giờ bấm ô đích
+      this.select(null);
+      if (!this.commit(sel, sq)) this.draw();
+      return;
+    }
+
+    if (this.pickable(sq)) {
+      this.select(sq);
+      drag = {
+        viewId: id,
+        from: sq,
+        code: piecesFromFen(this.state.fen).get(sq)!,
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        started: false,
+        wasSelected: sel === sq,
+        hover: sq,
+        ghost: null,
+      };
+      this.draw();
+      return;
+    }
+
+    // Bấm ra chỗ khác: bỏ chọn và huỷ nước đi trước
+    this.select(null);
+    this.cancelPremove();
+    this.draw();
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -154,16 +472,21 @@ export class BoardView {
     e.preventDefault();
 
     if (e.key === 'Escape') {
-      this.selected = null;
+      this.select(null);
+      this.cancelPremove();
+      notes.delete(this.o.id);
       this.draw();
       return;
     }
 
-    const cur = this.focus ?? this.selected ?? ('e4' as Square);
+    const sel = this.selected;
+    const cur = this.focus ?? sel ?? ('e4' as Square);
     if (e.key === 'Enter' || e.key === ' ') {
-      if (this.selected && this.selected !== cur) this.tryMove(this.selected, cur);
-      else if (this.o.canPick(cur)) {
-        this.selected = this.selected === cur ? null : cur;
+      if (sel && sel !== cur && this.destSet(sel).has(cur)) {
+        this.select(null);
+        if (!this.commit(sel, cur)) this.draw();
+      } else if (this.pickable(cur)) {
+        this.select(sel === cur ? null : cur);
         this.draw();
       }
       return;

@@ -16,6 +16,9 @@ export interface Level {
    * Khoảng dừng tối thiểu trước khi máy đi, kể cả khi nó nghĩ xong tức thì.
    * Máy đáp ngay lập tức làm ván cờ có cảm giác chóng mặt và không giống
    * đang chơi với ai cả; các trang cờ đều để máy "ngẫm" một nhịp.
+   *
+   * Lần đầu đặt 0,7–1,1 giây vẫn bị chê "đi nhoay nhoáy". Giờ 1,3–1,9 giây,
+   * nhân thêm hệ số ngẫu nhiên 0,7–1,5 — tức máy cấp 1 nghĩ khoảng 0,9–2 giây.
    */
   minThinkMs: number;
   depth?: number;
@@ -30,14 +33,14 @@ export interface Level {
 }
 
 export const LEVELS: Level[] = [
-  { id: 1, name: 'Cấp 1', hint: 'Mới tập, hay để hở quân', moveTimeMs: 40, minThinkMs: 700, depth: 1, multipv: 5, weights: [1, 3, 4, 4, 4] },
-  { id: 2, name: 'Cấp 2', hint: 'Biết luật, chưa nhìn xa', moveTimeMs: 60, minThinkMs: 750, depth: 2, multipv: 5, weights: [2, 3, 3, 2, 2] },
-  { id: 3, name: 'Cấp 3', hint: 'Thỉnh thoảng đi hỏng', moveTimeMs: 100, minThinkMs: 800, depth: 4, multipv: 4, weights: [5, 3, 2, 1] },
-  { id: 4, name: 'Cấp 4', hint: 'Khoảng 1350 Elo', moveTimeMs: 200, minThinkMs: 850, elo: 1350 },
-  { id: 5, name: 'Cấp 5', hint: 'Khoảng 1550 Elo', moveTimeMs: 300, minThinkMs: 900, elo: 1550 },
-  { id: 6, name: 'Cấp 6', hint: 'Khoảng 1800 Elo', moveTimeMs: 400, minThinkMs: 950, elo: 1800 },
-  { id: 7, name: 'Cấp 7', hint: 'Khoảng 2100 Elo', moveTimeMs: 600, minThinkMs: 1000, elo: 2100 },
-  { id: 8, name: 'Cấp 8', hint: 'Mạnh hết mức cho phép', moveTimeMs: 1000, minThinkMs: 1100, elo: 2500 },
+  { id: 1, name: 'Cấp 1', hint: 'Mới tập, hay để hở quân', moveTimeMs: 40, minThinkMs: 1300, depth: 1, multipv: 5, weights: [1, 3, 4, 4, 4] },
+  { id: 2, name: 'Cấp 2', hint: 'Biết luật, chưa nhìn xa', moveTimeMs: 60, minThinkMs: 1350, depth: 2, multipv: 5, weights: [2, 3, 3, 2, 2] },
+  { id: 3, name: 'Cấp 3', hint: 'Thỉnh thoảng đi hỏng', moveTimeMs: 100, minThinkMs: 1400, depth: 4, multipv: 4, weights: [5, 3, 2, 1] },
+  { id: 4, name: 'Cấp 4', hint: 'Khoảng 1350 Elo', moveTimeMs: 200, minThinkMs: 1500, elo: 1350 },
+  { id: 5, name: 'Cấp 5', hint: 'Khoảng 1550 Elo', moveTimeMs: 300, minThinkMs: 1600, elo: 1550 },
+  { id: 6, name: 'Cấp 6', hint: 'Khoảng 1800 Elo', moveTimeMs: 400, minThinkMs: 1700, elo: 1800 },
+  { id: 7, name: 'Cấp 7', hint: 'Khoảng 2100 Elo', moveTimeMs: 600, minThinkMs: 1800, elo: 2100 },
+  { id: 8, name: 'Cấp 8', hint: 'Mạnh hết mức cho phép', moveTimeMs: 1000, minThinkMs: 1900, elo: 2500 },
 ];
 
 /**
@@ -45,7 +48,7 @@ export const LEVELS: Level[] = [
  * chút để máy không đi đều như máy đếm nhịp.
  */
 export function thinkDelayMs(level: Level, random: () => number = Math.random): number {
-  return Math.round(level.minThinkMs * (0.75 + random() * 0.6));
+  return Math.round(level.minThinkMs * (0.7 + random() * 0.8));
 }
 
 export function levelById(id: number): Level {

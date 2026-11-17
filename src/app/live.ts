@@ -19,13 +19,15 @@ export const live: LiveStore = { state: null, queue: null, connected: false, err
 
 let es: EventSource | null = null;
 let rerender: (() => void) | null = null;
+/** Việc làm mỗi giây khi đang có ván: mặc định vẽ lại, màn hình có thể thay. */
+let onTick: (() => void) | null = null;
 let ticker: number | null = null;
 
 /** Đồng hồ phải nhích mỗi giây dù server chưa gửi gì. */
 function startTicker(): void {
   if (ticker !== null) return;
   ticker = window.setInterval(() => {
-    if (live.state && !live.state.over) rerender?.();
+    if (live.state && !live.state.over) (onTick ?? rerender)?.();
     else stopTicker();
   }, 1000);
 }
@@ -62,8 +64,9 @@ function apply(ev: LiveEvent): void {
 }
 
 /** Mở luồng. Gọi lại nhiều lần cũng chỉ mở một luồng. */
-export function connect(onChange: () => void): void {
+export function connect(onChange: () => void, tick?: () => void): void {
   rerender = onChange;
+  onTick = tick ?? null;
   if (es) return;
   es = new EventSource('/api/live/stream', { withCredentials: true });
   es.onmessage = (e) => {

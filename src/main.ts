@@ -8,7 +8,7 @@ import { loadPieces } from './board/sprite.ts';
 import { icon, type IconName } from './ui/icons.ts';
 import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton } from './app/session.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
-import { home, mountHome, resetHome } from './ui/screens/home.ts';
+import { handleHomeClick, home, mountHome, resetHome } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
@@ -183,6 +183,7 @@ document.addEventListener('click', (e) => {
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
   if (route() === 'hoc' && handleLearnClick(el)) return;
   if (route() === 'ban' && handleOnlineClick(el, render)) return;
+  if (route() === '' && handleHomeClick(el)) return;
 
   // Ô có data-go thì chuyển màn
   const go = el.closest<HTMLElement>('[data-go]');

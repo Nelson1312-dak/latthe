@@ -8,10 +8,23 @@ const SQ = 50; // cạnh một ô trong hệ toạ độ SVG
 const SIZE = SQ * 8;
 const PIECE_SCALE = SQ / 40; // sprite cburnett vẽ trong khung 40x40
 
+/**
+ * Màu bút vẽ của người chơi, theo quy ước của Lichess: chuột phải là xanh lá,
+ * giữ Shift là đỏ, giữ Alt là xanh dương, giữ cả hai là vàng.
+ */
+export type Brush = 'g' | 'r' | 'b' | 'y';
+
 export interface Arrow {
   from: Square;
   to: Square;
   kind?: 'coach' | 'user';
+  /** Mũi tên người chơi tự vẽ. Có `brush` thì bỏ qua `kind`. */
+  brush?: Brush;
+}
+
+export interface Circle {
+  square: Square;
+  brush: Brush;
 }
 
 export interface ClassBadge {
@@ -32,6 +45,14 @@ export interface BoardOptions {
   /** Ô có Vua đang bị chiếu. */
   check?: Square;
   arrows?: Arrow[];
+  /** Ô người chơi tự khoanh bằng chuột phải. */
+  circles?: Circle[];
+  /** Nước đã chọn đi trước, chờ tới lượt mới đi. */
+  premove?: [Square, Square];
+  /** Ô có quân đang bị kéo: vẽ mờ quân gốc để biết nó từ đâu tới. */
+  dragging?: Square;
+  /** Ô đang ở dưới quân bị kéo. */
+  hover?: Square;
   badge?: ClassBadge;
   /** Ô đang được bàn phím trỏ tới (chỉ hiện khi người chơi dùng bàn phím). */
   focus?: Square;
@@ -102,6 +123,10 @@ export function boardSvg(o: BoardOptions): string {
     const [x, y] = xy(sq, or);
     parts.push(`<rect x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--mark-move)"/>`);
   }
+  for (const sq of o.premove ?? []) {
+    const [x, y] = xy(sq, or);
+    parts.push(`<rect x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--mark-premove)"/>`);
+  }
   if (o.selected) {
     const [x, y] = xy(o.selected, or);
     parts.push(`<rect x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--mark-select)"/>`);
@@ -136,10 +161,21 @@ export function boardSvg(o: BoardOptions): string {
   // cho CSS transform — nhờ vậy animation không phá vị trí ô.
   for (const [sq, code] of pieces) {
     const [x, y] = xy(sq, or);
+    // Quân đang bị kéo: để lại một bóng mờ ở ô gốc, như Lichess
+    const fade = sq === o.dragging ? ' opacity=".3"' : '';
     parts.push(
       `<g class="sq" data-sq="${sq}" transform="translate(${x} ${y})">` +
-        `<g class="pc"><use href="#${code satisfies PieceCode}" transform="scale(${PIECE_SCALE})"/></g>` +
+        `<g class="pc"${fade}><use href="#${code satisfies PieceCode}" transform="scale(${PIECE_SCALE})"/></g>` +
         `</g>`,
+    );
+  }
+
+  // Ô đang ở dưới quân bị kéo
+  if (o.hover && o.hover !== o.dragging) {
+    const [x, y] = xy(o.hover, or);
+    parts.push(
+      `<rect x="${x + 1.5}" y="${y + 1.5}" width="${SQ - 3}" height="${SQ - 3}" fill="none" ` +
+        `stroke="var(--mark-hover)" stroke-width="3"/>`,
     );
   }
 
@@ -162,9 +198,22 @@ export function boardSvg(o: BoardOptions): string {
     parts.push(`<circle cx="${cx}" cy="${cy}" r="${SQ * 0.42}" fill="none" stroke="var(--mark-legal)" stroke-width="${SQ * 0.1}"/>`);
   }
 
+  // Ô khoanh tròn
+  for (const c of o.circles ?? []) {
+    const [cx, cy] = centre(c.square, or);
+    parts.push(
+      `<circle cx="${cx}" cy="${cy}" r="${SQ * 0.45}" fill="none" stroke="var(--brush-${c.brush})" ` +
+        `stroke-width="${SQ * 0.07}" opacity=".85"/>`,
+    );
+  }
+
   // Mũi tên
   (o.arrows ?? []).forEach((a, i) => {
-    const colour = a.kind === 'user' ? 'var(--arrow-user)' : 'var(--arrow-coach)';
+    const colour = a.brush
+      ? `var(--brush-${a.brush})`
+      : a.kind === 'user'
+        ? 'var(--arrow-user)'
+        : 'var(--arrow-coach)';
     const [x1, y1] = centre(a.from, or);
     const [x2, y2] = centre(a.to, or);
     const dx = x2 - x1;
@@ -182,7 +231,9 @@ export function boardSvg(o: BoardOptions): string {
     parts.push(
       `<marker id="${id}" markerWidth="3.2" markerHeight="3.2" refX="1.7" refY="1.6" orient="auto">` +
         `<path d="M0 0 L3 1.5 L0 3 Z" fill="${colour}"/></marker>`,
-      `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${colour}" stroke-width="${SQ * 0.11}" opacity=".85" marker-end="url(#${id})"/>`,
+      // Mũi tên người chơi tự vẽ dày hơn mũi tên gợi ý, như Lichess: nét mảnh
+      // trên bàn cờ lớn nhìn như vết xước chứ không như một ý định
+      `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${colour}" stroke-width="${SQ * (a.brush ? 0.16 : 0.11)}" opacity="${a.brush ? '.8' : '.85'}" marker-end="url(#${id})"/>`,
     );
   });
 

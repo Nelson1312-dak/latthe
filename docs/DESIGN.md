@@ -192,20 +192,39 @@ Không có cỡ chữ nào lớn hơn 28px. Không chữ in hoa toàn bộ trừ
 
 ### 4.6 Chuyển động
 
-- **Quân cờ phải trượt tới ô đích, không được nhảy cóc.** 150ms `ease-out` (`--t-piece`).
+- **Quân cờ phải trượt tới ô đích, không được nhảy cóc.** 240ms, đường cong
+  `cubic-bezier(.25,.8,.3,1)` (`--t-piece`, `--ease-piece`). Lần đầu đặt 150ms vẫn bị chê
+  "nhoay nhoáy"; Lichess để 250ms ở mức thường. Số này phải bằng `PIECE_SLIDE_MS` trong
+  `src/board/timing.ts` — có test canh.
   Quân nhảy tức thì làm ván cờ có cảm giác chóng mặt và khó theo dõi — mắt không kịp
   thấy quân nào vừa đi.
   Cách làm: bàn cờ vẽ lại với quân đã ở ô đích, rồi đẩy ngược quân về ô xuất phát và cho
   nó trượt về chỗ. Nhờ vậy không phải giữ lại bàn cờ cũ. Lớp `.pc` bên trong mỗi quân
   tồn tại chỉ để nhận CSS transform mà không phá vị trí ô.
   **Hệ quả cần nhớ:** mỗi lần vẽ lại màn hình là dựng lại cả bàn cờ, nên bất kỳ lần vẽ
-  nào trong vòng 150ms sau một nước đi sẽ cắt ngang animation. Những việc không gấp
-  (hiện "đang nghĩ", cập nhật thanh đánh giá) phải hoãn lại 200ms.
-- **Máy không được đáp ngay lập tức.** Mỗi cấp có `minThinkMs` (0,7–1,1 giây) cộng một
-  chút ngẫu nhiên; máy nghĩ và "ngẫm" cùng lúc nên cấp cao không bị chậm thêm. Máy trả lời
-  tức thì trông không giống đang chơi với ai cả.
+  nào trong lúc quân đang trượt sẽ cắt ngang animation. Những việc không gấp (hiện
+  "đang nghĩ", cập nhật thanh đánh giá, đi nước đi trước) phải hoãn `PIECE_SLIDE_MS`.
+  Đồng hồ ván online vì thế cập nhật **tại chỗ** mỗi giây, không dựng lại cả trang.
+- **Quân thả bằng tay thì không trượt nữa** — nó đã nằm sẵn ở ô đích dưới con trỏ.
+- **Máy không được đáp ngay lập tức.** Mỗi cấp có `minThinkMs` (1,3–1,9 giây) nhân hệ số
+  ngẫu nhiên 0,7–1,5; máy nghĩ và "ngẫm" cùng lúc nên cấp cao không bị chậm thêm. Bản đầu
+  0,7–1,1 giây vẫn bị chê nhanh quá.
 - Bảng, tab: chuyển ngay, không trượt, không nảy.
-- Tôn trọng `prefers-reduced-motion`: tắt mọi chuyển động trừ quân cờ (giảm còn 60ms).
+- Tôn trọng `prefers-reduced-motion`: tắt mọi chuyển động trừ quân cờ (giảm còn 80ms).
+
+### 4.6b Thao tác trên bàn cờ
+
+Theo đúng thói quen của người đã chơi chess.com/Lichess, không bắt học cách mới:
+
+- **Kéo thả** hoặc **bấm quân rồi bấm ô** đều được. Quân đang kéo bám theo con trỏ, ô gốc
+  để lại bóng mờ (30%), ô dưới con trỏ có viền. Thả ra ngoài thì quân về chỗ, vẫn giữ chọn.
+- **Chuột phải kéo** vẽ mũi tên, **chuột phải bấm** khoanh ô. Màu theo Lichess: thường là
+  xanh lá, Shift đỏ, Alt xanh dương, Shift+Alt vàng. Vẽ lại đúng nét đó thì xoá. Chuột trái
+  hoặc đi một nước thì xoá hết.
+- **Đi trước (premove)** khi chưa tới lượt: chọn được mọi ô quân đó *về hình học* tới được
+  trên bàn trống (kể cả ô quân mình đang đứng, để ăn lại). Tới lượt mới kiểm tra luật thật,
+  không hợp lệ thì bỏ. Ô đi trước tô xanh xám. Chuột phải, bấm ra ngoài, hoặc Esc là huỷ.
+- Bàn phím: mũi tên di chuyển, Enter chọn/đi, Esc huỷ.
 
 ### 4.7 Âm thanh
 

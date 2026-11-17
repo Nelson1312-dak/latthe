@@ -36,7 +36,6 @@ function progressBlock(): string {
   return `
     ${rule('Tiến độ học', `<span class="rule-note">chuỗi ${tienDo.streak} ngày</span>`)}
     ${stats([
-      ['Độ khó bài tập', String(tienDo.rating)],
       ['Bài đã làm', `${tienDo.correct} đúng / ${tienDo.attempts}${tienDo.attempts ? ` (${tyLe}%)` : ''}`],
       ['Thẻ lỗi', `${tienDo.the.due} đến hạn / ${tienDo.the.total}`],
     ])}
@@ -95,8 +94,9 @@ export function account(): string {
             </span>
           </div>
           ${stats([
-            ['Độ khó bài tập', String(u.puzzleRating)],
-            ['Mã người chơi', `#${u.id}`],
+            ['Elo đấu với người', String(u.gameRating)],
+            ['Ván online đã chơi', String(u.gameCount)],
+            ['Elo bài tập', String(tienDo?.rating ?? u.puzzleRating)],
           ])}
           <div class="account-actions">
             ${button({ label: 'Đăng xuất', kind: 'danger', icon: 'close' })}

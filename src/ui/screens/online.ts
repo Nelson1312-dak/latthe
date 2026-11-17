@@ -7,12 +7,14 @@
 // Engine và Huấn luyện viên không có mặt ở đây, và server cũng từ chối nếu ai
 // đó gọi thẳng API trong lúc đang có ván.
 
-import { BoardView } from '../../board/BoardView.ts';
+import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
+import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
 import { Game, outcomeText, type Side } from '../../../shared/chess.ts';
 import { material, type Square } from '../../../shared/fen.ts';
 import { CONTROLS, DEFAULT_CONTROL } from '../../../shared/protocol.ts';
 import {
   button,
+  clock,
   dialog,
   iconButton,
   moveList,
@@ -64,6 +66,9 @@ let recent: GameRow[] = [];
 /** Lúc hỏi server danh sách ván gần nhất lần cuối. */
 let recentAt = 0;
 let started = false;
+/** Nước đi trước, chờ đối thủ đi xong là gửi luôn. */
+let premove: [Square, Square] | null = null;
+let premoveTimer: number | null = null;
 
 /**
  * Rời khỏi màn Đấu.
@@ -72,6 +77,69 @@ let started = false;
  * bàn cờ cũ. Ván đang chơi thì giữ nguyên — đi xem chỗ khác rồi quay lại vẫn
  * phải thấy ván của mình.
  */
+/** Bỏ nước đi trước đang chờ. */
+function dropPremove(): void {
+  premove = null;
+  if (premoveTimer !== null) clearTimeout(premoveTimer);
+  premoveTimer = null;
+}
+
+/**
+ * Đi một nước ngay trên màn hình, không chờ server.
+ *
+ * Không có bước này thì thả quân xong, quân bật về ô cũ một nhịp rồi mới nhảy
+ * sang ô mới khi server trả lời — trông như bị từ chối. Server vẫn là trọng
+ * tài: gói tin tiếp theo của server đè lên, và nếu server từ chối thì nạp lại.
+ */
+function applyLocal(from: Square, to: Square, promotion?: string): boolean {
+  const s = live.state;
+  if (!s || s.over || s.turn !== s.youAre) return false;
+  const g = new Game(s.fen);
+  const m = g.move(from, to, promotion);
+  if (!m) return false;
+  const tôi = s.youAre;
+  // Đồng hồ của mình dừng đúng chỗ đang chạy, của đối thủ bắt đầu chạy từ giờ
+  const tôiCòn = clockNow(s, tôi);
+  live.state = {
+    ...s,
+    fen: g.fen,
+    history: [...s.history, m.san],
+    turn: tôi === 'w' ? 'b' : 'w',
+    lastMove: [from, to],
+    drawOfferFrom: null,
+    white: tôi === 'w' ? { ...s.white, clockMs: tôiCòn } : s.white,
+    black: tôi === 'b' ? { ...s.black, clockMs: tôiCòn } : s.black,
+    at: Date.now(),
+  };
+  return true;
+}
+
+function playMove(from: Square, to: Square, promotion: string | undefined, rerender: () => void): boolean {
+  if (!applyLocal(from, to, promotion)) return false;
+  void sendMove(from, to, promotion).then((r) => {
+    // Server từ chối (hết giờ đúng lúc đó chẳng hạn): nạp lại sự thật từ server
+    if (!r) void loadStatus().then(rerender);
+  });
+  return true;
+}
+
+/** Cập nhật đồng hồ tại chỗ, không dựng lại cả trang mỗi giây. */
+function tickClocks(): void {
+  const s = live.state;
+  if (!s) return;
+  for (const side of ['w', 'b'] as const) {
+    const el = document.querySelector<HTMLElement>(`[data-clock="${side}"]`);
+    if (!el) continue;
+    const ms = clockNow(s, side);
+    const st = s.over ? 'idle' : s.turn === side ? (ms < 30_000 ? 'low' : 'running') : 'idle';
+    el.outerHTML = clock(ms, st, side);
+  }
+  const hạn = document.querySelector<HTMLElement>('[data-reconnect]');
+  if (hạn && s.reconnectBy) {
+    hạn.innerHTML = notice(`Đối thủ mất kết nối · còn ${giây(s.reconnectBy - Date.now())} giây để vào lại`, 'danger', 'clock');
+  }
+}
+
 export function leaveOnline(): void {
   if (live.state?.over) {
     live.state = null;
@@ -81,6 +149,7 @@ export function leaveOnline(): void {
   confirmResign = false;
   shownPly = -1;
   shownFen = '';
+  if (!live.state || live.state.over) dropPremove();
 }
 
 export function resetOnline(): void {
@@ -263,6 +332,7 @@ function vánCờ(): string {
       you: side === tôi,
       rating: p.rating,
       clockMs: ms,
+      clockId: side,
       clockState: xong ? 'idle' : s.turn === side ? (ms < 30_000 ? 'low' : 'running') : 'idle',
       status: p.connected ? (xong ? undefined : s.turn === side ? 'đang nghĩ' : undefined) : 'mất kết nối',
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
@@ -272,7 +342,7 @@ function vánCờ(): string {
 
   const đợiVàoLại =
     s.reconnectBy && !xong
-      ? notice(`Đối thủ mất kết nối · còn ${giây(s.reconnectBy - Date.now())} giây để vào lại`, 'danger', 'clock')
+      ? `<div data-reconnect>${notice(`Đối thủ mất kết nối · còn ${giây(s.reconnectBy - Date.now())} giây để vào lại`, 'danger', 'clock')}</div>`
       : '';
 
   const hòaĐangChờ =
@@ -378,7 +448,7 @@ export function mountOnline(rerender: () => void): void {
   if (!auth.user) return;
   if (!started) {
     started = true;
-    connect(rerender);
+    connect(rerender, tickClocks);
     void loadStatus().then(rerender);
   }
   // Chỉ hỏi lại khi đang ở sảnh, và cách lần trước một lúc. Hỏi một lần rồi
@@ -404,6 +474,7 @@ export function mountOnline(rerender: () => void): void {
   const tôiĐi = !s.over && s.turn === s.youAre;
 
   view = new BoardView(host, {
+    id: 'online',
     legalFrom: (from) => (tôiĐi && board ? board.legalFrom(from) : { quiet: [], captures: [] }),
     canPick: (sq) => {
       if (!tôiĐi || !board) return false;
@@ -417,12 +488,35 @@ export function mountOnline(rerender: () => void): void {
         rerender();
         return true;
       }
-      // Gửi lên rồi chờ server xác nhận; không tự đi trước ở màn hình, vì
-      // server mới là nơi biết nước đó có hợp lệ và còn kịp giờ hay không.
-      void sendMove(from, to);
+      if (!playMove(from, to, undefined, rerender)) return false;
+      rerender();
       return true;
     },
+    premove: {
+      active: () => Boolean(live.state && !live.state.over && live.state.turn !== live.state.youAre),
+      canPick: (sq) => Boolean(live.state && ownsSquare(live.state.fen, sq, live.state.youAre)),
+      dests: (from) => (live.state ? premoveDests(live.state.fen, from) : []),
+      set: (from, to) => {
+        premove = [from, to];
+      },
+      clear: dropPremove,
+    },
   });
+
+  // Tới lượt mình mà có nước đi trước: đợi nước của đối thủ trượt xong rồi đi.
+  // Tốn của mình chừng ấy thời gian trên đồng hồ (chess.com tính 0,1 giây), đổi
+  // lại hai quân không trượt chồng lên nhau.
+  if (s.over) dropPremove();
+  else if (s.turn === s.youAre && premove && premoveTimer === null) {
+    premoveTimer = window.setTimeout(() => {
+      premoveTimer = null;
+      const pm = premove;
+      premove = null;
+      // Lúc chọn chưa biết đối thủ đi gì; giờ mới hỏi luật thật, sai thì bỏ
+      if (pm) playMove(pm[0], pm[1], undefined, rerender);
+      rerender();
+    }, PIECE_SLIDE_MS);
+  }
 
   // Trượt quân khi vừa có thêm đúng một nước
   const thêmMộtNước = s.history.length === shownPly + 1 && s.lastMove;
@@ -440,6 +534,7 @@ export function mountOnline(rerender: () => void): void {
       orientation: s.youAre,
       lastMove: s.lastMove ?? undefined,
       check: board?.checkedKing ?? undefined,
+      premove: premove ?? undefined,
       label: `Bàn cờ, lượt ${sideName(s.turn)}`,
     },
     thêmMộtNước ? s.lastMove! : undefined,
@@ -461,7 +556,7 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
   if (promo && pendingPromotion) {
     const { from, to } = pendingPromotion;
     pendingPromotion = null;
-    void sendMove(from, to, promo.dataset.promote);
+    playMove(from, to, promo.dataset.promote, rerender);
     rerender();
     return true;
   }

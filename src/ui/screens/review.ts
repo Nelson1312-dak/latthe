@@ -41,6 +41,8 @@ interface State {
   /** Bên của người học. null nghĩa là hai người cùng máy — soi lỗi cả hai bên. */
   playerSide: Side | null;
   label: string;
+  /** Tên đối thủ hiện trên thanh người chơi ("Máy cấp 3", tên người). null là cứ ghi Trắng/Đen. */
+  opponent: string | null;
   review: ReviewResult | null;
   /** Nước đang xem, 0 là thế cờ đầu. */
   ply: number;
@@ -62,6 +64,7 @@ const state: State = {
   pgn: '',
   playerSide: 'w',
   label: '',
+  opponent: null,
   review: null,
   ply: 0,
   orientation: 'w',
@@ -146,7 +149,7 @@ function pickScreen(): string {
     ${
       lastFinished
         ? `${rule('Ván vừa chơi')}
-           <div class="task-list" style="margin-bottom:var(--s-6)">
+           <div class="task-list">
              <div class="task">
                <span class="task-text"><b>${lastFinished.label}</b><span>Chấm ngay, không cần đăng nhập</span></span>
                <span class="task-go" data-review-last>${button({ label: 'Chấm ván này', kind: 'primary', icon: 'review' })}</span>
@@ -251,7 +254,14 @@ function resultScreen(r: ReviewResult): string {
 
   const strip = (side: Side) =>
     playerStrip({
-      name: sideName(side),
+      // Ván của mình thì ghi tên mình và tên đối thủ, không phải chữ Trắng/Đen
+      name:
+        mySide && side === mySide && auth.user
+          ? auth.user.name
+          : mySide && side !== mySide && state.opponent
+            ? state.opponent
+            : sideName(side),
+      bot: Boolean(mySide && side !== mySide && state.opponent?.startsWith('Máy')),
       side,
       you: side === mySide,
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
@@ -453,6 +463,12 @@ export function openGame(id: number, rerender: () => void): void {
             ? `Đấu với ${data.game.opponentName ?? 'người chơi khác'}`
             : 'Hai người một máy';
       state.label = `${who} · ${outcomeText({ winner: data.game.winner, reason: data.game.reason as never })}`;
+      state.opponent =
+        data.game.mode === 'bot'
+          ? `Máy cấp ${data.game.level ?? '?'}`
+          : data.game.mode === 'online'
+            ? (data.game.opponentName ?? null)
+            : null;
       if (data.review) {
         // Đã chấm rồi thì mở ra ngay, không chấm lại
         state.review = data.review;
@@ -481,6 +497,7 @@ export function handleReviewClick(target: HTMLElement, rerender: () => void): bo
     // Ván hai người thì cứ để Trắng ở dưới
     state.orientation = lastFinished.playerSide ?? 'w';
     state.label = lastFinished.label;
+    state.opponent = null; // ván vừa chơi chưa lưu: không biết chắc tên, cứ ghi Trắng/Đen
     state.newCards = 0;
     void runReview(rerender);
     return true;
