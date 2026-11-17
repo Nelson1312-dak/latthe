@@ -68,18 +68,22 @@
 }
 
 /* ---------------- Button ---------------- */
+/* Nút có khối như phím bấm: mép dưới đậm hơn thân nút, kiểu chess.com. Không
+   dùng bóng đổ (cấm trong DESIGN.md) — mép dưới là một đường viền 3px nửa
+   trong suốt, phủ lên nền nút nên tự ra màu đậm hơn đúng tông. */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  height: 34px;
-  padding: 0 var(--s-3);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
+  height: 40px;
+  padding: 0 var(--s-4);
+  border: 0;
+  border-bottom: 3px solid rgb(0 0 0 / 0.3);
+  border-radius: var(--r-md);
   background: var(--bg-2);
   color: var(--text-1);
   font-size: var(--fs-md);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--t-ui), border-color var(--t-ui);
@@ -96,23 +100,28 @@
   color: var(--text-3);
 }
 
+/* Nút chính to và đậm. Chữ trắng trên xanh chỉ đủ tương phản khi chữ từ
+   18.66px đậm trở lên (ngưỡng 3:1 của WCAG cho chữ lớn), nên chữ để 19px. */
 .btn-primary {
+  height: 48px;
+  padding: 0 var(--s-6);
   background: var(--accent);
-  border-color: var(--accent);
+  border-bottom-color: var(--accent-edge);
   color: var(--on-accent);
-  font-weight: 600;
+  font-size: 19px;
+  font-weight: 700;
 }
 .btn-primary .icon {
   color: inherit;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
-  border-color: var(--accent-hover);
 }
 
 .btn-danger {
   background: transparent;
   border-color: transparent;
+  border-bottom-color: transparent;
   color: var(--danger);
 }
 .btn-danger .icon {
@@ -125,6 +134,7 @@
 .btn-text {
   background: transparent;
   border-color: transparent;
+  border-bottom-color: transparent;
   padding: 0 var(--s-2);
   color: var(--text-2);
 }
@@ -165,24 +175,26 @@
 .toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--s-3);
 }
 .tool-group {
   display: inline-flex;
 }
+.tool-group {
+  gap: 2px;
+}
 .tool-group .btn {
   border-radius: 0;
-  border-left-width: 0;
 }
 .tool-group .btn:first-child {
-  border-left-width: 1px;
-  border-radius: var(--r-sm) 0 0 var(--r-sm);
+  border-radius: var(--r-md) 0 0 var(--r-md);
 }
 .tool-group .btn:last-child {
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  border-radius: 0 var(--r-md) var(--r-md) 0;
 }
 .tool-group .btn:only-child {
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
 }
 
 .spinner {
@@ -283,11 +295,12 @@
 /* Ô ảnh đại diện; không có ảnh thì vẽ quân Vua của bên đó */
 /* Chỉ làm mờ khi ván đang chạy (có .is-turn ở đâu đó trong cặp) */
 .game-board:has(.player.is-turn) .player:not(.is-turn) {
-  opacity: 0.55;
+  /* 0.55 trên nền xám mới thì nhạt quá, tên đối thủ gần như không đọc được */
+  opacity: 0.7;
 }
 .player-face {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   flex: none;
   display: grid;
   place-items: center;
@@ -301,8 +314,8 @@
   object-fit: cover;
 }
 .face-piece {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
 }
 .player-text {
   display: grid;
@@ -324,7 +337,8 @@
   height: 18px;
 }
 .player-name {
-  font-weight: 600;
+  font-size: var(--fs-lg);
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

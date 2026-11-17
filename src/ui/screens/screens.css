@@ -644,7 +644,9 @@
 /* Phần chọn đối thủ nằm trong cột phải, cạnh bàn cờ */
 .setup {
   display: grid;
-  gap: var(--s-5);
+  /* Từng ghi --s-5, một biến không tồn tại: khoảng cách thành 0, các khối dính
+     vào nhau. Thang khoảng cách chỉ có 1,2,3,4,6,8,12. */
+  gap: var(--s-4);
 }
 /* Cột phải hẹp: cấp độ xếp hai hàng dọc thay vì bốn */
 .game-side .level-grid {
@@ -670,6 +672,9 @@
 .game-side .setup .seg-item {
   flex: 1 1 0;
   min-width: 0;
+  /* "Hai người một máy" phải nằm trên một dòng như "Đấu với máy" */
+  padding: 0 var(--s-2);
+  white-space: nowrap;
   justify-content: center;
   text-align: center;
 }
@@ -945,7 +950,7 @@ button.log-row {
   background: var(--bg-2);
 }
 .chip.is-on {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   color: var(--accent);
 }
 

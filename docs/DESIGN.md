@@ -52,23 +52,34 @@ Thay vào đó:
 
 ## 3. Bố cục
 
-### Header chung
+### Điều hướng chung
 
-Mọi màn hình đều nằm dưới một header cao 56px:
+**Từ 1101px: cột điều hướng dọc bên trái** (rộng 190px, cao hết màn hình), như
+chess.com. Header ngang cũ ăn mất 56px chiều cao — đúng phần bàn cờ cần nhất.
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ ♘ Lật Cờ   Chơi  Xem lại  Ôn tập  Bạn bè    Thiết kế  Nelson │
-└──────────────────────────────────────────────────────────────┘
+┌──────────┬───────────────────────────────────────────────────┐
+│ ♞ Lật Cờ │                                                   │
+│          │      ♚ Máy cấp 3            ┌──────────────────┐  │
+│ ▷ Chơi   │      ┌────────────────┐     │ tiêu đề + nút    │  │
+│ ↗ Xem lại│      │                │     ├──────────────────┤  │
+│ ▤ Ôn tập │      │    BÀN CỜ      │     │ một tấm thẻ liền │  │
+│ ▥ Học    │      │                │     │ (nước đi, gợi ý, │  │
+│ ⚇ Đấu    │      └────────────────┘     │  cấu hình ván)   │  │
+│          │      ♔ Bạn                  └──────────────────┘  │
+│ 👤 Nelson│                                                   │
+└──────────┴───────────────────────────────────────────────────┘
 ```
 
-- **Tên app là thứ to nhất trên header** (21px, đậm) kèm một con Mã làm dấu nhận diện,
-  bấm vào về sảnh. Không màn nào lặp lại tên app trong tiêu đề của mình.
-- Mục điều hướng đang mở có vạch nhấn 2px sát đáy header — quy ước quen thuộc của
-  chess.com và Lichess.
-- Tài khoản nằm bên phải, hiện tên gọi của người đang đăng nhập.
-- Dưới 1100px: nhãn các mục ẩn đi, chỉ còn icon. Dưới 768px: điều hướng chuyển
-  hẳn xuống thanh đáy cho vừa tầm ngón tay, header chỉ còn tên app và tài khoản.
+- Tên app to nhất trong cột (22px, đậm) kèm con Mã, bấm vào về sảnh.
+- Mục đang mở: nền `--bg-2` và **vạch nhấn 4px bên trái** (thay cho vạch 2px sát
+  đáy header ngang trước đây).
+- Tài khoản dồn xuống đáy cột.
+- Bảng bên phải là **một tấm thẻ liền** (`--bg-1`, bo 6px) từ tiêu đề tới hết,
+  không phải nhiều khung rời — nhiều khung rời là thứ làm giao diện cũ trông lổn nhổn.
+- 768–1100px: vẫn header ngang, nhãn ẩn chỉ còn icon. Dưới 768px: điều hướng
+  xuống thanh đáy cho vừa tầm ngón tay.
+- Màn "Thiết kế" (trang mẫu) bỏ khỏi điều hướng, vẫn mở được bằng `#/thiet-ke`.
 
 ### Desktop (từ 1024px)
 
@@ -124,14 +135,17 @@ Tất cả màu, cỡ chữ, khoảng cách là biến CSS trong `src/ui/tokens.
 
 | Token | Tối (mặc định) | Sáng | Dùng cho |
 |---|---|---|---|
-| `--bg-0` | `#1A1917` | `#F3F1EC` | Nền trang |
-| `--bg-1` | `#22211E` | `#FFFFFF` | Bảng, nav |
-| `--bg-2` | `#2C2A27` | `#ECE9E2` | Ô nhập, dòng được chọn |
-| `--bg-3` | `#37352F` | `#E2DED5` | Hover |
-| `--line` | `#3A3833` | `#D9D4C9` | Viền 1px |
-| `--text-1` | `#ECE8E1` | `#1D1B18` | Chữ chính |
-| `--text-2` | `#B3ADA3` | `#57524A` | Chữ phụ (vẫn đạt tương phản 4.5:1) |
-| `--text-3` | `#857F75` | `#7D776D` | Nhãn, chú thích nhỏ |
+| `--bg-0` | `#302E2B` | `#F3F1EC` | Nền trang |
+| `--bg-1` | `#262421` | `#FFFFFF` | Bảng bên, cột điều hướng |
+| `--bg-2` | `#3C3A37` | `#ECE9E2` | Ô nhập, mục đang chọn, nút thường |
+| `--bg-3` | `#4B4845` | `#E2DED5` | Hover |
+| `--line` | `#3F3D39` | `#D9D4C9` | Viền 1px |
+| `--text-1` | `#FFFFFF` | `#1D1B18` | Chữ chính |
+| `--text-2` | `#C9C8C6` | `#57524A` | Chữ phụ |
+| `--text-3` | `#A7A5A3` | `#7D776D` | Nhãn, chú thích nhỏ |
+
+Bảng tối lấy theo họ màu của chess.com (xám nâu ấm, nền trang SÁNG hơn bảng bên).
+Bản trước (`#1A1917`, gần đen) làm bàn cờ trông như dán lên một cái hố.
 
 Nền ngả ấm (xám nâu) chứ không phải xám xanh lạnh kiểu dashboard.
 
@@ -139,9 +153,10 @@ Nền ngả ấm (xám nâu) chứ không phải xám xanh lạnh kiểu dashboa
 
 | Token | Giá trị | Dùng cho |
 |---|---|---|
-| `--accent` | `#E2A03F` (hổ phách) | Nút hành động chính ("Chơi"), trạng thái đang chọn. Chữ trên nền nhấn màu tối `#1A1917` |
-| `--accent-hover` | `#EDB25A` | |
-| `--danger` | `#D2493E` | Đầu hàng, xóa, hết giờ |
+| `--accent` | `#6A9F3E` tối / `#4B7A26` sáng (xanh lá) | Nút hành động chính ("Bắt đầu ván"), trạng thái đang chọn. Chữ trên nền nhấn màu trắng, đậm |
+| `--accent-edge` | `#4B7A26` | Gờ dưới 3px của nút chính — nút "dày" như chess.com chứ không phẳng lì |
+| `--accent-text` | `#95C862` | Chữ màu nhấn trên nền tối (chip đang bật…) |
+| `--danger` | `#F07A6D` tối / `#B5352B` sáng | Đầu hàng, xóa, hết giờ. Bản tối sáng lên vì nền mới xám hơn: đỏ cũ chỉ đạt 4,15:1 |
 | `--ok` | `#6FA35A` | Kết nối tốt, giải đúng |
 | `--clock-active` | `--text-1` trên `--bg-3` | Đồng hồ bên đang đi |
 | `--clock-low` | `#D2493E` | Dưới 20 giây |

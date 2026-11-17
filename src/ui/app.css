@@ -494,3 +494,116 @@
     min-height: 44px;
   }
 }
+
+
+/* ======================================================================
+   Làm lại 18/11/2026: thanh điều hướng dọc bên trái + cột phải một khối.
+   ====================================================================== */
+
+/* Máy tính: điều hướng nằm dọc bên trái như chess.com, không còn thanh ngang
+   trên đầu. Thanh ngang ăn 56px chiều cao — mà chiều cao chính là thứ quyết
+   định bàn cờ to được bao nhiêu — trong khi bề ngang màn hình thì thừa. */
+@media (min-width: 1101px) {
+  :root {
+    --head-h: 0px;
+    --board-w: min(
+      calc(100vh - 152px),
+      calc(100vw - var(--rail-w) - var(--side-w) - 3 * var(--s-6) - 16px)
+    );
+  }
+  .app {
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    grid-template-rows: 1fr;
+  }
+  .site-head {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    height: 100vh;
+    padding: var(--s-4) 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+  }
+  .app > main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .brand {
+    padding: var(--s-1) var(--s-4) var(--s-6);
+  }
+  .top-nav {
+    flex-direction: column;
+    overflow: visible;
+    gap: 2px;
+  }
+  .top-link {
+    min-height: 46px;
+    padding: 0 var(--s-4);
+    border-bottom: 0;
+    border-left: 4px solid transparent;
+    font-size: var(--fs-lg);
+    font-weight: 600;
+  }
+  .top-link .icon {
+    width: 22px;
+    height: 22px;
+  }
+  .top-link.is-active {
+    background: var(--bg-2);
+    border-left-color: var(--accent);
+  }
+  .site-right {
+    flex-direction: column;
+    margin-left: 0;
+    margin-top: auto;
+  }
+  .site-right .top-link span {
+    max-width: none;
+  }
+
+  /* Cột phải của màn có bàn cờ là MỘT khối liền như bảng bên phải chess.com:
+     dòng tiêu đề + nút ở trên, sổ nước đi và các phần khác bên dưới, chung một
+     nền. Bản cũ là mấy cái hộp viền mảnh rời nhau trôi giữa khoảng đen. */
+  .screen:has(> .game) {
+    row-gap: 0;
+  }
+  .screen:has(> .game) > .screen-head {
+    padding: var(--s-4);
+    background: var(--bg-1);
+    border-radius: var(--r-md) var(--r-md) 0 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .screen:has(> .game) > .screen-head .head-meta {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    color: var(--text-1);
+  }
+  .screen:has(> .game) .game-side {
+    gap: 0;
+    padding-bottom: var(--s-4);
+    background: var(--bg-1);
+    border-radius: 0 0 var(--r-md) var(--r-md);
+  }
+  .screen:has(> .game) .game-side .sheet {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+  .screen:has(> .game) .game-side > * + * {
+    border-top: 1px solid var(--line);
+  }
+  .screen:has(> .game) .game-side > :not(.sheet) {
+    padding-left: var(--s-4);
+    padding-right: var(--s-4);
+  }
+  .screen:has(> .game) .game-side > .rule {
+    border-top: 0;
+    padding-top: var(--s-4);
+    margin-top: 0;
+  }
+}

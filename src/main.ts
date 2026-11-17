@@ -76,8 +76,10 @@ function siteHeader(current: string): string {
     `<nav class="top-nav" aria-label="Chính">` +
     NAV.map((n) => topLink(n.route, n.label, n.icon, current)).join('') +
     `</nav>` +
+    // "Thiết kế" (trang mẫu của design system) không còn trên thanh điều hướng:
+    // người chơi không cần nó, và nó làm trang trông như công cụ của dev.
+    // Vẫn vào được bằng #/thiet-ke.
     `<div class="site-right">` +
-    topLink('thiet-ke', 'Thiết kế', 'book', current) +
     topLink('tai-khoan', shortName(), 'user', current) +
     `</div></header>`
   );

@@ -134,6 +134,7 @@ export function account(): string {
   }
 
   const canGoogle = Boolean(auth.googleClientId);
+  const onThisMachine = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
   return `<div class="screen screen-narrow">
     <div class="screen-head"><h1>Đăng nhập</h1></div>
     <div class="account-cols">
@@ -144,10 +145,20 @@ export function account(): string {
           App không bao giờ thấy mật khẩu của bạn: Google lo phần đó.
         </p>
         <div id="google-btn" class="google-btn"></div>
-        ${canGoogle ? '' : notice('Server chưa đặt GOOGLE_CLIENT_ID — xem docs/GOOGLE-LOGIN.md', 'locked', 'engine')}
+        ${
+          canGoogle
+            ? ''
+            : // Người ngoài không cần biết tên biến môi trường; chỉ người chạy máy chủ mới cần.
+              onThisMachine
+              ? notice('Server chưa đặt GOOGLE_CLIENT_ID — xem docs/GOOGLE-LOGIN.md', 'locked', 'engine')
+              : notice('Đăng nhập Google sắp mở. Trong lúc chờ, bạn vẫn chơi với máy và giải bài tập được — chỉ là chưa lưu lại.', 'info', 'clock')
+        }
         <p id="login-error" class="notice notice-danger" hidden></p>
       </div>
-      <div>
+      ${
+        // Trên web công khai không bao giờ có đăng nhập thử, nên khỏi hiện cột này.
+        auth.devAuth || onThisMachine
+          ? `<div>
         ${rule('Hoặc thử nhanh')}
         ${
           auth.devAuth
@@ -158,7 +169,9 @@ export function account(): string {
                </div>`
             : notice('Đăng nhập thử đang tắt (chỉ bật khi chạy trên máy bạn với AUTH_DEV=1)', 'locked', 'engine')
         }
-      </div>
+      </div>`
+          : ''
+      }
     </div>
   </div>`;
 }
