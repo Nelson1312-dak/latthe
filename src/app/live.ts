@@ -68,7 +68,31 @@ export function connect(onChange: () => void, tick?: () => void): void {
   rerender = onChange;
   onTick = tick ?? null;
   if (es) return;
-  es = new EventSource('/api/live/stream', { withCredentials: true });
+  void mởLuồng();
+}
+
+/**
+ * Mở luồng SSE.
+ *
+ * Trên bản web công khai, `/api` đi qua Vercel — mà Vercel gom đệm kết nối dài
+ * nên luồng SSE không bao giờ tới (thử thật: 12 giây không một gói nào). Nên
+ * xin một cái vé qua đường thường rồi mở luồng THẲNG tới máy chủ bằng vé đó.
+ * Chạy trong máy thì server trả url rỗng, dùng đường tương đối như cũ.
+ */
+async function mởLuồng(): Promise<void> {
+  let địaChỉ = '/api/live/stream';
+  try {
+    const r = await fetch('/api/live/ticket', { method: 'POST', credentials: 'same-origin' });
+    if (r.ok) {
+      const { ticket, url } = (await r.json()) as { ticket: string; url: string };
+      if (url) địaChỉ = `${url}/api/live/stream?ticket=${encodeURIComponent(ticket)}`;
+      else địaChỉ = `/api/live/stream?ticket=${encodeURIComponent(ticket)}`;
+    }
+  } catch {
+    /* không xin được vé thì cứ thử đường cũ */
+  }
+  if (es) return;
+  es = new EventSource(địaChỉ, { withCredentials: true });
   es.onmessage = (e) => {
     try {
       apply(JSON.parse(e.data) as LiveEvent);

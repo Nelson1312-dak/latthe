@@ -32,6 +32,20 @@ const PORT = Number(process.env.API_PORT ?? 8787);
 const HOST = process.env.API_HOST ?? '127.0.0.1';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? '';
 const DIST = resolve('dist');
+/**
+ * Trang web công khai gọi luồng SSE thẳng vào đây, không qua Vercel.
+ * Để trống thì trình duyệt dùng đường tương đối như cũ (chạy trong máy).
+ */
+const STREAM_BASE = (process.env.PUBLIC_UPSTREAM ?? '').replace(/\/+$/, '');
+/** Trang nào được phép mở luồng từ origin khác. */
+const ALLOW_ORIGIN = (process.env.PUBLIC_ORIGIN ?? 'https://latbai.vn').replace(/\/+$/, '');
+
+/** Header CORS cho đúng đường luồng, chỉ mở cho trang web của mình. */
+function corsFor(req: IncomingMessage): Record<string, string> {
+  const o = req.headers.origin;
+  if (!o || o !== ALLOW_ORIGIN) return {};
+  return { 'access-control-allow-origin': o, vary: 'origin' };
+}
 
 /**
  * Đăng nhập giả cho lúc phát triển và chạy test.
@@ -246,10 +260,26 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
   /* ---------------- Ván online ---------------- */
 
   // Luồng server đẩy xuống. Giữ mở cho tới khi trình duyệt đóng.
-  if (path === '/api/live/stream' && method === 'GET') {
+  // Xin vé mở luồng. Đi qua Vercel cũng được vì đây là request ngắn, có cookie.
+  if (path === '/api/live/ticket' && method === 'POST') {
     const user = currentUser(req);
     if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
-    live.subscribe(user, res);
+    // Chỉ đưa địa chỉ đi thẳng khi trang gọi tới ĐÚNG LÀ bản web công khai.
+    // Chạy trong máy (hoặc mở thẳng địa chỉ tunnel) thì trả rỗng để trình duyệt
+    // dùng đường tương đối — không thì bản dev lại đi hỏi cái tunnel đang tắt.
+    const quaWeb = req.headers.origin === ALLOW_ORIGIN;
+    return json(res, 200, { ticket: live.newTicket(user.id), url: quaWeb ? STREAM_BASE : '' });
+  }
+
+  if (path === '/api/live/stream' && method === 'GET') {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const vé = url.searchParams.get('ticket');
+    // Có vé thì dùng vé (luồng đi thẳng, khác origin nên không có cookie);
+    // không có thì vẫn nhận cookie như cũ (chạy trong máy, hoặc cùng origin).
+    const userId = vé ? live.useTicket(vé) : (currentUser(req)?.id ?? null);
+    const user = userId === null ? null : one<User>(db, 'SELECT * FROM users WHERE id = ?', userId);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' }, corsFor(req));
+    live.subscribe(user, res, Date.now(), corsFor(req));
     return;
   }
 

@@ -5,7 +5,7 @@
 // kết nối lại khi đứt mạng, nên phần "vào lại sau khi rớt" gần như có sẵn.
 
 import type { ServerResponse } from 'node:http';
-import { randomInt } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import { one, type Db, type User } from '../db.ts';
 import { insertGame } from '../games.ts';
 import { CONTROLS, DEFAULT_CONTROL, type LiveEvent, type LiveState } from '../../shared/protocol.ts';
@@ -39,6 +39,17 @@ export class Live {
   /** userId -> các luồng SSE đang mở (một người có thể mở nhiều tab). */
   private streams = new Map<number, Set<ServerResponse>>();
   private invites = new Map<string, Invite>();
+  /**
+   * Vé mở luồng SSE: mã dùng một lần, sống 60 giây.
+   *
+   * Cần tới vì luồng SSE phải đi THẲNG tới máy này chứ không qua Vercel —
+   * Vercel gom đệm kết nối dài, thử thật thì 12 giây không nhận được gói nào.
+   * Mà đi thẳng là khác origin, cookie `SameSite=Lax` không gửi kèm. Thay vì
+   * nới cookie thành `SameSite=None` (mất một lớp chắn CSRF cho MỌI đường),
+   * chỉ riêng đường này đổi sang vé: xin vé qua Vercel (có cookie), rồi mở
+   * luồng bằng vé.
+   */
+  private tickets = new Map<string, { userId: number; hết: number }>();
   // Khai riêng chứ không viết `constructor(private db: Db)`: Node chạy
   // TypeScript ở chế độ chỉ-bóc-kiểu, mà thuộc tính khai trong tham số
   // constructor thì không bóc được, phải sinh thêm mã.
@@ -48,15 +59,32 @@ export class Live {
     this.db = db;
   }
 
+  /** Cấp vé mở luồng cho người đã đăng nhập. */
+  newTicket(userId: number, now = Date.now()): string {
+    for (const [k, v] of this.tickets) if (v.hết <= now) this.tickets.delete(k);
+    const vé = randomBytes(18).toString('base64url');
+    this.tickets.set(vé, { userId, hết: now + 60_000 });
+    return vé;
+  }
+
+  /** Đổi vé lấy userId. Dùng xong là huỷ, không dùng lại được. */
+  useTicket(vé: string, now = Date.now()): number | null {
+    const v = this.tickets.get(vé);
+    if (!v) return null;
+    this.tickets.delete(vé);
+    return v.hết > now ? v.userId : null;
+  }
+
   /* ---------------- Luồng SSE ---------------- */
 
-  subscribe(user: User, res: ServerResponse, now = Date.now()): () => void {
+  subscribe(user: User, res: ServerResponse, now = Date.now(), thêm: Record<string, string> = {}): () => void {
     res.writeHead(200, {
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-store',
       connection: 'keep-alive',
       // Nhờ proxy/tunnel đừng gom gói lại rồi mới gửi, nếu không sẽ trễ cả phút.
       'x-accel-buffering': 'no',
+      ...thêm,
     });
     // Đứt thì tự nối lại sau 2 giây.
     res.write('retry: 2000\n\n');

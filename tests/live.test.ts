@@ -465,3 +465,35 @@ describe('ghép trận rồi lưu kết quả', () => {
     expect(live.acceptInvite(b, 'KHONGCO', T0)).toEqual({ ok: false, why: 'no-such-invite' });
   });
 });
+
+describe('vé mở luồng SSE', () => {
+  const dựng = () => {
+    const db = openDb(':memory:');
+    const a = createLocalUser(db, 'Nelson');
+    return { db, a, live: new Live(db) };
+  };
+
+  it('vé đổi được đúng một lần', () => {
+    const { live, a } = dựng();
+    const vé = live.newTicket(a.id, T0);
+    expect(live.useTicket(vé, T0 + 1000)).toBe(a.id);
+    // Dùng lại không được: ai nhặt được vé trong log cũng chỉ mở được một lần
+    expect(live.useTicket(vé, T0 + 2000)).toBeNull();
+  });
+
+  it('vé hết hạn sau một phút', () => {
+    const { live, a } = dựng();
+    const vé = live.newTicket(a.id, T0);
+    expect(live.useTicket(vé, T0 + 61_000)).toBeNull();
+  });
+
+  it('vé bịa thì không vào được', () => {
+    const { live } = dựng();
+    expect(live.useTicket('khong-co-that', T0)).toBeNull();
+  });
+
+  it('mỗi lần xin là một vé khác', () => {
+    const { live, a } = dựng();
+    expect(live.newTicket(a.id, T0)).not.toBe(live.newTicket(a.id, T0));
+  });
+});
