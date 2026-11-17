@@ -4,16 +4,18 @@
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
 import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
-import { Game, outcomeText, type Side, type Square } from '../../../shared/chess.ts';
+import { Game, outcomeText, type Outcome, type Side, type Square } from '../../../shared/chess.ts';
 import { material } from '../../../shared/fen.ts';
 import { formatScore, type Score } from '../../../shared/winrate.ts';
-import { playSound, soundEnabled } from '../../app/sound.ts';
+import { playSound } from '../../app/sound.ts';
 import { engine } from '../../engine/engine.ts';
 import { LEVELS, levelById, thinkDelayMs } from '../../engine/levels.ts';
 import { splitUci } from '../../engine/uci.ts';
 import { loadOpenings, openingAt } from '../../analysis/openings.ts';
 import { saveFinishedGame } from '../../app/games.ts';
 import { auth } from '../../app/session.ts';
+import { prefs } from '../../app/prefs.ts';
+import { icon, type IconName } from '../icons.ts';
 import { offerReview } from './review.ts';
 import { buildFacts } from '../../../shared/advisor/facts.ts';
 import { detectMotifs } from '../../../shared/advisor/motifs.ts';
@@ -33,16 +35,21 @@ import {
 
 type Mode = 'bot' | 'human';
 
+/** Bên muốn cầm: Trắng, Đen, hay để máy bốc thăm. */
+type Pick = Side | 'r';
+
 interface Setup {
   mode: Mode;
   level: number;
-  /** Bên người chơi cầm (chỉ dùng khi đấu với máy). */
+  /** Bên người chơi đã chọn trong bảng (có thể là bốc thăm). */
+  pick: Pick;
+  /** Bên người chơi THẬT SỰ cầm trong ván này (đã bốc thăm xong). */
   side: Side;
 }
 
 /** Ván đang chơi; giữ ngoài hàm render để chuyển màn rồi quay lại vẫn còn. */
 let game = new Game();
-let setup: Setup = { mode: 'bot', level: 3, side: 'w' };
+let setup: Setup = { mode: 'bot', level: 3, pick: 'w', side: 'w' };
 /** Chưa bắt đầu thì hiện màn chọn cấp độ. */
 let started = false;
 let orientation: Side = 'w';
@@ -66,6 +73,19 @@ let hintLoading = false;
 let premove: [Square, Square] | null = null;
 /** Đã xin kho khai cuộc chưa (chỉ xin một lần cho cả phiên). */
 let openingsAsked = false;
+/** Bên đã đầu hàng (null là chưa ai). Thế cờ không tự biết chuyện này. */
+let resigned: Side | null = null;
+/** Bấm "Đầu hàng" lần đầu chỉ hỏi lại; bấm lần nữa trong 3 giây mới tính. */
+let resignArmed = false;
+let resignTimer: ReturnType<typeof setTimeout> | null = null;
+/** Vừa chép PGN xong: đổi chữ trên nút một lúc cho biết là đã chép. */
+let copied = false;
+
+/** Kết quả ván: tính cả đầu hàng, thứ mà thế cờ không biết. */
+function outcome(): Outcome | null {
+  if (resigned) return { winner: resigned === 'w' ? 'b' : 'w', reason: 'resign' };
+  return game.outcome();
+}
 
 const PROMOTION_PIECES = [
   ['q', 'Hậu'],
@@ -90,6 +110,11 @@ function newGame(): void {
   animatedPly = 0;
   hintLevel = 0;
   hints = null;
+  resigned = null;
+  resignArmed = false;
+  copied = false;
+  // Bốc thăm bên cầm quân ngay lúc vào ván, mỗi ván một lần
+  setup.side = setup.pick === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : setup.pick;
   orientation = setup.mode === 'bot' ? setup.side : 'w';
   animatedOrientation = orientation;
 }
@@ -97,58 +122,118 @@ function newGame(): void {
 /* ---------------- Phần chọn đối thủ, nằm ở cột phải ---------------- */
 
 /**
- * Trước đây đây là một màn riêng: vào mục Chơi thì thấy một trang toàn nút,
- * không có bàn cờ nào. Giờ bàn cờ hiện ngay từ đầu, phần chọn nằm ở cột phải
- * và biến mất khi bấm Bắt đầu — giống chess.com.
+ * Bảng chọn đối thủ, nằm ở cột phải cạnh bàn cờ — như chess.com.
+ *
+ * Bản trước bày tám thẻ cấp độ hai dòng chữ, một thanh chọn chế độ và một
+ * thanh chọn bên, nhìn như một tờ khai. Giờ chỉ còn: ai là đối thủ (một thẻ
+ * to), một hàng số 1–8, ba ô chọn bên, và một nút Chơi.
  */
 function setupPanel(): string {
+  if (setup.mode === 'human') {
+    return `<div class="setup">
+      <div class="bot-card">
+        <span class="bot-face">${pieceGlyph('wn', 'bot-piece')}</span>
+        <span class="bot-text"><b>Hai người một máy</b><span>Thay nhau đi trên cùng bàn cờ này</span></span>
+      </div>
+      ${button({ label: 'Chơi', kind: 'primary', icon: 'play', full: true })}
+      <button class="link-btn" data-mode="bot">Đấu với máy</button>
+    </div>`;
+  }
+
+  const l = levelById(setup.level);
   const levels = LEVELS.map(
-    (l) =>
-      `<button class="level-card${l.id === setup.level ? ' is-active' : ''}" data-level="${l.id}">` +
-      `<b>${l.name}</b><span>${l.hint}</span></button>`,
+    (x) =>
+      `<button class="lv${x.id === setup.level ? ' is-active' : ''}" data-level="${x.id}" ` +
+      `aria-pressed="${x.id === setup.level}" aria-label="${x.name}">${x.id}</button>`,
   ).join('');
+  const sides = (
+    [
+      ['w', 'Trắng', pieceGlyph('wk', 'side-piece')],
+      ['r', 'Ngẫu nhiên', icon('random', 26)],
+      ['b', 'Đen', pieceGlyph('bk', 'side-piece')],
+    ] as const
+  )
+    .map(
+      ([id, name, glyph]) =>
+        `<button class="side-opt${setup.pick === id ? ' is-active' : ''}" data-pick="${id}" aria-pressed="${setup.pick === id}">` +
+        `${glyph}<span>${name}</span></button>`,
+    )
+    .join('');
 
   return `<div class="setup">
-      <div class="seg" role="group" aria-label="Đối thủ">
-        <button class="seg-item${setup.mode === 'bot' ? ' is-active' : ''}" data-mode="bot">Đấu với máy</button>
-        <button class="seg-item${setup.mode === 'human' ? ' is-active' : ''}" data-mode="human">Hai người một máy</button>
+      <div class="bot-card">
+        <span class="bot-face">${pieceGlyph('bn', 'bot-piece')}</span>
+        <span class="bot-text"><b>Máy ${l.name.toLowerCase()}</b><span>${l.hint}</span></span>
       </div>
-
-      ${
-        setup.mode === 'bot'
-          ? `<div class="setup-block">
-              <p class="rule"><span class="rule-label">Cấp độ máy</span><i></i></p>
-              <div class="level-grid">${levels}</div>
-            </div>
-            <div class="setup-block">
-              <p class="rule"><span class="rule-label">Bạn cầm quân</span><i></i></p>
-              <div class="seg" role="group" aria-label="Bên cầm quân">
-                <button class="seg-item${setup.side === 'w' ? ' is-active' : ''}" data-side="w">${pieceGlyph('wk', 'side-piece')} Trắng</button>
-                <button class="seg-item${setup.side === 'b' ? ' is-active' : ''}" data-side="b">${pieceGlyph('bk', 'side-piece')} Đen</button>
-              </div>
-              <p class="seg-note">${setup.side === 'w' ? 'Bạn đi trước.' : 'Máy đi trước.'}</p>
-            </div>`
-          : '<p class="prose">Hai người thay nhau đi trên cùng một máy. Bàn cờ lật được bất cứ lúc nào.</p>'
-      }
-
-    <div class="setup-go">${button({ label: 'Bắt đầu ván', kind: 'primary', icon: 'play' })}</div>
-    ${engineError ? notice(engineError, 'danger', 'engine') : ''}
+      <div class="setup-block">
+        <p class="setup-label">Độ khó</p>
+        <div class="lv-row" role="group" aria-label="Độ khó">${levels}</div>
+      </div>
+      <div class="setup-block">
+        <p class="setup-label">Bạn cầm quân</p>
+        <div class="side-row" role="group" aria-label="Bên cầm quân">${sides}</div>
+      </div>
+      ${button({ label: 'Chơi', kind: 'primary', icon: 'play', full: true })}
+      <button class="link-btn" data-mode="human">Hai người một máy</button>
+      ${engineError ? notice(engineError, 'danger', 'engine') : ''}
   </div>`;
 }
 
-/** Khối gợi ý ba nấc. Dùng gợi ý thì ván đó coi như có trợ giúp. */
-function hintBlock(): string {
-  const dots = [0, 1, 2]
-    .map((i) => `<span class="hint-dot${i < hintLevel ? ' is-on' : ''}"></span>`)
-    .join('');
-  const labels = ['Gợi ý', 'Gợi ý: quân nào', 'Gợi ý: nước cụ thể', 'Hết gợi ý'];
+/** Ba nút việc chính trong ván, mỗi nút có chữ — không bắt người chơi đoán icon. */
+function actionRow(): string {
+  const act = (
+    id: string,
+    name: IconName,
+    label: string,
+    opts: { disabled?: boolean; danger?: boolean; extra?: string } = {},
+  ) =>
+    `<button class="act${opts.danger ? ' is-danger' : ''}" data-act="${id}"${opts.disabled ? ' disabled' : ''}>` +
+    `${icon(name, 22)}<span>${label}</span>${opts.extra ?? ''}</button>`;
+  const dots =
+    `<span class="hint-dots" aria-label="Đã dùng ${hintLevel} trên 3 nấc gợi ý">` +
+    [0, 1, 2].map((i) => `<span class="hint-dot${i < hintLevel ? ' is-on' : ''}"></span>`).join('') +
+    `</span>`;
+  const hintLabel = hintLoading
+    ? 'Đang xem…'
+    : hintLevel === 0
+      ? 'Gợi ý'
+      : hintLevel === 3
+        ? 'Hết gợi ý'
+        : 'Gợi ý thêm';
+  return `<div class="game-actions">
+    ${
+      setup.mode === 'bot'
+        ? act('hint', 'hint', hintLabel, {
+            disabled: hintLevel === 3 || hintLoading || !game.atLive,
+            extra: dots,
+          })
+        : act('flip', 'flip', 'Lật bàn')
+    }
+    ${act('undo', 'undo', 'Đi lại', { disabled: game.length === 0 || thinking })}
+    ${act('resign', 'resign', resignArmed ? 'Chắc chưa?' : 'Đầu hàng', { danger: resignArmed, disabled: game.length === 0 })}
+  </div>`;
+}
+
+/** Các câu gợi ý đã mở, từ mơ hồ tới cụ thể. */
+function hintList(): string {
   const shown = hints ? hints.slice(0, hintLevel) : [];
-  return `<div class="hint-block">
-    <div class="hint">
-      ${button({ label: hintLoading ? 'Đang xem…' : labels[hintLevel], icon: 'hint', disabled: hintLevel === 3 || hintLoading })}
-      <span class="hint-dots" aria-label="Đã dùng ${hintLevel} trên 3 nấc gợi ý">${dots}</span>
+  return shown.length ? `<ol class="hint-list">${shown.map((h) => `<li>${h}</li>`).join('')}</ol>` : '';
+}
+
+/** Thẻ kết quả: thắng/thua to, lý do nhỏ, rồi các việc làm tiếp. */
+function resultCard(result: Outcome): string {
+  const mine = setup.mode === 'bot' && result.winner !== 'draw';
+  const won = mine && result.winner === setup.side;
+  const [who, why] = outcomeText(result).split(' · ');
+  return `<div class="result-card${won ? ' is-win' : mine ? ' is-loss' : ''}">
+    <b class="result-head">${!mine ? who : won ? 'Bạn thắng' : 'Bạn thua'}</b>
+    <span class="result-why">${mine ? `${who} · ${why}` : why}</span>
+    <div class="result-actions">
+      ${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review', full: true })}
+      ${button({ label: 'Chơi lại', icon: 'play' })}
+      ${button({ label: 'Ván mới', icon: 'settings' })}
     </div>
-    ${shown.length ? `<ol class="hint-list">${shown.map((h) => `<li>${h}</li>`).join('')}</ol>` : ''}
+    <button class="link-btn" data-act="pgn">${icon('copy', 16)}<span>${copied ? 'Đã chép PGN' : 'Sao chép PGN'}</span></button>
   </div>`;
 }
 
@@ -156,7 +241,7 @@ function hintBlock(): string {
 
 function gameScreen(extraSide = ''): string {
   const mat = material(game.fen);
-  const result = game.outcome();
+  const result = outcome();
   const topSide: Side = orientation === 'w' ? 'b' : 'w';
 
   const strip = (side: Side) => {
@@ -185,75 +270,21 @@ function gameScreen(extraSide = ''): string {
     });
   };
 
-  const thắngThua = !result
-    ? ''
-    : setup.mode !== 'bot' || result.winner === 'draw'
-      ? ''
-      : result.winner === setup.side
-        ? 'Bạn thắng'
-        : 'Bạn thua';
-
-  const statusLine = !started
-    ? ''
-    : result
-    ? `<div class="online-result">
-         <b class="result-head">${thắngThua || outcomeText(result)}</b>
-         ${thắngThua ? `<span class="muted">${outcomeText(result)}</span>` : ''}
-         <div class="row-actions">
-           ${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' })}
-           ${button({ label: 'Ván mới', icon: 'play' })}
-         </div>
-       </div>`
-    : thinking
-      ? notice(
-          premove
-            ? `${levelById(setup.level).name} đang nghĩ… Nước đi trước sẽ đi ngay khi tới lượt bạn.`
-            : `${levelById(setup.level).name} đang nghĩ… Bạn có thể đi trước.`,
-          'info',
-          'engine',
-        )
-      : game.inCheck
-        ? notice(`${sideName(game.turn)} đang bị chiếu`, 'danger', 'resign')
-        : // Hướng dẫn chỉ hiện trước nước đầu. Nhắc suốt ván thì thành rác:
-          // đi được một nước rồi là người chơi biết cách rồi.
-          game.length === 0
-          ? notice(
-              // Màn cảm ứng không có chuột phải, nói tới nó chỉ làm rối
-              matchMedia('(pointer: coarse)').matches
-                ? 'Kéo quân, hoặc chạm quân rồi chạm ô muốn đi.'
-                : 'Kéo quân, hoặc bấm quân rồi bấm ô. Chuột phải để vẽ mũi tên.',
-              'info',
-              'hint',
-            )
-          : '';
-
   return `<div class="screen">
     <div class="screen-head">
       <h1>Chơi</h1>
-      <span class="head-meta">
-        ${
-          // Không nhắc "lượt Trắng" nữa: thanh người chơi đã sáng/mờ theo lượt,
-          // và bên đang đi có chữ "đang đi" ngay cạnh tên.
-          !started
-            ? 'Chọn đối thủ rồi bắt đầu'
-            : setup.mode === 'bot'
-              ? `${levelById(setup.level).name} · bạn cầm ${sideName(setup.side)}`
-              : 'Hai người một máy'
-        }
-      </span>
-      ${toolbar(
-        [
-          iconButton('flip', 'Lật bàn cờ'),
-          iconButton('sound', 'Âm thanh', { pressed: soundEnabled() }),
-          ...(started ? [iconButton('engine', 'Thanh đánh giá', { pressed: showEval })] : []),
-        ],
-        started
-          ? [
-              button({ label: 'Đi lại', icon: 'prev', disabled: game.length === 0 || thinking }),
-              button({ label: 'Ván mới', icon: 'play' }),
-            ]
-          : [],
-      )}
+      <span class="head-meta">${
+        setup.mode === 'human'
+          ? 'Hai người một máy'
+          : started
+            ? `Máy ${levelById(setup.level).name.toLowerCase()}`
+            : 'Chơi với máy'
+      }</span>
+      ${toolbar([
+        iconButton('flip', 'Lật bàn cờ'),
+        ...(started ? [iconButton('engine', 'Thanh đánh giá', { pressed: showEval })] : []),
+        iconButton('settings', 'Cài đặt'),
+      ])}
     </div>
 
     <div class="game">
@@ -267,29 +298,34 @@ function gameScreen(extraSide = ''): string {
       </div>
 
       <div class="game-side">
-        ${!started ? sheet(setupPanel()) : ''}
-        ${!started ? '' : sheet(
-          statusLine,
-          game.length
-            ? moveList(
-                game.history.map((m) => ({ san: m.san })),
-                game.ply,
+        ${
+          !started
+            ? sheet(setupPanel())
+            : sheet(
+                khaiCuoc() || '<p class="opening-line">Thế cờ ban đầu</p>',
+                game.length
+                  ? moveList(
+                      game.history.map((m) => ({ san: m.san })),
+                      game.ply,
+                    )
+                  : '<p class="muted moves-empty">Chưa có nước nào. Kéo quân, hoặc bấm quân rồi bấm ô.</p>',
+                hintList(),
+                `<div class="move-bar">
+                  ${iconButton('first', 'Về đầu ván', { disabled: game.ply === 0 })}
+                  ${iconButton('prev', 'Lùi một nước', { disabled: game.ply === 0 })}
+                  ${iconButton('next', 'Tiến một nước', { disabled: game.atLive })}
+                  ${iconButton('last', 'Tới nước mới nhất', { disabled: game.atLive })}
+                </div>`,
+                result ? resultCard(result) : actionRow(),
               )
-            : '<p class="muted">Chưa có nước nào.</p>',
-          ...(setup.mode === 'bot' && !result ? [hintBlock()] : []),
-          `<div class="move-bar">
-            ${iconButton('first', 'Về đầu ván', { disabled: game.ply === 0 })}
-            ${iconButton('prev', 'Lùi một nước', { disabled: game.ply === 0 })}
-            ${iconButton('next', 'Tiến một nước', { disabled: game.atLive })}
-            ${iconButton('last', 'Tới nước mới nhất', { disabled: game.atLive })}
-            <span class="spacer"></span>
-            <span class="head-meta">${game.ply}/${game.length}</span>
-          </div>`,
-        )}
-        ${khaiCuoc()}
+        }
         ${showEval && currentEval ? `<p class="head-meta">Đánh giá: <span class="mono">${formatScore(currentEval)}</span> (góc nhìn Trắng)</p>` : ''}
-        ${engineError ? notice(engineError, 'danger', 'engine') : ''}
-        ${extraSide}
+        ${started && engineError ? notice(engineError, 'danger', 'engine') : ''}
+        ${
+          // Phần của Sảnh (việc hôm nay, sổ ván) chỉ hiện lúc chưa vào ván:
+          // đang đánh mà cột phải còn đủ thứ linh tinh thì rối mắt.
+          started ? '' : extraSide
+        }
       </div>
     </div>
 
@@ -334,12 +370,14 @@ export function mountPlay(rerender: () => void): void {
     },
     onMove: (from, to) => {
       if (!canPlay()) return false;
-      if (game.needsPromotion(from, to)) {
+      // Bật "tự phong Hậu" thì khỏi hỏi — chín phần mười là phong Hậu
+      const autoQ = game.needsPromotion(from, to) && prefs().autoQueen;
+      if (game.needsPromotion(from, to) && !autoQ) {
         pendingPromotion = { from, to };
         rerender();
         return true;
       }
-      if (!game.move(from, to)) return false;
+      if (!game.move(from, to, autoQ ? 'q' : undefined)) return false;
       hints = null;
       hintLevel = 0;
       afterMove(rerender);
@@ -385,7 +423,7 @@ export function mountPlay(rerender: () => void): void {
  * không phải đợi tới lúc xem lại. Chưa nạp xong kho thì không hiện gì.
  */
 function khaiCuoc(): string {
-  if (!started || !game.length) return '';
+  if (!started || !game.ply) return '';
   // Dò ngược từ thế cờ hiện tại: khai cuộc sâu nhất còn khớp
   for (let ply = game.ply; ply > 0; ply--) {
     const o = openingAt(game.history[ply - 1].fen);
@@ -425,7 +463,7 @@ function drawBoard(): void {
 }
 
 function afterMove(rerender: () => void): void {
-  const result = game.outcome();
+  const result = outcome();
   const last = game.lastMove!;
   if (result) {
     ended = true;
@@ -570,7 +608,7 @@ async function refreshEval(rerender: () => void): Promise<void> {
 async function storeGame(): Promise<void> {
   if (saved) return;
   saved = true;
-  const result = game.outcome();
+  const result = outcome();
   if (!result) return;
   const who = setup.mode === 'bot' ? levelById(setup.level).name : 'Hai người một máy';
   offerReview(game.pgn(), setup.mode === 'bot' ? setup.side : null, `${who} · ${outcomeText(result)}`);
@@ -599,10 +637,25 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     rerender();
     return true;
   }
-  const side = target.closest<HTMLElement>('[data-side]');
-  if (side) {
-    setup.side = side.dataset.side as Side;
+  const pick = target.closest<HTMLElement>('[data-pick]');
+  if (pick) {
+    setup.pick = pick.dataset.pick as Pick;
+    if (setup.pick !== 'r') setup.side = setup.pick;
     rerender();
+    return true;
+  }
+
+  // Bấm vào một nước trong sổ: xem lại thế cờ lúc đó
+  const mv = target.closest<HTMLElement>('.move[data-ply]');
+  if (mv && started) {
+    game.goTo(Number(mv.dataset.ply));
+    rerender();
+    return true;
+  }
+
+  const act = target.closest<HTMLButtonElement>('[data-act]');
+  if (act && !act.disabled) {
+    runAct(act.dataset.act ?? '', rerender);
     return true;
   }
 
@@ -620,14 +673,22 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
   const label = btn.getAttribute('title') ?? btn.textContent?.trim() ?? '';
 
   const actions: Record<string, () => void> = {
-    'Bắt đầu ván': () => {
+    Chơi: () => {
+      newGame();
+      started = true;
+    },
+    // Ván xong, đánh lại ngay với đúng đối thủ đó
+    'Chơi lại': () => {
       newGame();
       started = true;
     },
     'Lật bàn cờ': () => {
       // Chưa vào ván thì lật bàn nghĩa là đổi bên mình cầm, chứ không phải
       // xoay cho vui — vì lúc vẽ lại bàn cờ vẫn lật theo bên đã chọn.
-      if (!started && setup.mode === 'bot') setup.side = setup.side === 'w' ? 'b' : 'w';
+      if (!started && setup.mode === 'bot') {
+        setup.pick = setup.side === 'w' ? 'b' : 'w';
+        setup.side = setup.pick;
+      }
       else orientation = orientation === 'w' ? 'b' : 'w';
     },
     'Thanh đánh giá': () => {
@@ -642,19 +703,6 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     'Xem lại ván': () => {
       location.hash = '#/xem-lai';
     },
-    'Gợi ý': () => void askHint(rerender),
-    'Gợi ý: quân nào': () => void askHint(rerender),
-    'Gợi ý: nước cụ thể': () => void askHint(rerender),
-    // Đấu với máy thì lùi hai nước, để lượt vẫn thuộc về người chơi
-    'Đi lại': () => {
-      void engine().cancel();
-      thinking = false;
-      premove = null;
-      game.undo();
-      if (setup.mode === 'bot' && game.length && game.turn !== setup.side) game.undo();
-      ended = false;
-      saved = false;
-    },
     'Về đầu ván': () => game.first(),
     'Lùi một nước': () => game.prev(),
     'Tiến một nước': () => game.next(),
@@ -668,5 +716,63 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
   if (!run) return false;
   run();
   rerender();
+  // Trên điện thoại nút Chơi nằm dưới bàn cờ: bấm xong thì cuộn lên cho thấy
+  // cả bàn, không thì vào ván mà bàn cờ còn nằm khuất phía trên.
+  if ((label === 'Chơi' || label === 'Chơi lại' || label === 'Ván mới') && window.scrollY > 0) {
+    document.querySelector('.game-board')?.scrollIntoView({ block: 'start' });
+  }
   return true;
+}
+
+/** Các nút việc trong ván (Gợi ý, Đi lại, Đầu hàng, Sao chép PGN). */
+function runAct(id: string, rerender: () => void): void {
+  if (id === 'hint') return void askHint(rerender);
+  if (id === 'flip') {
+    orientation = orientation === 'w' ? 'b' : 'w';
+  } else if (id === 'undo') {
+    // Đấu với máy thì lùi hai nước, để lượt vẫn thuộc về người chơi
+    void engine().cancel();
+    thinking = false;
+    premove = null;
+    resigned = null;
+    game.last();
+    game.undo();
+    if (setup.mode === 'bot' && game.length && game.turn !== setup.side) game.undo();
+    ended = false;
+    saved = false;
+    hints = null;
+    hintLevel = 0;
+  } else if (id === 'resign') {
+    if (!resignArmed) {
+      // Lần đầu chỉ hỏi lại: bấm nhầm một cái mà thua luôn thì rất ức
+      resignArmed = true;
+      if (resignTimer) clearTimeout(resignTimer);
+      resignTimer = setTimeout(() => {
+        resignArmed = false;
+        rerender();
+      }, 3000);
+    } else {
+      resignArmed = false;
+      if (resignTimer) clearTimeout(resignTimer);
+      void engine().cancel();
+      thinking = false;
+      premove = null;
+      resigned = setup.mode === 'bot' ? setup.side : game.turn;
+      ended = true;
+      game.last();
+      playSound('end');
+      void storeGame();
+    }
+  } else if (id === 'pgn') {
+    void navigator.clipboard?.writeText(game.pgn()).then(() => {
+      copied = true;
+      rerender();
+      setTimeout(() => {
+        copied = false;
+        rerender();
+      }, 2000);
+    });
+    return;
+  }
+  rerender();
 }

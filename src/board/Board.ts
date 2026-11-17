@@ -167,7 +167,7 @@ export function boardSvg(o: BoardOptions): string {
       const sq = squareOf(f, r);
       const [x, y] = xy(sq, or);
       const light = (f + r) % 2 === 1;
-      parts.push(`<rect x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--sq-${light ? 'light' : 'dark'})"/>`);
+      parts.push(`<rect x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--sq-${light ? 'light' : 'dark'})" shape-rendering="crispEdges"/>`);
     }
   }
 
@@ -204,8 +204,8 @@ export function boardSvg(o: BoardOptions): string {
       const fileLight = (i + (or === 'w' ? 0 : 7)) % 2 === 1;
       const rankLight = ((or === 'w' ? 0 : 7) + i) % 2 === 1;
       parts.push(
-        `<text x="${fx + SQ - 3}" y="${fy + SQ - 3}" text-anchor="end" font-size="9" font-weight="600" fill="var(--sq-${fileLight ? 'dark' : 'light'})">${FILES[i]}</text>`,
-        `<text x="${rx + 3}" y="${ry + 11}" font-size="9" font-weight="600" fill="var(--sq-${rankLight ? 'dark' : 'light'})">${i + 1}</text>`,
+        `<text class="coord" x="${fx + SQ - 3}" y="${fy + SQ - 3}" text-anchor="end" font-size="9" font-weight="600" fill="var(--sq-${fileLight ? 'dark' : 'light'})">${FILES[i]}</text>`,
+        `<text class="coord" x="${rx + 3}" y="${ry + 11}" font-size="9" font-weight="600" fill="var(--sq-${rankLight ? 'dark' : 'light'})">${i + 1}</text>`,
       );
     }
   }
@@ -244,11 +244,11 @@ export function boardSvg(o: BoardOptions): string {
   // Nước đi hợp lệ (vẽ trên quân để thấy được vòng bắt quân)
   for (const sq of o.legal ?? []) {
     const [cx, cy] = centre(sq, or);
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="${SQ * 0.14}" fill="var(--mark-legal)"/>`);
+    parts.push(`<circle class="legal" cx="${cx}" cy="${cy}" r="${SQ * 0.14}" fill="var(--mark-legal)"/>`);
   }
   for (const sq of o.legalCaptures ?? []) {
     const [cx, cy] = centre(sq, or);
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="${SQ * 0.42}" fill="none" stroke="var(--mark-legal)" stroke-width="${SQ * 0.1}"/>`);
+    parts.push(`<circle class="legal" cx="${cx}" cy="${cy}" r="${SQ * 0.42}" fill="none" stroke="var(--mark-legal)" stroke-width="${SQ * 0.1}"/>`);
   }
 
   // Ô khoanh tròn

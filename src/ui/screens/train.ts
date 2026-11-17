@@ -232,7 +232,11 @@ export function train(): string {
     <span class="head-meta">${
       lesson
         ? `${lesson.chapter} · ${lessonDone}/${lesson.count} bài tập`
-        : `${cardCount.due ? `${cardCount.due} thẻ lỗi đến hạn · ` : ''}đã làm ${doneToday} bài hôm nay`
+        : // Đây là dòng tiêu đề của cột phải: ngắn và viết hoa đầu câu. Số bài đã
+          // làm hôm nay đã có trong bảng "Hôm nay" ngay bên dưới.
+          cardCount.due
+          ? `Ôn ${cardCount.due} thẻ lỗi`
+          : 'Bài tập'
     }</span>
     ${toolbar(
       lesson

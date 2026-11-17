@@ -159,9 +159,14 @@
   --sq-light: #ead8b6;
   --sq-dark: #b08a62;
 }
+/* Xanh lá như chess.com — mặc định */
 [data-board='green'] {
-  --sq-light: #e8e9d0;
-  --sq-dark: #7a9a5c;
+  --sq-light: #ebecd0;
+  --sq-dark: #739552;
+}
+[data-board='blue'] {
+  --sq-light: #dee3e6;
+  --sq-dark: #8ca2ad;
 }
 [data-board='stone'] {
   --sq-light: #dadfe3;

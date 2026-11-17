@@ -1045,3 +1045,367 @@ button.log-row {
 .draw-offer .row-actions {
   margin-top: var(--s-2);
 }
+
+/* ================= Bảng chơi gọn (bản làm mới) =================
+   Một thẻ đối thủ, một hàng độ khó 1–8, ba ô chọn bên, một nút Chơi. */
+.setup-label {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+.bot-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--bg-2);
+  border-radius: var(--r-md);
+}
+.bot-face {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  background: var(--bg-3);
+  border-radius: var(--r-md);
+}
+.bot-piece {
+  width: 52px;
+  height: 52px;
+}
+.bot-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.bot-text b {
+  font-size: var(--fs-xl);
+  line-height: 1.2;
+}
+.bot-text span {
+  color: var(--text-2);
+}
+.lv-row {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--s-1);
+}
+.lv,
+.side-opt {
+  display: grid;
+  place-items: center;
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lv {
+  height: 44px;
+  font-size: var(--fs-lg);
+}
+.lv:hover,
+.side-opt:hover {
+  background: var(--bg-3);
+}
+.lv.is-active,
+.side-opt.is-active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.side-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.side-opt {
+  gap: 2px;
+  padding: var(--s-2) 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.side-opt .side-piece {
+  width: 36px;
+  height: 36px;
+}
+.side-opt .icon {
+  width: 36px;
+  height: 36px;
+  padding: 5px;
+  color: var(--text-2);
+}
+/* Nút chữ không viền: lựa chọn phụ, không tranh chỗ với nút Chơi */
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-2);
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.link-btn:hover {
+  color: var(--text-1);
+  text-decoration: underline;
+}
+.setup .btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ---- Trong ván ---- */
+.game-side .opening-line {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.moves-empty {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+/* Bốn nút tua chia đều cả bề ngang, to dễ bấm — như chess.com */
+.game-side .move-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-1);
+}
+.game-side .move-bar .btn-icon {
+  width: auto;
+}
+/* Ba việc chính: icon to, có chữ ngay dưới — không phải đoán */
+.game-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.act {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 60px;
+  padding: var(--s-2) var(--s-1);
+  border: 0;
+  border-bottom: 3px solid rgb(0 0 0 / 0.3);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.act:hover:not(:disabled) {
+  background: var(--bg-3);
+}
+.act:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.act .icon {
+  color: var(--text-2);
+}
+.act.is-danger {
+  color: var(--danger);
+  outline: 2px solid var(--danger);
+  outline-offset: -2px;
+}
+.act.is-danger .icon {
+  color: var(--danger);
+}
+.act .hint-dots {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+/* Kết quả ván */
+.result-card {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: stretch;
+  text-align: center;
+}
+.result-card .result-head {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+}
+.result-card.is-win .result-head {
+  color: var(--accent-text);
+}
+.result-card.is-loss .result-head {
+  color: var(--danger);
+}
+.result-why {
+  color: var(--text-2);
+}
+.result-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+.result-actions .btn-full {
+  grid-column: 1 / -1;
+}
+.result-actions .btn {
+  justify-content: center;
+}
+
+/* ---- Hộp Cài đặt ---- */
+.dialog.settings {
+  max-width: 440px;
+  max-height: calc(100vh - 2 * var(--s-6));
+  overflow-y: auto;
+}
+.settings .dialog-body {
+  display: grid;
+  gap: var(--s-3);
+  font-family: inherit;
+}
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.swatch {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: var(--s-2) 0;
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.swatch.is-active {
+  border-color: var(--accent);
+  color: var(--text-1);
+}
+.swatch-board {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+.seg-fill .seg-item {
+  flex: 1 1 0;
+  justify-content: center;
+}
+.pref-list {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+.pref-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  padding: var(--s-2) 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pref-text {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.pref-text span {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.switch {
+  flex: none;
+  position: relative;
+  width: 40px;
+  height: 22px;
+  /* Bo góc nhỏ như mọi thứ khác trong app (tối đa 6px), không làm viên thuốc */
+  border-radius: var(--r-sm);
+  background: var(--bg-3);
+}
+.switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--text-2);
+  transition: transform var(--t-ui);
+}
+.switch.is-on {
+  background: var(--accent);
+}
+.switch.is-on i {
+  background: #fff;
+  transform: translateX(18px);
+}
+.pref-keys {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-sm);
+  font: 600 var(--fs-xs) / 18px var(--font-mono, monospace);
+  text-align: center;
+  color: var(--text-1);
+  background: var(--bg-2);
+}
+/* Nút Cài đặt trong cột điều hướng là <button>, phải trông y như các link */
+button.top-link {
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+@media (min-width: 1101px) {
+  button.top-link {
+    width: 100%;
+    border-left: 4px solid transparent;
+    font-size: var(--fs-lg);
+    font-weight: 600;
+  }
+}
+
+/* Tuỳ chọn hiển thị trên bàn cờ */
+[data-coords='off'] .board .coord,
+[data-legal='off'] .board .legal {
+  display: none;
+}
+
+/* Việc hôm nay ở Sảnh, khi nằm trong cột hẹp cạnh bàn cờ: chỉ một dòng chữ và
+   một nút. Câu giải thích dài làm cột phải thành một bức tường chữ. */
+.game-side .task-text > span {
+  display: none;
+}
+/* Cuộn tới bàn cờ thì chừa chỗ cho thanh tiêu đề dính trên điện thoại */
+.game-board {
+  scroll-margin-top: calc(var(--head-h, 0px) + var(--s-2));
+}

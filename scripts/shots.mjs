@@ -35,7 +35,7 @@ for (const [vName, width, height] of VIEWS) {
         await page.screenshot({ path: shot, fullPage: true });
         console.log(shot);
         await page.getByRole('button', { name: 'Hai người một máy' }).click();
-        await page.getByRole('button', { name: 'Bắt đầu ván' }).click();
+        await page.getByRole('button', { name: 'Chơi', exact: true }).click();
         await page.waitForSelector('#board svg');
         await page.waitForTimeout(200);
       }

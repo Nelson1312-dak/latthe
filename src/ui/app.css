@@ -607,3 +607,14 @@
     margin-top: 0;
   }
 }
+
+/* Bàn cờ nét căng: JS (src/board/snap.ts) đo chỗ trống rồi đặt --board-px sao
+   cho mỗi ô đúng một số nguyên điểm ảnh thật. Chưa đo xong thì vẫn co giãn như cũ. */
+.board-row[style*='--board-px'] > .board,
+.board-row[style*='--board-px'] > .board-host {
+  flex: none;
+  width: var(--board-px);
+}
+.board-row[style*='--board-px'] {
+  justify-content: flex-start;
+}

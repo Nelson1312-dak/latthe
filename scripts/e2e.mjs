@@ -66,7 +66,7 @@ await A.p.waitForSelector('#board svg', { timeout: 30000 });
 ghi('sảnh hiện bàn cờ ngay', (await A.p.locator('#board svg').count()) === 1);
 
 await A.p.locator('[data-level="1"]').click();
-await A.p.getByRole('button', { name: 'Bắt đầu ván' }).click();
+await A.p.getByRole('button', { name: 'Chơi', exact: true }).click();
 await A.p.waitForTimeout(400);
 await kéo(A.p, 'e2', 'e4');
 await A.p.waitForTimeout(3000);

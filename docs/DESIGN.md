@@ -127,6 +127,43 @@ chess.com. Header ngang cũ ăn mất 56px chiều cao — đúng phần bàn c�
 
 Máy tính bảng (768–1100px): như desktop nhưng các mục trên header chỉ còn icon, bảng bên phải 320px.
 
+### Bảng bên khi chơi với máy
+
+Trước khi vào ván (như "Play Bots" của chess.com):
+
+1. Một thẻ to cho đối thủ: con Mã đen, "Máy cấp 3", một câu mô tả.
+2. **Độ khó**: một hàng tám ô số 1–8. Bản cũ là tám thẻ hai dòng chữ, nhìn như tờ khai.
+3. **Bạn cầm quân**: ba ô Trắng / Ngẫu nhiên / Đen.
+4. Một nút xanh **Chơi**. "Hai người một máy" là nút chữ nhỏ bên dưới.
+
+Trong ván, từ trên xuống: tên khai cuộc → sổ nước (bấm vào nước nào là xem
+thế cờ lúc đó) → bốn nút tua chia đều bề ngang → **ba nút việc có chữ**:
+Gợi ý, Đi lại, Đầu hàng. Không còn hàng icon trơn bắt người chơi đoán. Đầu hàng
+phải bấm hai lần (lần đầu nút đỏ lên "Chắc chưa?", tự huỷ sau 3 giây).
+
+Hết ván: thẻ kết quả "Bạn thắng" / "Bạn thua" to, lý do nhỏ, rồi Xem lại ván ·
+Chơi lại · Ván mới · Sao chép PGN.
+
+Phần "Hôm nay" của Sảnh chỉ hiện lúc **chưa** vào ván.
+
+### Cài đặt
+
+Nút "Cài đặt" ở cột điều hướng (và trên thanh công cụ màn chơi). Đổi là thấy
+ngay, không có nút Lưu. Lưu trong trình duyệt (`src/app/prefs.ts`):
+
+- Màu bàn cờ: **Xanh lá (mặc định, như chess.com)**, Gỗ, Xanh dương, Đá
+- Tối / Sáng, âm thanh, toạ độ, chấm nước đi được, tự phong Hậu
+
+Phím tắt: ← → lùi/tiến, Home/End về đầu/cuối, F lật bàn.
+
+### Bàn cờ nét
+
+Bàn cờ co giãn theo cửa sổ nên bề ngang hay ra số lẻ (658px → 82,25px một ô;
+màn Windows phóng 125% còn thành 102,8 điểm ảnh thật). Mép ô rơi giữa hai điểm
+ảnh là nhoè. `src/board/snap.ts` đo chỗ trống, đổi ra **điểm ảnh thật** của
+màn hình, làm tròn xuống bội số của 8 rồi đặt `--board-px`. Ô cờ vẽ với
+`shape-rendering="crispEdges"`.
+
 ## 4. Token
 
 Tất cả màu, cỡ chữ, khoảng cách là biến CSS trong `src/ui/tokens.css`. Không component nào được viết màu cứng. Giá trị dưới đây là điểm xuất phát, sẽ chỉnh trên trang mẫu.
