@@ -31,18 +31,13 @@ for (const [family, pkg, cssName] of [
 }
 writeFileSync('public/fonts/fonts.css', faces);
 
-// Bộ quân cburnett (CC BY-SA 3.0) đi kèm cm-chessboard.
+// Bộ quân cburnett (CC BY-SA 3.0) đi kèm cm-chessboard. Chép nguyên bản.
 //
-// Gỡ thuộc tính stroke-width="1.5" ghi cứng trong file để CSS quyết định độ dày
-// nét viền theo từng chỗ: trên bàn cờ cần nét dày cho quân rõ và "căng", còn ở
-// mấy biểu tượng 17–18px thì nét dày lại thành cục mực. Xem `.board use` và
-// `.fig use` trong src/ui/components/components.css.
-//
-// Phải làm ở ĐÂY chứ không phải sửa thẳng public/pieces/cburnett.svg: file đó
-// là thứ sinh ra, mỗi lần chạy script (và mỗi lần npm install) là bị chép đè.
-// Hình dáng quân cờ không đổi, nên vẫn là tác phẩm gốc theo CC BY-SA 3.0.
-const quan = readFileSync('node_modules/cm-chessboard/assets/pieces/standard.svg', 'utf8');
-writeFileSync('public/pieces/cburnett.svg', quan.replace(/\sstroke-width="[\d.]+"/g, ''));
+// Đã từng gỡ stroke-width ra để CSS tự đặt, định làm quân "nét căng" hơn: trên
+// ảnh phóng to 2× thì thấy đậm và rõ thật, nhưng ở CỠ THẬT (ô cờ ~74px) nét dày
+// làm các chi tiết dính vào nhau — Xe mất khe, Mã bết lại. Nét gốc 1.5 là vừa.
+// Bài học: chọn độ dày nét thì phải nhìn ở đúng cỡ sẽ dùng.
+cpSync('node_modules/cm-chessboard/assets/pieces/standard.svg', 'public/pieces/cburnett.svg');
 const lic = readFileSync('node_modules/cm-chessboard/assets/pieces/standard.svg', 'utf8').split('-->')[0];
 writeFileSync('public/pieces/LICENSE.txt', lic.replace(/^<\?xml[^>]*\?><!--/, '').trim() + '\n');
 

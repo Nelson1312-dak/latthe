@@ -449,8 +449,11 @@ Phải thử bỏ cờ chặn ra, thấy test vẫn xanh, mới biết. Bản th
 `openingsAsked = true` phải đứng trước `loadOpenings`, và đã xác nhận là nó đỏ khi bỏ
 cờ chặn đi. **Test canh lỗi thì phải thử làm nó đỏ một lần, không thì chỉ là trang trí.**
 
-### Sau GĐ7 (tiếp) — quân cờ nét hơn, dọn lại phần chọn đối thủ (17/11/2026)
-- [x] Nét viền quân trên bàn cờ 1.5 → 2.1; biểu tượng nhỏ giữ 1.5
+### Sau GĐ7 (tiếp) — dọn lại phần chọn đối thủ (17/11/2026)
+- [x] ~~Nét viền quân trên bàn cờ 1.5 → 2.1~~ **đã revert**: phóng to 2× thì thấy đậm
+      và rõ, nhưng ở cỡ thật (ô ~74px) nét dày làm chi tiết dính vào nhau — Xe mất khe,
+      Mã bết lại, nhìn xấu hơn bản gốc. Chọn độ dày nét phải nhìn ở ĐÚNG CỠ sẽ dùng,
+      không phải trên ảnh phóng to.
 - [x] Phần chọn đối thủ: hai nút Trắng/Đen chia đôi đều, nút Bắt đầu rộng hết cột,
       các thẻ cấp độ cao bằng nhau, nhãn "Trắng — đi trước" rút gọn cho khỏi xuống dòng
 
@@ -483,7 +486,19 @@ file sprite. Hình dáng quân cờ không đổi, chỉ đổi độ dày nét.
       tạo tunnel `co-vua` → `co.latbai.vn`; tạo Google OAuth client ID; thử từ điện
       thoại qua 4G.
 
-**Chốt hướng tên miền (17/11/2026): Cloudflare + `co.latbai.vn`.** Có một điều kiện
+**Chốt hướng tên miền (17/11/2026): giữ `latbai.vn`, Vercel chuyển tiếp `/api`.**
+Bạn yêu cầu bắt buộc dùng latbai.vn và không dùng Cloudflare. Đã kiểm: máy chạy server
+**không nhận được kết nối vào từ ngoài** — địa chỉ `10.223.181.64`, gateway
+`10.128.128.128` là node mesh WiFi không có chuyển tiếp cổng, IP ngoài `101.99.15.211`
+dùng chung qua NAT nhà mạng. Nên DNS trỏ thẳng vào máy là không được, bất kể để DNS ở
+đâu. Cách đi được: `latbai.vn` vẫn ở Vercel, Vercel chuyển tiếp `/api/*` sang tunnel của
+máy. Trình duyệt chỉ nói chuyện với latbai.vn nên cookie và Google OAuth chỉ cần một
+origin, và máy tắt thì trang vẫn mở, vẫn chơi với máy được. `npm run deploy` tự sinh
+phần `rewrites` từ biến `PUBLIC_UPSTREAM`. **Còn thiếu: một địa chỉ tunnel cố định**
+(ngrok tĩnh hoặc Tailscale Funnel) — và **đấu online qua đường này chưa thử**, vì SSE
+có thể bị Vercel cắt khi chuyển tiếp.
+
+**(Hướng Cloudflare đã bỏ.)** Ghi lại để khỏi tìm lại:  Có một điều kiện
 trước mà lúc chọn chưa biết: `latbai.vn` đang để DNS ở **Mắt Bão**
 (`ns1/ns2.matbao.vn`), không phải Cloudflare. Cloudflare Tunnel chỉ gắn được tên miền
 nằm trong tài khoản Cloudflare, vì bản ghi `<id>.cfargotunnel.com` chỉ chạy khi

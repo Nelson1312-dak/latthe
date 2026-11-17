@@ -22,7 +22,8 @@
     "public": "npm run build && node scripts/public.mjs",
     "backup": "node scripts/backup.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "loadtest": "node scripts/loadtest.mjs"
+    "loadtest": "node scripts/loadtest.mjs",
+    "deploy": "npm run build && node scripts/deploy.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",

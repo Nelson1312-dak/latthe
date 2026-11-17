@@ -1,99 +1,91 @@
-# Tên miền cố định cho bản chạy thật
+# Cho latbai.vn chạy được bản đầy đủ
 
-App chơi được ngay mà không cần phần này: `npm run public` mở một tunnel tạm,
-cho ra một địa chỉ ngẫu nhiên dùng được luôn. Chỉ khi muốn **một địa chỉ không
-đổi** (và muốn bật đăng nhập Google) mới cần làm các bước dưới.
+Mục tiêu: vào `https://latbai.vn` là đăng nhập được, lưu ván được, đấu online
+được — mà **không đổi DNS**, **không cần Cloudflare**, **không cần VPS**.
 
-Phần này **bạn tự làm**, vì nó gắn với tài khoản Cloudflare và tài khoản nhà
-đăng ký tên miền của bạn. Mình không có quyền và cũng không nên có quyền.
+## Vì sao không chỉ trỏ DNS là xong
 
-## Hiện trạng (kiểm ngày 17/11/2026)
+Máy chạy server **không nhận được kết nối vào từ ngoài** (kiểm 17/11/2026):
 
-| Thứ | Đang là |
+| Thứ | Giá trị |
 |---|---|
-| Nameserver của `latbai.vn` | `ns1.matbao.vn`, `ns2.matbao.vn` — **không phải Cloudflare** |
-| `latbai.vn` (A) | `76.76.21.21` → Vercel, tức bản web tĩnh hiện tại |
-| TXT | `googlef94974eaa4fe4176.html` (xác minh Google) |
-| MX | **không có** — tên miền này không nhận mail |
+| Địa chỉ máy | `10.223.181.64` (dải nội bộ) |
+| Gateway | `10.128.128.128` — mở ra là giao diện một node mesh WiFi, không có mục chuyển tiếp cổng |
+| IP nhìn từ ngoài | `101.99.15.211` — dùng chung qua NAT nhà mạng |
 
-Không có MX là một tin tốt: chuyển DNS sang chỗ khác thì **không sợ mất mail**,
-vì vốn không có hòm thư nào chạy trên tên miền này.
+Bản ghi DNS là **tấm biển chỉ đường**, phải có một **con đường** để trỏ tới.
+Trỏ `latbai.vn` vào `101.99.15.211` thì gói tin dừng ở thiết bị nhà mạng.
+Nên máy phải **gọi ra** (tunnel), chứ không thể để người ta gọi vào.
 
-## Vì sao phải chuyển DNS
+## Cách làm: Vercel chuyển tiếp /api
 
-Cloudflare Tunnel chỉ gắn được tên miền **nằm trong tài khoản Cloudflare**.
-Lệnh `cloudflared tunnel route dns` tạo một bản ghi CNAME trỏ tới
-`<id>.cfargotunnel.com`, mà bản ghi đó **chỉ chạy khi Cloudflare làm proxy**.
-Để CNAME đó ở Mắt Bão thì không ra gì cả — nhà DNS khác không proxy hộ được.
+`latbai.vn` đang ở Vercel. Vercel chuyển tiếp được một đường dẫn sang nơi khác.
+Vậy:
 
-Nên muốn `co.latbai.vn` đi qua tunnel thì phải đưa `latbai.vn` về Cloudflare.
+```
+Trình duyệt  →  https://latbai.vn  →  (Vercel)
+                   ├── / , /assets, /pieces …   file tĩnh, luôn bật
+                   └── /api/*                   chuyển tiếp → tunnel → máy ở nhà
+```
+
+Trình duyệt **chỉ nói chuyện với latbai.vn**, nên:
+
+- cookie phiên là cookie của latbai.vn, chạy bình thường, không cần CORS
+- Google OAuth chỉ phải khai đúng một origin: `https://latbai.vn`
+- máy ở nhà tắt thì `/api` hỏng, nhưng trang vẫn mở và vẫn **chơi với máy** được
 
 ## Các bước
 
-### 1. Đưa latbai.vn vào Cloudflare
+### 1. Có một địa chỉ tunnel CỐ ĐỊNH
 
-1. https://dash.cloudflare.com → **Add a site** → gõ `latbai.vn` → chọn gói **Free**.
-2. Cloudflare quét bản ghi cũ. Kiểm cho đủ **đúng hai bản ghi** này:
-   - `A` `latbai.vn` → `76.76.21.21`, **Proxy: tắt (DNS only, mây xám)**.
-     Vercel tự lo HTTPS; để Cloudflare proxy chồng lên dễ sinh lỗi chứng chỉ.
-   - `TXT` `latbai.vn` → `googlef94974eaa4fe4176.html`
-3. Cloudflare cho hai nameserver mới. Vào trang quản lý tên miền ở **Mắt Bão**,
-   đổi nameserver sang hai cái đó.
-4. Chờ Cloudflare báo **Active** (thường vài phút tới vài tiếng).
+Tunnel tạm (`npm run public`) đổi tên mỗi lần chạy nên không dùng được ở đây.
+Cần một trong hai:
 
-Trong lúc chờ, latbai.vn vẫn chạy bình thường — bản ghi không đổi, chỉ đổi chỗ
-quản lý.
+- **ngrok**: tài khoản miễn phí được một tên miền tĩnh (dạng
+  `*.ngrok-free.dev`). Trên máy này đã có sẵn một tên như vậy trong
+  `ngrok.yml`, nhưng nó đang dành cho tunnel `latthe` (Ollama + PostgREST).
+  Muốn dùng cho cờ thì phải quyết số phận tunnel kia trước.
+- **Tailscale Funnel**: miễn phí, cho địa chỉ `*.ts.net` cố định. Tailscale đã
+  cài trên máy nhưng **chưa đăng nhập**.
 
-### 2. Tạo tunnel cho app cờ
-
-Chạy trên chính máy này:
+### 2. Chạy server kèm tunnel đó
 
 ```bash
-cloudflared tunnel login
+npm run public -- --tunnel=ngrok
+```
+
+### 3. Khai địa chỉ đó rồi deploy
+
+Thêm vào `.env.chess`:
+
+```
+PUBLIC_UPSTREAM=https://<ten-mien-tinh-cua-ban>
 ```
 
 ```bash
-cloudflared tunnel create co-vua
+npm run deploy
 ```
 
-```bash
-cloudflared tunnel route dns co-vua co.latbai.vn
-```
+Script tự sinh phần `rewrites` trong `vercel.json` rồi đẩy lên. Bỏ
+`PUBLIC_UPSTREAM` đi là quay lại bản tĩnh như cũ.
 
-> Dịch vụ `cloudflared` đang chạy sẵn trên máy (việc khác) **không bị ảnh hưởng**:
-> đây là một tunnel riêng, tên riêng, chạy bằng lệnh riêng.
+### 4. Bật đăng nhập Google
 
-### 3. Chạy
-
-```bash
-npm run public -- --tunnel=named
-```
-
-Mở `https://co.latbai.vn` là ra app, có đăng nhập, có đấu online.
-Đổi tên tunnel thì đặt biến `CF_TUNNEL`.
-
-### 4. Bật chạy tự động (tuỳ ý)
-
-```bash
-powershell -ExecutionPolicy Bypass -File scripts\setup-autostart.ps1
-```
-
-Sửa `scripts/setup-autostart.ps1` để thêm `--tunnel=named` nếu muốn bản tự chạy
-dùng tên miền cố định.
-
-## Sau khi có tên miền thì làm nốt đăng nhập Google
-
-Xem [GOOGLE-LOGIN.md](GOOGLE-LOGIN.md). Lúc tạo OAuth client, phần
-**Authorized JavaScript origins** điền đúng `https://co.latbai.vn`
-(không có dấu `/` ở cuối). Rồi đặt vào `.env.chess`:
+Xem [GOOGLE-LOGIN.md](GOOGLE-LOGIN.md). **Authorized JavaScript origins** điền
+`https://latbai.vn` (không có `/` ở cuối). Rồi `.env.chess`:
 
 ```
 GOOGLE_CLIENT_ID=....apps.googleusercontent.com
 ```
 
-## Hai cái vẫn tách nhau
+## Chỗ chưa kiểm được
 
-- **latbai.vn** (Vercel): bản tĩnh, luôn bật, chơi với máy và giải bài tập được.
-- **co.latbai.vn** (tunnel): bản đầy đủ, chỉ chạy khi máy này mở.
+**Đấu online qua đường này chưa thử.** Ván online dùng SSE — một kết nối mở
+liên tục. Vercel có thể cắt hoặc gom đệm kết nối dài khi chuyển tiếp, lúc đó
+nước đi của đối thủ sẽ về chậm hoặc không về. Đăng nhập, lưu ván, xem lại,
+ôn tập thì chỉ là request ngắn nên không lo.
 
-Giữ cả hai là cố ý: máy tắt thì vẫn còn chỗ chơi với máy.
+Chưa kiểm được vì chưa có địa chỉ tunnel cố định. Khi có rồi thì thử ngay:
+mở hai trình duyệt vào latbai.vn, tìm trận, đi vài nước. Nếu SSE bị cắt thật
+thì vẫn còn đường: cho riêng `/api/live/stream` đi thẳng tới tunnel thay vì
+qua Vercel (lúc đó mới cần CORS cho đúng một đường dẫn đó).
