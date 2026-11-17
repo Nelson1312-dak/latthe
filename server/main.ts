@@ -285,6 +285,30 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     return json(res, 200, { themes: themeCounts(db), kho: puzzleCount(db) });
   }
 
+  /* ---- Bài học ---- */
+
+  if (path === '/api/lessons' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 200, { done: [] });
+    return json(res, 200, {
+      done: all<{ lesson_id: string }>(db, 'SELECT lesson_id FROM lesson_progress WHERE user_id = ?', user.id).map(
+        (r) => r.lesson_id,
+      ),
+    });
+  }
+
+  if (path === '/api/lessons' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const id = typeof body.id === 'string' ? body.id.slice(0, 40) : '';
+    if (!id) return json(res, 400, { error: 'Thiếu mã bài' });
+    db.prepare(
+      'INSERT INTO lesson_progress (user_id, lesson_id, done_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING',
+    ).run(user.id, id, new Date().toISOString());
+    return json(res, 201, { ok: true });
+  }
+
   if (path === '/api/progress' && method === 'GET') {
     const user = currentUser(req);
     if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });

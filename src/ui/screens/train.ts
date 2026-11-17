@@ -17,6 +17,14 @@ import {
   type Puzzle,
 } from '../../app/training.ts';
 import { button, figurine, notice, rule, sheet, stats, toolbar } from '../components/index.ts';
+import { markLessonDone } from '../../app/training.ts';
+import { LESSONS, type Lesson } from '../../training/lessons.ts';
+
+/** Bài kế tiếp trong lộ trình. */
+function nextLessonAfter(id?: string): Lesson | null {
+  const i = LESSONS.findIndex((l) => l.id === id);
+  return i >= 0 && i + 1 < LESSONS.length ? LESSONS[i + 1] : null;
+}
 
 type Kind = 'card' | 'puzzle';
 type Phase = 'loading' | 'solving' | 'wrong' | 'solved' | 'empty';
@@ -48,6 +56,27 @@ let khoBai = 0;
 let doneToday = 0;
 let lastResult: { correct: boolean; text: string } | null = null;
 let loadedOnce = false;
+/** Đang học một bài: lấy bài tập theo chủ đề của bài đó. */
+let lesson: Lesson | null = null;
+let lessonDone = 0;
+let lessonIntroShown = false;
+
+/** Bắt đầu một bài học; màn Ôn tập sẽ chạy bài tập của bài đó. */
+export function startLesson(l: Lesson): void {
+  lesson = l;
+  lessonDone = 0;
+  lessonIntroShown = false;
+  theme = l.theme;
+  queue = [];
+  loadedOnce = false;
+}
+
+/** Thoát chế độ bài học, quay về ôn tập bình thường. */
+function exitLesson(): void {
+  lesson = null;
+  theme = undefined;
+  loadedOnce = false;
+}
 
 /* ---------------- Lấy việc tiếp theo ---------------- */
 
@@ -57,8 +86,8 @@ async function loadNext(rerender: () => void): Promise<void> {
   lastResult = null;
   rerender();
 
-  // Thẻ lỗi của mình luôn được ưu tiên
-  if (!queue.length && auth.user) {
+  // Thẻ lỗi của mình luôn được ưu tiên — trừ khi đang học một bài cụ thể
+  if (!lesson && !queue.length && auth.user) {
     const r = await dueCards();
     queue = r.cards;
     cardCount = { total: r.total, due: r.due };
@@ -159,6 +188,10 @@ async function finish(correct: boolean, rerender: () => void): Promise<void> {
   // Dùng gợi ý thì không tính là giải đúng
   const tínhĐúng = correct && !hintShown;
   if (correct) doneToday++;
+  if (lesson && correct) {
+    lessonDone++;
+    if (lessonDone >= lesson.count) void markLessonDone(lesson.id);
+  }
 
   if (task.kind === 'card' && task.card) {
     await answerCard(task.card.id, tínhĐúng);
@@ -183,10 +216,43 @@ async function finish(correct: boolean, rerender: () => void): Promise<void> {
 
 export function train(): string {
   const head = `<div class="screen-head">
-    <h1>Ôn tập</h1>
-    <span class="head-meta">${cardCount.due ? `${cardCount.due} thẻ lỗi đến hạn · ` : ''}đã làm ${doneToday} bài hôm nay</span>
-    ${toolbar([button({ label: 'Bài khác', icon: 'cards' })])}
+    <h1>${lesson ? lesson.title : 'Ôn tập'}</h1>
+    <span class="head-meta">${
+      lesson
+        ? `${lesson.chapter} · ${lessonDone}/${lesson.count} bài tập`
+        : `${cardCount.due ? `${cardCount.due} thẻ lỗi đến hạn · ` : ''}đã làm ${doneToday} bài hôm nay`
+    }</span>
+    ${toolbar(
+      lesson
+        ? [button({ label: 'Thoát bài học', kind: 'text', icon: 'close' })]
+        : [button({ label: 'Bài khác', icon: 'cards' })],
+    )}
   </div>`;
+
+  // Đọc phần giải thích trước, rồi mới làm bài tập
+  if (lesson && !lessonIntroShown) {
+    return `<div class="screen screen-narrow">${head}
+      <div class="lesson-intro">
+        <p class="prose">${lesson.intro}</p>
+        <p class="note note-key"><b>Cần nhớ:</b> ${lesson.keyPoint}</p>
+        <div class="setup-go">${button({ label: 'Làm bài tập', kind: 'primary', icon: 'play' })}</div>
+      </div>
+    </div>`;
+  }
+
+  // Làm xong đủ số bài của bài học
+  if (lesson && lessonDone >= lesson.count) {
+    return `<div class="screen screen-narrow">${head}
+      <div class="lesson-intro">
+        <p class="task-done is-right"><b>Xong bài</b> — bạn đã giải đúng ${lessonDone} bài tập.</p>
+        <p class="note note-key"><b>Cần nhớ:</b> ${lesson.keyPoint}</p>
+        <div class="setup-go">
+          ${button({ label: 'Bài học tiếp theo', kind: 'primary', icon: 'next' })}
+          ${button({ label: 'Thoát bài học', kind: 'text' })}
+        </div>
+      </div>
+    </div>`;
+  }
 
   if (phase === 'loading') return `<div class="screen screen-narrow">${head}${notice('Đang lấy bài…', 'info', 'clock')}</div>`;
 
@@ -317,6 +383,20 @@ export function handleTrainClick(target: HTMLElement, rerender: () => void): boo
   const label = btn.getAttribute('title') ?? btn.textContent?.trim() ?? '';
 
   const actions: Record<string, () => void> = {
+    'Làm bài tập': () => {
+      lessonIntroShown = true;
+      void loadNext(rerender);
+    },
+    'Thoát bài học': () => {
+      exitLesson();
+      location.hash = '#/hoc';
+    },
+    'Bài học tiếp theo': () => {
+      const next = nextLessonAfter(lesson?.id);
+      if (next) startLesson(next);
+      else exitLesson();
+      location.hash = '#/hoc';
+    },
     'Bài tiếp theo': () => void loadNext(rerender),
     'Bài khác': () => void loadNext(rerender),
     'Gợi ý': () => {

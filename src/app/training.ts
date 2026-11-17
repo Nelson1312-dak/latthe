@@ -115,3 +115,9 @@ export const THEME_VI: Record<string, string> = {
 };
 
 export const themeName = (t: string): string => THEME_VI[t] ?? t;
+
+/* ---------------- Bài học ---------------- */
+
+export const doneLessons = () => get<{ done: string[] }>('/api/lessons', { done: [] });
+
+export const markLessonDone = (id: string) => post<{ ok: boolean }>('/api/lessons', { id }, { ok: false });

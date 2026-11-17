@@ -9,6 +9,7 @@ const ROUTES = [
   ['choi-voi-may', 'choi-may'],
   ['xem-lai', 'xem-lai'],
   ['on-tap', 'on-tap'],
+  ['hoc', 'hoc'],
   ['van-voi-ban', 'ban'],
   ['tai-khoan', 'tai-khoan'],
   ['trang-thiet-ke', 'thiet-ke'],

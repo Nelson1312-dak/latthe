@@ -13,6 +13,7 @@ import { handlePlayClick, mountPlay, play } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
 import { handleTrainClick, mountTrain, train } from './ui/screens/train.ts';
+import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
 import { online } from './ui/screens/online.ts';
 import { account, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
@@ -28,6 +29,7 @@ const SCREENS: Record<string, Screen> = {
   'choi-may': { title: 'Chơi với máy', render: playBot },
   'xem-lai': { title: 'Xem lại ván', render: review },
   'on-tap': { title: 'Ôn tập', render: train },
+  hoc: { title: 'Học', render: learn },
   ban: { title: 'Ván với bạn', render: online },
   'tai-khoan': { title: 'Tài khoản', render: account },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
@@ -37,6 +39,7 @@ const NAV: { route: string; label: string; icon: IconName }[] = [
   { route: 'choi', label: 'Chơi', icon: 'play' },
   { route: 'xem-lai', label: 'Xem lại', icon: 'review' },
   { route: 'on-tap', label: 'Ôn tập', icon: 'cards' },
+  { route: 'hoc', label: 'Học', icon: 'learn' },
   { route: 'ban', label: 'Bạn bè', icon: 'friends' },
 ];
 
@@ -115,6 +118,7 @@ function render(): void {
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
   if (r === 'tai-khoan') mountAccount(render);
+  if (r === 'hoc') mountLearn(render);
   if (r === '') mountHome(render);
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');
@@ -168,6 +172,7 @@ document.addEventListener('click', (e) => {
   if (route() === 'choi' && handlePlayClick(el, render)) return;
   if (route() === 'xem-lai' && handleReviewClick(el, render)) return;
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
+  if (route() === 'hoc' && handleLearnClick(el)) return;
 
   // Ô có data-go thì chuyển màn
   const go = el.closest<HTMLElement>('[data-go]');
@@ -186,6 +191,7 @@ document.addEventListener('click', (e) => {
     void logout().then(() => {
       resetAccount();
       resetHome();
+      resetLearn();
       render();
     });
   } else if (label === 'Vào thử') {
