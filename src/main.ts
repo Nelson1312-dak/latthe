@@ -7,7 +7,9 @@ import './ui/screens/screens.css';
 import { loadPieces } from './board/sprite.ts';
 import { icon, type IconName } from './ui/icons.ts';
 import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton } from './app/session.ts';
+import { setSoundEnabled, soundEnabled } from './app/sound.ts';
 import { home } from './ui/screens/home.ts';
+import { handlePlayClick, mountPlay, play } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { review } from './ui/screens/review.ts';
 import { train } from './ui/screens/train.ts';
@@ -22,7 +24,8 @@ type Screen = { title: string; render: () => string };
 
 const SCREENS: Record<string, Screen> = {
   '': { title: 'Sảnh', render: home },
-  choi: { title: 'Chơi với máy', render: playBot },
+  choi: { title: 'Chơi', render: play },
+  'choi-may': { title: 'Chơi với máy', render: playBot },
   'xem-lai': { title: 'Xem lại ván', render: review },
   'on-tap': { title: 'Ôn tập', render: train },
   ban: { title: 'Ván với bạn', render: online },
@@ -92,6 +95,7 @@ function render(): void {
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
   app.innerHTML = siteHeader(r) + `<main>${screen.render()}</main>` + bottomNav(r);
+  if (r === 'choi') mountPlay(render);
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');
     if (slot) void renderGoogleButton(slot, showLoginError);
@@ -140,10 +144,16 @@ document.addEventListener('click', (e) => {
     return;
   }
 
+  // Màn chơi tự lo các nút của nó
+  if (route() === 'choi' && handlePlayClick(el, render)) return;
+
   const btn = el.closest<HTMLButtonElement>('button');
   if (!btn) return;
   const label = btn.textContent?.trim();
-  if (label === 'Đăng xuất') {
+  if (btn.title === 'Âm thanh') {
+    setSoundEnabled(!soundEnabled());
+    render();
+  } else if (label === 'Đăng xuất') {
     void logout().then(render);
   } else if (label === 'Vào thử') {
     const name = document.querySelector<HTMLInputElement>('#dev-name')?.value.trim() || 'Nelson';

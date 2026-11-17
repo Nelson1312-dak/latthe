@@ -5,7 +5,8 @@ import { mkdirSync } from 'node:fs';
 const BASE = process.env.BASE ?? 'http://localhost:5173';
 const ROUTES = [
   ['sanh', ''],
-  ['choi-voi-may', 'choi'],
+  ['choi', 'choi'],
+  ['choi-voi-may', 'choi-may'],
   ['xem-lai', 'xem-lai'],
   ['on-tap', 'on-tap'],
   ['van-voi-ban', 'ban'],

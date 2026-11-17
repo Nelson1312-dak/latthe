@@ -4,6 +4,7 @@
 
 import raw from './fixtures.json';
 import type { MoveClass, Score } from '../../shared/winrate.ts';
+import type { Square } from '../../shared/fen.ts';
 
 export interface FixtureMove {
   ply: number;
@@ -27,4 +28,5 @@ export interface Fixtures {
 
 export const fx = raw as unknown as Fixtures;
 
-export const squaresOf = (uci: string): [string, string] => [uci.slice(0, 2), uci.slice(2, 4)];
+/** Tách nước đi dạng "f3g4" thành hai ô. Dữ liệu mẫu do engine sinh nên luôn hợp lệ. */
+export const squaresOf = (uci: string): [Square, Square] => [uci.slice(0, 2) as Square, uci.slice(2, 4) as Square];

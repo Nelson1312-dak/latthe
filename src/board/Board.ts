@@ -33,6 +33,8 @@ export interface BoardOptions {
   check?: Square;
   arrows?: Arrow[];
   badge?: ClassBadge;
+  /** Ô đang được bàn phím trỏ tới (chỉ hiện khi người chơi dùng bàn phím). */
+  focus?: Square;
   coordinates?: boolean;
   /** Nhãn cho trình đọc màn hình. */
   label?: string;
@@ -129,6 +131,15 @@ export function boardSvg(o: BoardOptions): string {
   for (const [sq, code] of pieces) {
     const [x, y] = xy(sq, or);
     parts.push(`<g transform="translate(${x} ${y}) scale(${PIECE_SCALE})"><use href="#${code satisfies PieceCode}"/></g>`);
+  }
+
+  // Khung ô đang trỏ bằng bàn phím
+  if (o.focus) {
+    const [x, y] = xy(o.focus, or);
+    parts.push(
+      `<rect x="${x + 1.5}" y="${y + 1.5}" width="${SQ - 3}" height="${SQ - 3}" fill="none" ` +
+        `stroke="var(--focus)" stroke-width="3"/>`,
+    );
   }
 
   // Nước đi hợp lệ (vẽ trên quân để thấy được vòng bắt quân)

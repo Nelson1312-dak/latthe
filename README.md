@@ -2,7 +2,7 @@
 
 Web game cờ vua để học: chơi với máy, xem lại từng nước có Huấn luyện viên giải thích, và ôn tập bằng chính lỗi của mình. Xem [docs/PLAN.md](docs/PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
-Đang ở cuối **giai đoạn 1**: đã có server, database và đăng nhập. Các màn hình cờ vẫn là bản dựng tĩnh, chưa đi được quân (đó là giai đoạn 2).
+Đang ở cuối **giai đoạn 2**: bàn cờ đã **chơi được thật** ở `#/choi` (hai người một máy), có server, database và đăng nhập. Đấu với máy là giai đoạn 3; các màn Xem lại / Ôn tập / Ván với bạn vẫn là bản dựng tĩnh.
 
 Bản trên web: **https://latbai.vn** (project Vercel `latthe`). Đó là trang tĩnh, không có server, nên phần đăng nhập hiện "Ngoại tuyến" — muốn dùng thật thì chạy trên máy.
 

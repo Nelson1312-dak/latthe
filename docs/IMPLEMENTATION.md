@@ -239,11 +239,23 @@ Ba chỗ vấp khi làm, đã sửa:
 - Trên Windows, chạy `node.exe` qua shell bị hỏng vì đường dẫn có dấu cách.
 - Vite nghe trên `::1`, nên gọi `127.0.0.1:5173` bị từ chối; phải dùng `localhost`.
 
-### GĐ2 — Bàn cờ chơi được (M)
-- [ ] `shared/chess.ts` + test: nhập thành, bắt tốt qua đường, phong cấp, các kiểu hòa, PGN/FEN
-- [ ] `BoardView`: kéo thả và bấm-chọn, ô hợp lệ, phong cấp, lật bàn, đi quân bằng bàn phím, âm thanh
-- [ ] `MoveList`, lùi/tiến, phím tắt
-- **Kiểm tra:** đi hết một ván trên desktop và điện thoại (tự đi cả hai bên).
+### GĐ2 — Bàn cờ chơi được (M) — **đã làm**
+- [x] `shared/chess.ts` + 25 test: nhập thành (cả hai bên, và các trường hợp bị cấm), bắt tốt
+      qua đường (kể cả hết quyền sau một nước), phong cấp, bốn kiểu hòa, chiếu hết, PGN
+- [x] `src/board/BoardView.ts`: bấm-chọn, kéo-thả, đi bằng bàn phím (mũi tên + Enter, Esc để bỏ chọn)
+- [x] Màn `#/choi` chơi thật, hai người một máy; hộp chọn quân phong cấp; lật bàn; lùi nước
+- [x] Sổ nước đi, tua lại bằng |◀ ◀ ▶ ▶|; đi quân khi đang tua thì cắt bỏ phần sau
+- [x] Âm thanh tự tổng hợp bằng WebAudio (`src/app/sound.ts`) — không dùng file ngoài nên
+      không vướng giấy phép; có nút bật/tắt, nhớ lựa chọn
+- **Đã chạy thử trong trình duyệt:** đi quân, từ chối nước sai, không cầm được quân đối phương,
+  bắt tốt qua đường, phong cấp thành Mã (`gxh8=N`), lật bàn rồi đi tiếp (toạ độ vẫn đúng),
+  chiếu hết (`Qh4#` → "Đen thắng · chiếu hết"), bàn cờ khoá sau khi hết ván, tua về đầu và về cuối.
+
+Hai lỗi phải sửa khi làm:
+- Ban đầu dựng lại thế cờ từ FEN sau mỗi nước, nên mất lịch sử: luật lặp ba lần không bao giờ
+  phát hiện được và PGN xuất ra rỗng. Phải giữ một ván đầy đủ từ đầu.
+- Kiểu "ô cờ" có hai định nghĩa khác nhau (chuỗi bất kỳ ở `fen.ts`, kiểu chặt ở chess.js).
+  Gộp về một kiểu chặt trong `shared/fen.ts`, giờ gõ nhầm `e9` là lỗi ngay khi biên dịch.
 
 ### GĐ3 — Chơi với máy (M)
 - [ ] Chốt giấy phép GPL-3, thêm `LICENSE`

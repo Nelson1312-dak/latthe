@@ -528,3 +528,42 @@
     height: 44px;
   }
 }
+
+/* ---------------- Màn chơi ---------------- */
+.board-host {
+  flex: 1;
+  min-width: 0;
+  touch-action: none; /* kéo quân không làm cuộn trang trên điện thoại */
+  cursor: pointer;
+}
+.board-host:focus-visible {
+  outline-offset: -2px;
+}
+.game-result {
+  font-size: var(--fs-lg);
+}
+.promo-row {
+  display: flex;
+  gap: var(--s-2);
+}
+.promo {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: var(--s-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.promo:hover {
+  background: var(--bg-3);
+  border-color: var(--accent);
+}
+.promo-piece {
+  width: 34px;
+  height: 34px;
+}

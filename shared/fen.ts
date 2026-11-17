@@ -1,12 +1,18 @@
 // Đọc phần bố trí quân của FEN. Tách riêng để vẽ bàn cờ mà không cần cả chess.js.
 
 export type PieceCode = 'wk' | 'wq' | 'wr' | 'wb' | 'wn' | 'wp' | 'bk' | 'bq' | 'br' | 'bb' | 'bn' | 'bp';
-export type Square = string; // 'a1'..'h8'
 
 export const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const;
+export const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
+
+/**
+ * Chỉ 64 ô có thật mới hợp kiểu, nên gõ nhầm 'e9' là lỗi ngay khi biên dịch.
+ * Trùng khớp với kiểu Square của chess.js nên hai bên dùng lẫn được.
+ */
+export type Square = `${(typeof FILES)[number]}${(typeof RANKS)[number]}`;
 
 export function squareOf(fileIndex: number, rankIndex: number): Square {
-  return FILES[fileIndex] + String(rankIndex + 1);
+  return `${FILES[fileIndex]}${RANKS[rankIndex]}`;
 }
 
 /** Vị trí quân theo ô, đọc từ FEN. Ném lỗi nếu FEN sai dạng. */

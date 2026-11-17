@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BASE = process.env.BASE ?? 'http://localhost:5173';
-const ROUTES = ['', 'choi', 'xem-lai', 'on-tap', 'ban', 'tai-khoan', 'thiet-ke'];
+const ROUTES = ['', 'choi', 'choi-may', 'xem-lai', 'on-tap', 'ban', 'tai-khoan', 'thiet-ke'];
 const problems = [];
 const fail = (where, what) => problems.push(`${where}: ${what}`);
 
