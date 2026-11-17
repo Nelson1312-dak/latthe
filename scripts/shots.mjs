@@ -28,6 +28,16 @@ for (const [vName, width, height] of VIEWS) {
       await page.goto(`${BASE}/#/${route}`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => !!document.querySelector('#piece-sprite svg'));
       await page.waitForTimeout(120);
+      // Màn Chơi mở ra là phần chọn đối thủ; chụp thêm ảnh ván đang chơi
+      if (route === 'choi') {
+        const shot = `shots/${vName}-${theme}-choi-chon.png`;
+        await page.screenshot({ path: shot, fullPage: true });
+        console.log(shot);
+        await page.getByRole('button', { name: 'Hai người một máy' }).click();
+        await page.getByRole('button', { name: 'Bắt đầu ván' }).click();
+        await page.waitForSelector('#board svg');
+        await page.waitForTimeout(200);
+      }
       const file = `shots/${vName}-${theme}-${name}.png`;
       await page.screenshot({ path: file, fullPage: true });
       console.log(file);

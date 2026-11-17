@@ -76,6 +76,22 @@ function siteHeader(current: string): string {
   );
 }
 
+/**
+ * Dòng chân trang. GPL-3 yêu cầu người nhận bản chạy phải được mời xem mã nguồn,
+ * nên link tới kho mã là bắt buộc chứ không phải cho đẹp.
+ */
+function siteFooter(): string {
+  return (
+    `<footer class="site-foot">` +
+    `<span>${APP_NAME} — phần mềm tự do theo ` +
+    `<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3</a>.</span> ` +
+    `<span>Engine <a href="https://stockfishchess.org/" target="_blank" rel="noopener">Stockfish</a>, ` +
+    `bộ quân cburnett (CC BY-SA 3.0).</span> ` +
+    `<a href="https://github.com/Nelson1312-dak/latthe" target="_blank" rel="noopener">Mã nguồn</a>` +
+    `</footer>`
+  );
+}
+
 /** Thanh điều hướng dưới đáy, chỉ hiện trên điện thoại. */
 function bottomNav(current: string): string {
   const item = (route: string, label: string, name: IconName) =>
@@ -94,7 +110,7 @@ function render(): void {
   document.title = r ? `${screen.title} · ${APP_NAME}` : APP_NAME;
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
-  app.innerHTML = siteHeader(r) + `<main>${screen.render()}</main>` + bottomNav(r);
+  app.innerHTML = siteHeader(r) + `<main>${screen.render()}${siteFooter()}</main>` + bottomNav(r);
   if (r === 'choi') mountPlay(render);
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');

@@ -37,18 +37,11 @@ const lic = readFileSync('node_modules/cm-chessboard/assets/pieces/standard.svg'
 writeFileSync('public/pieces/LICENSE.txt', lic.replace(/^<\?xml[^>]*\?><!--/, '').trim() + '\n');
 
 // Stockfish: bản lite-single, chạy một luồng nên không cần COOP/COEP.
-//
-// CHỈ chép khi WITH_ENGINE=1. Stockfish dùng giấy phép GPL-3: đưa nó lên web là phân phối,
-// kéo theo nghĩa vụ công khai mã nguồn theo GPL-3. Giai đoạn 0 chưa dùng engine trong trình
-// duyệt (`npm run fixtures` gọi thẳng từ node_modules), nên bản deploy không mang theo file
-// engine cho tới khi chốt giấy phép ở giai đoạn 3 — xem docs/PLAN.md mục 5.
-if (process.env.WITH_ENGINE === '1') {
-  for (const f of ['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm']) {
-    const src = join('node_modules/stockfish/bin', f);
-    if (existsSync(src)) cpSync(src, join('public/engine', f));
-    else console.warn('thiếu engine:', f);
-  }
-  console.log('Đã chép font, bộ quân và engine vào public/');
-} else {
-  console.log('Đã chép font và bộ quân vào public/ (engine bỏ qua: đặt WITH_ENGINE=1 nếu cần)');
+// App phát hành theo GPL-3 (xem LICENSE và THIRD-PARTY.md) nên đưa engine lên web được.
+for (const f of ['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm']) {
+  const src = join('node_modules/stockfish/bin', f);
+  if (existsSync(src)) cpSync(src, join('public/engine', f));
+  else console.warn('thiếu engine:', f);
 }
+
+console.log('Đã chép font, bộ quân và engine vào public/');

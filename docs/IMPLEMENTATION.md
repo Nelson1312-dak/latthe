@@ -257,12 +257,20 @@ Hai lỗi phải sửa khi làm:
 - Kiểu "ô cờ" có hai định nghĩa khác nhau (chuỗi bất kỳ ở `fen.ts`, kiểu chặt ở chess.js).
   Gộp về một kiểu chặt trong `shared/fen.ts`, giờ gõ nhầm `e9` là lỗi ngay khi biên dịch.
 
-### GĐ3 — Chơi với máy (M)
-- [ ] Chốt giấy phép GPL-3, thêm `LICENSE`
-- [ ] `copy-engine.mjs`, `uci.ts`, `engine.ts`, `levels.ts` + test đọc dòng UCI
-- [ ] Màn Chơi với máy: chọn cấp và màu, thanh đánh giá bật/tắt, xin đi lại
-- [ ] Lưu ván lên server khi kết thúc (giữ 20 ván)
-- **Kiểm tra:** cấp 1 hay để hở quân; cấp 8 không thua ván dễ; giao diện không đứng khi máy nghĩ.
+### GĐ3 — Chơi với máy (M) — **đã làm**
+- [x] **Giấy phép đã chốt: GPL-3.0-or-later.** Thêm `LICENSE` và `THIRD-PARTY.md`; app có dòng
+      chân trang mời xem mã nguồn (GPL-3 bắt buộc điều này với người nhận bản chạy)
+- [x] Bản dựng mang theo engine (bỏ cờ `WITH_ENGINE`, không cần nữa)
+- [x] `src/engine/uci.ts` (đọc dòng engine, đổi góc nhìn điểm số), `levels.ts` (8 cấp),
+      `engine.ts` (Worker + hàng đợi lệnh) — 18 test
+- [x] Màn `#/choi`: chọn đấu với máy hay hai người, chọn cấp, chọn bên cầm quân,
+      thanh đánh giá bật/tắt, "Đi lại" lùi hai nước để vẫn đến lượt mình
+- [x] Lưu ván lên server khi kết thúc, giữ 20 ván gần nhất (`server/games.ts`, 11 test)
+
+**Đo thật, không phỏng đoán:** ở thế cờ có đòn ăn Hậu rõ ràng (`Nxf7+`, hơn 29 điểm),
+cấp 1 bỏ lỡ **12/12 lần** (thường đi `Ng6` để hở Mã), cấp 4 tìm ra 4/4, cấp 8 tìm ra 6/6.
+Đã chơi thử trong trình duyệt: máy đáp nước, giao diện không đứng khi máy nghĩ, "Đi lại"
+trả đúng lượt, thanh đánh giá chạy, ván kết thúc được lưu lên server.
 
 ### GĐ4 — Review (M)
 - [ ] `import-openings.mjs`, nhận nước "Sách" và tên khai cuộc
@@ -318,7 +326,7 @@ GĐ0 -> GĐ1 -> GĐ2 -> GĐ3 -> GĐ4 -> GĐ5 ----> GĐ8
 |---|---|---|
 | Duyệt design system và 5 màn hình | Cuối GĐ0 | Không sang GĐ1 khi chưa duyệt |
 | Tạo Google OAuth client ID | GĐ1 | Mình hướng dẫn từng bước |
-| Giấy phép GPL-3 | Trước GĐ3 | Thêm `LICENSE` GPL-3 |
+| ~~Giấy phép~~ | đã chốt 17/11/2026 | **GPL-3.0-or-later**, xem `LICENSE` và `THIRD-PARTY.md` |
 | Tải file puzzle 310 MB | Đầu GĐ6 | Mình hỏi lại trước khi tải |
 | Tên miền cố định cho tunnel | GĐ8 (nên chốt sớm) | Tên miền tĩnh miễn phí của ngrok |
 | Project Vercel cũ | GĐ8 | Giữ nguyên, không đụng tới |

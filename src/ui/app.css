@@ -295,3 +295,33 @@
     width: 100%;
   }
 }
+
+/* ---------------- Chân trang ---------------- */
+.site-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-2);
+  padding: var(--s-4) var(--s-6) var(--s-6);
+  margin-top: var(--s-8);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  color: var(--text-3);
+}
+.site-foot a {
+  color: var(--text-2);
+}
+.site-foot a:hover {
+  color: var(--accent-text);
+}
+@media (max-width: 767px) {
+  .site-foot {
+    padding: var(--s-3);
+  }
+  /* Link trong chân trang vẫn phải đủ to để chạm bằng ngón tay */
+  .site-foot a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

@@ -2,7 +2,7 @@
 
 Web game cờ vua để học: chơi với máy, xem lại từng nước có Huấn luyện viên giải thích, và ôn tập bằng chính lỗi của mình. Xem [docs/PLAN.md](docs/PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
-Đang ở cuối **giai đoạn 2**: bàn cờ đã **chơi được thật** ở `#/choi` (hai người một máy), có server, database và đăng nhập. Đấu với máy là giai đoạn 3; các màn Xem lại / Ôn tập / Ván với bạn vẫn là bản dựng tĩnh.
+Đang ở cuối **giai đoạn 3**: **đấu với máy được rồi** (8 cấp độ, Stockfish chạy trong trình duyệt), hoặc hai người một máy. Có server, database, đăng nhập, và ván kết thúc được lưu lại. Các màn Xem lại / Ôn tập / Ván với bạn vẫn là bản dựng tĩnh.
 
 Bản trên web: **https://latbai.vn** (project Vercel `latthe`). Đó là trang tĩnh, không có server, nên phần đăng nhập hiện "Ngoại tuyến" — muốn dùng thật thì chạy trên máy.
 
@@ -53,6 +53,5 @@ Một file SQLite: `data/chess.db`. Sao lưu bằng cách chép file. Migration 
 
 ## Giấy phép
 
-- Mã nguồn: chưa chốt. **Stockfish là GPL-3**, nên khi đưa engine vào ở giai đoạn 3 thì mã nguồn phải công khai theo GPL-3. Trong lúc chưa chốt, bản dựng **không** mang theo file engine (`scripts/copy-assets.mjs` chỉ chép khi `WITH_ENGINE=1`).
-- Bộ quân cburnett: CC BY-SA 3.0, xem `public/pieces/LICENSE.txt`.
-- Font IBM Plex Sans / Mono / Serif: OFL-1.1.
+**GPL-3.0-or-later** — xem [LICENSE](LICENSE). Lý do: Stockfish là GPL-3 và app đưa engine lên web.
+Danh sách đầy đủ thành phần của người khác: [THIRD-PARTY.md](THIRD-PARTY.md).

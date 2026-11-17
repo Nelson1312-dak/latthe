@@ -567,3 +567,107 @@
   width: 34px;
   height: 34px;
 }
+
+/* ---------------- Chọn đối thủ trước ván ---------------- */
+.setup {
+  display: grid;
+  gap: var(--s-6);
+  max-width: 720px;
+}
+.setup-block {
+  display: grid;
+  gap: var(--s-3);
+}
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+.seg-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 40px;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--line-strong);
+  border-left-width: 0;
+  background: var(--bg-2);
+  color: var(--text-2);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.seg-item:first-child {
+  border-left-width: 1px;
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+.seg-item:last-child {
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.seg-item:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+.seg-item.is-active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text-1);
+}
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-2);
+}
+.level-card {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-2) var(--s-3);
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.level-card span {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+.level-card:hover {
+  background: var(--bg-2);
+}
+.level-card.is-active {
+  border-left-color: var(--accent);
+  background: var(--bg-2);
+}
+.level-card.is-active b {
+  color: var(--accent-text);
+}
+.setup-go {
+  display: flex;
+  gap: var(--s-3);
+}
+@media (max-width: 767px) {
+  .seg-item,
+  .level-card {
+    min-height: 44px;
+  }
+  .seg {
+    flex-direction: column;
+  }
+  .seg-item {
+    border-left-width: 1px;
+    border-top-width: 0;
+    border-radius: 0;
+  }
+  .seg-item:first-child {
+    border-top-width: 1px;
+    border-radius: var(--r-sm) var(--r-sm) 0 0;
+  }
+  .seg-item:last-child {
+    border-radius: 0 0 var(--r-sm) var(--r-sm);
+  }
+}

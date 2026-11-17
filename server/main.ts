@@ -5,6 +5,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { openDb, createLocalUser, type Db, type User } from './db.ts';
+import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import {
   SESSION_COOKIE,
   clearCookie,
@@ -130,6 +131,29 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
       { user: publicUser(user) },
       { 'set-cookie': sessionCookie(session.token, session.expiresAt, isSecure(req)) },
     );
+  }
+
+  /* ---- Ván đã chơi ---- */
+
+  if (path === '/api/games' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    return json(res, 200, { games: listGames(db, user.id, KEEP_GAMES) });
+  }
+
+  if (path === '/api/games' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    let body: Record<string, unknown>;
+    try {
+      body = await readJson(req, 200_000);
+    } catch {
+      return json(res, 400, { error: 'Nội dung không hợp lệ' });
+    }
+    const g = parseNewGame(body);
+    if (!g) return json(res, 400, { error: 'Thiếu dữ liệu ván' });
+    insertGame(db, user.id, g);
+    return json(res, 201, { ok: true });
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {

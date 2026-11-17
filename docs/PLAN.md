@@ -90,6 +90,6 @@ Trình duyệt người chơi                       Máy này (Windows)
 
 1. **Tên miền cố định** cho tunnel (Google bắt buộc cần origin cố định). Máy đã cài sẵn cả ngrok và cloudflared: ngrok cho 1 tên miền tĩnh miễn phí; cloudflared cần tên miền riêng của bạn.
 2. **Google OAuth client ID**: bạn tạo trên Google Cloud Console (mình sẽ hướng dẫn từng bước ở GĐ1).
-3. **Giấy phép GPL-3** (do Stockfish): mã game công khai theo GPL-3.
+3. ~~Giấy phép~~ — đã chốt 17/11/2026: **GPL-3.0-or-later** (vì Stockfish là GPL-3). Mã nguồn công khai tại github.com/Nelson1312-dak/latthe.
 4. ~~Chỗ deploy~~ — đã chốt 17/11/2026: **Lật Cờ chạy ở latbai.vn** (project Vercel `latthe`). Game đảo cũ không còn trên web nữa, nhưng vẫn lấy lại được từ lịch sử git và lịch sử deploy của Vercel. Bản trên web là trang tĩnh, không có server, nên phần đăng nhập hiện "Ngoại tuyến"; muốn dùng thật thì chạy `npm run dev` trên máy. Project `co-vua` giữ lại làm nơi xem thử.
 5. ~~Tên app~~ — đã chốt: **Lật Cờ**, đặt theo bộ với latbai.vn.
