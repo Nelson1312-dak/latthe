@@ -301,24 +301,38 @@ Bốn chỗ vấp khi làm:
 - [ ] `npm run eval:advisor`: chạy 50 thế cờ mẫu, in tỉ lệ bị chặn, thời gian, xuất câu trả lời ra file để đọc tay
 - **Kiểm tra:** không câu nào nêu sai nước lọt qua kiểm duyệt; tắt Ollama thì vẫn có lời bình bằng câu mẫu; câu đầu tiên hiện ra dưới 5 giây khi hàng đợi trống.
 
-### GĐ6 — Học không giới hạn (L) — **phần lớn đã làm**
+### GĐ6 — Học không giới hạn (L) — **xong 17/11/2026**
 - [x] `scripts/import-puzzles.mjs`: tải 310 MB, lọc lấy bài độ khó 600–1800 và phổ biến
-- [x] `server/puzzles.ts` + 19 test: lấy bài theo chỉ mục, Elo với hệ số K giảm dần
+- [x] `server/puzzles.ts` + 21 test: lấy bài theo chỉ mục, Elo với hệ số K giảm dần
 - [x] Màn Ôn tập: thẻ lỗi của chính mình trước, hết thẻ mới lấy bài từ kho; gợi ý, xem lời giải
 - [x] Tiến độ (trong màn Tài khoản): độ khó, chuỗi ngày luyện, thẻ theo hộp, kiểu lỗi hay gặp
 - [x] Màn Sảnh thay số liệu giả bằng dữ liệu thật
-- [ ] **Còn lại: khoảng 30 bài học.** Thiết kế đã rõ — mỗi bài gồm phần giải thích tiếng Việt
-      tự soạn, cộng 3 bài tập lấy từ kho theo chủ đề. Làm vậy thì thế cờ luôn hợp lệ, không
-      phải dựng tay rồi dò lỗi.
+- [x] 15 bài học trong 4 chương (`src/training/lessons.ts`), màn Học, đánh dấu bài đã xong
+- **Kiểm tra (đã chạy):** kho **1.133.897 bài** lọc từ 6,19 triệu dòng, nạp hết trong 37 giây,
+  database 255 MB. Lấy một bài **4 ms** (mốc đặt ra là dưới 50 ms). Giải một bài trên giao diện
+  thì độ khó đổi 1000 → 981, chuỗi luyện lên 1 ngày. 189 test xanh, `check:design` sạch.
 
-Ba lỗi khi nạp kho bài tập, đều đáng ghi lại:
-1. Mạng đứt ở 162/310 MB mà script coi như tải xong, nạp vào thì hỏng. Giờ ghi vào `.part`
-   rồi mới đổi tên, và tải tiếp được bằng HTTP Range.
-2. File của Lichess mở đầu bằng một khung bỏ qua 12 byte; bộ giải nén zstd của Node không
-   tự nhảy qua mà báo `ZSTD_error_prefix_unknown`.
-3. Lichess dựng lại file định kỳ. Nối phần dở dang của bản cũ với phần mới tải ra một file
-   hỏng **ở đúng chỗ nối** — nạp được 32.000 bài rồi mới báo lỗi. Giờ ghi ETag kèm phần dở
-   dang và bỏ nó nếu máy chủ đã đổi bản.
+Kho bài tập làm mất nhiều thời gian nhất, và chẩn đoán sai một lần:
+1. Mạng đứt ở 162/310 MB mà script coi như tải xong. Giờ ghi vào `.part` rồi mới đổi tên,
+   và tải tiếp được bằng HTTP Range.
+2. File của Lichess **không phải một khung zstd liền mạch** mà là 74 khung nối đuôi nhau
+   (nén bằng pzstd), mỗi khung có một khung bỏ qua 12 byte đứng trước. Bộ giải nén của Node
+   dừng ở khung bỏ qua thứ hai và báo `ZSTD_error_prefix_unknown` — đúng chỗ 33,6 MB, tức
+   khoảng 32.000 bài. **Lần đầu mình đổ cho việc nối hai bản tải dở, và sai**: xoá hết tải lại
+   từ đầu thì vẫn hỏng y như cũ, ở đúng byte đó. Phải tự đi theo chuỗi khung mới nạp được.
+   Bài học: con số lỗi lặp lại **y hệt** sau khi đã thay dữ liệu đầu vào thì nguyên nhân không
+   nằm ở dữ liệu.
+3. Chạy được rồi mới thấy chậm: lấy một bài mất 282 ms. Ba chỗ, đều cùng một kiểu —
+   làm việc nặng trên đường đi nóng:
+   - `ORDER BY abs(rating - ?)` không dùng được chỉ mục nên quét cả chủ đề (riêng "endgame"
+     634.000 dòng). Đổi sang `rating BETWEEN` quanh một mốc ngẫu nhiên rồi bốc trong nhúm nhỏ.
+   - `count(*)` trên 1,13 triệu dòng và `GROUP BY` trên 2 triệu dòng, hỏi lại mỗi request.
+     Nhớ kết quả một phút, vì kho chỉ đổi khi chạy lại script.
+   - Mỗi request có đăng nhập đều `UPDATE users SET last_seen_at`, mà SQLite để
+     `synchronous = FULL` nên mỗi lần ghi là một lần ép đĩa (~60 ms). Đổi sang `NORMAL`
+     (an toàn khi đi với WAL) và năm phút mới ghi lại một lần.
+
+   Kết quả: 282 ms → **3–4 ms**.
 
 ### GĐ7 — Chơi online (L)
 - [ ] `shared/protocol.ts`, `server/live/rooms.ts`, `clock.ts` + test máy trạng thái và đồng hồ
@@ -352,7 +366,7 @@ GĐ0 -> GĐ1 -> GĐ2 -> GĐ3 -> GĐ4 -> GĐ5 ----> GĐ8
 | Duyệt design system và 5 màn hình | Cuối GĐ0 | Không sang GĐ1 khi chưa duyệt |
 | Tạo Google OAuth client ID | GĐ1 | Mình hướng dẫn từng bước |
 | ~~Giấy phép~~ | đã chốt 17/11/2026 | **GPL-3.0-or-later**, xem `LICENSE` và `THIRD-PARTY.md` |
-| Tải file puzzle 310 MB | Đầu GĐ6 | Mình hỏi lại trước khi tải |
+| ~~Tải file puzzle 310 MB~~ | đã xong 17/11/2026 | kho 1.133.897 bài, `data/chess.db` 255 MB |
 | Tên miền cố định cho tunnel | GĐ8 (nên chốt sớm) | Tên miền tĩnh miễn phí của ngrok |
 | Project Vercel cũ | GĐ8 | Giữ nguyên, không đụng tới |
 | ~~Tên app~~ | đã chốt 16/11/2026 | **Lật Cờ**, đặt theo bộ với latbai.vn |

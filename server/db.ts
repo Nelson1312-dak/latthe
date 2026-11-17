@@ -29,7 +29,13 @@ export function openDb(file = process.env.CHESS_DB ?? 'data/chess.db'): Db {
   if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   // WAL cho phép đọc trong lúc đang ghi; foreign_keys để ON DELETE CASCADE có tác dụng.
-  if (file !== ':memory:') db.exec('PRAGMA journal_mode = WAL');
+  if (file !== ':memory:') {
+    db.exec('PRAGMA journal_mode = WAL');
+    // Mặc định là FULL: mỗi lần ghi là một lần ép đĩa, đo được ~60 ms một
+    // request. Đi với WAL thì NORMAL vẫn an toàn khi chương trình chết giữa
+    // chừng; chỉ mất vài lần ghi cuối nếu cả máy mất điện, chấp nhận được.
+    db.exec('PRAGMA synchronous = NORMAL');
+  }
   db.exec('PRAGMA foreign_keys = ON');
   migrate(db);
   return db;

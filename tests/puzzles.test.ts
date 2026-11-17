@@ -9,6 +9,7 @@ import {
   puzzleStats,
   recentAttemptIds,
   recordAttempt,
+  resetPuzzleCount,
   themeCounts,
 } from '../server/puzzles.ts';
 
@@ -31,6 +32,7 @@ let userId: number;
 beforeEach(() => {
   db = openDb(':memory:');
   userId = createLocalUser(db, 'Nelson').id;
+  resetPuzzleCount(); // số bài được nhớ một phút, test nào cũng phải bắt đầu sạch
 });
 
 describe('lấy bài tập', () => {
@@ -66,6 +68,26 @@ describe('lấy bài tập', () => {
     ]);
     const p = pickPuzzle(db, { rating: 1000, exclude: ['a'], random: () => 0.5 });
     expect(p?.id).toBe('b');
+  });
+
+  it('cùng một chủ đề và mức khó vẫn ra nhiều bài khác nhau', () => {
+    // Nếu lấy "bài gần mốc nhất" thì lần nào cũng đúng một bài, học chán ngay.
+    withPuzzles(
+      db,
+      Array.from({ length: 40 }, (_, i) => ({ id: `b${i}`, rating: 980 + (i % 20), themes: 'fork' })),
+    );
+    const ra = new Set<string>();
+    for (let i = 0; i < 30; i++) ra.add(pickPuzzle(db, { rating: 1000, theme: 'fork' })?.id ?? '');
+    expect(ra.size).toBeGreaterThan(5);
+  });
+
+  it('nhớ số bài trong kho, nạp thêm thì phải quên đi mới thấy', () => {
+    withPuzzles(db, [{ id: 'a', rating: 1000, themes: 'fork' }]);
+    expect(puzzleCount(db)).toBe(1);
+    db.prepare('INSERT INTO puzzles VALUES (?, ?, ?, ?, ?, ?)').run('b', '8/8/8/8/8/8/8/K6k w - - 0 1', 'a1a2', 1000, 'fork', 90);
+    expect(puzzleCount(db)).toBe(1); // vẫn là con số đã nhớ
+    resetPuzzleCount();
+    expect(puzzleCount(db)).toBe(2);
   });
 
   it('tách nước đi: nước đầu là của đối phương', () => {

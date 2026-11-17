@@ -150,27 +150,54 @@ function openDb() {
 }
 
 /**
- * Vị trí byte của khung dữ liệu zstd đầu tiên.
+ * Đọc file .zst của Lichess, trả ra từng mẩu dữ liệu đã giải nén.
  *
- * File của Lichess mở đầu bằng một "khung bỏ qua" (skippable frame) chứa dữ
- * liệu phụ. Bộ giải nén zstd của Node không tự bỏ qua khung này mà báo lỗi
- * ZSTD_error_prefix_unknown, nên phải tự nhảy qua.
+ * File này nén bằng pzstd (zstd chạy nhiều luồng), nên nó không phải một khung
+ * liền mạch mà là 74 khung nối đuôi nhau, mỗi khung có một "khung bỏ qua"
+ * (skippable frame) 12 byte đứng trước ghi độ dài khung đó. Bộ giải nén của
+ * Node không chịu khung bỏ qua nằm giữa file: nó dừng ở khung bỏ qua thứ hai
+ * và báo ZSTD_error_prefix_unknown — đúng chỗ 33,6 MB, tức khoảng 32.000 bài.
+ * Lần trước mình tưởng file hỏng do nối hai bản tải dở; không phải.
+ *
+ * Nên ở đây tự đi theo chuỗi khung và giải nén riêng từng khung một.
  */
-function firstDataOffset(file) {
+async function* giaiNen(file) {
+  const size = statSync(file).size;
+  const head = Buffer.alloc(12);
   const fd = openSync(file, 'r');
-  const head = Buffer.alloc(8);
-  let offset = 0;
+  let off = 0;
   try {
     for (;;) {
-      if (readSync(fd, head, 0, 8, offset) < 8) return 0;
-      // Khung bỏ qua: 50..5F 2A 4D 18, rồi 4 byte độ dài
-      const isSkippable = head[0] >= 0x50 && head[0] <= 0x5f && head[1] === 0x2a && head[2] === 0x4d && head[3] === 0x18;
-      if (!isSkippable) return offset;
-      offset += 8 + head.readUInt32LE(4);
+      if (off >= size) return;
+      if (readSync(fd, head, 0, 12, off) < 12) return;
+      const boQua =
+        head[0] >= 0x50 && head[0] <= 0x5f && head[1] === 0x2a && head[2] === 0x4d && head[3] === 0x18;
+      if (!boQua) {
+        // Không có khung bỏ qua: file nén thường, giải một mạch tới hết.
+        yield* motKhung(file, off, size - off);
+        return;
+      }
+      const dai = head.readUInt32LE(4); // pzstd luôn ghi 4
+      const nen = head.readUInt32LE(8); // cỡ khung dữ liệu ngay sau
+      const batDau = off + 8 + dai;
+      if (dai !== 4 || nen <= 0 || batDau + nen > size) {
+        // Khung bỏ qua kiểu khác (vd phần đầu file cũ): cứ nhảy qua rồi giải nốt.
+        yield* motKhung(file, batDau, size - batDau);
+        return;
+      }
+      yield* motKhung(file, batDau, nen);
+      off = batDau + nen;
     }
   } finally {
     closeSync(fd);
   }
+}
+
+/** Giải nén đúng một khung nằm ở [batDau, batDau+soByte). */
+async function* motKhung(file, batDau, soByte) {
+  if (soByte <= 0) return;
+  const s = createReadStream(file, { start: batDau, end: batDau + soByte - 1 }).pipe(createZstdDecompress());
+  for await (const c of s) yield c;
 }
 
 async function load(db) {
@@ -178,7 +205,7 @@ async function load(db) {
     'INSERT OR REPLACE INTO puzzles (id, fen, moves, rating, themes, popularity) VALUES (?, ?, ?, ?, ?, ?)',
   );
   const rl = createInterface({
-    input: createReadStream(RAW, { start: firstDataOffset(RAW) }).pipe(createZstdDecompress()),
+    input: Readable.from(giaiNen(RAW)),
     crlfDelay: Infinity,
   });
 

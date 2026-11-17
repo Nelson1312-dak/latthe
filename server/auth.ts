@@ -90,8 +90,14 @@ export function userForSession(db: Db, token: string | undefined, now = new Date
     db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(h);
     return null;
   }
-  db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?').run(now.toISOString(), row.user_id);
-  return one<User>(db, 'SELECT * FROM users WHERE id = ?', row.user_id) ?? null;
+  const user = one<User>(db, 'SELECT * FROM users WHERE id = ?', row.user_id) ?? null;
+  // "Lần cuối thấy" chỉ để biết ai còn dùng, không cần chính xác tới giây. Ghi
+  // mỗi request thì mỗi request phải chờ đĩa, nên năm phút mới ghi lại một lần.
+  if (user && (!user.last_seen_at || now.getTime() - new Date(user.last_seen_at).getTime() > 5 * 60_000)) {
+    db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?').run(now.toISOString(), row.user_id);
+    user.last_seen_at = now.toISOString();
+  }
+  return user;
 }
 
 export function destroySession(db: Db, token: string | undefined): void {

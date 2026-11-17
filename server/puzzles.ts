@@ -28,18 +28,43 @@ const toPuzzle = (r: PuzzleRow): Puzzle => ({
   themes: r.themes.split(' ').filter(Boolean),
 });
 
+/**
+ * Số bài trong kho. Nhớ lại kết quả một phút.
+ *
+ * `count(*)` trên 1,13 triệu dòng mất gần 60 ms, mà màn Ôn tập hỏi con số này
+ * mỗi lần lấy bài — chiếm phần lớn thời gian chờ. Kho chỉ đổi khi chạy lại
+ * `npm run puzzles`, nên nhớ lại là đủ.
+ */
+let đếmCũ = { lúc: 0, số: -1 };
+
 export function puzzleCount(db: Db): number {
+  if (đếmCũ.số >= 0 && Date.now() - đếmCũ.lúc < 60_000) return đếmCũ.số;
   try {
-    return one<{ c: number }>(db, 'SELECT count(*) c FROM puzzles')?.c ?? 0;
+    const c = one<{ c: number }>(db, 'SELECT count(*) c FROM puzzles')?.c ?? 0;
+    đếmCũ = { lúc: Date.now(), số: c };
+    return c;
   } catch {
     // Chưa chạy `npm run puzzles` thì bảng chưa tồn tại
     return 0;
   }
 }
 
+/** Quên con số đã nhớ — dùng trong test. */
+export function resetPuzzleCount(): void {
+  đếmCũ = { lúc: 0, số: -1 };
+  chủĐềCũ = null;
+}
+
 /**
- * Lấy một bài quanh mức `rating`. Không quét cả kho: chọn một mốc ngẫu nhiên
- * trong khoảng rồi lấy bài gần nhất theo chỉ mục.
+ * Lấy một bài quanh mức `rating`.
+ *
+ * Trước đây câu lệnh là `ORDER BY abs(rating - ?) LIMIT 1`. Đúng kết quả nhưng
+ * chậm: abs() thì SQLite không dùng được chỉ mục, nên mỗi lần lấy bài là một
+ * lần quét hết chủ đề — riêng "endgame" đã 634.000 dòng, đo được 246 ms.
+ *
+ * Giờ chọn một mốc ngẫu nhiên trong khoảng cho phép rồi lấy một nhúm nhỏ quanh
+ * mốc đó bằng chỉ mục (rating BETWEEN), xong bốc ngẫu nhiên một bài trong nhúm.
+ * Chỉ đọc vài chục dòng, và vì mốc đổi mỗi lần nên bài vẫn đa dạng.
  */
 export function pickPuzzle(
   db: Db,
@@ -49,36 +74,48 @@ export function pickPuzzle(
 ): Puzzle | null {
   const spread = opts.spread ?? 150;
   const random = opts.random ?? Math.random;
-  const target = Math.round(opts.rating - spread + random() * spread * 2);
   const exclude = opts.exclude ?? [];
-  const placeholders = exclude.map(() => '?').join(',');
-  const notIn = exclude.length ? ` AND p.id NOT IN (${placeholders})` : '';
+  const notIn = exclude.length ? ` AND p.id NOT IN (${exclude.map(() => '?').join(',')})` : '';
 
   const sql = opts.theme
     ? `SELECT p.id, p.fen, p.moves, p.rating, p.themes FROM puzzle_themes t
          JOIN puzzles p ON p.id = t.puzzle_id
-        WHERE t.theme = ?${notIn}
-        ORDER BY abs(t.rating - ?) LIMIT 1`
+        WHERE t.theme = ? AND t.rating BETWEEN ? AND ?${notIn} LIMIT 60`
     : `SELECT p.id, p.fen, p.moves, p.rating, p.themes FROM puzzles p
-        WHERE 1 = 1${notIn}
-        ORDER BY abs(p.rating - ?) LIMIT 1`;
+        WHERE p.rating BETWEEN ? AND ?${notIn} LIMIT 60`;
 
-  const params = opts.theme ? [opts.theme, ...exclude, target] : [...exclude, target];
-  try {
-    const row = one<PuzzleRow>(db, sql, ...params);
-    return row ? toPuzzle(row) : null;
-  } catch {
-    return null;
+  // Thử vài lần: mốc đầu có thể rơi vào quãng không có bài nào, nới dần ra.
+  for (let lan = 0; lan < 4; lan++) {
+    const hep = lan < 3 ? 15 : spread;
+    const tam = Math.round(opts.rating - spread + random() * spread * 2);
+    const params = opts.theme
+      ? [opts.theme, tam - hep, tam + hep, ...exclude]
+      : [tam - hep, tam + hep, ...exclude];
+    try {
+      const rows = all<PuzzleRow>(db, sql, ...params);
+      if (rows.length) return toPuzzle(rows[Math.floor(random() * rows.length)]!);
+    } catch {
+      return null;
+    }
   }
+  return null;
 }
 
-/** Các chủ đề có trong kho, kèm số bài. */
+/**
+ * Các chủ đề có trong kho, kèm số bài. Cũng nhớ lại một phút: gom nhóm trên
+ * 2 triệu dòng mất gần 140 ms, mà danh sách này chỉ đổi khi nạp lại kho.
+ */
+let chủĐềCũ: { lúc: number; ds: { theme: string; count: number }[] } | null = null;
+
 export function themeCounts(db: Db): { theme: string; count: number }[] {
+  if (chủĐềCũ && Date.now() - chủĐềCũ.lúc < 60_000) return chủĐềCũ.ds;
   try {
-    return all<{ theme: string; count: number }>(
+    const ds = all<{ theme: string; count: number }>(
       db,
       'SELECT theme, count(*) count FROM puzzle_themes GROUP BY theme ORDER BY count DESC',
     );
+    chủĐềCũ = { lúc: Date.now(), ds };
+    return ds;
   } catch {
     return [];
   }
