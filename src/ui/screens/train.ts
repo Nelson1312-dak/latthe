@@ -193,11 +193,17 @@ export function train(): string {
   if (phase === 'empty') {
     return `<div class="screen screen-narrow">${head}
       ${
-        khoBai === 0
-          ? notice('Kho bài tập chưa được nạp. Chạy `npm run puzzles` trên máy chủ.', 'locked', 'engine')
-          : notice('Hết bài phù hợp rồi. Chơi thêm vài ván để có thẻ lỗi mới nhé.', 'info', 'play')
+        auth.offline
+          ? notice(
+              'Bản trên web chỉ có phần chơi và xem lại. Ôn tập cần máy chủ — chạy app trên máy bạn để dùng.',
+              'locked',
+              'engine',
+            )
+          : khoBai === 0
+            ? notice('Kho bài tập chưa được nạp. Chạy `npm run puzzles` trên máy chủ.', 'locked', 'engine')
+            : notice('Hết bài phù hợp rồi. Chơi thêm vài ván để có thẻ lỗi mới nhé.', 'info', 'play')
       }
-      ${auth.user ? '' : notice('Đăng nhập để lưu tiến độ và ôn lại chính lỗi của bạn.', 'locked', 'user')}
+      ${auth.user || auth.offline ? '' : notice('Đăng nhập để lưu tiến độ và ôn lại chính lỗi của bạn.', 'locked', 'user')}
     </div>`;
   }
 
