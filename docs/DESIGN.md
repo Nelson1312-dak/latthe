@@ -192,7 +192,18 @@ Không có cỡ chữ nào lớn hơn 28px. Không chữ in hoa toàn bộ trừ
 
 ### 4.6 Chuyển động
 
-- Quân cờ di chuyển 150ms `ease-out`; ăn quân: quân bị ăn mờ dần 100ms.
+- **Quân cờ phải trượt tới ô đích, không được nhảy cóc.** 150ms `ease-out` (`--t-piece`).
+  Quân nhảy tức thì làm ván cờ có cảm giác chóng mặt và khó theo dõi — mắt không kịp
+  thấy quân nào vừa đi.
+  Cách làm: bàn cờ vẽ lại với quân đã ở ô đích, rồi đẩy ngược quân về ô xuất phát và cho
+  nó trượt về chỗ. Nhờ vậy không phải giữ lại bàn cờ cũ. Lớp `.pc` bên trong mỗi quân
+  tồn tại chỉ để nhận CSS transform mà không phá vị trí ô.
+  **Hệ quả cần nhớ:** mỗi lần vẽ lại màn hình là dựng lại cả bàn cờ, nên bất kỳ lần vẽ
+  nào trong vòng 150ms sau một nước đi sẽ cắt ngang animation. Những việc không gấp
+  (hiện "đang nghĩ", cập nhật thanh đánh giá) phải hoãn lại 200ms.
+- **Máy không được đáp ngay lập tức.** Mỗi cấp có `minThinkMs` (0,7–1,1 giây) cộng một
+  chút ngẫu nhiên; máy nghĩ và "ngẫm" cùng lúc nên cấp cao không bị chậm thêm. Máy trả lời
+  tức thì trông không giống đang chơi với ai cả.
 - Bảng, tab: chuyển ngay, không trượt, không nảy.
 - Tôn trọng `prefers-reduced-motion`: tắt mọi chuyển động trừ quân cờ (giảm còn 60ms).
 

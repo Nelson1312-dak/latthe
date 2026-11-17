@@ -15,7 +15,8 @@
     "postinstall": "node scripts/copy-assets.mjs",
     "vite": "vite",
     "server": "node --env-file-if-exists=.env.chess --experimental-strip-types --no-warnings server/main.ts",
-    "start": "npm run build && npm run server"
+    "start": "npm run build && npm run server",
+    "openings": "node scripts/import-openings.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",

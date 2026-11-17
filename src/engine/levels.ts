@@ -12,6 +12,12 @@ export interface Level {
   hint: string;
   /** Thời gian nghĩ tối đa mỗi nước. */
   moveTimeMs: number;
+  /**
+   * Khoảng dừng tối thiểu trước khi máy đi, kể cả khi nó nghĩ xong tức thì.
+   * Máy đáp ngay lập tức làm ván cờ có cảm giác chóng mặt và không giống
+   * đang chơi với ai cả; các trang cờ đều để máy "ngẫm" một nhịp.
+   */
+  minThinkMs: number;
   depth?: number;
   /** Có dùng cơ chế giới hạn sức của Stockfish không. */
   elo?: number;
@@ -24,15 +30,23 @@ export interface Level {
 }
 
 export const LEVELS: Level[] = [
-  { id: 1, name: 'Cấp 1', hint: 'Mới tập, hay để hở quân', moveTimeMs: 40, depth: 1, multipv: 5, weights: [1, 3, 4, 4, 4] },
-  { id: 2, name: 'Cấp 2', hint: 'Biết luật, chưa nhìn xa', moveTimeMs: 60, depth: 2, multipv: 5, weights: [2, 3, 3, 2, 2] },
-  { id: 3, name: 'Cấp 3', hint: 'Thỉnh thoảng đi hỏng', moveTimeMs: 100, depth: 4, multipv: 4, weights: [5, 3, 2, 1] },
-  { id: 4, name: 'Cấp 4', hint: 'Khoảng 1350 Elo', moveTimeMs: 200, elo: 1350 },
-  { id: 5, name: 'Cấp 5', hint: 'Khoảng 1550 Elo', moveTimeMs: 300, elo: 1550 },
-  { id: 6, name: 'Cấp 6', hint: 'Khoảng 1800 Elo', moveTimeMs: 400, elo: 1800 },
-  { id: 7, name: 'Cấp 7', hint: 'Khoảng 2100 Elo', moveTimeMs: 600, elo: 2100 },
-  { id: 8, name: 'Cấp 8', hint: 'Mạnh hết mức cho phép', moveTimeMs: 1000, elo: 2500 },
+  { id: 1, name: 'Cấp 1', hint: 'Mới tập, hay để hở quân', moveTimeMs: 40, minThinkMs: 700, depth: 1, multipv: 5, weights: [1, 3, 4, 4, 4] },
+  { id: 2, name: 'Cấp 2', hint: 'Biết luật, chưa nhìn xa', moveTimeMs: 60, minThinkMs: 750, depth: 2, multipv: 5, weights: [2, 3, 3, 2, 2] },
+  { id: 3, name: 'Cấp 3', hint: 'Thỉnh thoảng đi hỏng', moveTimeMs: 100, minThinkMs: 800, depth: 4, multipv: 4, weights: [5, 3, 2, 1] },
+  { id: 4, name: 'Cấp 4', hint: 'Khoảng 1350 Elo', moveTimeMs: 200, minThinkMs: 850, elo: 1350 },
+  { id: 5, name: 'Cấp 5', hint: 'Khoảng 1550 Elo', moveTimeMs: 300, minThinkMs: 900, elo: 1550 },
+  { id: 6, name: 'Cấp 6', hint: 'Khoảng 1800 Elo', moveTimeMs: 400, minThinkMs: 950, elo: 1800 },
+  { id: 7, name: 'Cấp 7', hint: 'Khoảng 2100 Elo', moveTimeMs: 600, minThinkMs: 1000, elo: 2100 },
+  { id: 8, name: 'Cấp 8', hint: 'Mạnh hết mức cho phép', moveTimeMs: 1000, minThinkMs: 1100, elo: 2500 },
 ];
+
+/**
+ * Khoảng dừng thật sự của một nước: quanh mức tối thiểu của cấp, lệch đi một
+ * chút để máy không đi đều như máy đếm nhịp.
+ */
+export function thinkDelayMs(level: Level, random: () => number = Math.random): number {
+  return Math.round(level.minThinkMs * (0.75 + random() * 0.6));
+}
 
 export function levelById(id: number): Level {
   return LEVELS.find((l) => l.id === id) ?? LEVELS[3];

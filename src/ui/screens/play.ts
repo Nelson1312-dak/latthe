@@ -8,7 +8,7 @@ import { material } from '../../../shared/fen.ts';
 import { formatScore, type Score } from '../../../shared/winrate.ts';
 import { playSound, soundEnabled } from '../../app/sound.ts';
 import { engine } from '../../engine/engine.ts';
-import { LEVELS, levelById } from '../../engine/levels.ts';
+import { LEVELS, levelById, thinkDelayMs } from '../../engine/levels.ts';
 import { splitUci } from '../../engine/uci.ts';
 import { saveFinishedGame } from '../../app/games.ts';
 import {
@@ -48,6 +48,9 @@ let engineError: string | null = null;
 let showEval = false;
 let currentEval: Score | null = null;
 let saved = false;
+/** Nước đã chạy animation rồi, để không trượt lại quân khi vẽ lại màn hình. */
+let animatedPly = 0;
+let animatedOrientation: Side = 'w';
 
 const PROMOTION_PIECES = [
   ['q', 'Hậu'],
@@ -68,7 +71,9 @@ function newGame(): void {
   thinking = false;
   currentEval = null;
   saved = false;
+  animatedPly = 0;
   orientation = setup.mode === 'bot' ? setup.side : 'w';
+  animatedOrientation = orientation;
 }
 
 /* ---------------- Màn chọn trước khi vào ván ---------------- */
@@ -260,13 +265,21 @@ function canPlay(): boolean {
 function drawBoard(): void {
   const checked = game.checkedKing;
   const last = game.lastMove;
-  view?.render({
-    fen: game.fen,
-    orientation,
-    lastMove: last ? [last.from, last.to] : undefined,
-    check: checked ?? undefined,
-    label: `Bàn cờ, lượt ${sideName(game.turn)}`,
-  });
+  // Chỉ trượt quân khi vừa tiến thêm đúng một nước và bàn không bị lật giữa
+  // chừng — lật bàn thì mọi quân đều đổi chỗ, trượt sẽ thành loạn.
+  const stepped = last && game.ply === animatedPly + 1 && orientation === animatedOrientation;
+  animatedPly = game.ply;
+  animatedOrientation = orientation;
+  view?.render(
+    {
+      fen: game.fen,
+      orientation,
+      lastMove: last ? [last.from, last.to] : undefined,
+      check: checked ?? undefined,
+      label: `Bàn cờ, lượt ${sideName(game.turn)}`,
+    },
+    stepped ? [last.from, last.to] : undefined,
+  );
 }
 
 function afterMove(rerender: () => void): void {
@@ -280,17 +293,33 @@ function afterMove(rerender: () => void): void {
   else playSound(last.captured ? 'capture' : 'move');
 
   if (!result && isBotTurn()) void botMove(rerender);
-  else if (showEval) void refreshEval(rerender);
+  else if (showEval) setTimeout(() => void refreshEval(rerender), PIECE_SLIDE_MS);
+}
+
+/**
+ * Vẽ lại màn hình sau khi quân đã trượt xong.
+ *
+ * Mỗi lần vẽ lại là dựng lại cả bàn cờ, nên vẽ ngay sẽ cắt ngang animation của
+ * nước vừa đi. Chờ hết thời gian trượt rồi mới vẽ.
+ */
+const PIECE_SLIDE_MS = 200;
+function rerenderAfterSlide(rerender: () => void): void {
+  setTimeout(rerender, PIECE_SLIDE_MS);
 }
 
 /** Máy nghĩ rồi đi. Giao diện vẫn dùng được trong lúc này. */
 async function botMove(rerender: () => void): Promise<void> {
   thinking = true;
   engineError = null;
-  rerender();
+  // Engine bắt đầu nghĩ ngay, nhưng để quân của người chơi trượt xong đã rồi
+  // mới hiện "đang nghĩ".
+  rerenderAfterSlide(rerender);
   const fenAtStart = game.fen;
   try {
-    const uci = await engine().pickMove(fenAtStart, setup.level);
+    // Nghĩ và "ngẫm" cùng lúc: máy không bao giờ đáp trước khoảng dừng tối thiểu,
+    // nhưng cấp cao nghĩ lâu hơn khoảng đó thì cũng không bị chậm thêm.
+    const pause = new Promise((r) => setTimeout(r, thinkDelayMs(levelById(setup.level))));
+    const [uci] = await Promise.all([engine().pickMove(fenAtStart, setup.level), pause]);
     // Người chơi có thể đã bấm ván mới / lùi nước trong lúc máy nghĩ
     if (game.fen !== fenAtStart || ended) return;
     if (!uci) return;
@@ -310,7 +339,8 @@ async function botMove(rerender: () => void): Promise<void> {
   } finally {
     thinking = false;
     rerender();
-    if (showEval) void refreshEval(rerender);
+    // Thanh đánh giá cập nhật sau, để không vẽ lại giữa lúc quân đang trượt
+    if (showEval) setTimeout(() => void refreshEval(rerender), PIECE_SLIDE_MS);
   }
 }
 

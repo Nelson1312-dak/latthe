@@ -588,3 +588,9 @@
   width: 100%;
   height: auto;
 }
+
+/* Quân cờ trượt về chỗ sau mỗi nước đi. Lớp .pc không có transform thuộc tính
+   nên CSS transform ở đây không phá vị trí ô. */
+.pc.is-moving {
+  transition: transform var(--t-piece) ease-out;
+}

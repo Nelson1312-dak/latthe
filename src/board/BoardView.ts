@@ -3,7 +3,7 @@
 // Phần vẽ dùng chung boardSvg() với các màn tĩnh, nên bàn cờ ở đâu cũng giống nhau.
 // Lớp này chỉ lo việc nhận thao tác của người chơi rồi báo ra ngoài.
 
-import { boardSvg, type BoardOptions } from './Board.ts';
+import { boardSvg, squareXY, type BoardOptions } from './Board.ts';
 import { FILES, squareOf, type Square } from '../../shared/fen.ts';
 
 export interface BoardViewOptions {
@@ -24,6 +24,7 @@ export class BoardView {
   /** Ô đang được bàn phím trỏ tới; chỉ hiện khi dùng bàn phím. */
   private focus: Square | null = null;
 
+
   constructor(host: HTMLElement, options: BoardViewOptions) {
     this.host = host;
     this.o = options;
@@ -40,10 +41,36 @@ export class BoardView {
     this.host.removeEventListener('keydown', this.onKeyDown);
   }
 
-  /** Vẽ lại bàn cờ. Giữ nguyên ô đang chọn nếu thế cờ không đổi. */
-  render(state: BoardOptions): void {
+  /**
+   * Vẽ lại bàn cờ. `animate` là nước vừa đi (ô xuất phát, ô đích) nếu muốn quân
+   * trượt tới chỗ. Màn hình quyết định điều này, vì BoardView bị tạo lại mỗi lần
+   * vẽ nên không tự nhớ được thế cờ trước.
+   */
+  render(state: BoardOptions, animate?: [Square, Square]): void {
     this.state = state;
     this.draw();
+    if (animate) this.animateMove(animate[0], animate[1], state.orientation ?? 'w');
+  }
+
+  /**
+   * Quân cờ đã được vẽ ở ô đích rồi; đẩy ngược nó về ô xuất phát rồi cho trượt
+   * về chỗ. Làm vậy thì không cần giữ lại bàn cờ cũ.
+   */
+  private animateMove(from: Square, to: Square, orientation: 'w' | 'b'): void {
+    const piece = this.host.querySelector<SVGGElement>(`[data-sq="${to}"] .pc`);
+    if (!piece) return;
+    const [fx, fy] = squareXY(from, orientation);
+    const [tx, ty] = squareXY(to, orientation);
+    if (fx === tx && fy === ty) return;
+
+    piece.style.transition = 'none';
+    piece.style.transform = `translate(${fx - tx}px, ${fy - ty}px)`;
+    // Ép trình duyệt tính lại ngay, nếu không nó gộp hai lần đặt transform làm một
+    void piece.getBoundingClientRect();
+    piece.classList.add('is-moving');
+    piece.style.transition = '';
+    piece.style.transform = 'translate(0px, 0px)';
+    piece.addEventListener('transitionend', () => piece.classList.remove('is-moving'), { once: true });
   }
 
   clearSelection(): void {

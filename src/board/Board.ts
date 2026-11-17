@@ -67,6 +67,11 @@ function xy(sq: Square, orientation: 'w' | 'b'): [number, number] {
   return orientation === 'w' ? [f * SQ, (7 - r) * SQ] : [(7 - f) * SQ, r * SQ];
 }
 
+/** Toạ độ góc trên trái của một ô, trong hệ toạ độ SVG. Dùng cho animation. */
+export function squareXY(sq: Square, orientation: 'w' | 'b' = 'w'): [number, number] {
+  return xy(sq, orientation);
+}
+
 function centre(sq: Square, orientation: 'w' | 'b'): [number, number] {
   const [x, y] = xy(sq, orientation);
   return [x + SQ / 2, y + SQ / 2];
@@ -127,10 +132,15 @@ export function boardSvg(o: BoardOptions): string {
     }
   }
 
-  // Quân
+  // Quân. Lớp ngoài giữ vị trí bằng thuộc tính transform, lớp trong để trống
+  // cho CSS transform — nhờ vậy animation không phá vị trí ô.
   for (const [sq, code] of pieces) {
     const [x, y] = xy(sq, or);
-    parts.push(`<g transform="translate(${x} ${y}) scale(${PIECE_SCALE})"><use href="#${code satisfies PieceCode}"/></g>`);
+    parts.push(
+      `<g class="sq" data-sq="${sq}" transform="translate(${x} ${y})">` +
+        `<g class="pc"><use href="#${code satisfies PieceCode}" transform="scale(${PIECE_SCALE})"/></g>` +
+        `</g>`,
+    );
   }
 
   // Khung ô đang trỏ bằng bàn phím
