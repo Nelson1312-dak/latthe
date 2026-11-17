@@ -301,13 +301,24 @@ Bốn chỗ vấp khi làm:
 - [ ] `npm run eval:advisor`: chạy 50 thế cờ mẫu, in tỉ lệ bị chặn, thời gian, xuất câu trả lời ra file để đọc tay
 - **Kiểm tra:** không câu nào nêu sai nước lọt qua kiểm duyệt; tắt Ollama thì vẫn có lời bình bằng câu mẫu; câu đầu tiên hiện ra dưới 5 giây khi hàng đợi trống.
 
-### GĐ6 — Học không giới hạn (L)
-- [ ] `import-puzzles.mjs` (**hỏi bạn trước khi tải file 310 MB**), chỉ mục, đo tốc độ lấy bài
-- [ ] Màn Puzzle: theo chủ đề hoặc trộn, rating, gợi ý, xem lời giải
-- [ ] Màn Ôn tập hôm nay: thẻ lỗi đến hạn + puzzle theo chủ đề yếu
-- [ ] Khoảng 30 bài học (soạn nội dung tiếng Việt)
-- [ ] Màn Tiến độ: chủ đề mạnh/yếu, chuỗi ngày luyện, số thẻ theo hộp
-- **Kiểm tra:** lấy một puzzle dưới 50 ms; rating lên/xuống hợp lý sau 30 bài; thẻ sai quay lại đúng hạn (test với đồng hồ giả).
+### GĐ6 — Học không giới hạn (L) — **phần lớn đã làm**
+- [x] `scripts/import-puzzles.mjs`: tải 310 MB, lọc lấy bài độ khó 600–1800 và phổ biến
+- [x] `server/puzzles.ts` + 19 test: lấy bài theo chỉ mục, Elo với hệ số K giảm dần
+- [x] Màn Ôn tập: thẻ lỗi của chính mình trước, hết thẻ mới lấy bài từ kho; gợi ý, xem lời giải
+- [x] Tiến độ (trong màn Tài khoản): độ khó, chuỗi ngày luyện, thẻ theo hộp, kiểu lỗi hay gặp
+- [x] Màn Sảnh thay số liệu giả bằng dữ liệu thật
+- [ ] **Còn lại: khoảng 30 bài học.** Thiết kế đã rõ — mỗi bài gồm phần giải thích tiếng Việt
+      tự soạn, cộng 3 bài tập lấy từ kho theo chủ đề. Làm vậy thì thế cờ luôn hợp lệ, không
+      phải dựng tay rồi dò lỗi.
+
+Ba lỗi khi nạp kho bài tập, đều đáng ghi lại:
+1. Mạng đứt ở 162/310 MB mà script coi như tải xong, nạp vào thì hỏng. Giờ ghi vào `.part`
+   rồi mới đổi tên, và tải tiếp được bằng HTTP Range.
+2. File của Lichess mở đầu bằng một khung bỏ qua 12 byte; bộ giải nén zstd của Node không
+   tự nhảy qua mà báo `ZSTD_error_prefix_unknown`.
+3. Lichess dựng lại file định kỳ. Nối phần dở dang của bản cũ với phần mới tải ra một file
+   hỏng **ở đúng chỗ nối** — nạp được 32.000 bài rồi mới báo lỗi. Giờ ghi ETag kèm phần dở
+   dang và bỏ nó nếu máy chủ đã đổi bản.
 
 ### GĐ7 — Chơi online (L)
 - [ ] `shared/protocol.ts`, `server/live/rooms.ts`, `clock.ts` + test máy trạng thái và đồng hồ

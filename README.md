@@ -28,6 +28,7 @@ Muốn đăng nhập bằng Google thật thì xem [docs/GOOGLE-LOGIN.md](docs/G
 | `npm run fixtures` | Sinh lại dữ liệu mẫu bằng Stockfish (vài phút) |
 | `npm run openings` | Tải lại bảng khai cuộc từ Lichess |
 | `npm run eval:advisor` | Đo chất lượng lời bình của Huấn luyện viên (cần Ollama) |
+| `npm run puzzles` | Tải và nạp kho bài tập Lichess (310 MB, tải tiếp được nếu đứt) |
 | `npm run shots` | Chụp ảnh các màn hình vào `shots/` (cần `npm run dev`) |
 | `npm run check:design` | Rà theo danh sách cấm ở DESIGN.md: emoji, gradient, bo góc lớn, tương phản, vùng bấm, tràn ngang (cần `npm run dev`) |
 
