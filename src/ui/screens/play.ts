@@ -166,6 +166,7 @@ function gameScreen(): string {
           ? auth.user.name
           : sideName(side),
       side,
+      avatar: !isBot && setup.mode === 'bot' && side === setup.side ? auth.user?.avatar : null,
       bot: isBot,
       you: setup.mode === 'bot' && side === setup.side,
       status: !started

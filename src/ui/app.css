@@ -195,14 +195,14 @@
    và lề), và không rộng quá phần còn lại sau cột bên. Màn có bàn cờ không còn
    dòng tiêu đề thứ hai, cũng không có chân trang.
 
-   132px là đo thật rồi cộng chút dư: hai thanh người chơi 42px, hai khe 4px,
-   viền bàn 2px, lề trên dưới 16px = 126px. Phần dư để thanh người chơi cao lên
-   (tên dài, quân đã ăn) mà bàn cờ không bị cắt mất — trang không cuộn được nữa
-   nên tràn là mất hẳn chứ không phải cuộn xuống xem được. */
+   152px là đo thật rồi cộng dư: hai thanh người chơi 54px (ảnh đại diện, tên,
+   và hàng quân đã ăn bên dưới), hai khe 4px, lề trên dưới 32px = 148px. Trang
+   không cuộn được nữa nên tràn là mất hẳn chứ không phải cuộn xuống xem được —
+   thanh người chơi chỉ cần cao hơn dự tính vài px là thanh dưới bị cắt. */
 :root {
   --side-w: 360px;
   --board-w: min(
-    calc(100vh - var(--head-h) - 132px),
+    calc(100vh - var(--head-h) - 152px),
     calc(100vw - var(--side-w) - 3 * var(--s-6) - 16px)
   );
 }
@@ -331,14 +331,15 @@
   justify-items: center;
 }
 /* Bàn cờ vuông: giới hạn bề ngang là đủ để nó không cao quá cửa sổ.
-   Trừ đi hai thanh người chơi, tiêu đề màn hình và lề. */
+   Trừ đi hai thanh người chơi, tiêu đề màn hình và lề.
+
+   Không viền, không bo góc: chess.com để bàn cờ liền mép, ô cờ chạy thẳng ra
+   tới rìa. Thêm một cái khung quanh bàn chỉ làm nó trông nhỏ lại. */
 .board-row {
   display: flex;
   gap: 0;
   align-items: stretch;
   width: 100%;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
   overflow: hidden;
 }
 /* Cả hàng (thanh đánh giá + bàn cờ) rộng bằng bàn cờ cộng thanh, để bàn cờ

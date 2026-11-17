@@ -293,8 +293,7 @@ export function boardSvg(o: BoardOptions): string {
     );
   }
 
-  // Mép bàn vẽ trong SVG để luôn ôm sát ô cờ, không lệch do viền CSS
-  parts.push(`<rect x=".5" y=".5" width="${SIZE - 1}" height="${SIZE - 1}" fill="none" stroke="var(--board-edge)"/>`);
+  // Không vẽ mép bàn: chess.com để ô cờ chạy thẳng ra rìa, không khung.
   const label = o.label ?? 'Bàn cờ';
   return `<svg class="board" viewBox="0 0 ${SIZE} ${SIZE}" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">${parts.join('')}</svg>`;
 }

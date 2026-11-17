@@ -412,6 +412,20 @@ Hai cái bẫy CSS đáng ghi lại:
    xem được. Lần đầu đặt hụt 22px, thanh người chơi dưới bị cắt mà nhìn lướt không thấy.
    Phải đo từng phần rồi cộng dư, và thêm `max-height: 100%` làm chốt chặn.
 
+### Sau GĐ7 (tiếp) — giao diện bàn cờ theo chess.com (17/11/2026)
+- [x] Bàn cờ liền mép, bỏ viền và bo góc
+- [x] Thanh người chơi: ảnh đại diện, tên + điểm, quân đã ăn xuống dòng dưới, đồng hồ
+      thành ô to bên phải; bên đến lượt thì đồng hồ sáng hẳn
+- [x] Đồng hồ bên không đến lượt nâng tương phản 4,36 → 6,42
+
+**Không chép bộ quân của chess.com.** Bộ "Neo" của họ là tài sản riêng; app dùng
+cburnett (CC BY-SA 3.0) như Lichess. Mặt bàn cờ cũng là màu phẳng chứ không có vân gỗ
+— vân gỗ cần ảnh nền, mà màu phẳng thì nhẹ và kiểm tra tương phản được.
+
+Bẫy gặp lại lần hai: thanh người chơi cao lên (ảnh đại diện + hàng quân đã ăn) làm
+bàn cờ tràn khỏi màn hình, thanh dưới bị cắt. Trang không cuộn được nên tràn là mất
+hẳn. Giờ thanh cao cố định 54px và phần chừa cho bàn cờ tính lại theo đúng con số đó.
+
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
 - [ ] Task Scheduler + giám sát, sao lưu hằng đêm

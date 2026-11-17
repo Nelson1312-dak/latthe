@@ -99,8 +99,10 @@ export function clock(ms: number, state: ClockState = 'idle', id?: string): stri
 /* ---------------- PlayerStrip ---------------- */
 export interface PlayerOptions {
   name: string;
-  /** Bên cầm quân: hiện bằng một ô cờ nhỏ, hữu ích hơn ảnh đại diện chung chung. */
+  /** Bên cầm quân. Hiện trong ô ảnh đại diện khi không có ảnh thật. */
   side: 'w' | 'b';
+  /** Ảnh đại diện; không có thì vẽ quân Vua của bên đó. */
+  avatar?: string | null;
   rating?: number | string;
   bot?: boolean;
   clockMs?: number;
@@ -115,20 +117,38 @@ export interface PlayerOptions {
   accuracy?: number;
 }
 
+/**
+ * Thanh người chơi, xếp như chess.com: ảnh đại diện bên trái, tên và điểm ở
+ * giữa, quân đã ăn nằm ngay dưới tên, đồng hồ thành một ô to bên phải.
+ *
+ * Bản trước nhồi tất cả vào một hàng ngang nên tên, điểm, quân đã ăn và đồng
+ * hồ tranh nhau chỗ; bàn cờ to lên thì hàng đó càng thưa thớt, trông rời rạc.
+ */
 export function playerStrip(o: PlayerOptions): string {
   const taken = (o.took ?? []).map((p) => pieceGlyph(p, 'took-piece')).join('');
+  const face = o.avatar
+    ? `<img src="${esc(o.avatar)}" alt="" width="36" height="36">`
+    : pieceGlyph((o.side + 'k') as PieceCode, 'face-piece');
+  const hàngHai =
+    taken || o.diff
+      ? `<span class="took">${taken}${o.diff && o.diff > 0 ? `<b class="mono">+${o.diff}</b>` : ''}</span>`
+      : '';
   return (
     `<div class="player${o.clockState === 'running' ? ' is-turn' : ''}">` +
-    sideGlyph(o.side) +
-    `<span class="player-name">${esc(o.name)}</span>` +
+    `<span class="player-face" data-side="${o.side}">${face}</span>` +
+    `<span class="player-text">` +
+    `<span class="player-id">` +
+    `<b class="player-name">${esc(o.name)}</b>` +
+    (o.rating !== undefined ? `<span class="player-rating mono">${esc(String(o.rating))}</span>` : '') +
     (o.you ? '<span class="tag">bạn</span>' : '') +
     (o.bot ? '<span class="tag">máy</span>' : '') +
-    (o.rating !== undefined ? `<span class="player-rating mono">${esc(String(o.rating))}</span>` : '') +
-    (taken || o.diff ? `<span class="took">${taken}${o.diff && o.diff > 0 ? `<b class="mono">+${o.diff}</b>` : ''}</span>` : '') +
+    (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
+    `</span>` +
+    hàngHai +
+    `</span>` +
     (o.accuracy !== undefined
       ? `<span class="player-acc"><b class="mono">${o.accuracy}%</b> chính xác</span>`
       : '') +
-    (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
     (o.clockMs !== undefined ? clock(o.clockMs, o.clockState, o.clockId) : '') +
     `</div>`
   );

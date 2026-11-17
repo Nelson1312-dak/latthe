@@ -235,6 +235,14 @@ cửa sổ. Hai quy tắc:
   được nên tràn là mất hẳn.
 - Kết quả: 1524×800 cho bàn cờ 610px (ban đầu 470px); 1920×1080 cho 890px.
   Màn hẹp hơn 1101px thì quay về một cột, bàn cờ trên, cột bên dưới, trang cuộn lại.
+- **Bàn cờ liền mép, không khung.** chess.com để ô cờ chạy thẳng ra rìa; thêm viền
+  quanh bàn chỉ làm nó trông nhỏ lại.
+- **Thanh người chơi xếp như chess.com**: ảnh đại diện bên trái (không có ảnh thì vẽ
+  quân Vua của bên đó), tên và điểm ở giữa, **quân đã ăn nằm ngay dưới tên**, đồng hồ
+  là một ô to bên phải. Bên đang đến lượt thì đồng hồ sáng hẳn (nền sáng, chữ tối),
+  bên kia chìm xuống — nhìn một cái là biết ai đang bị trừ giờ.
+- Thanh người chơi **cao cố định 54px**. Trang không cuộn được nên nó phình ra là bàn
+  cờ bị cắt; để tự do thì thêm hàng quân đã ăn là tràn mất thanh dưới.
 - **Vào mục Chơi là thấy bàn cờ ngay**, phần chọn đối thủ nằm ở cột phải và biến mất
   khi bấm Bắt đầu. Trước đây đó là một trang riêng toàn nút, không có bàn cờ nào.
 
