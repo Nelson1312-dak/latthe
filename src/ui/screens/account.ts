@@ -70,9 +70,28 @@ function progressBlock(): string {
 
 export function account(): string {
   if (auth.offline) {
+    // Trên bản web công khai, server không chạy cùng chỗ với trang. Câu
+    // "chạy npm run dev" là lời nhắc cho người đang code, hiện ra cho khách
+    // vào latbai.vn thì vô nghĩa — họ có cái repo nào đâu mà chạy.
+    const đangTựChạy = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
     return `<div class="screen screen-narrow">
       <div class="screen-head"><h1>Tài khoản</h1></div>
-      ${notice('Không gọi được server. Chạy `npm run dev` rồi tải lại trang.', 'danger', 'clock')}
+      ${
+        đangTựChạy
+          ? notice('Không gọi được server. Chạy `npm run dev` rồi tải lại trang.', 'danger', 'clock')
+          : notice('Bản web này chưa nối được với máy chủ nên chưa đăng nhập được.', 'info', 'clock')
+      }
+      ${
+        đangTựChạy
+          ? ''
+          : `<p class="prose">Chơi với máy và giải bài tập thì vẫn dùng bình thường —
+             phần đó chạy ngay trong trình duyệt. Còn đăng nhập, lưu ván, ôn tập theo
+             lỗi của mình và đấu với người khác thì cần máy chủ, hiện chỉ bật khi máy
+             của chủ app đang mở.</p>
+             <div class="row-actions">
+               <span data-go="choi">${button({ label: 'Chơi với máy', kind: 'primary', icon: 'play' })}</span>
+             </div>`
+      }
     </div>`;
   }
 
