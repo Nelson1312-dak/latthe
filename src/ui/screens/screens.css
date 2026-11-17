@@ -802,3 +802,138 @@ button.log-row {
   font-size: 15px;
   line-height: 23px;
 }
+
+/* ---------------- Chơi với người ---------------- */
+
+/* Chọn thể thức */
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-4);
+}
+.pick-label {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.chips {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.chip {
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.chip:hover {
+  background: var(--bg-2);
+}
+.chip.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.row-actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin-top: var(--s-4);
+}
+
+/* Đang tìm trận */
+.searching {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+.searching-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: tim-tran 1.4s ease-in-out infinite;
+}
+@keyframes tim-tran {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .searching-dot {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+.searching .mono {
+  margin-left: auto;
+  color: var(--text-2);
+}
+
+.code-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.code-input::placeholder {
+  color: var(--text-3);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.log-delta {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+/* Kết quả ván online. Tên khác .game-result của màn Chơi: hai chỗ hiện kết
+   quả khác nhau, dùng chung tên là sửa chỗ này hỏng chỗ kia. */
+.online-result {
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s-4);
+}
+.result-head {
+  display: block;
+  font-size: var(--fs-lg);
+  margin-bottom: var(--s-1);
+}
+
+.draw-offer {
+  margin-bottom: var(--s-4);
+}
+
+/* Nhịp dọc: tấm chắn rồi tới tiêu đề mục kế tiếp thì phải có khoảng thở,
+   nếu không ba mục trông như một khối liền. */
+.screen-narrow .sheet + .rule {
+  margin-top: var(--s-6);
+}
+/* Khoảng cách dưới ô mã mời là để tách nó với khối sau, mà nằm trong tấm
+   chắn thì nó thành một dải trống vô nghĩa bên trong hộp. */
+.sheet .invite {
+  margin-bottom: 0;
+}
+.draw-offer .row-actions {
+  margin-top: var(--s-2);
+}

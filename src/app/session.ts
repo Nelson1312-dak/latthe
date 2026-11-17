@@ -8,6 +8,9 @@ export interface Me {
   name: string;
   avatar: string | null;
   puzzleRating: number;
+  /** Elo ván đấu với người, tách khỏi Elo bài tập. */
+  gameRating: number;
+  gameCount: number;
   /** Tài khoản thử lúc phát triển, không gắn với Google. */
   local: boolean;
 }

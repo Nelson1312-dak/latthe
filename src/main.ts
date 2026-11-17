@@ -14,7 +14,8 @@ import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
 import { handleTrainClick, mountTrain, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
-import { online } from './ui/screens/online.ts';
+import { handleOnlineClick, leaveOnline, mountOnline, online } from './ui/screens/online.ts';
+import { routeName } from './app/route.ts';
 import { account, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
@@ -30,7 +31,7 @@ const SCREENS: Record<string, Screen> = {
   'xem-lai': { title: 'Xem lại ván', render: review },
   'on-tap': { title: 'Ôn tập', render: train },
   hoc: { title: 'Học', render: learn },
-  ban: { title: 'Ván với bạn', render: online },
+  ban: { title: 'Chơi với người', render: online },
   'tai-khoan': { title: 'Tài khoản', render: account },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
 };
@@ -40,11 +41,13 @@ const NAV: { route: string; label: string; icon: IconName }[] = [
   { route: 'xem-lai', label: 'Xem lại', icon: 'review' },
   { route: 'on-tap', label: 'Ôn tập', icon: 'cards' },
   { route: 'hoc', label: 'Học', icon: 'learn' },
-  { route: 'ban', label: 'Bạn bè', icon: 'friends' },
+  { route: 'ban', label: 'Đấu', icon: 'friends' },
 ];
 
 function route(): string {
-  const r = location.hash.replace(/^#\/?/, '');
+  // routeName() đã bỏ phần ?... đi, nên '#/xem-lai?game=12' vẫn là màn Xem lại
+  // chứ không thành một tên lạ rồi rơi về Sảnh.
+  const r = routeName();
   return r in SCREENS ? r : '';
 }
 
@@ -107,8 +110,13 @@ function bottomNav(current: string): string {
   );
 }
 
+/** Màn hình đang hiện, để biết lúc nào người dùng rời khỏi một màn. */
+let mànTrước: string | null = null;
+
 function render(): void {
   const r = route();
+  if (mànTrước === 'ban' && r !== 'ban') leaveOnline();
+  mànTrước = r;
   const screen = SCREENS[r];
   document.title = r ? `${screen.title} · ${APP_NAME}` : APP_NAME;
   const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -119,6 +127,7 @@ function render(): void {
   if (r === 'on-tap') mountTrain(render);
   if (r === 'tai-khoan') mountAccount(render);
   if (r === 'hoc') mountLearn(render);
+  if (r === 'ban') mountOnline(render);
   if (r === '') mountHome(render);
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');
@@ -173,6 +182,7 @@ document.addEventListener('click', (e) => {
   if (route() === 'xem-lai' && handleReviewClick(el, render)) return;
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
   if (route() === 'hoc' && handleLearnClick(el)) return;
+  if (route() === 'ban' && handleOnlineClick(el, render)) return;
 
   // Ô có data-go thì chuyển màn
   const go = el.closest<HTMLElement>('[data-go]');

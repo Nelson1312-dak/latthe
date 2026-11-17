@@ -27,13 +27,18 @@ export async function saveFinishedGame(game: FinishedGame): Promise<void> {
 
 export interface GameRow {
   id: number;
-  mode: 'bot' | 'human';
+  mode: 'bot' | 'human' | 'online';
   level: number | null;
   playerSide: 'w' | 'b';
   winner: 'w' | 'b' | 'draw';
   reason: string;
   moveCount: number;
   createdAt: string;
+  /** Chỉ ván online mới có. */
+  opponentName: string | null;
+  opponentRating: number | null;
+  ratingBefore: number | null;
+  ratingAfter: number | null;
 }
 
 export async function recentGames(): Promise<GameRow[]> {

@@ -71,6 +71,10 @@ export interface User {
   display_name: string;
   avatar_url: string | null;
   puzzle_rating: number;
+  /** Elo ván đấu với người, tách khỏi Elo bài tập. */
+  game_rating: number;
+  /** Đã chơi bao nhiêu ván online — để tính hệ số K. */
+  game_count: number;
   created_at: string;
   last_seen_at: string;
 }

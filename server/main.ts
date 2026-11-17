@@ -9,6 +9,8 @@ import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
 import { explain, ollamaAlive, queueDepth } from './advisor.ts';
 import { pickPuzzle, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
+import { Live } from './live/index.ts';
+import { CONTROLS, DEFAULT_CONTROL, REFUSALS } from '../shared/protocol.ts';
 import { answerCard } from './reviews.ts';
 import type { Facts } from '../shared/advisor/facts.ts';
 import {
@@ -40,6 +42,12 @@ const DEV_AUTH = process.env.AUTH_DEV === '1' && LOCAL_HOSTS.has(HOST);
 const db: Db = openDb();
 purgeExpiredSessions(db);
 setInterval(() => purgeExpiredSessions(db), 3600_000).unref();
+
+// Ván online. Nhịp mỗi giây: ghép trận, kiểm tra rơi cờ, dọn phòng cũ.
+const live = new Live(db);
+setInterval(() => live.tick(), 1_000).unref();
+// Tunnel hay cắt kết nối đang rảnh, nên 15 giây gửi một nhịp tim.
+setInterval(() => live.heartbeat(), 15_000).unref();
 
 /* ---------------- Tiện ích ---------------- */
 
@@ -74,6 +82,8 @@ const publicUser = (u: User) => ({
   name: u.display_name,
   avatar: u.avatar_url,
   puzzleRating: u.puzzle_rating,
+  gameRating: u.game_rating,
+  gameCount: u.game_count,
   local: u.google_sub === null,
 });
 
@@ -168,9 +178,21 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     const user = currentUser(req);
     if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
     const gameId = Number(gameMatch[1]);
-    const game = one<{ id: number; pgn: string; mode: string; level: number | null; player_side: string; winner: string; reason: string; created_at: string }>(
+    const game = one<{
+      id: number;
+      pgn: string;
+      mode: string;
+      level: number | null;
+      player_side: string;
+      winner: string;
+      reason: string;
+      created_at: string;
+      opponent_name: string | null;
+      opponent_rating: number | null;
+    }>(
       db,
-      'SELECT id, pgn, mode, level, player_side, winner, reason, created_at FROM games WHERE id = ? AND user_id = ?',
+      `SELECT id, pgn, mode, level, player_side, winner, reason, created_at, opponent_name, opponent_rating
+         FROM games WHERE id = ? AND user_id = ?`,
       gameId,
       user.id,
     );
@@ -188,6 +210,8 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
           winner: game.winner,
           reason: game.reason,
           createdAt: game.created_at,
+          opponentName: game.opponent_name,
+          opponentRating: game.opponent_rating,
         },
         review: getReview(db, gameId),
       });
@@ -210,6 +234,95 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
 
   /* ---- Huấn luyện viên ---- */
 
+  /* ---------------- Ván online ---------------- */
+
+  // Luồng server đẩy xuống. Giữ mở cho tới khi trình duyệt đóng.
+  if (path === '/api/live/stream' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    live.subscribe(user, res);
+    return;
+  }
+
+  if (path === '/api/live/queue' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const control = typeof body.control === 'string' ? body.control : DEFAULT_CONTROL;
+    const kq = live.joinQueue(user, control);
+    if (!kq.ok) return json(res, 409, { error: REFUSALS[kq.why ?? ''] ?? 'Không vào được hàng chờ' });
+    return json(res, 200, { ok: true, control: control in CONTROLS ? control : DEFAULT_CONTROL });
+  }
+
+  if (path === '/api/live/queue' && method === 'DELETE') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    live.leaveQueue(user.id);
+    return json(res, 200, { ok: true });
+  }
+
+  // Trạng thái hiện tại, để trình duyệt vẽ ngay mà không phải chờ sự kiện đầu.
+  if (path === '/api/live/status' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 200, { state: null, queue: null, playing: false });
+    const now = Date.now();
+    const room = live.roomOf(user.id);
+    return json(res, 200, {
+      state: room ? room.stateFor(user.id, now) : null,
+      queue: live.queueState(user.id, now),
+      playing: live.isPlaying(user.id),
+      controls: Object.keys(CONTROLS),
+    });
+  }
+
+  if (path === '/api/live/invite' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const control = typeof body.control === 'string' ? body.control : DEFAULT_CONTROL;
+    return json(res, 200, { code: live.createInvite(user.id, control) });
+  }
+
+  if (path === '/api/live/join' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const mã = typeof body.code === 'string' ? body.code : '';
+    const kq = live.acceptInvite(user, mã);
+    if (!kq.ok) {
+      const nói: Record<string, string> = {
+        'no-such-invite': 'Mã mời không đúng hoặc đã hết hạn.',
+        'own-invite': 'Đây là lời mời của chính bạn.',
+        'already-playing': 'Một trong hai người đang có ván chưa xong.',
+      };
+      return json(res, 409, { error: nói[kq.why] ?? 'Không vào được ván' });
+    }
+    return json(res, 200, { ok: true, id: kq.roomId });
+  }
+
+  if (path === '/api/live/act' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    let body: Record<string, unknown>;
+    try {
+      body = await readJson(req);
+    } catch {
+      return json(res, 400, { error: 'Nội dung không hợp lệ' });
+    }
+    const what = body.what;
+    const hợpLệ = ['move', 'resign', 'draw-offer', 'draw-accept', 'draw-decline'] as const;
+    if (typeof what !== 'string' || !(hợpLệ as readonly string[]).includes(what)) {
+      return json(res, 400, { error: 'Hành động lạ' });
+    }
+    const kq = live.act(user.id, what as (typeof hợpLệ)[number], {
+      from: typeof body.from === 'string' ? body.from : undefined,
+      to: typeof body.to === 'string' ? body.to : undefined,
+      promotion: typeof body.promotion === 'string' ? body.promotion : undefined,
+    });
+    if (!kq.ok) return json(res, 409, { error: REFUSALS[kq.why ?? ''] ?? 'Không làm được' });
+    return json(res, 200, { ok: true });
+  }
+
   if (path === '/api/advisor/status' && method === 'GET') {
     return json(res, 200, { ollama: await ollamaAlive(), hangCho: queueDepth() });
   }
@@ -230,6 +343,11 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     if (!user) {
       const { templateComment } = await import('../shared/advisor/templates.ts');
       return json(res, 200, { comment: templateComment(facts), source: 'template' });
+    }
+    // Chặn ở server chứ không chỉ giấu nút: đang đánh với người thì không ai
+    // được hỏi máy. Giấu nút thôi thì gọi thẳng API vẫn ra.
+    if (live.isPlaying(user.id)) {
+      return json(res, 403, { error: REFUSALS['advisor-during-game'] });
     }
     return json(res, 200, await explain(db, user.id, facts));
   }

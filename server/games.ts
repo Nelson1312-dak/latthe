@@ -2,8 +2,10 @@
 
 import { all, type Db } from './db.ts';
 
-/** Giữ bao nhiêu ván gần nhất cho mỗi người. Ván qua mạng sẽ có hạn riêng (5). */
+/** Giữ bao nhiêu ván gần nhất cho mỗi người. */
 export const KEEP_GAMES = 20;
+/** Ván online giữ ít hơn, theo đúng kế hoạch: 5 ván gần nhất. */
+export const KEEP_ONLINE = 5;
 
 export interface GameRow {
   id: number;
@@ -14,15 +16,24 @@ export interface GameRow {
   reason: string;
   move_count: number;
   created_at: string;
+  opponent_name: string | null;
+  opponent_rating: number | null;
+  rating_before: number | null;
+  rating_after: number | null;
 }
 
 export interface NewGame {
-  mode: 'bot' | 'human';
+  mode: 'bot' | 'human' | 'online';
   level: number | null;
   playerSide: 'w' | 'b';
   pgn: string;
   winner: 'w' | 'b' | 'draw';
   reason: string;
+  /** Chỉ ván online mới có. */
+  opponentName?: string;
+  opponentRating?: number;
+  ratingBefore?: number;
+  ratingAfter?: number;
 }
 
 export const publicGame = (g: GameRow) => ({
@@ -34,6 +45,10 @@ export const publicGame = (g: GameRow) => ({
   reason: g.reason,
   moveCount: g.move_count,
   createdAt: g.created_at,
+  opponentName: g.opponent_name,
+  opponentRating: g.opponent_rating,
+  ratingBefore: g.rating_before,
+  ratingAfter: g.rating_after,
 });
 
 /**
@@ -42,6 +57,8 @@ export const publicGame = (g: GameRow) => ({
  */
 export function parseNewGame(body: Record<string, unknown>): NewGame | null {
   const pgn = typeof body.pgn === 'string' ? body.pgn.trim() : '';
+  // Cố tình KHÔNG nhận 'online' ở đây: ván online do server tự lưu sau khi
+  // trọng tài xong, chứ trình duyệt không được tự khai mình vừa thắng ai.
   const mode = body.mode === 'bot' || body.mode === 'human' ? body.mode : null;
   const winner = body.winner === 'w' || body.winner === 'b' || body.winner === 'draw' ? body.winner : null;
   const playerSide = body.playerSide === 'w' || body.playerSide === 'b' ? body.playerSide : null;
@@ -64,30 +81,57 @@ export function countMoves(pgn: string): number {
 export function insertGame(db: Db, userId: number, g: NewGame, now = new Date()): number {
   const info = db
     .prepare(
-      `INSERT INTO games (user_id, mode, level, player_side, pgn, winner, reason, move_count, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO games (user_id, mode, level, player_side, pgn, winner, reason, move_count, created_at,
+                          opponent_name, opponent_rating, rating_before, rating_after)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(userId, g.mode, g.level, g.playerSide, g.pgn, g.winner, g.reason, countMoves(g.pgn), now.toISOString());
+    .run(
+      userId,
+      g.mode,
+      g.level,
+      g.playerSide,
+      g.pgn,
+      g.winner,
+      g.reason,
+      countMoves(g.pgn),
+      now.toISOString(),
+      g.opponentName ?? null,
+      g.opponentRating ?? null,
+      g.ratingBefore ?? null,
+      g.ratingAfter ?? null,
+    );
   pruneGames(db, userId);
   return Number(info.lastInsertRowid);
 }
 
-/** Xoá ván cũ, chỉ giữ KEEP_GAMES ván gần nhất của người đó. */
-export function pruneGames(db: Db, userId: number, keep = KEEP_GAMES): number {
-  const info = db
-    .prepare(
-      `DELETE FROM games WHERE user_id = ? AND id NOT IN (
-         SELECT id FROM games WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?
-       )`,
-    )
-    .run(userId, userId, keep);
-  return Number(info.changes);
+/**
+ * Xoá ván cũ. Hai nhóm đếm riêng: ván online chỉ giữ 5 (kế hoạch nói vậy, cho
+ * nhẹ hệ thống), ván với máy giữ 20. Nếu đếm chung thì chơi vài ván với máy là
+ * ván online bị đẩy đi mất.
+ */
+export function pruneGames(db: Db, userId: number, keep = KEEP_GAMES, keepOnline = KEEP_ONLINE): number {
+  let xoá = 0;
+  for (const [điềuKiện, giữ] of [
+    ["mode = 'online'", keepOnline],
+    ["mode <> 'online'", keep],
+  ] as const) {
+    const info = db
+      .prepare(
+        `DELETE FROM games WHERE user_id = ? AND ${điềuKiện} AND id NOT IN (
+           SELECT id FROM games WHERE user_id = ? AND ${điềuKiện} ORDER BY created_at DESC, id DESC LIMIT ?
+         )`,
+      )
+      .run(userId, userId, giữ);
+    xoá += Number(info.changes);
+  }
+  return xoá;
 }
 
 export function listGames(db: Db, userId: number, limit = KEEP_GAMES) {
   return all<GameRow>(
     db,
-    `SELECT id, mode, level, player_side, winner, reason, move_count, created_at
+    `SELECT id, mode, level, player_side, winner, reason, move_count, created_at,
+            opponent_name, opponent_rating, rating_before, rating_after
        FROM games WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`,
     userId,
     limit,

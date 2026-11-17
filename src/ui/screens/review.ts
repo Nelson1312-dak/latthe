@@ -11,6 +11,7 @@ import { engine } from '../../engine/engine.ts';
 import { loadOpenings } from '../../analysis/openings.ts';
 import { reviewGame, ReviewCancelled, mistakesOf, type ReviewResult } from '../../analysis/review.ts';
 import { auth } from '../../app/session.ts';
+import { routeQuery } from '../../app/route.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
 import { fetchGame, saveReview } from '../../app/reviews.ts';
 import { advisorStatus, explainMove, factsForMove, type Comment } from '../../app/advisor.ts';
@@ -404,6 +405,12 @@ async function runReview(rerender: () => void): Promise<void> {
 
 /** Mở màn Xem lại: nạp danh sách ván đã lưu. */
 export function mountReview(rerender: () => void): void {
+  // Tới thẳng một ván qua địa chỉ, ví dụ sau khi đánh xong ván online.
+  const muốn = Number(routeQuery().get('game'));
+  if (muốn && state.gameId !== muốn && state.phase !== 'loading' && state.phase !== 'analysing') {
+    openGame(muốn, rerender);
+    return;
+  }
   if (state.ollama === null) {
     state.ollama = false;
     void advisorStatus().then((s) => {
@@ -420,10 +427,9 @@ export function mountReview(rerender: () => void): void {
   }
 }
 
-export function handleReviewClick(target: HTMLElement, rerender: () => void): boolean {
-  const pick = target.closest<HTMLElement>('[data-game]');
-  if (pick) {
-    const id = Number(pick.dataset.game);
+/** Mở một ván đã lưu theo id. Dùng cho cả chỗ bấm lẫn địa chỉ #/xem-lai?game=N. */
+export function openGame(id: number, rerender: () => void): void {
+  {
     state.phase = 'loading';
     state.gameId = id;
     state.newCards = 0;
@@ -440,7 +446,12 @@ export function handleReviewClick(target: HTMLElement, rerender: () => void): bo
       state.orientation = data.game.playerSide;
       // Ván hai người thì không có "bên của mình": soi lỗi cả hai bên
       if (data.game.mode === 'human') state.playerSide = null;
-      const who = data.game.mode === 'bot' ? `Máy cấp ${data.game.level ?? '?'}` : 'Hai người một máy';
+      const who =
+        data.game.mode === 'bot'
+          ? `Máy cấp ${data.game.level ?? '?'}`
+          : data.game.mode === 'online'
+            ? `Đấu với ${data.game.opponentName ?? 'người chơi khác'}`
+            : 'Hai người một máy';
       state.label = `${who} · ${outcomeText({ winner: data.game.winner, reason: data.game.reason as never })}`;
       if (data.review) {
         // Đã chấm rồi thì mở ra ngay, không chấm lại
@@ -453,6 +464,13 @@ export function handleReviewClick(target: HTMLElement, rerender: () => void): bo
         void runReview(rerender);
       }
     });
+  }
+}
+
+export function handleReviewClick(target: HTMLElement, rerender: () => void): boolean {
+  const pick = target.closest<HTMLElement>('[data-game]');
+  if (pick) {
+    openGame(Number(pick.dataset.game), rerender);
     return true;
   }
 

@@ -334,13 +334,47 @@ Kho bài tập làm mất nhiều thời gian nhất, và chẩn đoán sai mộ
 
    Kết quả: 282 ms → **3–4 ms**.
 
-### GĐ7 — Chơi online (L)
-- [ ] `shared/protocol.ts`, `server/live/rooms.ts`, `clock.ts` + test máy trạng thái và đồng hồ
-- [ ] Tạo ván, link mời, vào ván, hủy ván
-- [ ] Đi quân, đồng hồ, đầu hàng, hòa, hết giờ, mất kết nối / vào lại, khôi phục sau khi server khởi động lại
-- [ ] Ẩn engine/HLV trong ván; server chặn yêu cầu HLV
-- [ ] Giữ 5 ván gần nhất mỗi người; màn Hồ sơ liệt kê 5 ván đó → Review
-- **Kiểm tra:** hai trình duyệt (hai tài khoản) chơi trọn ván; rút mạng một bên 30 giây rồi cắm lại vẫn chơi tiếp; tắt server giữa ván rồi bật lại, ván khôi phục; chơi ván thứ 6 thì ván cũ nhất biến mất.
+### GĐ7 — Chơi online (L) — **xong 17/11/2026**
+- [x] `shared/protocol.ts`: các thông điệp hai bên nói với nhau
+- [x] `server/live/clock.ts`: đồng hồ do server giữ, có cộng giờ; hết giờ mà đối thủ
+      không đủ quân chiếu hết thì xử hòa (luật FIDE 6.9)
+- [x] `server/live/rating.ts`: Elo ván đấu, tách khỏi Elo bài tập, hệ số K giảm dần
+- [x] `server/live/rooms.ts`: máy trạng thái một ván — đi quân, đầu hàng, hòa, hết giờ,
+      mất kết nối rồi vào lại
+- [x] `server/live/queue.ts`: **hàng chờ ghép ngẫu nhiên theo Elo**, ±100 lúc đầu, mỗi
+      5 giây nới thêm 40, tối đa ±800
+- [x] `server/live/index.ts`: SSE + POST, ghép trận, lưu kết quả
+- [x] Màn Đấu: sảnh (chọn thể thức, tìm trận, mời người quen), đang chờ, đang đánh, kết quả
+- [x] Ẩn engine/HLV trong ván; **server trả 403** cho `/api/advisor/explain` khi đang có ván
+- [x] Giữ 5 ván online gần nhất mỗi người, đếm riêng với ván đánh máy
+- [x] 52 test mới (tổng 241)
+- **Kiểm tra (đã chạy, hai trình duyệt thật):** hai tài khoản được ghép và đánh trọn ván;
+  Elo đổi −20/+20 đúng chiều; Elo lệch 800↔2000 thì **không** ghép (khoảng mới ±100);
+  đóng tab một bên → bên kia thấy ngay “Đối thủ mất kết nối · còn 59 giây”, mở lại trong
+  hạn thì ván chạy tiếp; xin lời bình giữa ván bị trả 403; bấm “Xem lại ván” mở đúng ván.
+
+**Vì sao SSE chứ không WebSocket.** Cần đẩy dữ liệu từ server xuống, nhưng cờ vua chỉ vài
+thông điệp mỗi phút. SSE có sẵn trong `node:http`, không phải thêm thư viện nào, và
+`EventSource` của trình duyệt **tự kết nối lại** khi đứt mạng — đúng cái yêu cầu "rút mạng
+30 giây rồi cắm lại". Nước đi gửi lên bằng POST thường.
+
+Mấy chỗ sai đáng ghi lại:
+1. `constructor(private db: Db)` dịch được qua `tsc` nhưng Node chạy TypeScript ở chế độ
+   **chỉ bóc kiểu**, mà thuộc tính khai trong tham số constructor thì phải sinh thêm mã.
+   Kiểu lỗi này `tsc --noEmit` không bắt được, chỉ chạy thật mới lòi ra.
+2. Đẩy trạng thái xuống khi **có người đi quân**, nhưng quên lúc **mất kết nối** — nên đối
+   thủ không hề biết mình đã rớt cho tới khi có việc khác xảy ra. Thêm một lần đẩy ở chỗ
+   đóng luồng và chỗ mở lại luồng.
+3. Bộ định tuyến cắt hash theo `r in SCREENS`, nên `#/xem-lai?game=12` không khớp màn nào
+   và rơi về Sảnh. Giờ bỏ phần `?...` trước khi tra (`src/app/route.ts`).
+4. Đặt lớp CSS trùng tên `.game-result` với màn Chơi, suýt sửa chỗ này hỏng chỗ kia.
+5. Sổ "5 ván online gần nhất" hỏi server đúng một lần rồi thôi, nên đánh xong quay về vẫn
+   thấy sổ rỗng. Và ván đã xong thì phải bỏ khi rời màn, nếu không lần sau vào lại là thấy
+   bàn cờ cũ chứ không phải sảnh.
+
+**Còn thiếu, cần biết khi dùng thật:** hàng chờ và phòng chơi nằm trong bộ nhớ, nên server
+khởi động lại giữa ván là mất ván đó (hai bên quay về sảnh, không ai bị tính thua). Lưu
+phòng xuống database để khôi phục được là việc của GĐ8 nếu thấy cần.
 
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth

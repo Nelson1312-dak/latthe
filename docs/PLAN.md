@@ -29,11 +29,27 @@ Thêm lộ trình bài học cơ bản (luật đi quân → chiến thuật →
 
 ### Chế độ 2 — Chơi với người qua mạng
 
-- Tạo ván, gửi **link mời** cho bạn; chọn thời gian (3+2, 5+0, 10+0, 15+10).
+Hai đường vào:
+
+1. **Tìm trận ngẫu nhiên theo trình độ** (đường chính). Bấm "Tìm trận", server xếp bạn
+   vào hàng chờ và ghép với người có Elo gần nhất. Khoảng chấp nhận nới dần theo thời
+   gian chờ: ±100 lúc đầu, mỗi 5 giây nới thêm 40, tối đa ±800 — chờ khoảng một phút
+   rưỡi là ghép được với bất kỳ ai đang chờ cùng thể thức.
+2. **Link mời** cho người quen, chọn thời gian (3+2, 5+0, 10+0, 15+10).
+
+- Mỗi người có **Elo ván đấu** riêng, tách khỏi Elo bài tập. Thắng/thua/hòa ăn điểm
+  theo Elo chuẩn, hệ số K giảm dần khi đã chơi nhiều.
 - Server kiểm tra mọi nước đi, giữ đồng hồ, xử lý mất kết nối, đầu hàng, đề nghị hòa.
-- **Trong ván: tắt hoàn toàn engine và HLV** (để công bằng).
+- **Trong ván: tắt hoàn toàn engine và HLV** (để công bằng). Server cũng từ chối, không
+  chỉ giấu nút đi.
 - **Sau ván**: review và tư vấn từ AI như chế độ 1; lỗi cũng thành thẻ ôn tập.
 - Mỗi người chỉ lưu **5 ván online gần nhất**.
+
+> **Nói trước một điều thật.** App chạy trên một máy, người dùng là bạn và vài người
+> quen, nên **phần lớn thời gian hàng chờ sẽ trống**. Màn tìm trận vì vậy phải nói thật
+> đang có bao nhiêu người chờ và chờ bao lâu rồi, kèm lối rẽ sang chơi với máy — chứ
+> không quay vòng mãi. Và **không bao giờ lén thả bot vào thay người**: nếu sau này có
+> làm, nó phải ghi rõ là máy.
 
 ### Chung
 
@@ -61,7 +77,7 @@ Trình duyệt người chơi                       Máy này (Windows)
 │ UI (Vite + TS)           │ <────────────> │ Server Node                   │
 │ Stockfish WASM (chơi,    │   qua tunnel   │  - phục vụ web tĩnh           │
 │   review — chạy ở máy    │   tên miền     │  - đăng nhập Google           │
-│   người chơi)            │   cố định      │  - ván online (WebSocket)     │
+│   người chơi)            │   cố định      │  - ván online (SSE + POST)    │
 └──────────────────────────┘                │  - API học tập, puzzle        │
                                             │  - hàng đợi HLV -> Ollama     │
                                             │ SQLite: data/chess.db         │

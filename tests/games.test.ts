@@ -1,7 +1,7 @@
 // Lưu ván: không tin dữ liệu trình duyệt gửi lên, và không để database phình mãi.
 import { describe, expect, it } from 'vitest';
 import { openDb, createLocalUser, type Db } from '../server/db.ts';
-import { KEEP_GAMES, countMoves, insertGame, listGames, parseNewGame, pruneGames } from '../server/games.ts';
+import { KEEP_GAMES, KEEP_ONLINE, countMoves, insertGame, listGames, parseNewGame, pruneGames } from '../server/games.ts';
 
 const PGN = '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5';
 
@@ -77,6 +77,72 @@ describe('lưu và dọn ván', () => {
     }
     expect(db.prepare('SELECT count(*) c FROM games').get()).toMatchObject({ c: KEEP_GAMES });
     db.close();
+  });
+
+  it('ván online chỉ giữ 5, và đếm riêng với ván đánh máy', () => {
+    const { db, userId } = setup();
+    const online = (i: number) =>
+      insertGame(
+        db,
+        userId,
+        {
+          mode: 'online' as const,
+          level: null,
+          playerSide: 'w' as const,
+          pgn: '1. e4 e5 2. Nf3',
+          winner: 'w' as const,
+          reason: 'resign',
+          opponentName: `Hùng ${i}`,
+          opponentRating: 1200,
+          ratingBefore: 1000,
+          ratingAfter: 1008,
+        },
+        new Date(Date.now() + i * 1000),
+      );
+
+    for (let i = 0; i < KEEP_ONLINE + 4; i++) online(i);
+    // Chơi thêm thật nhiều ván với máy: không được đẩy ván online đi mất
+    for (let i = 0; i < KEEP_GAMES + 3; i++) {
+      insertGame(db, userId, parseNewGame(sample())!, new Date(Date.now() + 100_000 + i * 1000));
+    }
+
+    const ds = listGames(db, userId, 100);
+    expect(ds.filter((g) => g.mode === 'online')).toHaveLength(KEEP_ONLINE);
+    expect(ds.filter((g) => g.mode !== 'online')).toHaveLength(KEEP_GAMES);
+    // Giữ đúng 5 ván MỚI nhất
+    const giữ = ds.filter((g) => g.mode === 'online').map((g) => g.opponentName);
+    expect(giữ).toEqual(['Hùng 8', 'Hùng 7', 'Hùng 6', 'Hùng 5', 'Hùng 4']);
+    db.close();
+  });
+
+  it('ván online nhớ đối thủ và Elo trước/sau', () => {
+    const { db, userId } = setup();
+    insertGame(db, userId, {
+      mode: 'online',
+      level: null,
+      playerSide: 'b',
+      pgn: '1. e4 e5',
+      winner: 'b',
+      reason: 'checkmate',
+      opponentName: 'Minh',
+      opponentRating: 1310,
+      ratingBefore: 1200,
+      ratingAfter: 1216,
+    });
+    expect(listGames(db, userId)[0]).toMatchObject({
+      mode: 'online',
+      opponentName: 'Minh',
+      opponentRating: 1310,
+      ratingBefore: 1200,
+      ratingAfter: 1216,
+    });
+    db.close();
+  });
+
+  it('trình duyệt không tự khai được ván online', () => {
+    // Ván online do server lưu sau khi trọng tài xong; nhận 'online' từ trình
+    // duyệt là mở đường cho người ta tự cộng Elo cho mình.
+    expect(parseNewGame({ ...sample(), mode: 'online' })).toBeNull();
   });
 
   it('dọn ván của người này không đụng ván người khác', () => {

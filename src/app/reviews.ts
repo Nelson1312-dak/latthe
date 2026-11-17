@@ -6,12 +6,15 @@ import { auth } from './session.ts';
 export interface GameDetail {
   id: number;
   pgn: string;
-  mode: 'bot' | 'human';
+  mode: 'bot' | 'human' | 'online';
   level: number | null;
   playerSide: 'w' | 'b';
   winner: 'w' | 'b' | 'draw';
   reason: string;
   createdAt: string;
+  /** Chỉ ván online mới có. */
+  opponentName?: string | null;
+  opponentRating?: number | null;
 }
 
 export async function fetchGame(id: number): Promise<{ game: GameDetail; review: ReviewResult | null } | null> {
