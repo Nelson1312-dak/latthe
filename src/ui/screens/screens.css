@@ -630,6 +630,17 @@
 }
 
 /* ---------------- Chọn đối thủ trước ván ---------------- */
+/* Tên khai cuộc hiện ngay trong lúc đánh, không phải đợi tới màn Xem lại */
+.opening-line {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.opening-line .mono {
+  color: var(--text-3);
+  margin-right: var(--s-1);
+}
+
 /* Phần chọn đối thủ nằm trong cột phải, cạnh bàn cờ */
 .setup {
   display: grid;

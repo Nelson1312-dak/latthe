@@ -433,6 +433,22 @@ hẳn. Giờ thanh cao cố định 54px và phần chừa cho bàn cờ tính l
       trang chỉ làm phân vân
 - [x] Bỏ dòng việc "Chơi một ván" (đang đứng trên bàn cờ rồi còn mời vào chơi)
 
+### Sau GĐ7 (tiếp) — làm lại HUD quanh bàn cờ (17/11/2026)
+- [x] Bên đến lượt nổi lên, bên kia mờ 55%; bỏ "lượt Trắng" khỏi tiêu đề vì đã thừa
+- [x] Sổ nước đi: vạch chia hai cột, nước đang xem tô rõ hơn
+- [x] Hết ván hiện thẻ kết quả (ai thắng, vì sao, hai nút đi tiếp) thay cho một dòng chữ
+- [x] Bỏ dòng "Nước vừa đi: …" — sổ nước đi đã tô sẵn nước đó
+- [x] Tên khai cuộc hiện ngay trong lúc đánh
+
+**Một lỗi tự gây ra, và một test vô dụng.** Thêm `loadOpenings().then(rerender)` vào
+`mountPlay` mà quên rằng `mountPlay` chạy SAU mỗi lần vẽ: vẽ → gắn → vẽ → gắn, trang
+treo cứng. `tsc` không bắt được.
+Tệ hơn: test đầu tiên mình viết để canh lỗi này **vẫn xanh khi lỗi còn nguyên** — nó chỉ
+dò xem phía trên có chữ `if (` nào không, mà `if (!host) return;` ở đầu hàm luôn khớp.
+Phải thử bỏ cờ chặn ra, thấy test vẫn xanh, mới biết. Bản thay thế kiểm đúng một việc:
+`openingsAsked = true` phải đứng trước `loadOpenings`, và đã xác nhận là nó đỏ khi bỏ
+cờ chặn đi. **Test canh lỗi thì phải thử làm nó đỏ một lần, không thì chỉ là trang trí.**
+
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
 - [ ] Task Scheduler + giám sát, sao lưu hằng đêm

@@ -60,3 +60,23 @@ describe('thời gian trượt quân', () => {
     expect(Number(m?.[1])).toBe(PIECE_SLIDE_MS);
   });
 });
+
+describe('gắn màn hình', () => {
+  it('mountPlay chỉ xin kho khai cuộc một lần', () => {
+    // mountPlay chạy SAU mỗi lần vẽ. Có lần mình để `loadOpenings().then(rerender)`
+    // không điều kiện trong đó: vẽ -> gắn -> vẽ -> gắn ... trang treo cứng. `tsc`
+    // không bắt được loại lỗi này — và bản test đầu tiên của mình cũng không:
+    // nó viết lỏng tới mức vẫn xanh khi lỗi còn nguyên. Bản này đã thử bỏ cờ
+    // chặn ra và xác nhận là nó đỏ.
+    const src = readFileSync('src/ui/screens/play.ts', 'utf8');
+    const start = src.indexOf('export function mountPlay');
+    expect(start).toBeGreaterThan(-1);
+    const body = src.slice(start, src.indexOf('\n}', start));
+
+    const gọi = body.indexOf('loadOpenings');
+    expect(gọi, 'mountPlay phải nạp kho khai cuộc').toBeGreaterThan(-1);
+    const khoá = body.indexOf('openingsAsked = true');
+    expect(khoá, 'lời gọi phải nằm sau một cái cờ chặn').toBeGreaterThan(-1);
+    expect(khoá).toBeLessThan(gọi);
+  });
+});

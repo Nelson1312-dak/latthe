@@ -241,6 +241,15 @@ cửa sổ. Hai quy tắc:
   quân Vua của bên đó), tên và điểm ở giữa, **quân đã ăn nằm ngay dưới tên**, đồng hồ
   là một ô to bên phải. Bên đang đến lượt thì đồng hồ sáng hẳn (nền sáng, chữ tối),
   bên kia chìm xuống — nhìn một cái là biết ai đang bị trừ giờ.
+- **Bên đang đến lượt nổi lên, bên kia chìm xuống** (mờ 55%). Nhìn bàn cờ là biết tới
+  phiên ai, không phải đọc chữ. Vì vậy dòng tiêu đề không nhắc "lượt Trắng" nữa.
+- **Sổ nước đi có vạch chia giữa cột Trắng và cột Đen.** Không có nó thì hai bên dính
+  vào nhau, mắt phải tự dò nước nào của ai.
+- **Hết ván thì hiện một thẻ kết quả**, không phải một dòng chữ lẫn trong sổ nước đi:
+  ai thắng, vì sao, và hai nút đi tiếp (Xem lại ván, Ván mới).
+- **Tên khai cuộc hiện ngay trong lúc đánh** ("C50 Italian Game"), không bắt đợi tới
+  màn Xem lại. Đây là app học cờ, biết mình đang đi vào khai cuộc nào là một phần của
+  việc học.
 - Thanh người chơi **cao cố định 54px**. Trang không cuộn được nên nó phình ra là bàn
   cờ bị cắt; để tự do thì thêm hàng quân đã ăn là tràn mất thanh dưới.
 - **Vào mục Chơi là thấy bàn cờ ngay**, phần chọn đối thủ nằm ở cột phải và biến mất

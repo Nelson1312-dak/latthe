@@ -11,6 +11,7 @@ import { playSound, soundEnabled } from '../../app/sound.ts';
 import { engine } from '../../engine/engine.ts';
 import { LEVELS, levelById, thinkDelayMs } from '../../engine/levels.ts';
 import { splitUci } from '../../engine/uci.ts';
+import { loadOpenings, openingAt } from '../../analysis/openings.ts';
 import { saveFinishedGame } from '../../app/games.ts';
 import { auth } from '../../app/session.ts';
 import { offerReview } from './review.ts';
@@ -63,6 +64,8 @@ let hints: [string, string, string] | null = null;
 let hintLoading = false;
 /** Nước đã chọn đi trước trong lúc máy nghĩ; tới lượt mình thì đi luôn. */
 let premove: [Square, Square] | null = null;
+/** Đã xin kho khai cuộc chưa (chỉ xin một lần cho cả phiên). */
+let openingsAsked = false;
 
 const PROMOTION_PIECES = [
   ['q', 'Hậu'],
@@ -153,7 +156,6 @@ function hintBlock(): string {
 function gameScreen(extraSide = ''): string {
   const mat = material(game.fen);
   const result = game.outcome();
-  const last = game.lastMove;
   const topSide: Side = orientation === 'w' ? 'b' : 'w';
 
   const strip = (side: Side) => {
@@ -182,11 +184,25 @@ function gameScreen(extraSide = ''): string {
     });
   };
 
+  const thắngThua = !result
+    ? ''
+    : setup.mode !== 'bot' || result.winner === 'draw'
+      ? ''
+      : result.winner === setup.side
+        ? 'Bạn thắng'
+        : 'Bạn thua';
+
   const statusLine = !started
     ? ''
     : result
-    ? `<p class="game-result"><b>${outcomeText(result)}</b></p>
-       <div class="setup-go" style="margin-top:var(--s-3)">${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' })}</div>`
+    ? `<div class="online-result">
+         <b class="result-head">${thắngThua || outcomeText(result)}</b>
+         ${thắngThua ? `<span class="muted">${outcomeText(result)}</span>` : ''}
+         <div class="row-actions">
+           ${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' })}
+           ${button({ label: 'Ván mới', icon: 'play' })}
+         </div>
+       </div>`
     : thinking
       ? notice(
           premove
@@ -215,9 +231,13 @@ function gameScreen(extraSide = ''): string {
       <h1>Chơi</h1>
       <span class="head-meta">
         ${
+          // Không nhắc "lượt Trắng" nữa: thanh người chơi đã sáng/mờ theo lượt,
+          // và bên đang đi có chữ "đang đi" ngay cạnh tên.
           !started
             ? 'Chọn đối thủ rồi bắt đầu'
-            : `${setup.mode === 'bot' ? `${levelById(setup.level).name} · bạn cầm ${sideName(setup.side)}` : 'Hai người một máy'}${result ? '' : ` · lượt ${sideName(game.turn)}`}`
+            : setup.mode === 'bot'
+              ? `${levelById(setup.level).name} · bạn cầm ${sideName(setup.side)}`
+              : 'Hai người một máy'
         }
       </span>
       ${toolbar(
@@ -265,8 +285,8 @@ function gameScreen(extraSide = ''): string {
             <span class="head-meta">${game.ply}/${game.length}</span>
           </div>`,
         )}
+        ${khaiCuoc()}
         ${showEval && currentEval ? `<p class="head-meta">Đánh giá: <span class="mono">${formatScore(currentEval)}</span> (góc nhìn Trắng)</p>` : ''}
-        ${last ? `<p class="head-meta">Nước vừa đi: <span class="mono">${last.san}</span></p>` : ''}
         ${engineError ? notice(engineError, 'danger', 'engine') : ''}
         ${extraSide}
       </div>
@@ -343,8 +363,34 @@ export function mountPlay(rerender: () => void): void {
   });
 
   drawBoard();
+  // Kho khai cuộc: nạp đúng MỘT lần rồi vẽ lại đúng một lần.
+  // mountPlay chạy sau mỗi lần vẽ, nên gọi .then(rerender) vô điều kiện ở đây
+  // là tự gọi lại mình mãi mãi — trang treo cứng.
+  // Kho khai cuộc: xin đúng MỘT lần rồi vẽ lại đúng một lần.
+  // mountPlay chạy sau mỗi lần vẽ, nên gọi .then(rerender) vô điều kiện ở đây
+  // là tự gọi lại mình mãi mãi — trang treo cứng.
+  if (!openingsAsked) {
+    openingsAsked = true;
+    void loadOpenings().then(rerender);
+  }
   // Máy đi trước thì bắt đầu nghĩ ngay
   if (started && isBotTurn() && !thinking) void botMove(rerender);
+}
+
+/**
+ * Tên khai cuộc của thế cờ đang xem.
+ *
+ * Người học nhìn thấy mình vừa đi vào khai cuộc nào ngay trong lúc đánh, chứ
+ * không phải đợi tới lúc xem lại. Chưa nạp xong kho thì không hiện gì.
+ */
+function khaiCuoc(): string {
+  if (!started || !game.length) return '';
+  // Dò ngược từ thế cờ hiện tại: khai cuộc sâu nhất còn khớp
+  for (let ply = game.ply; ply > 0; ply--) {
+    const o = openingAt(game.history[ply - 1].fen);
+    if (o) return `<p class="opening-line"><span class="mono">${o.eco}</span> ${o.name}</p>`;
+  }
+  return '';
 }
 
 /** Người chơi có được phép đi lúc này không. */

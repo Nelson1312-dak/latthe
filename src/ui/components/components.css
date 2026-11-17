@@ -267,7 +267,10 @@
 }
 
 /* ---------------- PlayerStrip ---------------- */
+/* Bên đang đến lượt nổi lên, bên kia chìm xuống — nhìn bàn cờ là biết ngay tới
+   phiên ai, không phải đọc chữ. chess.com cũng làm vậy. */
 .player {
+  transition: opacity var(--t-ui) linear;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -278,6 +281,10 @@
   min-height: 54px;
 }
 /* Ô ảnh đại diện; không có ảnh thì vẽ quân Vua của bên đó */
+/* Chỉ làm mờ khi ván đang chạy (có .is-turn ở đâu đó trong cặp) */
+.game-board:has(.player.is-turn) .player:not(.is-turn) {
+  opacity: 0.55;
+}
 .player-face {
   width: 32px;
   height: 32px;
@@ -395,8 +402,15 @@
 }
 .move-row {
   display: grid;
-  grid-template-columns: 30px 1fr 1fr;
+  grid-template-columns: 34px 1fr 1fr;
   align-items: stretch;
+  /* Vạch chia giữa cột Trắng và cột Đen: không có nó thì hai bên dính vào nhau
+     và mắt phải tự dò xem nước nào của ai. */
+  column-gap: 1px;
+  background: var(--line);
+}
+.move-row > * {
+  background: var(--bg-1);
 }
 .move-row:nth-child(even) {
   background: var(--bg-row);
@@ -427,8 +441,9 @@
   background: var(--bg-2);
 }
 .move.is-current {
-  background: var(--bg-3);
+  background: var(--accent-dim);
   border-left-color: var(--accent);
+  color: var(--text-1);
   font-weight: 600;
 }
 .move-empty {
