@@ -8,7 +8,7 @@
 // Lưu ý về dữ liệu: cột FEN là thế cờ TRƯỚC nước của đối phương, và nước đầu
 // trong cột Moves là nước của đối phương. Người học bắt đầu giải từ nước thứ hai.
 
-import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readSync, renameSync, rmSync, statSync } from 'node:fs';
 import { createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { createInterface } from 'node:readline';
@@ -128,12 +128,36 @@ function openDb() {
   return db;
 }
 
+/**
+ * Vị trí byte của khung dữ liệu zstd đầu tiên.
+ *
+ * File của Lichess mở đầu bằng một "khung bỏ qua" (skippable frame) chứa dữ
+ * liệu phụ. Bộ giải nén zstd của Node không tự bỏ qua khung này mà báo lỗi
+ * ZSTD_error_prefix_unknown, nên phải tự nhảy qua.
+ */
+function firstDataOffset(file) {
+  const fd = openSync(file, 'r');
+  const head = Buffer.alloc(8);
+  let offset = 0;
+  try {
+    for (;;) {
+      if (readSync(fd, head, 0, 8, offset) < 8) return 0;
+      // Khung bỏ qua: 50..5F 2A 4D 18, rồi 4 byte độ dài
+      const isSkippable = head[0] >= 0x50 && head[0] <= 0x5f && head[1] === 0x2a && head[2] === 0x4d && head[3] === 0x18;
+      if (!isSkippable) return offset;
+      offset += 8 + head.readUInt32LE(4);
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
+
 async function load(db) {
   const insert = db.prepare(
     'INSERT OR REPLACE INTO puzzles (id, fen, moves, rating, themes, popularity) VALUES (?, ?, ?, ?, ?, ?)',
   );
   const rl = createInterface({
-    input: createReadStream(RAW).pipe(createZstdDecompress()),
+    input: createReadStream(RAW, { start: firstDataOffset(RAW) }).pipe(createZstdDecompress()),
     crlfDelay: Infinity,
   });
 
