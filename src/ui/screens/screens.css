@@ -630,38 +630,17 @@
 }
 
 /* ---------------- Chọn đối thủ trước ván ---------------- */
-/* Trái là các lựa chọn, phải là bàn cờ xem trước. Bản trước chỉ có cột trái,
-   một phần ba bên phải để trống. */
-.setup-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
-  gap: var(--s-8);
-  align-items: start;
-}
+/* Phần chọn đối thủ nằm trong cột phải, cạnh bàn cờ */
 .setup {
   display: grid;
-  gap: var(--s-6);
-  max-width: 720px;
+  gap: var(--s-5);
 }
-.setup-preview {
-  margin: 0;
-  display: grid;
-  gap: var(--s-3);
+/* Cột phải hẹp: cấp độ xếp hai hàng dọc thay vì bốn */
+.game-side .level-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.setup-preview figcaption {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-.setup-preview figcaption b {
-  color: var(--text-1);
-}
-@media (max-width: 900px) {
-  .setup-wrap {
-    grid-template-columns: 1fr;
-  }
-  .setup-preview {
-    display: none;
-  }
+.game-side .setup .seg {
+  flex-wrap: wrap;
 }
 .setup-block {
   display: grid;

@@ -98,6 +98,59 @@ function centre(sq: Square, orientation: 'w' | 'b'): [number, number] {
   return [x + SQ / 2, y + SQ / 2];
 }
 
+/**
+ * Đường đi của một mũi tên, trả về chuỗi "x,y x,y ..." cho <polyline>.
+ *
+ * Mũi tên phải đi theo đúng cách quân cờ đi, chứ không phải cứ nối thẳng hai ô:
+ * nước của Mã là hình chữ L nên mũi tên cũng gấp khúc — đi hai ô theo trục dài
+ * trước rồi mới rẽ, đúng như chess.com và Lichess vẽ. Nối thẳng thì mũi tên cắt
+ * chéo qua giữa bàn cờ, chỉ đúng với Xe/Tượng/Hậu.
+ *
+ * Trả về null nếu hai ô trùng nhau (không có mũi tên nào để vẽ).
+ */
+export function arrowPath(
+  from: Square,
+  to: Square,
+  orientation: 'w' | 'b',
+  headRoom: number,
+): string | null {
+  const [x1, y1] = centre(from, orientation);
+  const [x2, y2] = centre(to, orientation);
+  if (x1 === x2 && y1 === y2) return null;
+
+  // Chênh lệch tính bằng số ô, theo hệ toạ độ MÀN HÌNH (đã tính hướng bàn cờ)
+  const cx = Math.round((x2 - x1) / SQ);
+  const cy = Math.round((y2 - y1) / SQ);
+  const knight =
+    (Math.abs(cx) === 1 && Math.abs(cy) === 2) || (Math.abs(cx) === 2 && Math.abs(cy) === 1);
+
+  /** Lùi điểm cuối lại để chỗ cho đầu mũi tên. */
+  const pullBack = (ax: number, ay: number, bx: number, by: number): [number, number] => {
+    const len = Math.hypot(bx - ax, by - ay) || 1;
+    return [bx - ((bx - ax) / len) * headRoom, by - ((by - ay) / len) * headRoom];
+  };
+
+  if (knight) {
+    // Đi trục dài trước rồi rẽ — giống hệt cách người ta cầm quân Mã mà đi
+    const [kx, ky] = Math.abs(cx) === 2 ? [x2, y1] : [x1, y2];
+    const [ex, ey] = pullBack(kx, ky, x2, y2);
+    // Bắt đầu lùi khỏi tâm ô xuất phát một chút cho đỡ đè lên quân
+    const len = Math.hypot(kx - x1, ky - y1) || 1;
+    const sx = x1 + ((kx - x1) / len) * (SQ * 0.3);
+    const sy = y1 + ((ky - y1) / len) * (SQ * 0.3);
+    return `${sx},${sy} ${kx},${ky} ${ex},${ey}`;
+  }
+
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  const ux = (x2 - x1) / len;
+  const uy = (y2 - y1) / len;
+  const sx = x1 + ux * SQ * 0.3;
+  const sy = y1 + uy * SQ * 0.3;
+  const ex = x2 - ux * headRoom;
+  const ey = y2 - uy * headRoom;
+  return `${sx},${sy} ${ex},${ey}`;
+}
+
 let boardSeq = 0;
 
 export function boardSvg(o: BoardOptions): string {
@@ -214,26 +267,19 @@ export function boardSvg(o: BoardOptions): string {
       : a.kind === 'user'
         ? 'var(--arrow-user)'
         : 'var(--arrow-coach)';
-    const [x1, y1] = centre(a.from, or);
-    const [x2, y2] = centre(a.to, or);
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const len = Math.hypot(dx, dy);
-    const head = SQ * 0.26;
-    const ux = dx / len;
-    const uy = dy / len;
-    // chừa chỗ cho đầu mũi tên và lùi khỏi tâm ô xuất phát
-    const sx = x1 + ux * SQ * 0.3;
-    const sy = y1 + uy * SQ * 0.3;
-    const ex = x2 - ux * head;
-    const ey = y2 - uy * head;
     const id = `${uid}-arrow-${i}`;
+    // Tỉ lệ theo Lichess: thân mảnh, đầu rộng gấp đôi thân, hơi trong suốt để
+    // còn nhìn thấy quân cờ nằm dưới.
+    const w = SQ * (a.brush ? 0.13 : 0.1);
+    const head = SQ * 0.26;
+    const pts = arrowPath(a.from, a.to, or, head);
+    if (!pts) return;
     parts.push(
-      `<marker id="${id}" markerWidth="3.2" markerHeight="3.2" refX="1.7" refY="1.6" orient="auto">` +
-        `<path d="M0 0 L3 1.5 L0 3 Z" fill="${colour}"/></marker>`,
-      // Mũi tên người chơi tự vẽ dày hơn mũi tên gợi ý, như Lichess: nét mảnh
-      // trên bàn cờ lớn nhìn như vết xước chứ không như một ý định
-      `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${colour}" stroke-width="${SQ * (a.brush ? 0.16 : 0.11)}" opacity="${a.brush ? '.8' : '.85'}" marker-end="url(#${id})"/>`,
+      // refX đặt ở mũi nhọn để đầu mũi tên dừng đúng tâm ô đích
+      `<marker id="${id}" markerWidth="3" markerHeight="3" refX="2.8" refY="1.5" orient="auto">` +
+        `<path d="M0 0 L2.8 1.5 L0 3 Z" fill="${colour}"/></marker>`,
+      `<polyline points="${pts}" fill="none" stroke="${colour}" stroke-width="${w}" ` +
+        `stroke-linecap="butt" stroke-linejoin="round" opacity="${a.brush ? '.65' : '.85'}" marker-end="url(#${id})"/>`,
     );
   });
 

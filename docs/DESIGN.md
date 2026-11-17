@@ -224,8 +224,19 @@ cửa sổ. Hai quy tắc:
   vẫn còn trong mã cho trình đọc màn hình, chỉ là không vẽ ra.
 - **Bàn cờ dính khi cuộn** và không giãn theo cột bên. Màn Xem lại có cột phải
   cao hơn bàn cờ nhiều; nếu để lưới chia đều, phần cao dư sẽ đẩy bàn cờ xuống.
-- Kết quả: cửa sổ 1524×800 cho bàn cờ 622px (trước đây 470px); 1920×1080 cho 902px.
-  Màn hẹp hơn 1101px thì quay về một cột, bàn cờ trên, cột bên dưới.
+- **Vừa đúng một màn hình, không cuộn trang.** Từ 1101px trở lên: không chân trang,
+  trang không cuộn, cột phải tự cuộn bên trong. Trang cuộn được thì bàn cờ trôi lên
+  trôi xuống trong lúc đánh.
+- Cột phải là flex với `flex: none` cho từng khối, không phải lưới: cột cao cố định
+  nên lưới ép các khối co lại, mà `.sheet` có `overflow: hidden` nên nó **cắt cụt**
+  nội dung thay vì cho cuộn.
+- Chiều cao dành cho bàn cờ = `100vh - header - 132px`. 132 là đo thật (hai thanh
+  người chơi 42, hai khe 4, viền 2, lề 32 = 126) cộng chút dư, vì trang không cuộn
+  được nên tràn là mất hẳn.
+- Kết quả: 1524×800 cho bàn cờ 610px (ban đầu 470px); 1920×1080 cho 890px.
+  Màn hẹp hơn 1101px thì quay về một cột, bàn cờ trên, cột bên dưới, trang cuộn lại.
+- **Vào mục Chơi là thấy bàn cờ ngay**, phần chọn đối thủ nằm ở cột phải và biến mất
+  khi bấm Bắt đầu. Trước đây đó là một trang riêng toàn nút, không có bàn cờ nào.
 
 ### 4.6b Thao tác trên bàn cờ
 
@@ -236,6 +247,12 @@ Theo đúng thói quen của người đã chơi chess.com/Lichess, không bắt
 - **Chuột phải kéo** vẽ mũi tên, **chuột phải bấm** khoanh ô. Màu theo Lichess: thường là
   xanh lá, Shift đỏ, Alt xanh dương, Shift+Alt vàng. Vẽ lại đúng nét đó thì xoá. Chuột trái
   hoặc đi một nước thì xoá hết.
+- **Mũi tên đi theo đúng cách quân cờ đi.** Nước của Mã là hình chữ L nên mũi tên
+  cũng gấp khúc: đi hai ô theo trục dài trước rồi mới rẽ, đúng như chess.com và
+  Lichess. Nối thẳng thì mũi tên cắt chéo qua giữa bàn, chỉ đúng với Xe/Tượng/Hậu.
+  `arrowPath()` trong `src/board/Board.ts`, có test cho cả tám nước của Mã.
+- Tỉ lệ mũi tên theo Lichess: thân 0,13 ô, đầu rộng gấp đôi thân, độ mờ 0,65 để
+  còn nhìn thấy quân nằm dưới.
 - **Đi trước (premove)** khi chưa tới lượt: chọn được mọi ô quân đó *về hình học* tới được
   trên bàn trống (kể cả ô quân mình đang đứng, để ăn lại). Tới lượt mới kiểm tra luật thật,
   không hợp lệ thì bỏ. Ô đi trước tô xanh xám. Chuột phải, bấm ra ngoài, hoặc Esc là huỷ.

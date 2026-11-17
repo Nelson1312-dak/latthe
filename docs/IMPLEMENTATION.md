@@ -396,6 +396,22 @@ phòng xuống database để khôi phục được là việc của GĐ8 nếu 
       phong cấp, hỏi đầu hàng) nằm trong luồng trang chứ không phủ lên — tức là hiện tận
       cuối trang, ngoài tầm nhìn. Giờ `position: fixed`.
 
+### Sau GĐ7 (tiếp) — bàn cờ chiếm trọn màn hình, mũi tên đúng luật (17/11/2026)
+- [x] Màn đánh cờ vừa đúng một màn hình: bỏ chân trang, trang không cuộn, cột phải tự
+      cuộn. Bàn cờ 1524×800 lên 610px.
+- [x] Vào mục Chơi là thấy bàn cờ ngay, phần chọn đối thủ sang cột phải
+- [x] Mũi tên của Mã vẽ gấp khúc chữ L như chess.com/Lichess; 10 test cho hình học mũi tên
+- [x] Tỉ lệ mũi tên gọn lại theo Lichess; bỏ dòng nhắc "kéo quân…" sau nước đầu
+
+Hai cái bẫy CSS đáng ghi lại:
+1. Cột phải dùng lưới (grid) trong một ô cao cố định thì lưới **ép các khối co lại**.
+   `.sheet` có `overflow: hidden` nên nó cắt cụt nội dung chứ không cho cuộn — sổ nước
+   đi của màn Xem lại chỉ còn 2 dòng rưỡi, phần Tổng kết mất hẳn. Đổi sang flex với
+   `flex: none` thì mỗi khối cao đúng nội dung và cả cột tự cuộn.
+2. Trang không cuộn được nữa thì **tràn là mất hẳn**, không như trước là cuộn xuống vẫn
+   xem được. Lần đầu đặt hụt 22px, thanh người chơi dưới bị cắt mà nhìn lướt không thấy.
+   Phải đo từng phần rồi cộng dư, và thêm `max-height: 100%` làm chốt chặn.
+
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
 - [ ] Task Scheduler + giám sát, sao lưu hằng đêm

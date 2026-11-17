@@ -3,9 +3,8 @@
 // trong lúc máy nghĩ.
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
-import { boardSvg } from '../../board/Board.ts';
 import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
-import { Game, START_FEN, outcomeText, type Side, type Square } from '../../../shared/chess.ts';
+import { Game, outcomeText, type Side, type Square } from '../../../shared/chess.ts';
 import { material } from '../../../shared/fen.ts';
 import { formatScore, type Score } from '../../../shared/winrate.ts';
 import { playSound, soundEnabled } from '../../app/sound.ts';
@@ -92,23 +91,21 @@ function newGame(): void {
   animatedOrientation = orientation;
 }
 
-/* ---------------- Màn chọn trước khi vào ván ---------------- */
+/* ---------------- Phần chọn đối thủ, nằm ở cột phải ---------------- */
 
-function setupScreen(): string {
+/**
+ * Trước đây đây là một màn riêng: vào mục Chơi thì thấy một trang toàn nút,
+ * không có bàn cờ nào. Giờ bàn cờ hiện ngay từ đầu, phần chọn nằm ở cột phải
+ * và biến mất khi bấm Bắt đầu — giống chess.com.
+ */
+function setupPanel(): string {
   const levels = LEVELS.map(
     (l) =>
       `<button class="level-card${l.id === setup.level ? ' is-active' : ''}" data-level="${l.id}">` +
       `<b>${l.name}</b><span>${l.hint}</span></button>`,
   ).join('');
 
-  return `<div class="screen screen-narrow">
-    <div class="screen-head">
-      <h1>Chơi</h1>
-      <span class="head-meta">Chọn đối thủ rồi bắt đầu</span>
-    </div>
-
-    <div class="setup-wrap">
-    <div class="setup">
+  return `<div class="setup">
       <div class="seg" role="group" aria-label="Đối thủ">
         <button class="seg-item${setup.mode === 'bot' ? ' is-active' : ''}" data-mode="bot">Đấu với máy</button>
         <button class="seg-item${setup.mode === 'human' ? ' is-active' : ''}" data-mode="human">Hai người một máy</button>
@@ -130,27 +127,8 @@ function setupScreen(): string {
           : '<p class="prose">Hai người thay nhau đi trên cùng một máy. Bàn cờ lật được bất cứ lúc nào.</p>'
       }
 
-      <div class="setup-go">${button({ label: 'Bắt đầu ván', kind: 'primary', icon: 'play' })}</div>
-      ${engineError ? notice(engineError, 'danger', 'engine') : ''}
-    </div>
-
-    <!-- Bàn cờ xem trước: lật theo bên đã chọn, để thấy ngay mình ngồi phía nào -->
-    <figure class="setup-preview only-desktop">
-      ${boardSvg({
-        fen: START_FEN,
-        orientation: setup.mode === 'bot' ? setup.side : 'w',
-        coordinates: true,
-        label: 'Bàn cờ xem trước',
-      })}
-      <figcaption>
-        ${
-          setup.mode === 'bot'
-            ? `<b>${levelById(setup.level).name}</b> · ${levelById(setup.level).hint}<br>Bạn cầm ${setup.side === 'w' ? 'Trắng, đi trước' : 'Đen'}`
-            : '<b>Hai người một máy</b> · thay nhau đi'
-        }
-      </figcaption>
-    </figure>
-    </div>
+    <div class="setup-go">${button({ label: 'Bắt đầu ván', kind: 'primary', icon: 'play' })}</div>
+    ${engineError ? notice(engineError, 'danger', 'engine') : ''}
   </div>`;
 }
 
@@ -190,14 +168,22 @@ function gameScreen(): string {
       side,
       bot: isBot,
       you: setup.mode === 'bot' && side === setup.side,
-      status: thinking && isBot ? 'đang nghĩ…' : !result && game.turn === side ? 'đang đi' : undefined,
-      clockState: !result && game.turn === side ? 'running' : 'idle',
+      status: !started
+        ? undefined
+        : thinking && isBot
+          ? 'đang nghĩ…'
+          : !result && game.turn === side
+            ? 'đang đi'
+            : undefined,
+      clockState: started && !result && game.turn === side ? 'running' : 'idle',
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
       diff: side === 'w' ? mat.diff : -mat.diff,
     });
   };
 
-  const statusLine = result
+  const statusLine = !started
+    ? ''
+    : result
     ? `<p class="game-result"><b>${outcomeText(result)}</b></p>
        <div class="setup-go" style="margin-top:var(--s-3)">${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' })}</div>`
     : thinking
@@ -210,32 +196,41 @@ function gameScreen(): string {
         )
       : game.inCheck
         ? notice(`${sideName(game.turn)} đang bị chiếu`, 'danger', 'resign')
-        : notice(
-            // Màn cảm ứng không có chuột phải, nói tới nó chỉ làm rối
-            matchMedia('(pointer: coarse)').matches
-              ? 'Kéo quân, hoặc chạm quân rồi chạm ô muốn đi.'
-              : 'Kéo quân, hoặc bấm quân rồi bấm ô. Chuột phải để vẽ mũi tên.',
-            'info',
-            'hint',
-          );
+        : // Hướng dẫn chỉ hiện trước nước đầu. Nhắc suốt ván thì thành rác:
+          // đi được một nước rồi là người chơi biết cách rồi.
+          game.length === 0
+          ? notice(
+              // Màn cảm ứng không có chuột phải, nói tới nó chỉ làm rối
+              matchMedia('(pointer: coarse)').matches
+                ? 'Kéo quân, hoặc chạm quân rồi chạm ô muốn đi.'
+                : 'Kéo quân, hoặc bấm quân rồi bấm ô. Chuột phải để vẽ mũi tên.',
+              'info',
+              'hint',
+            )
+          : '';
 
   return `<div class="screen">
     <div class="screen-head">
       <h1>Chơi</h1>
       <span class="head-meta">
-        ${setup.mode === 'bot' ? `${levelById(setup.level).name} · bạn cầm ${sideName(setup.side)}` : 'Hai người một máy'}
-        ${result ? '' : ` · lượt ${sideName(game.turn)}`}
+        ${
+          !started
+            ? 'Chọn đối thủ rồi bắt đầu'
+            : `${setup.mode === 'bot' ? `${levelById(setup.level).name} · bạn cầm ${sideName(setup.side)}` : 'Hai người một máy'}${result ? '' : ` · lượt ${sideName(game.turn)}`}`
+        }
       </span>
       ${toolbar(
         [
           iconButton('flip', 'Lật bàn cờ'),
           iconButton('sound', 'Âm thanh', { pressed: soundEnabled() }),
-          iconButton('engine', 'Thanh đánh giá', { pressed: showEval }),
+          ...(started ? [iconButton('engine', 'Thanh đánh giá', { pressed: showEval })] : []),
         ],
-        [
-          button({ label: 'Đi lại', icon: 'prev', disabled: game.length === 0 || thinking }),
-          button({ label: 'Ván mới', icon: 'play' }),
-        ],
+        started
+          ? [
+              button({ label: 'Đi lại', icon: 'prev', disabled: game.length === 0 || thinking }),
+              button({ label: 'Ván mới', icon: 'play' }),
+            ]
+          : [],
       )}
     </div>
 
@@ -250,7 +245,8 @@ function gameScreen(): string {
       </div>
 
       <div class="game-side">
-        ${sheet(
+        ${!started ? sheet(setupPanel()) : ''}
+        ${!started ? '' : sheet(
           statusLine,
           game.length
             ? moveList(
@@ -291,7 +287,9 @@ function gameScreen(): string {
 }
 
 export function play(): string {
-  return started ? gameScreen() : setupScreen();
+  // Luôn vẽ bố cục có bàn cờ. Chưa bắt đầu thì bàn cờ là thế cờ đầu, không
+  // bấm được, và cột phải là phần chọn đối thủ.
+  return gameScreen();
 }
 
 /* ---------------- Gắn bàn cờ sau khi HTML vào DOM ---------------- */
@@ -341,17 +339,19 @@ export function mountPlay(rerender: () => void): void {
 
   drawBoard();
   // Máy đi trước thì bắt đầu nghĩ ngay
-  if (isBotTurn() && !thinking) void botMove(rerender);
+  if (started && isBotTurn() && !thinking) void botMove(rerender);
 }
 
 /** Người chơi có được phép đi lúc này không. */
 function canPlay(): boolean {
-  if (!game.atLive || ended || thinking) return false;
+  if (!started || !game.atLive || ended || thinking) return false;
   if (setup.mode === 'human') return true;
   return game.turn === setup.side;
 }
 
 function drawBoard(): void {
+  // Chưa bắt đầu: bàn cờ lật theo bên vừa chọn, để thấy ngay mình ngồi phía nào
+  if (!started) orientation = setup.mode === 'bot' ? setup.side : 'w';
   const checked = game.checkedKing;
   const last = game.lastMove;
   // Chỉ trượt quân khi vừa tiến thêm đúng một nước và bàn không bị lật giữa
@@ -573,7 +573,10 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
       started = true;
     },
     'Lật bàn cờ': () => {
-      orientation = orientation === 'w' ? 'b' : 'w';
+      // Chưa vào ván thì lật bàn nghĩa là đổi bên mình cầm, chứ không phải
+      // xoay cho vui — vì lúc vẽ lại bàn cờ vẫn lật theo bên đã chọn.
+      if (!started && setup.mode === 'bot') setup.side = setup.side === 'w' ? 'b' : 'w';
+      else orientation = orientation === 'w' ? 'b' : 'w';
     },
     'Thanh đánh giá': () => {
       showEval = !showEval;

@@ -157,6 +157,11 @@
 }
 
 /* Nhóm nút phụ dính liền, ngăn bằng nét kẻ */
+/* Trên màn có bàn cờ, thanh nút nằm gọn một hàng ở đầu cột phải */
+.screen:has(> .game) .screen-head .toolbar {
+  width: 100%;
+  justify-content: flex-start;
+}
 .toolbar {
   display: flex;
   align-items: center;

@@ -193,11 +193,16 @@
 
    --board-w: không cao quá cửa sổ (trừ header của trang, hai thanh người chơi
    và lề), và không rộng quá phần còn lại sau cột bên. Màn có bàn cờ không còn
-   dòng tiêu đề thứ hai nữa (xem dưới), nên chỉ phải trừ 120px chứ không 188px. */
+   dòng tiêu đề thứ hai, cũng không có chân trang.
+
+   132px là đo thật rồi cộng chút dư: hai thanh người chơi 42px, hai khe 4px,
+   viền bàn 2px, lề trên dưới 16px = 126px. Phần dư để thanh người chơi cao lên
+   (tên dài, quân đã ăn) mà bàn cờ không bị cắt mất — trang không cuộn được nữa
+   nên tràn là mất hẳn chứ không phải cuộn xuống xem được. */
 :root {
   --side-w: 360px;
   --board-w: min(
-    calc(100vh - var(--head-h) - 120px),
+    calc(100vh - var(--head-h) - 132px),
     calc(100vw - var(--side-w) - 3 * var(--s-6) - 16px)
   );
 }
@@ -222,19 +227,62 @@
    trên xuống dưới; mọi thứ khác xếp lần lượt ở cột phải. Hàng cuối 1fr hứng
    phần chiều cao còn dư, để các khối bên phải không bị kéo giãn cách xa nhau. */
 @media (min-width: 1101px) {
+  /* Đánh cờ thì vừa đúng một màn hình: không cuộn trang, không chân trang.
+     Cột phải tự cuộn bên trong nếu nội dung dài (sổ nước đi, phần chấm ván).
+     Trang cuộn được thì bàn cờ trôi lên trôi xuống trong lúc đánh. */
+  .app:has(.screen > .game) {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .app:has(.screen > .game) > main {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .app:has(.screen > .game) .site-foot {
+    display: none;
+  }
+
   .screen:has(> .game) {
     display: grid;
     grid-template-columns: var(--board-w) var(--side-w);
-    grid-template-rows: auto auto auto auto 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
     column-gap: var(--s-6);
     row-gap: var(--s-3);
     justify-content: center;
     align-content: start;
+    height: 100%;
+    min-height: 0;
     padding-top: var(--s-4);
     padding-bottom: var(--s-4);
   }
   .screen:has(> .game) > .game {
     display: contents;
+  }
+  .screen:has(> .game) > .screen-head {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .screen:has(> .game) .game-side {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    /* Flex + flex:none chứ không phải lưới: cột cao cố định nên lưới ép các
+       khối co lại, mà .sheet có overflow:hidden nên nó CẮT CỤT nội dung thay
+       vì cho cuộn (sổ nước đi của màn Xem lại từng chỉ còn 2 dòng rưỡi).
+       Khoá lại thì khối nào cũng cao đúng nội dung, và cả cột tự cuộn. */
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .screen:has(> .game) .game-side > * {
+    flex: none;
+  }
+  /* Trong cột tự cuộn thì sổ nước đi cứ dài tuỳ ý */
+  .screen:has(> .game) .game-side .move-list {
+    max-height: none;
   }
   /* Bàn cờ dính ở đầu, không giãn theo cột bên. Màn Xem lại có cột bên cao hơn
      bàn cờ nhiều; trước đây phần cao dư bị dồn vào hàng bàn cờ, đẩy bàn cờ xuống
@@ -245,11 +293,15 @@
     grid-row: 1 / -1;
     align-self: start;
     align-content: start;
-    position: sticky;
-    top: calc(var(--head-h) + var(--s-4));
+    /* Chốt chặn cuối: thanh người chơi có cao bất ngờ thì bàn cờ co lại,
+       chứ không thò ra ngoài rồi bị cắt mất. */
+    max-height: 100%;
+    min-height: 0;
   }
-  .screen:has(> .game) > :not(.game),
-  .screen:has(> .game) .game-side {
+  .screen:has(> .game) .board-row {
+    min-height: 0;
+  }
+  .screen:has(> .game) > :not(.game) {
     grid-column: 2;
     min-width: 0;
   }

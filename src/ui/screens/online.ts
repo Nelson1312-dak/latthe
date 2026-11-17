@@ -370,9 +370,6 @@ function vánCờ(): string {
       }
     </div>
 
-    ${live.error ? notice(live.error, 'danger') : ''}
-    ${live.connected ? '' : notice('Mất kết nối tới server, đang thử nối lại…', 'danger')}
-
     <div class="game">
       <div class="game-board">
         ${strip(họ)}
@@ -382,6 +379,8 @@ function vánCờ(): string {
 
       <div class="game-side">
         ${sheet(
+          live.error ? notice(live.error, 'danger') : '',
+          live.connected ? '' : notice('Mất kết nối tới server, đang thử nối lại…', 'danger'),
           đợiVàoLại,
           hòaĐangChờ,
           xong ? kếtQuả() : '',
