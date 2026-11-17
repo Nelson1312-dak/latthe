@@ -19,6 +19,7 @@ import {
   createSession,
   destroySession,
   loginWithGoogle,
+  fromThisMachine,
   purgeExpiredSessions,
   readCookie,
   sessionCookie,
@@ -33,11 +34,18 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? '';
 const DIST = resolve('dist');
 
 /**
- * Đăng nhập giả cho lúc phát triển và chạy test. CHỈ bật được khi server nghe trên
- * máy này — để không bao giờ có đường tắt vào tài khoản trên bản chạy thật.
+ * Đăng nhập giả cho lúc phát triển và chạy test.
+ *
+ * Bản đầu chỉ xét ĐỊA CHỈ SERVER ĐANG NGHE (`HOST`). Hỏng: chạy sau tunnel thì
+ * server vẫn nghe 127.0.0.1 trong khi cả internet gọi vào được — ai cũng có thể
+ * POST /api/auth/dev rồi lấy một phiên mang tên bất kỳ. Giờ xét TỪNG REQUEST:
+ * chỉ máy này gọi thẳng mới được, qua tunnel thì không.
  */
 const LOCAL_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
 const DEV_AUTH = process.env.AUTH_DEV === '1' && LOCAL_HOSTS.has(HOST);
+
+/** Đăng nhập giả có dùng được cho request này không. */
+const devAuthFor = (req: IncomingMessage) => DEV_AUTH && fromThisMachine(req);
 
 const db: Db = openDb();
 purgeExpiredSessions(db);
@@ -96,7 +104,7 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
   const method = req.method ?? 'GET';
 
   if (path === '/api/health' && method === 'GET') {
-    return json(res, 200, { ok: true, googleConfigured: Boolean(GOOGLE_CLIENT_ID), devAuth: DEV_AUTH });
+    return json(res, 200, { ok: true, googleConfigured: Boolean(GOOGLE_CLIENT_ID), devAuth: devAuthFor(req) });
   }
 
   // Trình duyệt hỏi: tôi là ai, và trang đăng nhập nên hiện cái gì.
@@ -105,7 +113,7 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     return json(res, 200, {
       user: user ? publicUser(user) : null,
       googleClientId: GOOGLE_CLIENT_ID || null,
-      devAuth: DEV_AUTH,
+      devAuth: devAuthFor(req),
     });
   }
 
@@ -135,7 +143,8 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
   }
 
   if (path === '/api/auth/dev' && method === 'POST') {
-    if (!DEV_AUTH) return json(res, 404, { error: 'Không có' });
+    // Cố tình trả 404 chứ không phải 403: người ở xa không cần biết là có đường này
+    if (!devAuthFor(req)) return json(res, 404, { error: 'Không có' });
     const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
     const name = (typeof body.name === 'string' && body.name.trim()) || 'Người chơi thử';
     const user = createLocalUser(db, name.slice(0, 40));
@@ -339,6 +348,11 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     const facts = body.facts as Facts | undefined;
     if (!facts || typeof facts.nuocDaDi !== 'string' || !Array.isArray(facts.the)) {
       return json(res, 400, { error: 'Thiếu dữ kiện' });
+    }
+    // Mấy mảng này về sau được đọc thẳng (f.nuocTotHon[0], f.dongChinh[0]...).
+    // Thiếu một cái là ngã ở tận trong template, trả về 500 cho người gọi.
+    if (!Array.isArray(facts.nuocTotHon) || !Array.isArray(facts.dongChinh) || typeof facts.xepLoai !== 'string') {
+      return json(res, 400, { error: 'Dữ kiện không đúng dạng' });
     }
     if (!user) {
       const { templateComment } = await import('../shared/advisor/templates.ts');

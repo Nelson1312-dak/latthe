@@ -76,6 +76,24 @@ export function createSession(db: Db, userId: number, days = SESSION_DAYS): Sess
   return { token, expiresAt };
 }
 
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+/**
+ * Request này có đúng là từ chính máy này gọi thẳng vào không.
+ *
+ * Dùng để khoá đăng nhập giả. Chỉ xét địa chỉ server đang nghe là không đủ:
+ * chạy sau tunnel thì server vẫn nghe 127.0.0.1 trong khi cả internet gọi vào
+ * được. Qua tunnel/proxy thì luôn có mấy header x-forwarded-*; người ở xa
+ * không bỏ chúng đi được, còn người ngồi tại máy mà tự thêm vào thì chỉ tự tắt
+ * lối của mình — sai về phía đóng, không phải phía mở.
+ */
+export function fromThisMachine(req: { headers: Record<string, unknown>; socket: { remoteAddress?: string } }): boolean {
+  if (req.headers['x-forwarded-for'] || req.headers['x-forwarded-host'] || req.headers['x-forwarded-proto']) {
+    return false;
+  }
+  return LOOPBACK.has(req.socket.remoteAddress ?? '');
+}
+
 /** Người dùng của phiên, hoặc null nếu mã sai/hết hạn. Phiên hết hạn bị xoá luôn. */
 export function userForSession(db: Db, token: string | undefined, now = new Date()): User | null {
   if (!token) return null;

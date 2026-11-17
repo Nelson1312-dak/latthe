@@ -468,13 +468,50 @@ Ba chỗ vấp khi làm nét quân cờ, đều đáng nhớ:
 CC BY-SA 3.0 cho phép sửa, miễn ghi rõ — đã ghi trong `THIRD-PARTY.md` và trong chính
 file sprite. Hình dáng quân cờ không đổi, chỉ đổi độ dày nét.
 
-### GĐ8 — Vận hành và phát hành (M)
-- [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
-- [ ] Task Scheduler + giám sát, sao lưu hằng đêm
-- [ ] Playwright: đăng nhập giả → chơi với máy → review → ôn tập; hai người chơi online
-- [ ] Thử tải: 10 ván online cùng lúc + 5 người xin lời bình cùng lúc
-- [ ] Gỡ hoặc giữ project Vercel cũ (**bạn quyết**)
-- **Kiểm tra:** truy cập từ điện thoại qua 4G bằng tên miền thật, chơi trọn một ván online.
+### GĐ8 — Vận hành và phát hành (M) — **phần lớn đã làm 17/11/2026**
+- [x] `npm run public`: dựng dist rồi để chính server Node phục vụ cả trang tĩnh lẫn
+      `/api` trên MỘT cổng. Cùng origin nên cookie phiên chạy bình thường, không cần
+      CORS, và Google OAuth chỉ phải khai đúng một origin.
+- [x] Tunnel: `--tunnel=cloudflared` (mặc định, không cần tài khoản) hoặc `--tunnel=ngrok`.
+      Script **không sửa** cấu hình tunnel của máy, chỉ đọc rồi tự sinh file riêng.
+- [x] `npm run backup`: sao lưu hằng đêm, **chỉ dữ liệu người dùng**
+- [x] `scripts/setup-autostart.ps1`: đăng ký Task Scheduler (chạy tay, không tự đăng ký)
+- [x] `npm run e2e`: 9 mục, đi hết đường chính của người dùng
+- [x] `npm run loadtest`: 10 ván online cùng lúc + 5 lời bình cùng lúc
+- [ ] **Còn lại (cần bạn):** chốt tên miền cố định, tạo Google OAuth client ID, và
+      truy cập thử từ điện thoại qua 4G.
+
+**Kết quả thử tải** (10 ván song song, 100 nước, trên chính máy này):
+ghép 10/10 ván, 100/100 nước đi thành công; đi một nước trung vị 9 ms, p95 25 ms;
+toàn bộ xong trong 1,1 giây. Lời bình: 5 người cùng lúc mà Ollama còn **lạnh** thì
+42–57 giây (hàng đợi LLM, một GPU 6 GB chạy lần lượt); lần sau cùng dữ kiện đó thì
+lấy từ cache, 45 ms. Nghĩa là chỗ nghẽn là LLM chứ không phải server.
+
+**Một lỗ bảo mật tự mình tạo ra từ GĐ1, tới giờ mới lòi.** `DEV_AUTH` chỉ xét ĐỊA CHỈ
+SERVER ĐANG NGHE (`127.0.0.1`), mà chạy sau tunnel thì server vẫn nghe 127.0.0.1 trong
+khi cả internet gọi vào được — ai cũng `POST /api/auth/dev` rồi lấy một phiên mang tên
+bất kỳ. Giờ xét TỪNG REQUEST (`fromThisMachine` trong `server/auth.ts`): có bất kỳ
+header `x-forwarded-*` nào là từ chối. Sai về phía đóng: người ở xa không bỏ header đi
+được, người ngồi tại máy mà tự thêm vào thì chỉ tự tắt lối của mình. Có 4 test, và đã
+thử thật qua tunnel: tại máy 200, qua tunnel 404.
+
+**Thử tải tìm ra một lỗi thật:** `templateComment` gọi thẳng `MOTIF_TEXT[motif.kind]`
+mà không tra trước, nên kiểu lỗi lạ làm server trả 500 — và đường `/api/advisor/explain`
+giờ ra tới internet nên ai cũng gây được. Đã vá cả ở template lẫn ở chỗ kiểm dữ liệu
+đầu vào (trả 400 thay vì để nó thành 500).
+
+**Bản sao lưu nhỏ đi 1200 lần.** Lần đầu `VACUUM INTO` cả database: 251 MB một bản,
+14 bản là 3,5 GB — mà 250 MB trong đó là kho bài tập, lần nào cũng y hệt và tải lại
+được bằng `npm run puzzles`. Giờ chỉ chép bảng dữ liệu người dùng: **205 KB**.
+
+**Chưa đụng tới của việc khác.** Máy này đang chạy sẵn: dịch vụ `cloudflared` (tunnel
+Zero Trust, cấu hình từ dashboard) và một tunnel ngrok tên `latthe` trỏ vào cổng 11435.
+Cái ngrok đó do `start-ngrok-ollama.bat` trong Startup bật lên, định đưa Ollama +
+PostgREST ra ngoài qua `local-proxy.js` — nhưng file đó đã bị xoá khỏi repo từ
+22/10/2026 (commit `7c9cbe2`, lúc đổi latbai.vn sang game đảo), nên **mấy tuần nay
+tunnel ấy trỏ vào chỗ trống**. Không đụng vào, chỉ ghi lại.
+
+### GĐ8 — còn lại
 
 ## 6. Thứ tự và phụ thuộc
 

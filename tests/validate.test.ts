@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildFacts, type Facts } from '../shared/advisor/facts.ts';
 import { parseModelReply, validateComment } from '../shared/advisor/validate.ts';
-import { templateComment, hintSteps } from '../shared/advisor/templates.ts';
+import { hintSteps, templateComment } from '../shared/advisor/templates.ts';
 
 const facts: Facts = buildFacts({
   side: 'w',
@@ -137,5 +137,36 @@ describe('phạm vi dữ kiện', () => {
     const den = buildFacts({ side: 'b', ply: 22, san: 'Nxc2+', cls: 'good', best: [], pv: [], motifs: [] });
     expect(den.nuocDaDi).toBe('11...Nxc2+');
     expect(den.ben).toBe('Đen');
+  });
+});
+
+describe('lời bình mẫu chịu được dữ liệu hỏng', () => {
+  const nền = {
+    ben: 'Trắng',
+    nuocDaDi: '11.Qg4',
+    xepLoai: 'Sai nghiêm trọng',
+    nuocTotHon: ['Qd1'],
+    dongChinh: [],
+    the: [],
+  };
+
+  it('kiểu lỗi lạ thì vẫn ra một câu, không ngã', () => {
+    // Từng làm server trả 500: MOTIF_TEXT[kind] is not a function.
+    const f = { ...nền, the: [{ kind: 'khong-co-that', square: 'e4' }] } as never;
+    const câu = templateComment(f);
+    expect(câu).toBeTruthy();
+    expect(câu).toContain('Nước này làm hỏng thế cờ');
+  });
+
+  it('gợi ý cũng chịu được kiểu lỗi lạ', () => {
+    const f = { ...nền, the: [{ kind: 'khong-co-that', square: 'e4' }] } as never;
+    const [một, hai, ba] = hintSteps(f);
+    expect(một).toBeTruthy();
+    expect(hai).toBeTruthy();
+    expect(ba).toBeTruthy();
+  });
+
+  it('không có kiểu lỗi nào thì dùng câu theo xếp loại', () => {
+    expect(templateComment(nền as never)).toContain('Nước này làm hỏng thế cờ');
   });
 });

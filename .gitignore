@@ -22,3 +22,6 @@ infra/*.log
 infra/*.containers.txt
 
 .vercel
+
+# Cấu hình ngrok do scripts/public.mjs tự sinh
+.ngrok.local.yml

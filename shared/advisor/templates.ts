@@ -36,11 +36,11 @@ export function templateComment(f: Facts): string {
   const parts: string[] = [];
   const motif = f.the[0];
 
-  if (motif) {
-    parts.push(MOTIF_TEXT[motif.kind](f, motif));
-  } else {
-    parts.push(CLASS_OPENING[f.xepLoai] ?? 'Nước đi bình thường.');
-  }
+  // Tra bảng rồi mới gọi: kiểu lỗi lạ (dữ liệu hỏng, hoặc client tự gửi lên)
+  // từng làm `MOTIF_TEXT[kind] is not a function` → server trả 500. Mà đường
+  // /api/advisor/explain giờ ra tới internet, nên ai cũng gây được.
+  const viết = motif ? MOTIF_TEXT[motif.kind] : undefined;
+  parts.push(viết ? viết(f, motif!) : (CLASS_OPENING[f.xepLoai] ?? 'Nước đi bình thường.'));
 
   if (f.nuocTotHon.length && ['Sai nghiêm trọng', 'Sai', 'Thiếu chính xác', 'Bỏ lỡ'].includes(f.xepLoai)) {
     parts.push(`Thay vào đó ${f.nuocTotHon[0]} giữ được thế cờ.`);
@@ -53,7 +53,7 @@ export function hintSteps(f: Facts): [string, string, string] {
   const best = f.nuocTotHon[0] ?? f.dongChinh[0] ?? '';
   const motif = f.the[0];
 
-  const idea = motif
+  const idea = (motif
     ? {
         hanging: 'Có một quân đang bị bỏ hở — của bạn hoặc của đối thủ.',
         missedCapture: 'Có một quân của đối thủ đang không ai bảo vệ.',
@@ -63,7 +63,7 @@ export function hintSteps(f: Facts): [string, string, string] {
         backRank: 'Hàng cuối của bạn đang yếu.',
         badTrade: 'Đừng đổi quân vội, bạn sẽ bị thiệt.',
       }[motif.kind]
-    : 'Tìm nước làm thế cờ của bạn tốt lên.';
+    : undefined) ?? 'Tìm nước làm thế cờ của bạn tốt lên.';
 
   // Nấc hai chỉ nói quân nào, không nói đi đâu
   const pieceLetter = best.match(/^[KQRBN]/)?.[0];

@@ -3,16 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type JWK } from 'jose';
 import { openDb, upsertGoogleUser, type Db } from '../server/db.ts';
-import {
-  createSession,
-  destroySession,
-  loginWithGoogle,
-  purgeExpiredSessions,
-  readCookie,
-  sessionCookie,
-  userForSession,
-  verifyGoogleToken,
-} from '../server/auth.ts';
+import { createSession, destroySession, fromThisMachine, loginWithGoogle, purgeExpiredSessions, readCookie, sessionCookie, userForSession, verifyGoogleToken } from '../server/auth.ts';
 
 const CLIENT_ID = '1234567890-abc.apps.googleusercontent.com';
 const ISSUER = 'https://accounts.google.com';
@@ -172,5 +163,35 @@ describe('cookie', () => {
     expect(sessionCookie('abc', exp, false)).toContain('SameSite=Lax');
     expect(sessionCookie('abc', exp, false)).not.toContain('Secure');
     expect(sessionCookie('abc', exp, true)).toContain('Secure');
+  });
+});
+
+describe('đăng nhập giả chỉ dành cho máy này', () => {
+  // Giả lập request: chỉ cần headers và socket.remoteAddress
+  const req = (headers: Record<string, string>, remote = '127.0.0.1') => ({
+    headers,
+    socket: { remoteAddress: remote },
+  });
+
+  it('gọi thẳng từ máy này thì được', () => {
+    expect(fromThisMachine(req({}))).toBe(true);
+    expect(fromThisMachine(req({}, '::1'))).toBe(true);
+    expect(fromThisMachine(req({}, '::ffff:127.0.0.1'))).toBe(true);
+  });
+
+  it('qua tunnel thì không, dù socket vẫn là loopback', () => {
+    // Đây đúng là tình huống chạy sau ngrok: tunnel nối vào 127.0.0.1 của mình,
+    // nên nhìn socket thì tưởng là người nhà.
+    expect(fromThisMachine(req({ 'x-forwarded-for': '203.0.113.9' }))).toBe(false);
+    expect(fromThisMachine(req({ 'x-forwarded-proto': 'https' }))).toBe(false);
+    expect(fromThisMachine(req({ 'x-forwarded-host': 'abc.ngrok-free.dev' }))).toBe(false);
+  });
+
+  it('máy khác trong mạng LAN cũng không được', () => {
+    expect(fromThisMachine(req({}, '192.168.1.50'))).toBe(false);
+  });
+
+  it('không có địa chỉ thì coi như không phải máy này', () => {
+    expect(fromThisMachine(req({}, ''))).toBe(false);
   });
 });
