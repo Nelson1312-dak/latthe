@@ -235,6 +235,12 @@ cửa sổ. Hai quy tắc:
   được nên tràn là mất hẳn.
 - Kết quả: 1524×800 cho bàn cờ 610px (ban đầu 470px); 1920×1080 cho 890px.
   Màn hẹp hơn 1101px thì quay về một cột, bàn cờ trên, cột bên dưới, trang cuộn lại.
+- **Nét viền quân cờ đặt bằng CSS, không ghi cứng trong file sprite.** Bàn cờ dùng
+  `stroke-width: 2.1`, các biểu tượng nhỏ 17–18px dùng `1.5`. Một con số cho cả hai
+  là hỏng một bên: 1.5 trên bàn cờ nhìn nhợt và mềm, 2.1 ở biểu tượng nhỏ thành cục mực.
+  Đặt trên chính thẻ `<use>`, **không** đặt lên phần tử gốc trong sprite — nội dung
+  nhân bản lấy style đã tính của phần tử gốc nên luật nhắm vào gốc sẽ đè mất giá trị
+  kế thừa từ `<use>`.
 - **Bàn cờ liền mép, không khung.** chess.com để ô cờ chạy thẳng ra rìa; thêm viền
   quanh bàn chỉ làm nó trông nhỏ lại.
 - **Thanh người chơi xếp như chess.com**: ảnh đại diện bên trái (không có ảnh thì vẽ

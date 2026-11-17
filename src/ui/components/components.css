@@ -674,6 +674,28 @@
   height: auto;
 }
 
+/* Độ dày nét viền quân cờ.
+   Sprite cburnett vốn ghi cứng stroke-width="1.5" trong file; mình đã gỡ ra để
+   quyết định ở đây, vì cùng một con số không hợp cho mọi cỡ: trên bàn cờ nét
+   1.5 nhìn nhợt và mềm (quân Trắng gần như không thấy viền trên ô sáng), còn ở
+   mấy biểu tượng 17–18px thì nét dày lại thành cục mực.
+   stroke-width là thuộc tính kế thừa, nên đặt ở <use> là nó thấm vào nội dung
+   được nhân bản bên trong. */
+/* Đặt trên chính thẻ <use>, KHÔNG đặt trên #piece-sprite g: nội dung nhân bản
+   lấy style đã tính của phần tử gốc, nên một luật nhắm vào phần tử gốc sẽ đè
+   mất giá trị kế thừa từ <use> — đặt cả hai thì bàn cờ không dày lên được. */
+.fig use,
+.side-piece use,
+.took-piece use,
+.face-piece use,
+.promo-piece use {
+  stroke-width: 1.5;
+}
+.board use,
+.drag-piece use {
+  stroke-width: 2.1;
+}
+
 /* Quân cờ trượt về chỗ sau mỗi nước đi. Lớp .pc không có transform thuộc tính
    nên CSS transform ở đây không phá vị trí ô. */
 .pc.is-moving {

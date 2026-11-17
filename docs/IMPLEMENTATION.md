@@ -449,6 +449,25 @@ Phải thử bỏ cờ chặn ra, thấy test vẫn xanh, mới biết. Bản th
 `openingsAsked = true` phải đứng trước `loadOpenings`, và đã xác nhận là nó đỏ khi bỏ
 cờ chặn đi. **Test canh lỗi thì phải thử làm nó đỏ một lần, không thì chỉ là trang trí.**
 
+### Sau GĐ7 (tiếp) — quân cờ nét hơn, dọn lại phần chọn đối thủ (17/11/2026)
+- [x] Nét viền quân trên bàn cờ 1.5 → 2.1; biểu tượng nhỏ giữ 1.5
+- [x] Phần chọn đối thủ: hai nút Trắng/Đen chia đôi đều, nút Bắt đầu rộng hết cột,
+      các thẻ cấp độ cao bằng nhau, nhãn "Trắng — đi trước" rút gọn cho khỏi xuống dòng
+
+Ba chỗ vấp khi làm nét quân cờ, đều đáng nhớ:
+1. Sửa thẳng `public/pieces/cburnett.svg` là vô ích — file đó do `copy-assets.mjs` sinh
+   ra, chạy script (hay `npm install`) một cái là chép đè. Phải sửa ở khâu chép.
+   Mình còn tự xoá mất thay đổi của chính mình bằng cách chạy `copy-assets` ngay sau
+   khi sửa, rồi ngồi tưởng CSS không ăn.
+2. Đặt `stroke-width` lên `#piece-sprite g` (phần tử gốc) thì nội dung `<use>` nhân bản
+   lấy đúng giá trị đó, đè mất giá trị kế thừa từ `<use>` — nên bàn cờ không dày lên.
+   Phải đặt lên chính thẻ `<use>` ở từng chỗ dùng.
+3. So 1.5 với 2.8 mới thấy rõ là đường ống có ăn hay không. Nhìn một ảnh rồi đoán thì
+   không phân biệt được "đổi rồi mà ít" với "không đổi gì cả".
+
+CC BY-SA 3.0 cho phép sửa, miễn ghi rõ — đã ghi trong `THIRD-PARTY.md` và trong chính
+file sprite. Hình dáng quân cờ không đổi, chỉ đổi độ dày nét.
+
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
 - [ ] Task Scheduler + giám sát, sao lưu hằng đêm

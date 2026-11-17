@@ -662,6 +662,31 @@
   flex-wrap: wrap;
   gap: 0;
 }
+/* Trong cột bên: hai lựa chọn chia đôi đều nhau và nút Bắt đầu rộng hết cột.
+   Trước đây ba nút ba bề ngang khác nhau xếp so le, nhìn rất luộm thuộm. */
+.game-side .setup .seg {
+  flex-wrap: nowrap;
+}
+.game-side .setup .seg-item {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  text-align: center;
+}
+.game-side .setup-go {
+  display: grid;
+  margin-top: var(--s-2);
+}
+.seg-note {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.game-side .setup-go .btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 44px;
+}
 .seg-item {
   display: flex;
   align-items: center;
@@ -697,7 +722,11 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--s-2);
 }
+/* Mọi thẻ cao bằng nhau: câu mô tả dài ngắn khác nhau làm các hàng lệch nhau,
+   nhìn lôm côm. */
 .level-card {
+  min-height: 62px;
+  align-content: center;
   display: grid;
   gap: 2px;
   padding: var(--s-2) var(--s-3);

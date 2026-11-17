@@ -123,9 +123,10 @@ function setupPanel(): string {
             <div class="setup-block">
               <p class="rule"><span class="rule-label">Bạn cầm quân</span><i></i></p>
               <div class="seg" role="group" aria-label="Bên cầm quân">
-                <button class="seg-item${setup.side === 'w' ? ' is-active' : ''}" data-side="w">${pieceGlyph('wk', 'side-piece')} Trắng — đi trước</button>
+                <button class="seg-item${setup.side === 'w' ? ' is-active' : ''}" data-side="w">${pieceGlyph('wk', 'side-piece')} Trắng</button>
                 <button class="seg-item${setup.side === 'b' ? ' is-active' : ''}" data-side="b">${pieceGlyph('bk', 'side-piece')} Đen</button>
               </div>
+              <p class="seg-note">${setup.side === 'w' ? 'Bạn đi trước.' : 'Máy đi trước.'}</p>
             </div>`
           : '<p class="prose">Hai người thay nhau đi trên cùng một máy. Bàn cờ lật được bất cứ lúc nào.</p>'
       }
