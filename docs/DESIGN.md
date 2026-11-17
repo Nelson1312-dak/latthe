@@ -212,6 +212,21 @@ Không có cỡ chữ nào lớn hơn 28px. Không chữ in hoa toàn bộ trừ
 - Bảng, tab: chuyển ngay, không trượt, không nảy.
 - Tôn trọng `prefers-reduced-motion`: tắt mọi chuyển động trừ quân cờ (giảm còn 80ms).
 
+### 4.6a Màn có bàn cờ: bàn cờ là thứ to nhất
+
+Bàn cờ là chỗ người chơi nhìn vào suốt ván, nên nó phải chiếm gần hết chiều cao
+cửa sổ. Hai quy tắc:
+
+- **Chỉ một header.** Trên màn hình rộng, dòng tiêu đề riêng của màn (tên màn,
+  trạng thái, các nút) chuyển lên đầu cột bên phải, không nằm thành một tầng
+  ngang nữa — chess.com và Lichess đều vậy. Hai tầng header ăn mất ~70px chiều
+  cao, mà chiều cao chính là thứ quyết định bàn cờ to được bao nhiêu. Tên màn
+  vẫn còn trong mã cho trình đọc màn hình, chỉ là không vẽ ra.
+- **Bàn cờ dính khi cuộn** và không giãn theo cột bên. Màn Xem lại có cột phải
+  cao hơn bàn cờ nhiều; nếu để lưới chia đều, phần cao dư sẽ đẩy bàn cờ xuống.
+- Kết quả: cửa sổ 1524×800 cho bàn cờ 622px (trước đây 470px); 1920×1080 cho 902px.
+  Màn hẹp hơn 1101px thì quay về một cột, bàn cờ trên, cột bên dưới.
+
 ### 4.6b Thao tác trên bàn cờ
 
 Theo đúng thói quen của người đã chơi chess.com/Lichess, không bắt học cách mới:

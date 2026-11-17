@@ -251,7 +251,7 @@ export function specimen(): string {
     ${section(
       'Hộp thoại',
       'Thứ duy nhất được phép nổi lên trên và có bóng đổ, vì nó chặn thao tác và cần một quyết định.',
-      `<div style="max-width:440px">${dialog(
+      `<div class="spec-inline" style="max-width:440px">${dialog(
         'Đầu hàng ván này?',
         '<p>Ván sẽ tính là thua. Bạn vẫn xem lại được sau đó.</p>',
         button({ label: 'Quay lại', kind: 'text' }) + button({ label: 'Đầu hàng', kind: 'danger' }),

@@ -563,11 +563,24 @@
 }
 
 /* ---------------- Dialog ---------------- */
+/* Hộp thoại phủ lên cả trang. Bản trước nó nằm trong luồng trang, tức là hiện
+   ở tận cuối, dưới bàn cờ: bảng chọn quân phong cấp và câu hỏi "Đầu hàng?" có
+   thể nằm ngoài màn hình mà người chơi không biết. */
 .dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
   display: grid;
   place-items: center;
   padding: var(--s-6);
   background: rgb(0 0 0 / 0.45);
+}
+.dialog-backdrop .dialog {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+/* Trang thiết kế bày hộp thoại làm mẫu, không phủ trang */
+.spec-inline .dialog-backdrop {
+  position: static;
 }
 .dialog {
   width: 100%;

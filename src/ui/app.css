@@ -191,12 +191,13 @@
    Bản trước cho bàn cờ một cột 1fr rồi căn bàn cờ vào giữa cột đó, nên trên màn
    hình rộng bàn cờ trôi ra xa, cách cột bên một khoảng trống to.
 
-   --board-w: không cao quá cửa sổ (trừ header, tiêu đề màn và hai thanh người
-   chơi), và không rộng quá phần còn lại sau cột bên. */
+   --board-w: không cao quá cửa sổ (trừ header của trang, hai thanh người chơi
+   và lề), và không rộng quá phần còn lại sau cột bên. Màn có bàn cờ không còn
+   dòng tiêu đề thứ hai nữa (xem dưới), nên chỉ phải trừ 120px chứ không 188px. */
 :root {
   --side-w: 360px;
   --board-w: min(
-    calc(100vh - var(--head-h) - 188px),
+    calc(100vh - var(--head-h) - 120px),
     calc(100vw - var(--side-w) - 3 * var(--s-6) - 16px)
   );
 }
@@ -207,9 +208,70 @@
   justify-content: center;
   align-items: start;
 }
-/* Tiêu đề màn rộng đúng bằng cụm bàn cờ + cột bên, không thò ra hai bên */
 .screen:has(> .game) {
   max-width: calc(var(--board-w) + var(--side-w) + 3 * var(--s-6));
+}
+
+/* Màn có bàn cờ, trên màn hình rộng: chỉ MỘT header (của trang). Dòng tiêu đề
+   riêng của màn — tên màn, trạng thái, các nút — chuyển lên đầu cột bên phải,
+   như chess.com và Lichess. Hai tầng header chồng nhau ăn mất ~70px chiều cao,
+   mà chiều cao chính là thứ quyết định bàn cờ to được bao nhiêu.
+
+   Làm bằng CSS để khỏi sửa bốn màn: .game "tan" ra (display: contents) cho bàn
+   cờ, cột bên và dòng tiêu đề cùng nằm trên một lưới. Bàn cờ chiếm cột trái từ
+   trên xuống dưới; mọi thứ khác xếp lần lượt ở cột phải. Hàng cuối 1fr hứng
+   phần chiều cao còn dư, để các khối bên phải không bị kéo giãn cách xa nhau. */
+@media (min-width: 1101px) {
+  .screen:has(> .game) {
+    display: grid;
+    grid-template-columns: var(--board-w) var(--side-w);
+    grid-template-rows: auto auto auto auto 1fr;
+    column-gap: var(--s-6);
+    row-gap: var(--s-3);
+    justify-content: center;
+    align-content: start;
+    padding-top: var(--s-4);
+    padding-bottom: var(--s-4);
+  }
+  .screen:has(> .game) > .game {
+    display: contents;
+  }
+  /* Bàn cờ dính ở đầu, không giãn theo cột bên. Màn Xem lại có cột bên cao hơn
+     bàn cờ nhiều; trước đây phần cao dư bị dồn vào hàng bàn cờ, đẩy bàn cờ xuống
+     và kéo dài thanh đánh giá. Dính khi cuộn để bàn cờ luôn trong tầm mắt trong
+     lúc đọc phần chấm ván ở bên phải. */
+  .screen:has(> .game) .game-board {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: start;
+    align-content: start;
+    position: sticky;
+    top: calc(var(--head-h) + var(--s-4));
+  }
+  .screen:has(> .game) > :not(.game),
+  .screen:has(> .game) .game-side {
+    grid-column: 2;
+    min-width: 0;
+  }
+  .screen:has(> .game) > .screen-head {
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin-bottom: 0;
+    padding-bottom: var(--s-3);
+  }
+  /* Tên màn đã sáng trên thanh điều hướng; ở đây giữ cho trình đọc màn hình */
+  .screen:has(> .game) > .screen-head h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .screen:has(> .game) > .screen-head .head-meta {
+    width: 100%;
+    margin-right: 0;
+  }
 }
 .game-board {
   display: grid;

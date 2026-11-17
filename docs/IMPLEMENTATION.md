@@ -391,6 +391,10 @@ phòng xuống database để khôi phục được là việc của GĐ8 nếu 
   - màn Đấu dựng lại cả trang mỗi giây cho đồng hồ → có thể nuốt mất cú bấm "Đầu hàng"
 - Ảnh chụp toàn trang trên điện thoại vẽ thanh đầu/thanh dưới (sticky) vào giữa trang —
   đó là lỗi của cách chụp, không phải của trang. Chụp đúng khung màn hình mới thấy thật.
+- [x] **Bàn cờ to lên**: bỏ tầng header thứ hai trên màn có bàn cờ, dồn tiêu đề và nút vào
+      đầu cột phải. 1524×800: bàn cờ 470 → 622px. Nhân tiện phát hiện hộp thoại (chọn quân
+      phong cấp, hỏi đầu hàng) nằm trong luồng trang chứ không phủ lên — tức là hiện tận
+      cuối trang, ngoài tầm nhìn. Giờ `position: fixed`.
 
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
