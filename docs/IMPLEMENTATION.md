@@ -272,12 +272,26 @@ cấp 1 bỏ lỡ **12/12 lần** (thường đi `Ng6` để hở Mã), cấp 4 
 Đã chơi thử trong trình duyệt: máy đáp nước, giao diện không đứng khi máy nghĩ, "Đi lại"
 trả đúng lượt, thanh đánh giá chạy, ván kết thúc được lưu lên server.
 
-### GĐ4 — Review (M)
-- [ ] `import-openings.mjs`, nhận nước "Sách" và tên khai cuộc
-- [ ] `winrate.ts` + test, `review.ts` (chạy nền, tiến độ, hủy được), lưu `reviews`
-- [ ] Màn Review: huy hiệu xếp loại, `EvalGraph`, độ chính xác, nhảy tới nước sai, "thử lại từ đây"
-- [ ] Sinh thẻ ôn tập từ nước sai
-- **Kiểm tra:** review 5 ván PGN mẫu, so với phân tích Lichess của cùng ván: khớp phần lớn các nước Sai/Sai nghiêm trọng; ván 40 nước dưới 60 giây.
+### GĐ4 — Review (M) — **đã làm**
+- [x] `scripts/import-openings.mjs`: 3.835 thế cờ khai cuộc từ Lichess (CC0) → `public/data/openings.json`,
+      tải riêng khi vào màn Xem lại nên không nặng gói chính
+- [x] `src/analysis/review.ts`: chấm cả ván, chạy nền, có thanh tiến độ, dừng được giữa chừng — 12 test
+- [x] `server/reviews.ts`: lưu kết quả chấm, sinh thẻ ôn tập theo hộp Leitner — 17 test
+- [x] Màn Xem lại dùng dữ liệu thật: chọn ván đã lưu hoặc chấm ngay ván vừa chơi, huy hiệu xếp loại,
+      biểu đồ diễn biến bấm được, nhảy tới nước hỏng, nước tốt hơn vẽ bằng mũi tên
+- [x] Chơi xong có nút "Xem lại ván" ngay trên màn Chơi
+
+**Đo thật:** ván 17 nước (35 thế cờ) chấm hết **18,2 giây** — dưới mốc 60 giây. Mở lại lần hai
+mất 0,2 giây vì đọc kết quả đã lưu. Kiểm chứng chéo: màn Xem lại chấm ra `11.Qg4 ?? −7.1`,
+nước tốt hơn `Qd1`, độ chính xác Trắng 90,6% — **khớp đúng** với dữ liệu mẫu sinh độc lập
+bằng Stockfish ở GĐ0 (`npm run fixtures`). Khai cuộc nhận đúng: C50 Giuoco Pianissimo.
+
+Bốn chỗ vấp khi làm:
+- Nút nằm lồng trong nút: HTML không cho phép, trình duyệt tự cắt DOM nên bấm không ăn.
+- `.gitignore` có dòng `data/` chặn luôn `public/data/` — bảng khai cuộc sẽ không lên được web.
+  Đổi thành `/data/` để chỉ chặn database ở thư mục gốc.
+- Server Node không tự nạp lại mã: sửa API xong phải khởi động lại `npm run dev`.
+- Lại dính bẫy "đổi mỗi phần sau dấu # thì trang không tải lại" khi viết script kiểm thử.
 
 ### GĐ5 — HLV AI (L)
 - [ ] Các mô-típ + thế cờ mẫu dương/âm tính

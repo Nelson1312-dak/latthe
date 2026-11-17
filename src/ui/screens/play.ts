@@ -11,6 +11,7 @@ import { engine } from '../../engine/engine.ts';
 import { LEVELS, levelById, thinkDelayMs } from '../../engine/levels.ts';
 import { splitUci } from '../../engine/uci.ts';
 import { saveFinishedGame } from '../../app/games.ts';
+import { offerReview } from './review.ts';
 import {
   button,
   dialog,
@@ -142,7 +143,8 @@ function gameScreen(): string {
   };
 
   const statusLine = result
-    ? `<p class="game-result"><b>${outcomeText(result)}</b></p>`
+    ? `<p class="game-result"><b>${outcomeText(result)}</b></p>
+       <div class="setup-go" style="margin-top:var(--s-3)">${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' })}</div>`
     : thinking
       ? notice(`${levelById(setup.level).name} đang nghĩ…`, 'info', 'engine')
       : game.inCheck
@@ -361,6 +363,8 @@ async function storeGame(): Promise<void> {
   saved = true;
   const result = game.outcome();
   if (!result) return;
+  const who = setup.mode === 'bot' ? levelById(setup.level).name : 'Hai người một máy';
+  offerReview(game.pgn(), setup.mode === 'bot' ? setup.side : null, `${who} · ${outcomeText(result)}`);
   await saveFinishedGame({
     mode: setup.mode,
     level: setup.mode === 'bot' ? setup.level : undefined,
@@ -422,6 +426,9 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     'Ván mới': () => {
       newGame();
       started = false;
+    },
+    'Xem lại ván': () => {
+      location.hash = '#/xem-lai';
     },
     // Đấu với máy thì lùi hai nước, để lượt vẫn thuộc về người chơi
     'Đi lại': () => {

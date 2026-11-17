@@ -11,7 +11,7 @@ import { setSoundEnabled, soundEnabled } from './app/sound.ts';
 import { home } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
-import { review } from './ui/screens/review.ts';
+import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
 import { train } from './ui/screens/train.ts';
 import { online } from './ui/screens/online.ts';
 import { account } from './ui/screens/account.ts';
@@ -112,6 +112,7 @@ function render(): void {
   app.className = 'app';
   app.innerHTML = siteHeader(r) + `<main>${screen.render()}${siteFooter()}</main>` + bottomNav(r);
   if (r === 'choi') mountPlay(render);
+  if (r === 'xem-lai') mountReview(render);
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');
     if (slot) void renderGoogleButton(slot, showLoginError);
@@ -160,8 +161,9 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Màn chơi tự lo các nút của nó
+  // Màn chơi và màn xem lại tự lo các nút của chúng
   if (route() === 'choi' && handlePlayClick(el, render)) return;
+  if (route() === 'xem-lai' && handleReviewClick(el, render)) return;
 
   const btn = el.closest<HTMLButtonElement>('button');
   if (!btn) return;

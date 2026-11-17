@@ -671,3 +671,40 @@
     border-radius: 0 0 var(--r-sm) var(--r-sm);
   }
 }
+
+/* ---------------- Xem lại ván ---------------- */
+.analysing {
+  display: grid;
+  gap: var(--s-3);
+  max-width: 560px;
+}
+.progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms linear;
+}
+.verdict .note-move {
+  margin-bottom: var(--s-1);
+}
+.graph-dot {
+  cursor: pointer;
+}
+.graph-dot:hover {
+  r: 5;
+}
+button.log-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+

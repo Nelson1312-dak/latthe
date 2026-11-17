@@ -2,7 +2,7 @@
 
 Web game cờ vua để học: chơi với máy, xem lại từng nước có Huấn luyện viên giải thích, và ôn tập bằng chính lỗi của mình. Xem [docs/PLAN.md](docs/PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
-Đang ở cuối **giai đoạn 3**: **đấu với máy được rồi** (8 cấp độ, Stockfish chạy trong trình duyệt), hoặc hai người một máy. Có server, database, đăng nhập, và ván kết thúc được lưu lại. Các màn Xem lại / Ôn tập / Ván với bạn vẫn là bản dựng tĩnh.
+Đang ở cuối **giai đoạn 4**: đấu với máy 8 cấp độ, và **xem lại ván** được rồi — engine chấm từng nước, chỉ ra chỗ hỏng và nước tốt hơn, rồi sinh thẻ ôn tập từ chính lỗi của bạn. Màn Ôn tập và Ván với bạn vẫn là bản dựng tĩnh.
 
 Bản trên web: **https://latbai.vn** (project Vercel `latthe`). Đó là trang tĩnh, không có server, nên phần đăng nhập hiện "Ngoại tuyến" — muốn dùng thật thì chạy trên máy.
 
@@ -24,6 +24,7 @@ Muốn đăng nhập bằng Google thật thì xem [docs/GOOGLE-LOGIN.md](docs/G
 | `npm test` | Unit test |
 | `npm run build` | Kiểm tra kiểu và đóng gói |
 | `npm run fixtures` | Sinh lại dữ liệu mẫu bằng Stockfish (vài phút) |
+| `npm run openings` | Tải lại bảng khai cuộc từ Lichess |
 | `npm run shots` | Chụp ảnh các màn hình vào `shots/` (cần `npm run dev`) |
 | `npm run check:design` | Rà theo danh sách cấm ở DESIGN.md: emoji, gradient, bo góc lớn, tương phản, vùng bấm, tràn ngang (cần `npm run dev`) |
 

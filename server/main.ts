@@ -4,8 +4,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
-import { openDb, createLocalUser, type Db, type User } from './db.ts';
+import { openDb, createLocalUser, one, type Db, type User } from './db.ts';
 import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
+import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
 import {
   SESSION_COOKIE,
   clearCookie,
@@ -154,6 +155,61 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     if (!g) return json(res, 400, { error: 'Thiếu dữ liệu ván' });
     insertGame(db, user.id, g);
     return json(res, 201, { ok: true });
+  }
+
+  /* ---- Một ván cụ thể và kết quả chấm ---- */
+
+  const gameMatch = /^\/api\/games\/(\d+)(\/review)?$/.exec(path);
+  if (gameMatch) {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const gameId = Number(gameMatch[1]);
+    const game = one<{ id: number; pgn: string; mode: string; level: number | null; player_side: string; winner: string; reason: string; created_at: string }>(
+      db,
+      'SELECT id, pgn, mode, level, player_side, winner, reason, created_at FROM games WHERE id = ? AND user_id = ?',
+      gameId,
+      user.id,
+    );
+    // Không nói "ván này của người khác": người hỏi không cần biết nó tồn tại
+    if (!game) return json(res, 404, { error: 'Không có ván này' });
+
+    if (!gameMatch[2] && method === 'GET') {
+      return json(res, 200, {
+        game: {
+          id: game.id,
+          pgn: game.pgn,
+          mode: game.mode,
+          level: game.level,
+          playerSide: game.player_side,
+          winner: game.winner,
+          reason: game.reason,
+          createdAt: game.created_at,
+        },
+        review: getReview(db, gameId),
+      });
+    }
+
+    if (gameMatch[2] && method === 'POST') {
+      let body: Record<string, unknown>;
+      try {
+        body = await readJson(req, 2_000_000);
+      } catch {
+        return json(res, 400, { error: 'Nội dung không hợp lệ' });
+      }
+      const review = parseReview(body.review);
+      if (!review) return json(res, 400, { error: 'Kết quả chấm không hợp lệ' });
+      saveReview(db, gameId, review);
+      const cards = makeCards(db, user.id, gameId, review, game.player_side === 'b' ? 'b' : 'w');
+      return json(res, 201, { ok: true, newCards: cards });
+    }
+  }
+
+  /* ---- Thẻ ôn tập ---- */
+
+  if (path === '/api/cards' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    return json(res, 200, { cards: dueCards(db, user.id), ...countCards(db, user.id) });
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {
