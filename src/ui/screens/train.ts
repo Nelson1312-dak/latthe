@@ -1,82 +1,336 @@
-// Ôn tập hôm nay: thẻ lỗi của chính mình trước, rồi bài tập theo chủ đề hay sai.
+// Ôn tập: thẻ lỗi của chính mình trước, rồi bài tập từ kho Lichess.
+//
+// Thẻ lỗi quan trọng hơn bài tập chung: đó là chỗ bạn thật sự đã sai.
+
 import { boardSvg } from '../../board/Board.ts';
-import { button, coachPanel, figurine, hintButton, rule, sheet, sideGlyph, stats, toolbar } from '../components/index.ts';
-import { fx } from '../../mock/index.ts';
+import { BoardView } from '../../board/BoardView.ts';
+import { Game, type Side, type Square } from '../../../shared/chess.ts';
+import { playSound } from '../../app/sound.ts';
+import { auth } from '../../app/session.ts';
+import {
+  answerCard,
+  answerPuzzle,
+  dueCards,
+  nextPuzzle,
+  themeName,
+  type Card,
+  type Puzzle,
+} from '../../app/training.ts';
+import { button, figurine, notice, rule, sheet, stats, toolbar } from '../components/index.ts';
+
+type Kind = 'card' | 'puzzle';
+type Phase = 'loading' | 'solving' | 'wrong' | 'solved' | 'empty';
+
+interface Task {
+  kind: Kind;
+  /** Ván dùng để đi thử; đã đi sẵn nước của đối phương nếu là bài tập. */
+  game: Game;
+  /** Bên người học cầm. */
+  side: Side;
+  /** Các nước phải đi, dạng UCI. */
+  solution: string[];
+  /** Đã đi đúng mấy nước trong lời giải. */
+  step: number;
+  label: string;
+  rating?: number;
+  card?: Card;
+  puzzle?: Puzzle;
+}
+
+let phase: Phase = 'loading';
+let task: Task | null = null;
+let view: BoardView | null = null;
+let queue: Card[] = [];
+let cardCount = { total: 0, due: 0 };
+let theme: string | undefined;
+let hintShown = false;
+let khoBai = 0;
+let doneToday = 0;
+let lastResult: { correct: boolean; text: string } | null = null;
+let loadedOnce = false;
+
+/* ---------------- Lấy việc tiếp theo ---------------- */
+
+async function loadNext(rerender: () => void): Promise<void> {
+  phase = 'loading';
+  hintShown = false;
+  lastResult = null;
+  rerender();
+
+  // Thẻ lỗi của mình luôn được ưu tiên
+  if (!queue.length && auth.user) {
+    const r = await dueCards();
+    queue = r.cards;
+    cardCount = { total: r.total, due: r.due };
+  }
+
+  const card = queue.shift();
+  if (card) {
+    const game = new Game(card.fen);
+    task = {
+      kind: 'card',
+      game,
+      side: game.turn,
+      solution: [card.best_uci],
+      step: 0,
+      label: 'Lỗi của bạn — tìm nước tốt hơn',
+      card,
+    };
+    phase = 'solving';
+    rerender();
+    return;
+  }
+
+  const r = await nextPuzzle(theme);
+  khoBai = r.kho;
+  if (!r.puzzle) {
+    phase = 'empty';
+    rerender();
+    return;
+  }
+  // Nước đầu trong dữ liệu Lichess là của đối phương; đi sẵn rồi mới tới lượt người học
+  const game = new Game(r.puzzle.fen);
+  const first = r.puzzle.moves[0];
+  game.move(first.slice(0, 2) as Square, first.slice(2, 4) as Square, first[4]);
+  task = {
+    kind: 'puzzle',
+    game,
+    side: game.turn,
+    solution: r.puzzle.moves.slice(1),
+    step: 0,
+    label: r.puzzle.themes.map(themeName)[0] ?? 'Bài tập',
+    rating: r.puzzle.rating,
+    puzzle: r.puzzle,
+  };
+  phase = 'solving';
+  rerender();
+}
+
+/* ---------------- Chấm một nước ---------------- */
+
+function onMove(from: Square, to: Square, rerender: () => void): boolean {
+  if (!task || phase !== 'solving') return false;
+  const want = task.solution[task.step];
+  if (!want) return false;
+
+  const played = `${from}${to}`;
+  // Phong cấp: dữ liệu ghi cả quân phong, so sánh phần ô trước
+  const đúng = want.slice(0, 4) === played;
+  if (!đúng) {
+    const probe = task.game.move(from, to, want[4]);
+    if (!probe) return false; // nước không hợp lệ: coi như chưa đi gì
+    task.game.undo();
+    playSound('wrong');
+    phase = 'wrong';
+    void finish(false, rerender);
+    return false;
+  }
+
+  task.game.move(from, to, want[4]);
+  task.step++;
+  playSound(task.game.inCheck ? 'check' : 'move');
+
+  const nextOpponent = task.solution[task.step];
+  if (!nextOpponent) {
+    phase = 'solved';
+    void finish(true, rerender);
+    return true;
+  }
+  // Đối phương đi nước tiếp theo trong lời giải, rồi tới lượt người học
+  setTimeout(() => {
+    task!.game.move(
+      nextOpponent.slice(0, 2) as Square,
+      nextOpponent.slice(2, 4) as Square,
+      nextOpponent[4],
+    );
+    task!.step++;
+    if (!task!.solution[task!.step]) {
+      phase = 'solved';
+      void finish(true, rerender);
+    }
+    rerender();
+  }, 350);
+  rerender();
+  return true;
+}
+
+async function finish(correct: boolean, rerender: () => void): Promise<void> {
+  if (!task) return;
+  // Dùng gợi ý thì không tính là giải đúng
+  const tínhĐúng = correct && !hintShown;
+  if (correct) doneToday++;
+
+  if (task.kind === 'card' && task.card) {
+    await answerCard(task.card.id, tínhĐúng);
+    lastResult = {
+      correct,
+      text: correct ? 'Đúng rồi. Thẻ này sẽ quay lại sau một thời gian dài hơn.' : `Nước đúng là ${task.card.best_san}.`,
+    };
+  } else if (task.puzzle && auth.user) {
+    const r = await answerPuzzle(task.puzzle.id, task.puzzle.rating, tínhĐúng);
+    lastResult = {
+      correct,
+      text: correct ? `Đúng rồi. Độ khó của bạn: ${r.rating}.` : 'Chưa đúng. Xem lời giải rồi thử bài khác nhé.',
+    };
+  } else {
+    lastResult = { correct, text: correct ? 'Đúng rồi.' : 'Chưa đúng.' };
+  }
+  playSound(correct ? 'end' : 'wrong');
+  rerender();
+}
+
+/* ---------------- Vẽ màn hình ---------------- */
 
 export function train(): string {
-  const g = fx.game1;
-  const card = g.moves.find((m) => m.cls === 'blunder')!;
-  const puzzles = fx.puzzles;
-  const current = puzzles[1]; // Đòn đôi của Mã
+  const head = `<div class="screen-head">
+    <h1>Ôn tập</h1>
+    <span class="head-meta">${cardCount.due ? `${cardCount.due} thẻ lỗi đến hạn · ` : ''}đã làm ${doneToday} bài hôm nay</span>
+    ${toolbar([button({ label: 'Bài khác', icon: 'cards' })])}
+  </div>`;
 
-  const queueItem = (fen: string, theme: string, note: string, due: string, done = false) =>
-    `<div class="queue-item${done ? ' is-done' : ''}">
-      <span class="queue-board">${boardSvg({ fen, coordinates: false, label: theme })}</span>
-      <span class="queue-text"><b>${theme}</b><span>${note}</span></span>
-      <span class="queue-due mono">${due}</span>
+  if (phase === 'loading') return `<div class="screen screen-narrow">${head}${notice('Đang lấy bài…', 'info', 'clock')}</div>`;
+
+  if (phase === 'empty') {
+    return `<div class="screen screen-narrow">${head}
+      ${
+        khoBai === 0
+          ? notice('Kho bài tập chưa được nạp. Chạy `npm run puzzles` trên máy chủ.', 'locked', 'engine')
+          : notice('Hết bài phù hợp rồi. Chơi thêm vài ván để có thẻ lỗi mới nhé.', 'info', 'play')
+      }
+      ${auth.user ? '' : notice('Đăng nhập để lưu tiến độ và ôn lại chính lỗi của bạn.', 'locked', 'user')}
     </div>`;
+  }
 
-  const boxes = [3, 2, 5, 9, 14];
-  const max = Math.max(...boxes);
+  const t = task!;
+  const done = phase === 'solved' || phase === 'wrong';
 
-  return `<div class="screen screen-narrow">
-    <div class="screen-head">
-      <h1>Ôn tập hôm nay</h1>
-      <span class="head-meta">7 thẻ · chuỗi 5 ngày</span>
-      ${toolbar([button({ label: 'Đổi chủ đề', icon: 'cards' })])}
-    </div>
-
-    <div class="train-cols">
-      <div>
+  return `<div class="screen">
+    ${head}
+    <div class="game">
+      <div class="game-board">
         <div class="puzzle-head">
-          <span class="theme-tag">${current.theme}</span>
-          <span class="head-meta mono">độ khó ${current.rating}</span>
-          <span class="to-move">${sideGlyph('w')} Trắng đi</span>
+          <span class="theme-tag">${t.label}</span>
+          ${t.rating ? `<span class="head-meta mono">độ khó ${t.rating}</span>` : ''}
+          <span class="to-move">${t.side === 'w' ? 'Trắng' : 'Đen'} đi</span>
         </div>
-        <div class="puzzle-board">
-          ${boardSvg({ fen: current.fen, label: `Bài tập: ${current.theme}` })}
-        </div>
-        <div class="puzzle-bar">
-          ${hintButton(0)}
-          <span class="spacer"></span>
-          ${button({ label: 'Xem lời giải', kind: 'text' })}
-          ${button({ label: 'Bỏ qua', kind: 'text' })}
-        </div>
-        ${coachPanel({
-          text: 'Mã trắng ở e5 đang đứng rất gần Vua và Hậu đen. Tìm nước ăn hai mục tiêu cùng lúc.',
-          source: 'template',
-        })}
+        <div class="board-row"><div id="board" class="board-host"></div></div>
       </div>
 
-      <div>
-        ${rule('Hàng chờ', '<span class="rule-note">còn 6</span>')}
+      <div class="game-side">
         ${sheet(
-          `<div class="queue">
-            ${queueItem(card.fenAfter, 'Lỗi của bạn', `Ván với máy cấp 4, nước ${figurine('Qg4', 'w')}`, 'hôm nay')}
-            ${queueItem(puzzles[0].fen, puzzles[0].theme, `Độ khó ${puzzles[0].rating}`, 'hôm nay')}
-            ${queueItem(puzzles[2].fen, puzzles[2].theme, `Độ khó ${puzzles[2].rating}`, 'hôm nay')}
+          done
+            ? `<p class="task-done ${lastResult?.correct ? 'is-right' : 'is-wrong'}">
+                 <b>${lastResult?.correct ? 'Đúng' : 'Chưa đúng'}</b> — ${lastResult?.text ?? ''}
+               </p>`
+            : notice(
+                t.kind === 'card'
+                  ? 'Đây là thế cờ bạn từng đi sai. Tìm nước tốt hơn.'
+                  : 'Tìm nước mạnh nhất cho bên đang đi.',
+                'info',
+                'hint',
+              ),
+          `<div class="puzzle-bar">
+            ${
+              done
+                ? button({ label: 'Bài tiếp theo', kind: 'primary', icon: 'next' })
+                : button({ label: hintShown ? 'Đã xem gợi ý' : 'Gợi ý', icon: 'hint', disabled: hintShown })
+            }
+            <span class="spacer"></span>
+            ${done ? '' : button({ label: 'Xem lời giải', kind: 'text' })}
           </div>`,
+          hintShown || done
+            ? `<p class="prose">${
+                done && !lastResult?.correct
+                  ? `Nước đúng: ${figurine(sanOfSolution(), t.side)}`
+                  : `Hãy nhìn con ${pieceOfSolution()}.`
+              }</p>`
+            : '',
         )}
 
-        ${rule('Tiến độ')}
+        ${rule('Hôm nay')}
         ${stats([
-          ['Độ khó bài tập', '1 180'],
-          ['Thẻ đã thuộc', '14 / 33'],
-          ['Giải đúng tuần này', '41 / 52'],
+          ['Thẻ lỗi còn lại', String(Math.max(0, cardCount.due - doneToday))],
+          ['Đã làm', String(doneToday)],
+          ...(khoBai ? ([['Kho bài tập', khoBai.toLocaleString('vi')]] as [string, string][]) : []),
         ])}
-
-        <div class="boxes">
-          <div class="box-bars">
-            ${boxes
-              .map(
-                (n, i) =>
-                  `<span class="box-bar"><b class="mono">${n}</b><i style="height:${Math.round((n / max) * 46) + 2}px"></i><span>H${i + 1}</span></span>`,
-              )
-              .join('')}
-          </div>
-          <p class="box-note">Hộp 1 gặp lại sau 1 ngày, hộp 5 sau 35 ngày.</p>
-        </div>
       </div>
     </div>
   </div>`;
+}
+
+/** Ký hiệu nước đúng, tính từ thế cờ hiện tại của bài. */
+function sanOfSolution(): string {
+  const t = task;
+  if (!t) return '';
+  const uci = t.solution[t.step] ?? t.solution[t.solution.length - 1];
+  if (!uci) return '';
+  const probe = new Game(t.game.fen);
+  const m = probe.move(uci.slice(0, 2) as Square, uci.slice(2, 4) as Square, uci[4]);
+  return m?.san ?? uci;
+}
+
+function pieceOfSolution(): string {
+  const san = sanOfSolution();
+  return { K: 'Vua', Q: 'Hậu', R: 'Xe', B: 'Tượng', N: 'Mã' }[san[0]] ?? 'Tốt';
+}
+
+/* ---------------- Gắn bàn cờ ---------------- */
+
+export function mountTrain(rerender: () => void): void {
+  if (!loadedOnce) {
+    loadedOnce = true;
+    void loadNext(rerender);
+    return;
+  }
+  const host = document.querySelector<HTMLElement>('#board');
+  if (!host || !task) return;
+
+  view = new BoardView(host, {
+    legalFrom: (from) => (phase === 'solving' ? task!.game.legalFrom(from) : { quiet: [], captures: [] }),
+    canPick: (sq) => {
+      if (phase !== 'solving') return false;
+      const l = task!.game.legalFrom(sq);
+      return l.quiet.length + l.captures.length > 0;
+    },
+    onMove: (from, to) => onMove(from, to, rerender),
+  });
+
+  const last = task.game.lastMove;
+  view.render({
+    fen: task.game.fen,
+    orientation: task.side,
+    lastMove: last ? [last.from, last.to] : undefined,
+    check: task.game.checkedKing ?? undefined,
+    label: 'Bàn cờ bài tập',
+  });
+}
+
+export function handleTrainClick(target: HTMLElement, rerender: () => void): boolean {
+  const btn = target.closest<HTMLButtonElement>('button');
+  if (!btn) return false;
+  const label = btn.getAttribute('title') ?? btn.textContent?.trim() ?? '';
+
+  const actions: Record<string, () => void> = {
+    'Bài tiếp theo': () => void loadNext(rerender),
+    'Bài khác': () => void loadNext(rerender),
+    'Gợi ý': () => {
+      hintShown = true;
+      rerender();
+    },
+    'Xem lời giải': () => {
+      hintShown = true;
+      phase = 'wrong';
+      void finish(false, rerender);
+    },
+  };
+  const run = actions[label];
+  if (!run) return false;
+  run();
+  rerender();
+  return true;
+}
+
+/** Ảnh thu nhỏ cho màn Sảnh. */
+export function trainThumbnail(fen: string): string {
+  return boardSvg({ fen, coordinates: false, label: 'Bài tập' });
 }

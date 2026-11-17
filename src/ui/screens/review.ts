@@ -4,7 +4,7 @@
 // độ và dừng được giữa chừng. Kết quả lưu lên server để lần sau mở ra là có ngay.
 
 import { boardSvg, CLASS_LABEL } from '../../board/Board.ts';
-import { Game, outcomeText, type Side } from '../../../shared/chess.ts';
+import { END_TEXT, Game, outcomeText, type EndReason, type Side } from '../../../shared/chess.ts';
 import { material, type Square } from '../../../shared/fen.ts';
 import { formatScore, type MoveClass } from '../../../shared/winrate.ts';
 import { engine } from '../../engine/engine.ts';
@@ -130,7 +130,7 @@ function pickScreen(): string {
     return `<button class="log-row" data-game="${g.id}">
       ${sideGlyph(g.playerSide)}
       <span class="log-name">${who}</span>
-      <span class="log-result result-${win}">${text} · ${g.reason}</span>
+      <span class="log-result result-${win}">${text} · ${END_TEXT[g.reason as EndReason] ?? g.reason}</span>
       <span class="log-acc mono">${g.moveCount} nước</span>
       <span class="log-when">${when(g.createdAt)}</span>
     </button>`;

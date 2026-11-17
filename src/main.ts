@@ -8,13 +8,13 @@ import { loadPieces } from './board/sprite.ts';
 import { icon, type IconName } from './ui/icons.ts';
 import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton } from './app/session.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
-import { home } from './ui/screens/home.ts';
+import { home, mountHome, resetHome } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
-import { train } from './ui/screens/train.ts';
+import { handleTrainClick, mountTrain, train } from './ui/screens/train.ts';
 import { online } from './ui/screens/online.ts';
-import { account } from './ui/screens/account.ts';
+import { account, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
 /** Tên app, đặt theo bộ với latbai.vn. Đổi ở đây là đổi cả header lẫn tiêu đề tab. */
@@ -113,6 +113,9 @@ function render(): void {
   app.innerHTML = siteHeader(r) + `<main>${screen.render()}${siteFooter()}</main>` + bottomNav(r);
   if (r === 'choi') mountPlay(render);
   if (r === 'xem-lai') mountReview(render);
+  if (r === 'on-tap') mountTrain(render);
+  if (r === 'tai-khoan') mountAccount(render);
+  if (r === '') mountHome(render);
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');
     if (slot) void renderGoogleButton(slot, showLoginError);
@@ -164,6 +167,14 @@ document.addEventListener('click', (e) => {
   // Màn chơi và màn xem lại tự lo các nút của chúng
   if (route() === 'choi' && handlePlayClick(el, render)) return;
   if (route() === 'xem-lai' && handleReviewClick(el, render)) return;
+  if (route() === 'on-tap' && handleTrainClick(el, render)) return;
+
+  // Ô có data-go thì chuyển màn
+  const go = el.closest<HTMLElement>('[data-go]');
+  if (go?.dataset.go) {
+    location.hash = `#/${go.dataset.go}`;
+    return;
+  }
 
   const btn = el.closest<HTMLButtonElement>('button');
   if (!btn) return;
@@ -172,7 +183,11 @@ document.addEventListener('click', (e) => {
     setSoundEnabled(!soundEnabled());
     render();
   } else if (label === 'Đăng xuất') {
-    void logout().then(render);
+    void logout().then(() => {
+      resetAccount();
+      resetHome();
+      render();
+    });
   } else if (label === 'Vào thử') {
     const name = document.querySelector<HTMLInputElement>('#dev-name')?.value.trim() || 'Nelson';
     btn.disabled = true;

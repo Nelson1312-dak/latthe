@@ -1,7 +1,73 @@
 // Màn đăng nhập / tài khoản. Vào thẳng được qua #/tai-khoan.
-import { button, notice, rule, stats } from '../components/index.ts';
+import { button, classBadge, notice, rule, stats } from '../components/index.ts';
 import { auth } from '../../app/session.ts';
+import { progress, type Progress } from '../../app/training.ts';
 import { icon } from '../icons.ts';
+import { CLASS_LABEL } from '../../board/Board.ts';
+import type { MoveClass } from '../../../shared/winrate.ts';
+
+/** Tiến độ học, nạp riêng vì cần gọi server. */
+let tienDo: Progress | null = null;
+let daHoi = false;
+
+export function mountAccount(rerender: () => void): void {
+  if (daHoi || !auth.user) return;
+  daHoi = true;
+  void progress().then((p) => {
+    tienDo = p;
+    rerender();
+  });
+}
+
+/** Quên tiến độ khi đăng xuất, để người sau không thấy số của người trước. */
+export function resetAccount(): void {
+  tienDo = null;
+  daHoi = false;
+}
+
+const BOX_DAYS = [1, 3, 7, 16, 35];
+
+function progressBlock(): string {
+  if (!tienDo) return '';
+  const boxes = Array.from({ length: 5 }, (_, i) => tienDo!.hopThe.find((h) => h.box === i + 1)?.c ?? 0);
+  const max = Math.max(1, ...boxes);
+  const tyLe = tienDo.attempts ? Math.round((tienDo.correct / tienDo.attempts) * 100) : 0;
+
+  return `
+    ${rule('Tiến độ học', `<span class="rule-note">chuỗi ${tienDo.streak} ngày</span>`)}
+    ${stats([
+      ['Độ khó bài tập', String(tienDo.rating)],
+      ['Bài đã làm', `${tienDo.correct} đúng / ${tienDo.attempts}${tienDo.attempts ? ` (${tyLe}%)` : ''}`],
+      ['Thẻ lỗi', `${tienDo.the.due} đến hạn / ${tienDo.the.total}`],
+    ])}
+
+    ${
+      tienDo.the.total
+        ? `<div class="boxes">
+            <p class="label">Thẻ theo hộp ôn tập</p>
+            <div class="box-bars">
+              ${boxes
+                .map(
+                  (n, i) =>
+                    `<span class="box-bar"><b class="mono">${n}</b>` +
+                    `<i style="height:${Math.round((n / max) * 46) + 2}px"></i><span>H${i + 1}</span></span>`,
+                )
+                .join('')}
+            </div>
+            <p class="box-note">Hộp 1 gặp lại sau ${BOX_DAYS[0]} ngày, hộp 5 sau ${BOX_DAYS[4]} ngày.</p>
+          </div>`
+        : ''
+    }
+
+    ${
+      tienDo.chuDeHaySai.length
+        ? `${rule('Kiểu lỗi hay gặp')}
+           <ul class="tally">${tienDo.chuDeHaySai
+             .map((c) => `<li>${classBadge(c.cls as MoveClass)} ${CLASS_LABEL[c.cls as MoveClass] ?? c.cls} <b class="mono">${c.c}</b></li>`)
+             .join('')}</ul>`
+        : ''
+    }`;
+}
 
 export function account(): string {
   if (auth.offline) {
@@ -37,6 +103,7 @@ export function account(): string {
           </div>
         </div>
         <div>
+          ${progressBlock()}
           ${rule('Lưu ở đâu')}
           <p class="prose">
             Ván cờ, thẻ ôn tập và tiến độ nằm trong một file SQLite trên máy chủ, không gửi đi đâu khác.

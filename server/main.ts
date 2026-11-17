@@ -4,10 +4,12 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
-import { openDb, createLocalUser, one, type Db, type User } from './db.ts';
+import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
 import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
 import { explain, ollamaAlive, queueDepth } from './advisor.ts';
+import { pickPuzzle, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
+import { answerCard } from './reviews.ts';
 import type { Facts } from '../shared/advisor/facts.ts';
 import {
   SESSION_COOKIE,
@@ -238,6 +240,68 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     const user = currentUser(req);
     if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
     return json(res, 200, { cards: dueCards(db, user.id), ...countCards(db, user.id) });
+  }
+
+  if (path === '/api/cards/answer' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const id = Number(body.id);
+    if (!Number.isInteger(id)) return json(res, 400, { error: 'Thiếu mã thẻ' });
+    const card = answerCard(db, user.id, id, body.correct === true);
+    if (!card) return json(res, 404, { error: 'Không có thẻ này' });
+    return json(res, 200, { card });
+  }
+
+  /* ---- Bài tập ---- */
+
+  if (path === '/api/puzzles/next' && method === 'GET') {
+    const user = currentUser(req);
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const theme = url.searchParams.get('theme') ?? undefined;
+    const rating = user ? puzzleStats(db, user.id).rating : Number(url.searchParams.get('rating') ?? 1000);
+    const puzzle = pickPuzzle(db, {
+      rating,
+      theme,
+      exclude: user ? recentAttemptIds(db, user.id) : [],
+    });
+    if (!puzzle) {
+      return json(res, 200, { puzzle: null, kho: puzzleCount(db) });
+    }
+    return json(res, 200, { puzzle, rating, kho: puzzleCount(db) });
+  }
+
+  if (path === '/api/puzzles/answer' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const id = typeof body.id === 'string' ? body.id : '';
+    const puzzleRating = Number(body.rating);
+    if (!id || !Number.isFinite(puzzleRating)) return json(res, 400, { error: 'Thiếu dữ liệu' });
+    return json(res, 200, recordAttempt(db, user.id, id, puzzleRating, body.correct === true));
+  }
+
+  if (path === '/api/puzzles/themes' && method === 'GET') {
+    return json(res, 200, { themes: themeCounts(db), kho: puzzleCount(db) });
+  }
+
+  if (path === '/api/progress' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    return json(res, 200, {
+      ...puzzleStats(db, user.id),
+      the: countCards(db, user.id),
+      hopThe: all<{ box: number; c: number }>(
+        db,
+        'SELECT box, count(*) c FROM cards WHERE user_id = ? GROUP BY box ORDER BY box',
+        user.id,
+      ),
+      chuDeHaySai: all<{ cls: string; c: number }>(
+        db,
+        'SELECT cls, count(*) c FROM cards WHERE user_id = ? GROUP BY cls ORDER BY c DESC',
+        user.id,
+      ),
+    });
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {

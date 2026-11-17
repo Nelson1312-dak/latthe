@@ -728,3 +728,16 @@ button.log-row {
   color: var(--text-1);
   font-weight: 600;
 }
+
+/* ---------------- Ôn tập ---------------- */
+.task-done {
+  font-size: var(--fs-lg);
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--line-strong);
+}
+.task-done.is-right {
+  border-left-color: var(--ok);
+}
+.task-done.is-wrong {
+  border-left-color: var(--danger);
+}
