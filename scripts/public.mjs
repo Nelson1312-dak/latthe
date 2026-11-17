@@ -1,8 +1,8 @@
 // Chạy bản thật và mở ra internet.
-// Chạy: npm run public            (tự chọn tunnel có sẵn)
-//       npm run public -- --tunnel=cloudflared
+// Chạy: npm run public                       (tunnel tạm, địa chỉ ngẫu nhiên)
+//       npm run public -- --tunnel=named      (tên miền cố định, xem docs/TEN-MIEN.md)
 //       npm run public -- --tunnel=ngrok
-//       npm run public -- --tunnel=none     (chỉ chạy server ở localhost)
+//       npm run public -- --tunnel=none       (chỉ chạy trong máy)
 //
 // Khác `npm run dev` ở chỗ: dựng sẵn dist rồi để chính server Node phục vụ cả
 // trang tĩnh lẫn /api trên MỘT cổng. Cùng một origin nên cookie phiên chạy
@@ -19,6 +19,8 @@ import { join } from 'node:path';
 
 const PORT = process.env.API_PORT ?? '8787';
 const TÊN = 'co-vua';
+/** Tên tunnel Cloudflare đã tạo sẵn, dùng cho --tunnel=named. */
+const CF_TUNNEL = process.env.CF_TUNNEL ?? 'co-vua';
 const CẤU_HÌNH_RIÊNG = '.ngrok.local.yml';
 const NGROK_YML =
   process.env.NGROK_CONFIG ?? join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData/Local'), 'ngrok/ngrok.yml');
@@ -87,6 +89,21 @@ if (chọn === 'none') {
   );
   console.log(host ? `\nMở ra: https://${host}\n` : '\nngrok sẽ cấp một tên ngẫu nhiên.\n');
   chay('ngrok', 'ngrok', ['start', '--config', NGROK_YML, '--config', CẤU_HÌNH_RIÊNG, TÊN]);
+} else if (chọn === 'named') {
+  // Tunnel Cloudflare đã đặt tên và đã gắn tên miền. Cần làm một lần theo
+  // docs/TEN-MIEN.md; sau đó địa chỉ cố định, không đổi mỗi lần chạy.
+  //
+  // `--url` đè lên phần ingress trong cấu hình, nên không cần file config riêng.
+  console.log(`\nMở tunnel "${CF_TUNNEL}" (tên miền cố định).`);
+  console.log('Chưa tạo tunnel này thì xem docs/TEN-MIEN.md.\n');
+  chay('cloudflared', 'cloudflared', [
+    'tunnel',
+    '--no-autoupdate',
+    'run',
+    '--url',
+    `http://localhost:${PORT}`,
+    CF_TUNNEL,
+  ]);
 } else {
   // Mặc định: cloudflared quick tunnel. Không cần tài khoản, không đụng vào
   // dịch vụ cloudflared đang chạy sẵn, nhưng mỗi lần chạy là một tên khác.

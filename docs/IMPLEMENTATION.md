@@ -478,8 +478,19 @@ file sprite. Hình dáng quân cờ không đổi, chỉ đổi độ dày nét.
 - [x] `scripts/setup-autostart.ps1`: đăng ký Task Scheduler (chạy tay, không tự đăng ký)
 - [x] `npm run e2e`: 9 mục, đi hết đường chính của người dùng
 - [x] `npm run loadtest`: 10 ván online cùng lúc + 5 lời bình cùng lúc
-- [ ] **Còn lại (cần bạn):** chốt tên miền cố định, tạo Google OAuth client ID, và
-      truy cập thử từ điện thoại qua 4G.
+- [x] `--tunnel=named`: chạy tunnel Cloudflare đã đặt tên, địa chỉ cố định
+- [ ] **Còn lại (cần bạn, xem `docs/TEN-MIEN.md`):** đưa latbai.vn về Cloudflare rồi
+      tạo tunnel `co-vua` → `co.latbai.vn`; tạo Google OAuth client ID; thử từ điện
+      thoại qua 4G.
+
+**Chốt hướng tên miền (17/11/2026): Cloudflare + `co.latbai.vn`.** Có một điều kiện
+trước mà lúc chọn chưa biết: `latbai.vn` đang để DNS ở **Mắt Bão**
+(`ns1/ns2.matbao.vn`), không phải Cloudflare. Cloudflare Tunnel chỉ gắn được tên miền
+nằm trong tài khoản Cloudflare, vì bản ghi `<id>.cfargotunnel.com` chỉ chạy khi
+Cloudflare làm proxy — để ở nhà DNS khác thì vô nghĩa. Nên phải chuyển nameserver.
+Đã kiểm trước cho chắc: tên miền chỉ có **một bản ghi A** (→ Vercel) và **một TXT**
+xác minh Google, **không có MX** — tức là không có hòm thư nào để làm hỏng. Chuyển
+khá an toàn.
 
 **Kết quả thử tải** (10 ván song song, 100 nước, trên chính máy này):
 ghép 10/10 ván, 100/100 nước đi thành công; đi một nước trung vị 9 ms, p95 25 ms;
