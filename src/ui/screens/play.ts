@@ -150,7 +150,7 @@ function hintBlock(): string {
 
 /* ---------------- Màn đang chơi ---------------- */
 
-function gameScreen(): string {
+function gameScreen(extraSide = ''): string {
   const mat = material(game.fen);
   const result = game.outcome();
   const last = game.lastMove;
@@ -268,6 +268,7 @@ function gameScreen(): string {
         ${showEval && currentEval ? `<p class="head-meta">Đánh giá: <span class="mono">${formatScore(currentEval)}</span> (góc nhìn Trắng)</p>` : ''}
         ${last ? `<p class="head-meta">Nước vừa đi: <span class="mono">${last.san}</span></p>` : ''}
         ${engineError ? notice(engineError, 'danger', 'engine') : ''}
+        ${extraSide}
       </div>
     </div>
 
@@ -287,10 +288,13 @@ function gameScreen(): string {
   </div>`;
 }
 
-export function play(): string {
+export function play(extraSide = ''): string {
   // Luôn vẽ bố cục có bàn cờ. Chưa bắt đầu thì bàn cờ là thế cờ đầu, không
   // bấm được, và cột phải là phần chọn đối thủ.
-  return gameScreen();
+  //
+  // `extraSide` để màn Sảnh gắn thêm phần của nó (việc hôm nay, sổ ván) xuống
+  // dưới cột phải — Sảnh dùng chung đúng bàn cờ này, vào là đánh được ngay.
+  return gameScreen(extraSide);
 }
 
 /* ---------------- Gắn bàn cờ sau khi HTML vào DOM ---------------- */

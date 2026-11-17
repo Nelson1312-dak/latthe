@@ -8,7 +8,7 @@ import { loadPieces } from './board/sprite.ts';
 import { icon, type IconName } from './ui/icons.ts';
 import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton } from './app/session.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
-import { handleHomeClick, home, mountHome, resetHome } from './ui/screens/home.ts';
+import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
@@ -25,7 +25,8 @@ export const APP_NAME = 'Lật Cờ';
 type Screen = { title: string; render: () => string };
 
 const SCREENS: Record<string, Screen> = {
-  '': { title: 'Sảnh', render: home },
+  // Sảnh dùng chung bàn cờ của màn Chơi, gắn thêm phần riêng vào cột phải
+  '': { title: 'Sảnh', render: () => play(homeSide()) },
   choi: { title: 'Chơi', render: play },
   'choi-may': { title: 'Chơi với máy', render: playBot },
   'xem-lai': { title: 'Xem lại ván', render: review },
@@ -128,7 +129,10 @@ function render(): void {
   if (r === 'tai-khoan') mountAccount(render);
   if (r === 'hoc') mountLearn(render);
   if (r === 'ban') mountOnline(render);
-  if (r === '') mountHome(render);
+  if (r === '') {
+    mountHome(render);
+    mountPlay(render);
+  }
   if (r === 'tai-khoan' && !auth.user && !auth.offline) {
     const slot = document.querySelector<HTMLElement>('#google-btn');
     if (slot) void renderGoogleButton(slot, showLoginError);
@@ -178,12 +182,11 @@ document.addEventListener('click', (e) => {
   }
 
   // Màn chơi và màn xem lại tự lo các nút của chúng
-  if (route() === 'choi' && handlePlayClick(el, render)) return;
+  if ((route() === 'choi' || route() === '') && handlePlayClick(el, render)) return;
   if (route() === 'xem-lai' && handleReviewClick(el, render)) return;
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
   if (route() === 'hoc' && handleLearnClick(el)) return;
   if (route() === 'ban' && handleOnlineClick(el, render)) return;
-  if (route() === '' && handleHomeClick(el)) return;
 
   // Ô có data-go thì chuyển màn
   const go = el.closest<HTMLElement>('[data-go]');

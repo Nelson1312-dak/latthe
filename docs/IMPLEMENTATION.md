@@ -426,6 +426,13 @@ Bẫy gặp lại lần hai: thanh người chơi cao lên (ảnh đại diện 
 bàn cờ tràn khỏi màn hình, thanh dưới bị cắt. Trang không cuộn được nên tràn là mất
 hẳn. Giờ thanh cao cố định 54px và phần chừa cho bàn cờ tính lại theo đúng con số đó.
 
+### Sau GĐ7 (tiếp) — Sảnh là bàn cờ (17/11/2026)
+- [x] Sảnh gọi thẳng `play(homeSide())`: dùng chung bàn cờ, cùng phần chọn đối thủ,
+      cùng BoardView của màn Chơi. Mở trang chủ là đánh được luôn.
+- [x] Bỏ bàn cờ bài tập xem trước ở Sảnh — giờ đã có bàn cờ thật, hai bàn trên một
+      trang chỉ làm phân vân
+- [x] Bỏ dòng việc "Chơi một ván" (đang đứng trên bàn cờ rồi còn mời vào chơi)
+
 ### GĐ8 — Vận hành và phát hành (M)
 - [ ] Tunnel với tên miền cố định, thêm origin đó vào Google OAuth
 - [ ] Task Scheduler + giám sát, sao lưu hằng đêm

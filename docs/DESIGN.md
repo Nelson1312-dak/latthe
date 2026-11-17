@@ -245,6 +245,10 @@ cửa sổ. Hai quy tắc:
   cờ bị cắt; để tự do thì thêm hàng quân đã ăn là tràn mất thanh dưới.
 - **Vào mục Chơi là thấy bàn cờ ngay**, phần chọn đối thủ nằm ở cột phải và biến mất
   khi bấm Bắt đầu. Trước đây đó là một trang riêng toàn nút, không có bàn cờ nào.
+- **Sảnh dùng chung đúng bàn cờ đó.** Mở latbai.vn là đánh được luôn, không phải bấm
+  thêm nhịp nào. Phần riêng của Sảnh — việc hôm nay, trình độ, sổ ván đã chơi — gắn
+  xuống dưới cột phải, cuộn cùng cột. Sảnh không có bàn cờ riêng, không có bài tập xem
+  trước: hai bàn cờ trên một trang chỉ làm người ta phân vân bấm cái nào.
 
 ### 4.6b Thao tác trên bàn cờ
 
