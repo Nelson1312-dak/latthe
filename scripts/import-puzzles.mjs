@@ -8,7 +8,10 @@
 // Lưu ý về dữ liệu: cột FEN là thế cờ TRƯỚC nước của đối phương, và nước đầu
 // trong cột Moves là nước của đối phương. Người học bắt đầu giải từ nước thứ hai.
 
-import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readSync, renameSync, rmSync, statSync } from 'node:fs';
+import {
+  closeSync, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, readSync,
+  renameSync, rmSync, statSync, writeFileSync,
+} from 'node:fs';
 import { createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { createInterface } from 'node:readline';
@@ -36,13 +39,17 @@ const THEMES = new Set([
 
 const human = (n) => (n > 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.round(n / 1e6)} MB`);
 
-/** Độ dài thật của file trên máy chủ, để biết file đã tải có đủ chưa. */
-async function remoteSize() {
+/** Độ dài và phiên bản file trên máy chủ. */
+async function remoteInfo() {
   try {
     const res = await fetch(URL_ZST, { method: 'HEAD' });
-    return res.ok ? Number(res.headers.get('content-length') ?? 0) : 0;
+    if (!res.ok) return { size: 0, tag: '' };
+    return {
+      size: Number(res.headers.get('content-length') ?? 0),
+      tag: res.headers.get('etag') ?? res.headers.get('last-modified') ?? '',
+    };
   } catch {
-    return 0;
+    return { size: 0, tag: '' };
   }
 }
 
@@ -55,7 +62,20 @@ async function remoteSize() {
  */
 async function download() {
   mkdirSync('assets-src', { recursive: true });
-  const full = await remoteSize();
+  const { size: full, tag } = await remoteInfo();
+  const tagFile = `${RAW}.part.tag`;
+
+  // Lichess dựng lại file này định kỳ. Nối phần dở dang của bản cũ với phần
+  // mới tải là ra một file hỏng ở đúng chỗ nối — đã dính một lần: nạp được
+  // 32.000 bài rồi mới báo "Unknown frame descriptor". Khác phiên bản thì bỏ.
+  if (existsSync(`${RAW}.part`) && tag) {
+    const cũ = existsSync(tagFile) ? readFileSync(tagFile, 'utf8') : '';
+    if (cũ !== tag) {
+      console.log('Máy chủ đã có bản mới, bỏ phần tải dở của bản cũ.');
+      rmSync(`${RAW}.part`);
+    }
+  }
+  if (tag) writeFileSync(tagFile, tag);
 
   if (existsSync(RAW)) {
     const có = statSync(RAW).size;
@@ -104,6 +124,7 @@ async function download() {
       const đượcBaoNhiêu = statSync(part).size;
       if (total && đượcBaoNhiêu !== total) throw new Error(`tải thiếu: ${human(đượcBaoNhiêu)} / ${human(total)}`);
       renameSync(part, RAW);
+      if (existsSync(tagFile)) rmSync(tagFile);
       console.log(`Xong: ${human(statSync(RAW).size)}`);
       return;
     } catch (err) {
