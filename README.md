@@ -2,7 +2,9 @@
 
 Web game cờ vua để học: chơi với máy, xem lại từng nước có Huấn luyện viên giải thích, và ôn tập bằng chính lỗi của mình. Xem [docs/PLAN.md](docs/PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
-Đang ở cuối **giai đoạn 4**: đấu với máy 8 cấp độ, và **xem lại ván** được rồi — engine chấm từng nước, chỉ ra chỗ hỏng và nước tốt hơn, rồi sinh thẻ ôn tập từ chính lỗi của bạn. Màn Ôn tập và Ván với bạn vẫn là bản dựng tĩnh.
+Đang ở cuối **giai đoạn 5**: đấu với máy 8 cấp độ, xem lại ván có engine chấm từng nước, và **Huấn luyện viên** giải thích bằng tiếng Việt. Màn Ôn tập và Ván với bạn vẫn là bản dựng tĩnh.
+
+Huấn luyện viên hoạt động theo nguyên tắc: **engine và luật cờ quyết định đúng sai, mô hình ngôn ngữ chỉ diễn đạt lại**. Lời nào nhắc nước đi, ô cờ, tên quân hay con số không có trong dữ kiện đều bị chặn và thay bằng câu mẫu. Chạy `npm run eval:advisor` để tự đo.
 
 Bản trên web: **https://latbai.vn** (project Vercel `latthe`). Đó là trang tĩnh, không có server, nên phần đăng nhập hiện "Ngoại tuyến" — muốn dùng thật thì chạy trên máy.
 
@@ -25,6 +27,7 @@ Muốn đăng nhập bằng Google thật thì xem [docs/GOOGLE-LOGIN.md](docs/G
 | `npm run build` | Kiểm tra kiểu và đóng gói |
 | `npm run fixtures` | Sinh lại dữ liệu mẫu bằng Stockfish (vài phút) |
 | `npm run openings` | Tải lại bảng khai cuộc từ Lichess |
+| `npm run eval:advisor` | Đo chất lượng lời bình của Huấn luyện viên (cần Ollama) |
 | `npm run shots` | Chụp ảnh các màn hình vào `shots/` (cần `npm run dev`) |
 | `npm run check:design` | Rà theo danh sách cấm ở DESIGN.md: emoji, gradient, bo góc lớn, tương phản, vùng bấm, tràn ngang (cần `npm run dev`) |
 
@@ -41,6 +44,8 @@ Server đọc `.env.chess` ở thư mục gốc (tên riêng để không lẫn 
 | `GOOGLE_CLIENT_ID` | trống | Bật đăng nhập Google |
 | `API_PORT` | `8787` | Cổng của server API (**không** dùng `PORT`: nhiều công cụ đặt sẵn biến đó) |
 | `API_HOST` | `127.0.0.1` | Địa chỉ lắng nghe |
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | Nơi chạy mô hình cho Huấn luyện viên |
+| `OLLAMA_MODEL` | `qwen3:8b` | Mô hình dùng để viết lời bình |
 | `AUTH_DEV` | tắt | `1` để bật đăng nhập thử; chỉ có tác dụng khi `API_HOST` là địa chỉ máy này |
 | `CHESS_DB` | `data/chess.db` | File database |
 

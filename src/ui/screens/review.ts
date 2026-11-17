@@ -13,6 +13,7 @@ import { reviewGame, ReviewCancelled, mistakesOf, type ReviewResult } from '../.
 import { auth } from '../../app/session.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
 import { fetchGame, saveReview } from '../../app/reviews.ts';
+import { advisorStatus, explainMove, factsForMove, type Comment } from '../../app/advisor.ts';
 import {
   button,
   classBadge,
@@ -47,6 +48,11 @@ interface State {
   error: string | null;
   newCards: number;
   games: GameRow[];
+  /** Lời bình của Huấn luyện viên cho nước đang xem. */
+  coach: Comment | null;
+  coachLoading: boolean;
+  /** Ollama có chạy không — để nói rõ nguồn lời bình. */
+  ollama: boolean | null;
 }
 
 const state: State = {
@@ -62,6 +68,9 @@ const state: State = {
   error: null,
   newCards: 0,
   games: [],
+  coach: null,
+  coachLoading: false,
+  ollama: null,
 };
 
 let cancelRequested = false;
@@ -194,6 +203,29 @@ function evalGraph(r: ReviewResult, currentPly: number): string {
   </svg>`;
 }
 
+/** Khối lời bình của Huấn luyện viên cho nước đang xem. */
+function coachBlock(): string {
+  if (state.ply === 0) return '';
+  if (state.coachLoading) {
+    return `<section class="note"><p class="note-move"><span class="note-verdict">Huấn luyện viên</span></p>
+      <p class="note-text is-typing">Đang xem thế cờ</p></section>`;
+  }
+  if (!state.coach) {
+    return `<div class="setup-go">${button({ label: 'Vì sao nước này?', icon: 'coach' })}</div>`;
+  }
+  const src =
+    state.coach.source === 'llm'
+      ? 'Engine chấm nước · máy viết lời bình'
+      : state.coach.source === 'cache'
+        ? 'Engine chấm nước · lời bình đã lưu'
+        : 'Engine chấm nước · lời bình mẫu';
+  return `<section class="note">
+    <p class="note-move"><span class="note-verdict">Huấn luyện viên</span></p>
+    <p class="note-text">${state.coach.comment.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!)}</p>
+    <p class="note-source">${src}</p>
+  </section>`;
+}
+
 function resultScreen(r: ReviewResult): string {
   const ply = state.ply;
   const move = ply > 0 ? r.moves[ply - 1] : null;
@@ -296,6 +328,8 @@ function resultScreen(r: ReviewResult): string {
           </div>`,
         )}
 
+        ${coachBlock()}
+
         ${rule('Tổng kết')}
         ${stats([
           ...(mySide
@@ -310,6 +344,25 @@ function resultScreen(r: ReviewResult): string {
       </div>
     </div>
   </div>`;
+}
+
+/** Đổi nước đang xem; lời bình của nước cũ không còn đúng nữa. */
+function goToPly(ply: number, rerender: () => void): void {
+  state.ply = ply;
+  state.coach = null;
+  rerender();
+}
+
+/** Xin lời bình cho nước đang xem. */
+async function askCoach(rerender: () => void): Promise<void> {
+  const r = state.review;
+  const move = r && state.ply > 0 ? r.moves[state.ply - 1] : null;
+  if (!move || state.coachLoading) return;
+  state.coachLoading = true;
+  rerender();
+  state.coach = await explainMove(factsForMove(move));
+  state.coachLoading = false;
+  rerender();
 }
 
 /* ---------------- Chạy việc chấm ván ---------------- */
@@ -351,6 +404,13 @@ async function runReview(rerender: () => void): Promise<void> {
 
 /** Mở màn Xem lại: nạp danh sách ván đã lưu. */
 export function mountReview(rerender: () => void): void {
+  if (state.ollama === null) {
+    state.ollama = false;
+    void advisorStatus().then((s) => {
+      state.ollama = s.ollama;
+      rerender();
+    });
+  }
   if (state.phase === 'pick' && auth.user && !state.games.length) {
     void recentGames().then((games) => {
       if (!games.length) return;
@@ -410,15 +470,13 @@ export function handleReviewClick(target: HTMLElement, rerender: () => void): bo
 
   const dot = target.closest<SVGElement>('.graph-dot');
   if (dot) {
-    state.ply = Number(dot.getAttribute('data-ply'));
-    rerender();
+    goToPly(Number(dot.getAttribute('data-ply')), rerender);
     return true;
   }
 
   const moveBtn = target.closest<HTMLElement>('.move[data-ply]');
   if (moveBtn) {
-    state.ply = Number(moveBtn.dataset.ply);
-    rerender();
+    goToPly(Number(moveBtn.dataset.ply), rerender);
     return true;
   }
 
@@ -439,25 +497,18 @@ export function handleReviewClick(target: HTMLElement, rerender: () => void): bo
     'Lật bàn cờ': () => {
       state.orientation = state.orientation === 'w' ? 'b' : 'w';
     },
-    'Về đầu ván': () => {
-      state.ply = 0;
-    },
-    'Lùi một nước': () => {
-      state.ply = Math.max(0, state.ply - 1);
-    },
-    'Tiến một nước': () => {
-      state.ply = Math.min(r?.moves.length ?? 0, state.ply + 1);
-    },
-    'Tới nước cuối': () => {
-      state.ply = r?.moves.length ?? 0;
-    },
+    'Vì sao nước này?': () => void askCoach(rerender),
+    'Về đầu ván': () => goToPly(0, rerender),
+    'Lùi một nước': () => goToPly(Math.max(0, state.ply - 1), rerender),
+    'Tiến một nước': () => goToPly(Math.min(r?.moves.length ?? 0, state.ply + 1), rerender),
+    'Tới nước cuối': () => goToPly(r?.moves.length ?? 0, rerender),
     'Nước hỏng tiếp theo': () => {
       const next = r && mistakesOf(r, state.playerSide ?? undefined).find((m) => m.ply > state.ply);
-      if (next) state.ply = next.ply;
+      if (next) goToPly(next.ply, rerender);
     },
     'Nước hỏng trước': () => {
       const prev = r && [...mistakesOf(r, state.playerSide ?? undefined)].reverse().find((m) => m.ply < state.ply);
-      if (prev) state.ply = prev.ply;
+      if (prev) goToPly(prev.ply, rerender);
     },
   };
 

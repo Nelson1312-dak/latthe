@@ -7,6 +7,8 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { openDb, createLocalUser, one, type Db, type User } from './db.ts';
 import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
+import { explain, ollamaAlive, queueDepth } from './advisor.ts';
+import type { Facts } from '../shared/advisor/facts.ts';
 import {
   SESSION_COOKIE,
   clearCookie,
@@ -202,6 +204,32 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
       const cards = makeCards(db, user.id, gameId, review, game.player_side === 'b' ? 'b' : 'w');
       return json(res, 201, { ok: true, newCards: cards });
     }
+  }
+
+  /* ---- Huấn luyện viên ---- */
+
+  if (path === '/api/advisor/status' && method === 'GET') {
+    return json(res, 200, { ollama: await ollamaAlive(), hangCho: queueDepth() });
+  }
+
+  if (path === '/api/advisor/explain' && method === 'POST') {
+    const user = currentUser(req);
+    // Chưa đăng nhập vẫn xem được lời bình mẫu, nhưng không dùng mô hình
+    let body: Record<string, unknown>;
+    try {
+      body = await readJson(req, 100_000);
+    } catch {
+      return json(res, 400, { error: 'Nội dung không hợp lệ' });
+    }
+    const facts = body.facts as Facts | undefined;
+    if (!facts || typeof facts.nuocDaDi !== 'string' || !Array.isArray(facts.the)) {
+      return json(res, 400, { error: 'Thiếu dữ kiện' });
+    }
+    if (!user) {
+      const { templateComment } = await import('../shared/advisor/templates.ts');
+      return json(res, 200, { comment: templateComment(facts), source: 'template' });
+    }
+    return json(res, 200, await explain(db, user.id, facts));
   }
 
   /* ---- Thẻ ôn tập ---- */

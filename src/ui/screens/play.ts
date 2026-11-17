@@ -12,6 +12,9 @@ import { LEVELS, levelById, thinkDelayMs } from '../../engine/levels.ts';
 import { splitUci } from '../../engine/uci.ts';
 import { saveFinishedGame } from '../../app/games.ts';
 import { offerReview } from './review.ts';
+import { buildFacts } from '../../../shared/advisor/facts.ts';
+import { detectMotifs } from '../../../shared/advisor/motifs.ts';
+import { hintSteps } from '../../../shared/advisor/templates.ts';
 import {
   button,
   dialog,
@@ -52,6 +55,10 @@ let saved = false;
 /** Nước đã chạy animation rồi, để không trượt lại quân khi vẽ lại màn hình. */
 let animatedPly = 0;
 let animatedOrientation: Side = 'w';
+/** Gợi ý ba nấc: 0 là chưa xin, 3 là đã xem nước cụ thể. */
+let hintLevel: 0 | 1 | 2 | 3 = 0;
+let hints: [string, string, string] | null = null;
+let hintLoading = false;
 
 const PROMOTION_PIECES = [
   ['q', 'Hậu'],
@@ -73,6 +80,8 @@ function newGame(): void {
   currentEval = null;
   saved = false;
   animatedPly = 0;
+  hintLevel = 0;
+  hints = null;
   orientation = setup.mode === 'bot' ? setup.side : 'w';
   animatedOrientation = orientation;
 }
@@ -117,6 +126,22 @@ function setupScreen(): string {
       <div class="setup-go">${button({ label: 'Bắt đầu ván', kind: 'primary', icon: 'play' })}</div>
       ${engineError ? notice(engineError, 'danger', 'engine') : ''}
     </div>
+  </div>`;
+}
+
+/** Khối gợi ý ba nấc. Dùng gợi ý thì ván đó coi như có trợ giúp. */
+function hintBlock(): string {
+  const dots = [0, 1, 2]
+    .map((i) => `<span class="hint-dot${i < hintLevel ? ' is-on' : ''}"></span>`)
+    .join('');
+  const labels = ['Gợi ý', 'Gợi ý: quân nào', 'Gợi ý: nước cụ thể', 'Hết gợi ý'];
+  const shown = hints ? hints.slice(0, hintLevel) : [];
+  return `<div class="hint-block">
+    <div class="hint">
+      ${button({ label: hintLoading ? 'Đang xem…' : labels[hintLevel], icon: 'hint', disabled: hintLevel === 3 || hintLoading })}
+      <span class="hint-dots" aria-label="Đã dùng ${hintLevel} trên 3 nấc gợi ý">${dots}</span>
+    </div>
+    ${shown.length ? `<ol class="hint-list">${shown.map((h) => `<li>${h}</li>`).join('')}</ol>` : ''}
   </div>`;
 }
 
@@ -190,6 +215,7 @@ function gameScreen(): string {
                 game.ply,
               )
             : '<p class="muted">Chưa có nước nào.</p>',
+          ...(setup.mode === 'bot' && !result ? [hintBlock()] : []),
           `<div class="move-bar">
             ${iconButton('first', 'Về đầu ván', { disabled: game.ply === 0 })}
             ${iconButton('prev', 'Lùi một nước', { disabled: game.ply === 0 })}
@@ -246,6 +272,8 @@ export function mountPlay(rerender: () => void): void {
         return true;
       }
       if (!game.move(from, to)) return false;
+      hints = null;
+      hintLevel = 0;
       afterMove(rerender);
       rerender();
       return true;
@@ -304,6 +332,55 @@ function afterMove(rerender: () => void): void {
  * Mỗi lần vẽ lại là dựng lại cả bàn cờ, nên vẽ ngay sẽ cắt ngang animation của
  * nước vừa đi. Chờ hết thời gian trượt rồi mới vẽ.
  */
+/**
+ * Gợi ý ba nấc. Engine cho biết nước tốt nhất, bộ nhận diện mô-típ cho biết vì
+ * sao; từ đó dựng ba câu đi từ mơ hồ tới cụ thể, để người học tự nghĩ trước.
+ */
+async function askHint(rerender: () => void): Promise<void> {
+  if (hintLoading || ended || !game.atLive) return;
+  if (hints) {
+    hintLevel = Math.min(3, hintLevel + 1) as 0 | 1 | 2 | 3;
+    rerender();
+    return;
+  }
+  hintLoading = true;
+  rerender();
+  try {
+    const fen = game.fen;
+    const a = await engine().analyse(fen, { movetimeMs: 500, multipv: 2 });
+    const bestUci = a.lines[0]?.uci;
+    if (!bestUci) return;
+    const probe = new Game(fen);
+    const played = probe.move(bestUci.slice(0, 2) as Square, bestUci.slice(2, 4) as Square, bestUci[4]);
+    const motifs = detectMotifs({
+      fenBefore: fen,
+      fenAfter: probe.fen,
+      san: played?.san ?? '',
+      side: game.turn,
+      replyUci: a.lines[1]?.uci,
+    });
+    hints = hintSteps(
+      buildFacts({
+        side: game.turn,
+        ply: game.ply + 1,
+        // Để trống nước "đã đi": ở đây chưa đi gì cả, và buildFacts sẽ loại nước
+        // trùng ra khỏi danh sách nước tốt hơn — mà đó đúng là nước cần gợi ý.
+        san: '',
+        cls: 'best',
+        best: [{ san: played?.san ?? '', score: a.lines[0].score }],
+        pv: [],
+        motifs,
+      }),
+    );
+    hintLevel = 1;
+  } catch {
+    hints = null;
+  } finally {
+    hintLoading = false;
+    rerender();
+  }
+}
+
 const PIECE_SLIDE_MS = 200;
 function rerenderAfterSlide(rerender: () => void): void {
   setTimeout(rerender, PIECE_SLIDE_MS);
@@ -430,6 +507,9 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     'Xem lại ván': () => {
       location.hash = '#/xem-lai';
     },
+    'Gợi ý': () => void askHint(rerender),
+    'Gợi ý: quân nào': () => void askHint(rerender),
+    'Gợi ý: nước cụ thể': () => void askHint(rerender),
     // Đấu với máy thì lùi hai nước, để lượt vẫn thuộc về người chơi
     'Đi lại': () => {
       void engine().cancel();

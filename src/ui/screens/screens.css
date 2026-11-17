@@ -708,3 +708,23 @@ button.log-row {
   cursor: pointer;
 }
 
+
+/* ---------------- Gợi ý ba nấc ---------------- */
+.hint-block {
+  display: grid;
+  gap: var(--s-2);
+}
+.hint-list {
+  margin: 0;
+  padding-left: var(--s-4);
+  display: grid;
+  gap: var(--s-1);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--text-2);
+}
+.hint-list li:last-child {
+  color: var(--text-1);
+  font-weight: 600;
+}
