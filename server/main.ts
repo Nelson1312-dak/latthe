@@ -119,6 +119,18 @@ const ADMIN_IDS = new Set(
     .map((s) => Number(s.trim()))
     .filter((n) => Number.isInteger(n) && n > 0),
 );
+/**
+ * Hoặc theo Gmail: ADMIN_EMAILS=a@gmail.com,b@gmail.com. Lúc đăng nhập Google, email
+ * (đã xác minh) có trong danh sách thì tài khoản được đánh dấu chủ trang. Email chỉ
+ * để so, không lưu.
+ */
+const ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.includes('@')),
+);
+const isAdmin = (u: User) => ADMIN_IDS.has(u.id) || u.is_admin === 1;
 
 /**
  * Giới hạn số lần gọi theo địa chỉ, chỉ để chặn spam (đếm lượt, tạo link chia
@@ -149,7 +161,7 @@ const publicUser = (u: User) => ({
   local: u.google_sub === null,
   onboarded: Boolean(u.onboarded),
   createdAt: u.created_at,
-  admin: ADMIN_IDS.has(u.id),
+  admin: isAdmin(u),
 });
 
 const currentUser = (req: IncomingMessage) =>
@@ -187,7 +199,7 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     const credential = typeof body.credential === 'string' ? body.credential : '';
     if (!credential) return json(res, 400, { error: 'Thiếu credential' });
     try {
-      const { user, session } = await loginWithGoogle(db, credential, GOOGLE_CLIENT_ID);
+      const { user, session } = await loginWithGoogle(db, credential, GOOGLE_CLIENT_ID, undefined, ADMIN_EMAILS);
       bump(db, 'login');
       // Tài khoản vừa tạo trong lần đăng nhập này
       if (Date.now() - Date.parse(user.created_at) < 10_000) bump(db, 'signup');
@@ -642,14 +654,14 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
   // Thống kê trực tiếp (chủ trang): ai đang trên trang, ván online đang đánh, hàng chờ
   if (path === '/api/admin/live' && method === 'GET') {
     const user = currentUser(req);
-    if (!user || !ADMIN_IDS.has(user.id)) return json(res, 403, { error: 'Không có quyền' });
+    if (!user || !isAdmin(user)) return json(res, 403, { error: 'Không có quyền' });
     return json(res, 200, { online: presenceNow(), live: live.snapshot(), at: new Date().toISOString() });
   }
 
   // Bảng thống kê: chỉ chủ trang
   if (path === '/api/admin/stats' && method === 'GET') {
     const user = currentUser(req);
-    if (!user || !ADMIN_IDS.has(user.id)) return json(res, 403, { error: 'Không có quyền' });
+    if (!user || !isAdmin(user)) return json(res, 403, { error: 'Không có quyền' });
     const n = Math.min(90, Math.max(7, Number(new URL(req.url ?? '/', 'http://x').searchParams.get('days')) || 30));
     return json(res, 200, statsFor(db, n));
   }
@@ -657,7 +669,7 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
   // Huấn luyện viên toàn trang: gộp ván của mọi người chơi, không tên — chỉ chủ trang
   if (path === '/api/admin/coach' && method === 'GET') {
     const user = currentUser(req);
-    if (!user || !ADMIN_IDS.has(user.id)) return json(res, 403, { error: 'Không có quyền' });
+    if (!user || !isAdmin(user)) return json(res, 403, { error: 'Không có quyền' });
     const n = Math.min(90, Math.max(7, Number(new URL(req.url ?? '/', 'http://x').searchParams.get('days')) || 30));
     const rp = communityReport(db, n);
     const withAdvice = new URL(req.url ?? '/', 'http://x').searchParams.get('advice') === '1';

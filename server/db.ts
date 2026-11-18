@@ -81,6 +81,8 @@ export interface User {
   custom_name: number;
   /** Tuỳ chọn hiển thị dạng JSON. */
   prefs: string | null;
+  /** Chủ trang (0/1): email Google lúc đăng nhập có trong ADMIN_EMAILS. Email không được lưu. */
+  is_admin?: number;
   created_at: string;
   last_seen_at: string;
 }

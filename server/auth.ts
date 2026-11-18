@@ -26,6 +26,8 @@ export interface GoogleIdentity {
   name: string;
   picture?: string;
   emailVerified: boolean;
+  /** Chỉ để so với ADMIN_EMAILS ngay lúc đăng nhập — KHÔNG lưu xuống đâu cả. */
+  email?: string;
 }
 
 /**
@@ -50,6 +52,7 @@ export async function verifyGoogleToken(
     name: p.name?.trim() || p.email?.split('@')[0] || 'Người chơi',
     picture: p.picture,
     emailVerified: p.email_verified === true,
+    email: typeof p.email === 'string' ? p.email.trim().toLowerCase() : undefined,
   };
 }
 
@@ -134,9 +137,19 @@ export async function loginWithGoogle(
   idToken: string,
   clientId: string,
   jwks?: JWTVerifyGetKey,
+  /** Gmail của chủ trang (ADMIN_EMAILS). Có đặt thì mỗi lần đăng nhập so lại: có trong danh sách là bật, không có là tắt. */
+  adminEmails?: ReadonlySet<string>,
 ): Promise<{ user: User; session: Session }> {
   const id = await verifyGoogleToken(idToken, clientId, jwks);
-  const user = upsertGoogleUser(db, id.sub, id.name, id.picture);
+  let user = upsertGoogleUser(db, id.sub, id.name, id.picture);
+  if (adminEmails && adminEmails.size) {
+    // Chỉ tin email Google đã xác minh. So xong là thôi: email không đi vào CSDL.
+    const admin = id.emailVerified && Boolean(id.email) && adminEmails.has(id.email!) ? 1 : 0;
+    if ((user.is_admin ?? 0) !== admin) {
+      db.prepare('UPDATE users SET is_admin = ? WHERE id = ?').run(admin, user.id);
+      user = { ...user, is_admin: admin };
+    }
+  }
   return { user, session: createSession(db, user.id) };
 }
 

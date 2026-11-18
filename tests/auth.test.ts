@@ -144,6 +144,25 @@ describe('phiên đăng nhập', () => {
     expect(userForSession(db, a.session.token)?.id).toBe(a.user.id);
   });
 
+  it('chủ trang theo Gmail: email đã xác minh có trong danh sách thì bật, bỏ khỏi danh sách thì tắt', async () => {
+    const ds = new Set(['chu@example.test']);
+    const a = await loginWithGoogle(db, await token({ claims: { email: 'Chu@Example.test' } }), CLIENT_ID, keys.jwks, ds);
+    expect(a.user.is_admin).toBe(1);
+    // Không lưu email ở bất cứ cột nào
+    expect(JSON.stringify(db.prepare('SELECT * FROM users').all()).toLowerCase()).not.toContain('chu@');
+    const b = await loginWithGoogle(db, await token({ claims: { email: 'chu@example.test' } }), CLIENT_ID, keys.jwks, new Set(['khac@example.test']));
+    expect(b.user.is_admin).toBe(0);
+    // Email chưa xác minh thì không tin
+    const c = await loginWithGoogle(
+      db,
+      await token({ claims: { email: 'chu@example.test', email_verified: false } }),
+      CLIENT_ID,
+      keys.jwks,
+      ds,
+    );
+    expect(c.user.is_admin).toBe(0);
+  });
+
   it('token hỏng thì không tạo tài khoản nào', async () => {
     await expect(loginWithGoogle(db, await token({ key: otherKey }), CLIENT_ID, keys.jwks)).rejects.toThrow();
     expect(db.prepare('SELECT count(*) c FROM users').get()).toMatchObject({ c: 0 });
