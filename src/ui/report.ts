@@ -13,6 +13,8 @@ import type { MoveClass } from '../../shared/winrate.ts';
 import { button, classBadge, figurine, notice } from './components/index.ts';
 import { icon } from './icons.ts';
 import type { ShareState } from '../app/share.ts';
+import { takeaways, type Takeaway } from '../analysis/takeaways.ts';
+import { auth } from '../app/session.ts';
 
 export interface Report {
   phase: 'running' | 'done' | 'error';
@@ -22,6 +24,8 @@ export interface Report {
   pgn: string;
   result: ReviewResult | null;
   error?: string;
+  /** Ba điều rút ra từ ván; `llm` là đã được Huấn luyện viên viết lại. */
+  ta?: { items: Takeaway[]; source: 'facts' | 'llm'; polishing: boolean };
 }
 
 /** Một "người chấm" giữ đúng một bảng chấm; chấm ván mới là huỷ ván cũ. */
@@ -29,13 +33,36 @@ export interface Reporter {
   readonly current: Report | null;
   /** Kết quả chấm, nếu đã xong và đúng là của ván `pgn`. */
   resultFor(pgn: string): ReviewResult | null;
-  start(pgn: string, rerender: () => void, onDone?: (r: ReviewResult) => void): void;
+  /** `me`: bên của người chơi (null là hai người một máy) — để rút ra điều đúng cho người đó. */
+  start(pgn: string, rerender: () => void, onDone?: (r: ReviewResult) => void, me?: Side | null): void;
   drop(): void;
 }
 
 export function createReporter(): Reporter {
   let report: Report | null = null;
   let token = 0;
+
+  async function polish(my: number, items: Takeaway[]): Promise<void> {
+    let out: Takeaway[] | null = null;
+    try {
+      const r = await fetch('/api/advisor/summary', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ items: items.map((t) => t.text) }),
+      });
+      const d = (await r.json()) as { items?: string[]; source?: string };
+      if (r.ok && (d.source === 'llm' || d.source === 'cache') && d.items?.length === items.length) {
+        out = items.map((t, i) => ({ ...t, text: d.items![i] }));
+      }
+    } catch {
+      /* máy chủ AI nghỉ: giữ câu gốc */
+    }
+    if (my !== token || !report?.ta) return;
+    report.ta = out ? { items: out, source: 'llm', polishing: false } : { ...report.ta, polishing: false };
+    rerenderRef?.();
+  }
+  let rerenderRef: (() => void) | null = null;
 
   return {
     get current() {
@@ -48,9 +75,10 @@ export function createReporter(): Reporter {
       token++;
       report = null;
     },
-    start(pgn, rerender, onDone) {
+    start(pgn, rerender, onDone, me = null) {
       if (report && report.pgn === pgn) return; // đang chấm / đã chấm đúng ván này
       const my = ++token;
+      rerenderRef = rerender;
       let plies = 0;
       try {
         plies = Game.fromPgn(pgn).length;
@@ -78,9 +106,20 @@ export function createReporter(): Reporter {
             cancelled: () => my !== token,
           });
           if (my !== token) return;
-          report = { phase: 'done', done: report?.total ?? 0, total: report?.total ?? 0, pgn, result };
+          const items = takeaways(result, me);
+          report = {
+            phase: 'done',
+            done: report?.total ?? 0,
+            total: report?.total ?? 0,
+            pgn,
+            result,
+            ta: { items, source: 'facts', polishing: Boolean(auth.user) && items.length > 0 },
+          };
           onDone?.(result);
           rerender();
+          // Nhờ Huấn luyện viên viết lại cho tự nhiên (chạy trên máy chủ, có thể mất
+          // vài chục giây lần đầu). Không được thì giữ nguyên câu gốc.
+          if (report.ta?.polishing) void polish(my, items);
         } catch (err) {
           if (err instanceof ReviewCancelled || my !== token) return;
           report = { phase: 'error', done: 0, total: 0, pgn, result: null, error: (err as Error).message };
@@ -180,6 +219,7 @@ export function reportCard(report: Report | null, v: ReportView): string {
   return `<div class="report">
     <p class="report-title">${icon('engine', 18)}<span>Chấm ván</span></p>
     <div class="acc-rows">${acc}</div>
+    ${taBlock(report)}
     <div class="beats-wrap">
       <p class="report-label">Nhịp ván${me ? ' của bạn' : ''} <span>· bấm một ô để xem nước đó</span></p>
       <div class="beats">${beats}</div>
@@ -221,4 +261,25 @@ export function pgnFromSans(sans: readonly string[]): string {
   const out: string[] = [];
   sans.forEach((san, i) => out.push(i % 2 === 0 ? `${i / 2 + 1}. ${san}` : san));
   return out.join(' ');
+}
+
+/** Mục "Rút ra từ ván này": ba câu, bấm vào câu có nước cụ thể là xem nước đó. */
+function taBlock(report: Report): string {
+  const ta = report.ta;
+  if (!ta || !ta.items.length) return '';
+  const nguồn = ta.polishing
+    ? 'Huấn luyện viên đang viết lại…'
+    : ta.source === 'llm'
+      ? 'Huấn luyện viên'
+      : 'tóm tắt từ engine';
+  return `<div class="takeaways">
+    <p class="report-label">Rút ra từ ván này <span>· ${nguồn}</span></p>
+    <ol>${ta.items
+      .map((t) =>
+        t.ply
+          ? `<li><button class="ta-item" data-report-ply="${t.ply}">${t.text.replace(/[<>&]/g, '')}</button></li>`
+          : `<li><span class="ta-item">${t.text.replace(/[<>&]/g, '')}</span></li>`,
+      )
+      .join('')}</ol>
+  </div>`;
 }

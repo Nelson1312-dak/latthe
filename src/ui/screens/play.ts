@@ -117,7 +117,7 @@ function dropReport(): void {
 
 /** Chấm cả ván vừa xong, ngay tại chỗ. */
 function startReport(rerender: () => void): void {
-  reporter.start(game.pgn(), rerender, () => trySaveReview());
+  reporter.start(game.pgn(), rerender, () => trySaveReview(), setup.mode === 'bot' ? setup.side : null);
 }
 
 /** Kết quả ván: tính cả đầu hàng, thứ mà thế cờ không biết. */

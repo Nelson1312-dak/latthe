@@ -415,6 +415,27 @@ góc ô của chess.com. Nước hỏng có thêm mũi tên mảnh chỉ nước
 
 Đã đăng nhập thì kết quả chấm được lưu cùng ván, nước sai thành thẻ ôn tập.
 
+### 4.6e Giữ chân người chơi
+
+- **Bài tập của ngày** (dòng đầu ở Sảnh): cả trang giải chung một bài mỗi ngày, chọn cố
+  định theo ngày (giờ Việt Nam). Chỉ tính lần giải đầu; chuỗi ngày liên tiếp (hôm nay
+  chưa làm thì chưa mất chuỗi). Chưa giải thì dòng có vạch nhấn trái.
+- **Thử thách AI** (Chơi → Với người): bấm thẳng một trong 6 AI để đấu ngay, tính Elo.
+  AI đã thắng có dấu tích; Hồ sơ có "Bậc thang AI · đã hạ x/6".
+- **Biểu đồ Elo** trong Hồ sơ: Elo online và Elo bài tập theo từng ván/bài (trục ngang là
+  thứ tự, không phải ngày — người chơi thất thường thì trục ngày toàn khoảng trống).
+
+### 4.6f "Rút ra từ ván này"
+
+Trong bảng chấm ván, tối đa ba ý, **tính từ kết quả engine** (`src/analysis/takeaways.ts`):
+nước ngoặt (nước hỏng nặng nhất + nên đi gì + thế cờ đổi ra sao), giai đoạn chơi tốt/kém
+nhất, cơ hội bỏ lỡ khi đối thủ đi hỏng. Hiện ngay.
+
+Sau đó Huấn luyện viên (mô hình trên máy chủ, ~10 giây) **chỉ viết lại** cho tự nhiên và
+thêm một lời khuyên chung. Bản viết lại bị bỏ (giữ câu gốc) nếu có ô cờ hay con số không
+có trong câu gốc, hoặc đoán kết cục kiểu "sẽ thắng / sẽ không thua"
+(`shared/advisor/summary.ts`). Máy chủ AI nghỉ thì giữ câu gốc, ghi "tóm tắt từ engine".
+
 ### 4.7 Âm thanh
 
 Bốn âm ngắn: đi quân, ăn quân, chiếu, kết thúc ván; thêm tiếng tích khi đồng hồ dưới 10 giây. Mặc định bật, có nút tắt. Nguồn âm thanh phải có giấy phép rõ ràng (CC0 hoặc tự thu).

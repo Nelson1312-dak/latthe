@@ -12,7 +12,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
 import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
-import { explain, ollamaAlive, queueDepth } from './advisor.ts';
+import { explain, ollamaAlive, queueDepth, summarize } from './advisor.ts';
 import { pickPuzzle, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
 import { Live } from './live/index.ts';
 import { CONTROLS, DEFAULT_CONTROL, REFUSALS } from '../shared/protocol.ts';
@@ -440,6 +440,19 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
 
   if (path === '/api/advisor/status' && method === 'GET') {
     return json(res, 200, { ollama: await ollamaAlive(), hangCho: queueDepth() });
+  }
+
+  // Ba điều rút ra từ ván: viết lại các nhận định đã tính sẵn cho tự nhiên
+  if (path === '/api/advisor/summary' && method === 'POST') {
+    const user = currentUser(req);
+    const body = await readJson(req, 8_000).catch(() => null);
+    const items = body?.items;
+    if (!Array.isArray(items) || !items.length || items.length > 4 || items.some((t) => typeof t !== 'string' || t.length > 400)) {
+      return json(res, 400, { error: 'Dữ kiện không đúng dạng' });
+    }
+    // Chưa đăng nhập, hoặc đang dở ván online: trả nguyên câu gốc, không dùng mô hình
+    if (!user || live.isPlaying(user.id)) return json(res, 200, { items, source: 'template' });
+    return json(res, 200, await summarize(db, user.id, items as string[]));
   }
 
   if (path === '/api/advisor/explain' && method === 'POST') {

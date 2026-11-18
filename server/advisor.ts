@@ -10,6 +10,7 @@ import { cacheKey, SYSTEM_PROMPT, userPrompt } from '../shared/advisor/prompt.ts
 import { templateComment } from '../shared/advisor/templates.ts';
 import { parseModelReply, validateComment } from '../shared/advisor/validate.ts';
 import type { Facts } from '../shared/advisor/facts.ts';
+import { SUMMARY_PROMPT, SUMMARY_VERSION, summaryUserPrompt, validateSummary } from '../shared/advisor/summary.ts';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
 const MODEL = process.env.OLLAMA_MODEL ?? 'qwen3:8b';
@@ -149,4 +150,70 @@ export async function explain(db: Db, userId: number, rawFacts: Facts): Promise<
     new Date().toISOString(),
   );
   return { comment: text, source: 'llm' };
+}
+
+/* ---------------- Ba điều rút ra từ ván (viết lại cho tự nhiên) ---------------- */
+
+export interface SummaryResult {
+  items: string[];
+  source: Source;
+  rejected?: string;
+}
+
+async function askSummary(items: string[]): Promise<string | null> {
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    body: JSON.stringify({
+      model: MODEL,
+      stream: false,
+      keep_alive: '15m',
+      think: false,
+      format: { type: 'object', properties: { y: { type: 'array', items: { type: 'string' } } }, required: ['y'] },
+      options: { temperature: 0.4, num_predict: 420 },
+      messages: [
+        { role: 'system', content: SUMMARY_PROMPT },
+        { role: 'user', content: summaryUserPrompt(items) },
+      ],
+    }),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { message?: { content?: string } };
+  return data.message?.content ?? null;
+}
+
+/**
+ * Viết lại các nhận định đã kiểm chứng. Mô hình tắt, chậm quá hạn, hay viết
+ * thêm ô cờ / con số không có trong câu gốc thì trả nguyên câu gốc.
+ */
+export async function summarize(db: Db, userId: number, items: string[]): Promise<SummaryResult> {
+  const key = hash(`${SUMMARY_VERSION}|${JSON.stringify(items)}`);
+  const cached = one<{ comment: string }>(db, 'SELECT comment FROM advisor_cache WHERE key = ?', key);
+  if (cached) {
+    try {
+      return { items: JSON.parse(cached.comment) as string[], source: 'cache' };
+    } catch {
+      /* đệm hỏng: viết lại */
+    }
+  }
+  if (!withinLimit(userId)) return { items, source: 'template', rejected: 'quá giới hạn mỗi giờ' };
+  const raw = await withSlot(() => askSummary(items).catch(() => null));
+  if (raw === null) return { items, source: 'template', rejected: 'không gọi được mô hình' };
+  noteHit(userId);
+  let parsed: unknown;
+  try {
+    parsed = (JSON.parse(raw) as { y?: unknown }).y;
+  } catch {
+    return { items, source: 'template', rejected: 'câu trả lời sai dạng' };
+  }
+  const ok = validateSummary(items, parsed);
+  if (!ok) return { items, source: 'template', rejected: 'viết thêm điều không có trong nhận định' };
+  db.prepare('INSERT OR REPLACE INTO advisor_cache (key, comment, source, created_at) VALUES (?, ?, ?, ?)').run(
+    key,
+    JSON.stringify(ok),
+    'llm',
+    new Date().toISOString(),
+  );
+  return { items: ok, source: 'llm' };
 }

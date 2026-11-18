@@ -2281,3 +2281,53 @@ button.top-link {
   color: var(--text-3);
   font-size: var(--fs-sm);
 }
+
+/* ---- Rút ra từ ván này ---- */
+.takeaways {
+  display: grid;
+  gap: var(--s-2);
+}
+.takeaways ol {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: ta;
+}
+.takeaways li {
+  counter-increment: ta;
+  display: flex;
+  gap: var(--s-2);
+}
+.takeaways li::before {
+  content: counter(ta);
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border-radius: var(--r-sm);
+  background: var(--bg-3);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+}
+.ta-item {
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-align: left;
+}
+button.ta-item {
+  cursor: pointer;
+}
+button.ta-item:hover {
+  text-decoration: underline;
+}

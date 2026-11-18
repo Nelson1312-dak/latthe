@@ -576,7 +576,7 @@ export function mountOnline(rerender: () => void): void {
     reporter.start(pgnFromSans(s.history), rerender, (r) => {
       // Lưu kết quả cùng ván (sinh thẻ ôn tập từ nước sai), lần sau mở ra là có ngay
       if (gameId) void saveReview(gameId, r);
-    });
+    }, s.youAre);
   }
 
   // Ván cục bộ chỉ dùng để tô ô đi được. Dựng lại mỗi khi thế cờ đổi.
