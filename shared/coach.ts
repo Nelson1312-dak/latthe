@@ -10,7 +10,7 @@ import { Game } from './chess.ts';
 import { material, type Square } from './fen.ts';
 import { detectMotifs, type MotifKind } from './advisor/motifs.ts';
 
-export const COACH_VERSION = 'c1';
+export const COACH_VERSION = 'c2';
 /** Xem tối đa ngần này ván gần nhất. */
 export const COACH_GAMES = 20;
 /** Ít hơn ngần này ván đã chấm thì chưa đủ để nói "hay mắc". */
@@ -52,6 +52,25 @@ export interface CoachFacts {
   perGame: { blunder: number; mistake: number };
   /** Kiểu lỗi lặp lại, nhiều nhất trước. */
   motifs: { kind: MotifKind; count: number; games: number }[];
+  /** Ví dụ gần nhất của mỗi kiểu lỗi (để bấm vào xem đúng nước đó trong ván). */
+  examples: Partial<Record<MotifKind, { gameId: number; ply: number; san: string }>>;
+}
+
+/** Tóm tắt một ván đã chấm, nhìn từ người chơi. Lưu trong bảng game_insights. */
+export interface GameInsight {
+  gameId?: number;
+  side: 'w' | 'b';
+  winner: 'w' | 'b' | 'draw';
+  /** Số nước của người chơi, và tổng độ chính xác của các nước đó (để gộp có trọng số). */
+  moves: number;
+  accSum: number;
+  blunder: number;
+  mistake: number;
+  inaccuracy: number;
+  /** Theo giai đoạn: số nước và tổng độ chính xác. */
+  phases: Record<string, { n: number; sum: number }>;
+  /** Mỗi nước hỏng nhận ra được kiểu lỗi: kiểu chính, nước thứ mấy, ký hiệu. */
+  motifs: { kind: MotifKind; ply: number; san: string }[];
 }
 
 /** Tên kiểu lỗi cho người học đọc. */
@@ -117,56 +136,98 @@ function motifsOf(m: CoachMove, scoreBefore: S): MotifKind[] {
   }
 }
 
-export function coachFacts(games: CoachGame[]): CoachFacts {
+/** Tóm tắt một ván đã chấm: tính một lần (lúc chấm xong), lưu lại cho Huấn luyện viên đọc. */
+export function gameInsight(g: CoachGame, gameId?: number): GameInsight {
+  const out: GameInsight = {
+    gameId,
+    side: g.side,
+    winner: g.winner,
+    moves: 0,
+    accSum: 0,
+    blunder: 0,
+    mistake: 0,
+    inaccuracy: 0,
+    phases: {},
+    motifs: [],
+  };
+  const moves = [...g.moves].sort((a, b) => a.ply - b.ply);
+  moves.forEach((m, i) => {
+    if (m.side !== g.side) return;
+    out.moves++;
+    out.accSum += m.accuracy;
+    const ph = phaseOf(m.ply);
+    const e = (out.phases[ph] ??= { n: 0, sum: 0 });
+    e.n++;
+    e.sum += m.accuracy;
+    if (m.cls === 'blunder' || m.cls === 'miss') out.blunder++;
+    if (m.cls === 'mistake') out.mistake++;
+    if (m.cls === 'inaccuracy') out.inaccuracy++;
+    if (!BAD.has(m.cls)) return;
+    const before = m.scoreBefore ?? moves[i - 1]?.scoreAfter ?? { cp: 0 };
+    // Một nước chỉ tính kiểu lỗi chính (cái đầu tiên bộ nhận diện thấy)
+    const k = motifsOf(m, before)[0];
+    if (k) out.motifs.push({ kind: k, ply: m.ply, san: m.san });
+  });
+  out.accSum = r1(out.accSum);
+  return out;
+}
+
+/**
+ * Gộp nhiều ván (mới nhất trước) thành nhận định. Dùng cho Huấn luyện viên của
+ * một người, và cho bảng tổng hợp toàn trang (gộp ván của mọi người).
+ */
+export function coachFacts(xs: GameInsight[]): CoachFacts {
   let wins = 0;
   let losses = 0;
   let draws = 0;
-  const accs: number[] = [];
-  const byPhase = new Map<string, number[]>();
+  let moves = 0;
+  let accSum = 0;
   let blunder = 0;
   let mistake = 0;
+  const byPhase = new Map<string, { n: number; sum: number }>();
   const motif = new Map<MotifKind, { count: number; games: Set<number> }>();
+  const examples: CoachFacts['examples'] = {};
 
-  games.forEach((g, gi) => {
+  xs.forEach((g, gi) => {
     if (g.winner === 'draw') draws++;
     else if (g.winner === g.side) wins++;
     else losses++;
-    const moves = [...g.moves].sort((a, b) => a.ply - b.ply);
-    moves.forEach((m, i) => {
-      if (m.side !== g.side) return;
-      accs.push(m.accuracy);
-      const ph = phaseOf(m.ply);
-      byPhase.set(ph, [...(byPhase.get(ph) ?? []), m.accuracy]);
-      if (m.cls === 'blunder' || m.cls === 'miss') blunder++;
-      if (m.cls === 'mistake') mistake++;
-      if (!BAD.has(m.cls)) return;
-      const before = m.scoreBefore ?? moves[i - 1]?.scoreAfter ?? { cp: 0 };
-      // Một nước chỉ tính kiểu lỗi chính (cái đầu tiên bộ nhận diện thấy)
-      const k = motifsOf(m, before)[0];
-      if (!k) return;
-      const e = motif.get(k) ?? { count: 0, games: new Set<number>() };
+    moves += g.moves;
+    accSum += g.accSum;
+    blunder += g.blunder;
+    mistake += g.mistake;
+    for (const [name, p] of Object.entries(g.phases)) {
+      const e = byPhase.get(name) ?? { n: 0, sum: 0 };
+      e.n += p.n;
+      e.sum += p.sum;
+      byPhase.set(name, e);
+    }
+    for (const m of g.motifs) {
+      const e = motif.get(m.kind) ?? { count: 0, games: new Set<number>() };
       e.count++;
       e.games.add(gi);
-      motif.set(k, e);
-    });
+      motif.set(m.kind, e);
+      // xs xếp mới nhất trước: ví dụ đầu tiên gặp là ví dụ gần nhất
+      if (!examples[m.kind] && g.gameId) examples[m.kind] = { gameId: g.gameId, ply: m.ply, san: m.san };
+    }
   });
 
-  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-  const n = games.length || 1;
+  const n = xs.length || 1;
   return {
-    games: games.length,
+    games: xs.length,
     wins,
     losses,
     draws,
-    accuracy: Math.round(avg(accs)),
+    accuracy: moves ? Math.round(accSum / moves) : 0,
     phases: ['khai cuộc', 'trung cuộc', 'tàn cuộc']
-      .map((name) => ({ name, xs: byPhase.get(name) ?? [] }))
-      .filter((p) => p.xs.length >= 15)
-      .map((p) => ({ name: p.name, accuracy: Math.round(avg(p.xs)) })),
+      .map((name) => ({ name, p: byPhase.get(name) ?? { n: 0, sum: 0 } }))
+      .filter((x) => x.p.n >= 15)
+      .map((x) => ({ name: x.name, accuracy: Math.round(x.p.sum / x.p.n) })),
     perGame: { blunder: r1(blunder / n), mistake: r1(mistake / n) },
     motifs: [...motif.entries()]
       .map(([kind, e]) => ({ kind, count: e.count, games: e.games.size }))
       .sort((a, b) => b.count - a.count || b.games - a.games),
+    examples,
   };
 }
 
@@ -213,7 +274,8 @@ dựa trên thống kê nhiều ván gần đây của họ.
 Bạn nhận: các nhận định ĐÃ ĐƯỢC KIỂM CHỨNG, và danh sách bài học sẽ đề xuất.
 Hãy viết:
 1. "nhanXet": 2–3 câu nhận xét tổng quát — điểm mạnh nếu có, rồi điều cần sửa nhất. Giọng ấm áp, cụ thể.
-2. "loTrinh": với TỪNG bài học (đúng thứ tự, đúng số lượng), một câu ngắn nói vì sao bài này giúp sửa lỗi của họ.
+2. "loTrinh": với TỪNG bài học (đúng thứ tự, đúng số lượng), một câu ngắn nói vì sao bài này giúp sửa
+   đúng lỗi của họ (nhắc tới lỗi trong nhận định). KHÔNG chép lại tên bài hay câu "Cần nhớ" của bài.
 
 Quy tắc bắt buộc:
 - Mọi con số phải lấy đúng từ nhận định. Không thêm con số, phần trăm hay ô cờ nào khác.
@@ -274,4 +336,48 @@ export function templateAdvice(f: CoachFacts, lessons: { title: string; keyPoint
   ];
   if (yếu && f.phases.length >= 2) câu.push(`Giai đoạn bạn cần chú ý nhất là ${yếu.name}.`);
   return { nhanXet: câu.join(' '), loTrinh: lessons.map((l) => l.keyPoint) };
+}
+
+/* ---------------- Toàn trang (chỉ chủ trang xem) ---------------- */
+
+/** Nhận định gộp ván của mọi người chơi — không có tên, không có ván cụ thể. */
+export function communityLines(f: CoachFacts, players: number, days: number): string[] {
+  const lines = [
+    `Trong ${days} ngày gần nhất: ${players} người chơi, ${f.games} ván đã chấm. Độ chính xác trung bình ${f.accuracy}%.`,
+  ];
+  if (f.phases.length >= 2) {
+    const xếp = [...f.phases].sort((a, b) => b.accuracy - a.accuracy);
+    lines.push(`Chắc nhất ở ${xếp[0].name} (${xếp[0].accuracy}%), yếu nhất ở ${xếp[xếp.length - 1].name} (${xếp[xếp.length - 1].accuracy}%).`);
+  }
+  lines.push(`Trung bình mỗi ván có ${f.perGame.blunder} nước sai nghiêm trọng và ${f.perGame.mistake} nước sai.`);
+  for (const m of f.motifs.slice(0, 4)) {
+    lines.push(`Lỗi hay gặp: ${MOTIF_NAME[m.kind]} — ${m.count} lần, trong ${m.games} ván.`);
+  }
+  return lines;
+}
+
+export const COMMUNITY_PROMPT = `Bạn là người phân tích, nói tiếng Việt, viết cho CHỦ một trang dạy cờ vua cho người mới.
+
+Bạn nhận: các nhận định ĐÃ ĐƯỢC KIỂM CHỨNG gộp từ ván của mọi người chơi trên trang, và danh sách bài học
+mà người chơi cần nhất. Hãy viết:
+1. "nhanXet": 2–3 câu — người chơi trên trang đang vướng gì nhất, điều gì đáng chú ý.
+2. "loTrinh": với TỪNG bài học (đúng thứ tự, đúng số lượng), một câu gợi ý chủ trang nên làm gì với bài đó
+   (đưa lên trang chủ, thêm bài tập, viết thêm bài giải thích...).
+
+Quy tắc bắt buộc:
+- Mọi con số phải lấy đúng từ nhận định. Không thêm con số, phần trăm hay ô cờ nào khác.
+- Không thêm sự kiện mới, không nhắc tên người chơi, không hứa hẹn kết quả.
+- Mỗi câu tối đa 35 chữ.
+
+Trả lời đúng dạng JSON: {"nhanXet": "...", "loTrinh": ["...", "..."]}`;
+
+/** Lời viết sẵn cho bảng toàn trang (khi AI tắt hoặc viết sai). */
+export function templateCommunity(f: CoachFacts, players: number, lessons: { title: string; keyPoint: string }[]): Advice {
+  const top = f.motifs[0];
+  return {
+    nhanXet:
+      `${players} người chơi, ${f.games} ván đã chấm, độ chính xác trung bình ${f.accuracy}%.` +
+      (top ? ` Lỗi phổ biến nhất là ${MOTIF_NAME[top.kind]} (${top.count} lần).` : ''),
+    loTrinh: lessons.map((l) => `Nhiều người cần bài "${l.title}" — nên đưa lên chỗ dễ thấy.`),
+  };
 }

@@ -5,6 +5,7 @@ import { sanVi, thếCờ } from '../src/analysis/words.ts';
 import {
   COACH_MIN_GAMES,
   coachFacts,
+  gameInsight,
   factLines,
   lessonsFor,
   templateAdvice,
@@ -15,7 +16,8 @@ import {
 import { createLocalUser, openDb } from '../server/db.ts';
 import { insertGame } from '../server/games.ts';
 import { saveReview } from '../server/reviews.ts';
-import { coachReport } from '../server/coach.ts';
+import { coachReport, communityReport } from '../server/coach.ts';
+import { saveInsight } from '../server/analyst.ts';
 
 describe('sanVi, thếCờ', () => {
   it('viết nước đi bằng chữ', () => {
@@ -62,7 +64,7 @@ const ván = (winner: CoachGame['winner']): CoachGame => ({
 
 describe('coachFacts', () => {
   it('đếm đúng thắng thua, lỗi sai nghiêm trọng, và kiểu lỗi lặp lại', () => {
-    const f = coachFacts([ván('b'), ván('b'), ván('w')]);
+    const f = coachFacts([ván('b'), ván('b'), ván('w')].map((g) => gameInsight(g)));
     expect(f.games).toBe(3);
     expect([f.wins, f.losses, f.draws]).toEqual([1, 2, 0]);
     expect(f.perGame.blunder).toBe(1);
@@ -73,13 +75,13 @@ describe('coachFacts', () => {
   it('chỉ tính nước của người chơi, không tính nước đối thủ', () => {
     const g = ván('draw');
     g.side = 'b';
-    const f = coachFacts([g]);
+    const f = coachFacts([gameInsight(g)]);
     expect(f.motifs).toHaveLength(0);
     expect(f.perGame.blunder).toBe(0);
   });
 
   it('bài học đi theo lỗi hay gặp nhất, bỏ bài đã học xong', () => {
-    const f = coachFacts([ván('b'), ván('b'), ván('b')]);
+    const f = coachFacts([ván('b'), ván('b'), ván('b')].map((g) => gameInsight(g)));
     expect(lessonsFor(f)[0]).toBe('hanging');
     expect(lessonsFor(f, new Set(['hanging']))).not.toContain('hanging');
     expect(lessonsFor(f)).toHaveLength(3);
@@ -87,7 +89,7 @@ describe('coachFacts', () => {
 });
 
 describe('validateAdvice: AI chỉ được viết lại nhận định', () => {
-  const f = coachFacts([ván('b'), ván('b'), ván('w')]);
+  const f = coachFacts([ván('b'), ván('b'), ván('w')].map((g) => gameInsight(g)));
   const lines = factLines(f);
 
   it('nhận lời khuyên dùng đúng con số trong nhận định', () => {
@@ -122,6 +124,7 @@ describe('coachReport (server)', () => {
     const thêmVán = () => {
       const id = insertGame(db, u.id, { mode: 'bot', level: 3, playerSide: 'w', pgn: '1. e4 e5', winner: 'b', reason: 'checkmate' });
       saveReview(db, id, { moves: ván('b').moves as never, accuracy: { w: 50, b: 95 }, opening: null });
+      saveInsight(db, id);
     };
     thêmVán();
     expect(coachReport(db, u.id)).toMatchObject({ facts: null, need: COACH_MIN_GAMES - 1 });
@@ -130,5 +133,38 @@ describe('coachReport (server)', () => {
     const r = coachReport(db, u.id);
     expect(r.facts?.games).toBe(3);
     expect(r.lessons[0]).toMatchObject({ id: 'hanging', title: expect.any(String) });
+    // Ví dụ gần nhất của lỗi để hở quân: đúng ván, đúng nước
+    expect(r.facts?.examples.hanging).toMatchObject({ ply: 1, san: 'Qd7+' });
+    // Toàn trang: gộp được, không mang ván cụ thể của ai
+    const all = communityReport(db, 30);
+    expect(all.players).toBe(1);
+    expect(all.facts?.games).toBe(3);
+    expect(all.facts?.examples).toEqual({});
   });
+});
+
+describe('người chấm nền (server/analyst.ts) — chạy Stockfish thật', () => {
+  it('tự chấm ván chưa chấm, lưu kết quả, thẻ ôn tập và tóm tắt lỗi', async () => {
+    const { analystStep } = await import('../server/analyst.ts');
+    const { getReview } = await import('../server/reviews.ts');
+    const db = openDb(':memory:');
+    const u = createLocalUser(db, 'Lan');
+    // Ván "chiếu hết nhanh nhất": Trắng đi hỏng hai nước liền. Ván cũ (để máy chủ chấm, không nhường trình duyệt)
+    const id = insertGame(
+      db,
+      u.id,
+      { mode: 'bot', level: 1, playerSide: 'w', pgn: '1. f3 e5 2. g4 Qh4#', winner: 'b', reason: 'checkmate' },
+      new Date(Date.now() - 3600_000),
+    );
+    expect(await analystStep(db)).toBe(id);
+    const r = getReview(db, id);
+    expect(r?.moves).toHaveLength(4);
+    expect(r?.moves[2].cls).toBe('blunder'); // 2.g4?? để Hậu chiếu hết
+    expect(r?.moves[3].cls).toBe('best'); // 2...Qh4# đúng nước tốt nhất
+    const ins = db.prepare('SELECT data FROM game_insights WHERE game_id = ?').get(id) as { data: string } | undefined;
+    expect(JSON.parse(ins!.data)).toMatchObject({ side: 'w', blunder: 1 });
+    const thẻ = db.prepare('SELECT count(*) c FROM cards WHERE user_id = ?').get(u.id) as { c: number };
+    expect(thẻ.c).toBeGreaterThan(0);
+    expect(await analystStep(db)).toBe('idle'); // hết việc
+  }, 60_000);
 });

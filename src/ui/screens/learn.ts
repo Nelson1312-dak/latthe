@@ -4,6 +4,8 @@
 // theo đúng chủ đề đang dạy.
 
 import { CHAPTERS, LESSONS, type Lesson } from '../../training/lessons.ts';
+import { loadCoach, type CoachData } from '../../app/coach.ts';
+import { MOTIF_NAME } from '../../../shared/coach.ts';
 import { doneLessons } from '../../app/training.ts';
 import { auth } from '../../app/session.ts';
 import { icon } from '../icons.ts';
@@ -13,6 +15,9 @@ import { startLesson } from './train.ts';
 let done = new Set<string>();
 let daHoi = false;
 
+/** Huấn luyện viên: bài nên học trước, theo lỗi bạn hay lặp lại. */
+let coach: CoachData | null = null;
+
 export function mountLearn(rerender: () => void): void {
   if (daHoi) return;
   daHoi = true;
@@ -20,10 +25,15 @@ export function mountLearn(rerender: () => void): void {
     done = new Set(r.done);
     rerender();
   });
+  void loadCoach().then((c) => {
+    coach = c;
+    if (c?.lessons.length) rerender();
+  });
 }
 
 export function resetLearn(): void {
   done = new Set();
+  coach = null;
   daHoi = false;
 }
 
@@ -36,12 +46,14 @@ export function learn(): string {
   const tiep = nextUp();
   const xong = LESSONS.filter((l) => done.has(l.id)).length;
 
+  const gợiÝ = new Set((coach?.lessons ?? []).map((l) => l.id));
+  const lỗi = coach?.facts?.motifs[0];
   const row = (l: Lesson) => {
     const đãXong = done.has(l.id);
     return `<button class="lesson-row${đãXong ? ' is-done' : ''}" data-lesson="${l.id}">
       <span class="lesson-mark">${đãXong ? icon('check', 18) : icon('learn', 18)}</span>
       <span class="lesson-text">
-        <b>${l.title}</b>
+        <b>${l.title}${gợiÝ.has(l.id) ? ' <span class="tag tag-coach">Huấn luyện viên gợi ý</span>' : ''}</b>
         <span>${l.keyPoint}</span>
       </span>
       <span class="lesson-count mono">${l.count} bài</span>
@@ -56,6 +68,17 @@ export function learn(): string {
     </div>
 
     ${auth.user ? '' : notice('Đăng nhập để lưu bài đã học.', 'locked', 'user')}
+
+    ${
+      coach?.lessons.length
+        ? `<a class="coach-banner" href="#/huan-luyen">
+            <span class="quick-icon">${icon('coach', 20)}</span>
+            <span class="quick-text"><b>Huấn luyện viên gợi ý học trước: ${coach.lessons.map((l) => l.title).join(', ')}</b>
+              <span>${lỗi ? `Vì bạn hay ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần trong các ván gần đây).` : 'Theo các ván gần đây của bạn.'} Xem nhận xét đầy đủ</span></span>
+            ${icon('next', 16)}
+          </a>`
+        : ''
+    }
 
     ${CHAPTERS.map((ch) => {
       const trong = LESSONS.filter((l) => l.chapter === ch);

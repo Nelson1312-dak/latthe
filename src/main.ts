@@ -44,6 +44,7 @@ import { IS_MINI, MINI_MODE, closeMini, miniOpen, openMini, saveHandoff, takeHan
 import { exportPlayState, importPlayState, miniPlay, playStarted, resetPlay, startBotGame, type PlayHandoff } from './ui/screens/play.ts';
 import { muteHere } from './app/sound.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
+import { coachScreen, handleCoachClick, mountCoach, resetCoach } from './ui/screens/coach.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
 /** Tên app, đặt theo bộ với latbai.vn. Đổi ở đây là đổi cả header lẫn tiêu đề tab. */
@@ -59,6 +60,7 @@ const SCREENS: Record<string, Screen> = {
   'xem-lai': { title: 'Xem lại ván', render: review },
   'on-tap': { title: 'Ôn tập', render: train },
   hoc: { title: 'Học', render: learn },
+  'huan-luyen': { title: 'Huấn luyện viên', render: coachScreen },
   'tai-khoan': { title: 'Hồ sơ', render: account },
   'thong-ke': { title: 'Thống kê', render: stats },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
@@ -70,6 +72,8 @@ const NAV: { route: string; label: string; icon: IconName }[] = [
   { route: 'choi', label: 'Chơi', icon: 'play' },
   { route: 'on-tap', label: 'Ôn tập', icon: 'cards' },
   { route: 'hoc', label: 'Học', icon: 'learn' },
+  // AI đọc lịch sử ván của bạn: lỗi hay lặp lại + lộ trình học
+  { route: 'huan-luyen', label: 'Huấn luyện', icon: 'coach' },
 ];
 
 function route(): string {
@@ -408,6 +412,7 @@ function render(): void {
   if (r === 'tai-khoan') mountAccount(render);
   if (r === 'thong-ke') mountStats(render);
   if (r === 'hoc') mountLearn(render);
+  if (r === 'huan-luyen') mountCoach(render);
   if (r === '') mountHome(render);
   snapBoards(app);
   // Nút Google ở bất cứ chỗ nào có chỗ cho nó: trang Đăng nhập, hộp mời đăng nhập
@@ -572,6 +577,7 @@ document.addEventListener('click', (e) => {
   if ((route() === 'xem-lai' || sharedIdFromPath()) && handleReviewClick(el, render)) return;
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
   if (route() === 'hoc' && handleLearnClick(el)) return;
+  if (route() === 'huan-luyen' && handleCoachClick(el, render)) return;
 
   // Bài tập của ngày (dòng ở Sảnh): mở đúng bài đó ở màn Ôn tập
   if (el.closest('[data-daily]')) {
@@ -600,6 +606,7 @@ document.addEventListener('click', (e) => {
   } else if (label === 'Đăng xuất') {
     void logout().then(() => {
       resetAccount();
+      resetCoach();
       resetHome();
       resetLearn();
       render();

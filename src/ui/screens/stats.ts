@@ -4,6 +4,8 @@
 // danh: lượt đếm theo ngày, không biết ai là ai.
 
 import { auth } from '../../app/session.ts';
+import { MOTIF_NAME, type Advice, type CoachFacts } from '../../../shared/coach.ts';
+import { icon } from '../icons.ts';
 import { notice, rule } from '../components/index.ts';
 
 interface DayRow {
@@ -35,9 +37,35 @@ let data: Stats | null = null;
 let error: string | null = null;
 let loading = false;
 
+/** Huấn luyện viên toàn trang: gộp ván của mọi người chơi (không tên), AI đọc và nhận xét. */
+interface Community {
+  days: number;
+  players: number;
+  pending: number;
+  facts: CoachFacts | null;
+  lessons: { id: string; title: string; keyPoint: string }[];
+  advice: Advice | null;
+  source?: string;
+}
+let cộngĐồng: Community | null = null;
+let cộngĐồngĐang = false;
+
 export function mountStats(rerender: () => void): void {
   if (loading || data || !auth.user?.admin) return;
   loading = true;
+  // Phần AI chậm hơn (mô hình có thể phải nạp): xin riêng, không bắt cả trang chờ
+  cộngĐồngĐang = true;
+  void fetch('/api/admin/coach?days=30&advice=1', { credentials: 'same-origin' })
+    .then(async (r) => {
+      cộngĐồng = r.ok ? ((await r.json()) as Community) : null;
+    })
+    .catch(() => {
+      cộngĐồng = null;
+    })
+    .finally(() => {
+      cộngĐồngĐang = false;
+      rerender();
+    });
   void fetch('/api/admin/stats?days=30', { credentials: 'same-origin' })
     .then(async (r) => {
       if (!r.ok) throw new Error(r.status === 403 ? 'Không có quyền xem' : `Lỗi ${r.status}`);
@@ -56,12 +84,58 @@ export function mountStats(rerender: () => void): void {
 export function refreshStats(rerender: () => void): void {
   data = null;
   error = null;
+  cộngĐồng = null;
   mountStats(rerender);
 }
 
 const sum = (rows: DayRow[], k: keyof DayRow) => rows.reduce((a, r) => a + (r[k] as number), 0);
 const fmt = (n: number) => n.toLocaleString('vi-VN');
 const dm = (day: string) => `${Number(day.slice(8, 10))}/${Number(day.slice(5, 7))}`;
+
+/**
+ * Người chơi trên trang hay sai gì: gộp tóm tắt lỗi của mọi ván đã chấm (máy chủ
+ * tự chấm cả ván người chơi bỏ dở), AI đọc và gợi ý nên đẩy bài học nào. Không
+ * có tên ai, không có ván cụ thể nào.
+ */
+function communityBlock(): string {
+  const head = rule('Người chơi hay sai gì · 30 ngày', '<span class="rule-note">AI đọc ván của mọi người, không tên</span>');
+  if (cộngĐồngĐang && !cộngĐồng) return head + notice('AI đang đọc ván của mọi người chơi…', 'info', 'coach');
+  const c = cộngĐồng;
+  if (!c?.facts) return head + notice('Chưa có ván nào được chấm trong 30 ngày.', 'info', 'coach');
+  const f = c.facts;
+  const tốiĐa = Math.max(1, ...f.motifs.map((m) => m.count));
+  const từAI = c.source === 'llm' || c.source === 'cache';
+  return `${head}
+    ${c.advice ? `<p class="coach-text">${c.advice.nhanXet.replace(/[<>&]/g, '')}</p>
+      <p class="coach-src">${từAI ? 'AI viết từ số liệu gộp' : 'Viết sẵn từ số liệu gộp'}</p>` : ''}
+    <div class="stat-tiles">
+      ${tile(c.players, 'Người chơi có ván đã chấm', `${fmt(f.games)} ván`)}
+      ${tile(f.accuracy, 'Độ chính xác trung bình (%)', 'mọi nước của người chơi')}
+      ${tile(f.perGame.blunder, 'Sai nghiêm trọng mỗi ván', `sai: ${f.perGame.mistake}`)}
+    </div>
+    ${c.pending ? `<p class="muted">Máy chủ còn ${c.pending} ván trong 30 ngày chưa chấm xong — số liệu sẽ đủ dần.</p>` : ''}
+    <div class="coach-mistakes">${f.motifs
+      .slice(0, 6)
+      .map(
+        (m) =>
+          `<div class="coach-mistake"><div class="coach-mistake-top"><b class="mono">${m.count}</b>` +
+          `<span>lần ${MOTIF_NAME[m.kind]}</span><small>trong ${m.games} ván</small></div>` +
+          `<span class="acc-bar"><i style="width:${Math.round((m.count / tốiĐa) * 100)}%"></i></span></div>`,
+      )
+      .join('')}</div>
+    ${
+      c.lessons.length
+        ? `<p class="label">Bài học người chơi cần nhất</p>
+           <div class="quick-list">${c.lessons
+             .map(
+               (l, i) =>
+                 `<a class="quick" href="/hoc/" target="_blank" rel="noopener"><span class="quick-icon">${icon('learn', 20)}</span>` +
+                 `<span class="quick-text"><b>${l.title}</b><span>${(c.advice?.loTrinh[i] ?? l.keyPoint).replace(/[<>&]/g, '')}</span></span>${icon('next', 16)}</a>`,
+             )
+             .join('')}</div>`
+        : ''
+    }`;
+}
 
 /** Ô số liệu: con số to, nhãn, so với kỳ trước. */
 function tile(value: number, label: string, note: string): string {
@@ -198,6 +272,7 @@ export function stats(): string {
     ${barChart(d, 'play_end', 'Ván chơi xong (với máy, hai người)', 'ván')}
     ${rule('Phễu 30 ngày')}
     ${funnel(d)}
+    ${communityBlock()}
     ${rule('Từng ngày')}
     <div class="table-wrap"><table class="stats-table">
       <thead><tr><th>Ngày</th><th>Vào</th><th>Bắt đầu ván</th><th>Xong ván</th><th>Với AI</th><th>Với người</th><th>Xem chi tiết</th><th>Chia sẻ</th><th>Mở link</th><th>Đăng ký</th><th>Bài tập</th></tr></thead>

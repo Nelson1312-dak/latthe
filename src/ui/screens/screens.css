@@ -2464,3 +2464,168 @@ a.quick {
   background: var(--bg-3);
   color: var(--text-1);
 }
+
+/* ================= Tab Huấn luyện viên ================= */
+.coach-screen {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+}
+.coach-screen > .screen-head {
+  margin-bottom: 0;
+}
+.coach-say {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.coach-say .coach-text {
+  font-size: var(--fs-lg);
+}
+.coach-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.coach-pending .icon {
+  color: var(--text-3);
+}
+.coach-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-3);
+  max-width: 560px;
+  padding: var(--s-6);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.coach-empty p {
+  margin: 0;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+.coach-empty b {
+  color: var(--text-1);
+}
+.coach-empty-icon {
+  color: var(--accent-text);
+}
+/* Thanh ngang một màu: độ chính xác theo giai đoạn, số lần mỗi kiểu lỗi */
+.acc-bar {
+  display: block;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+.acc-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.coach-phases {
+  display: grid;
+  gap: var(--s-2);
+}
+.coach-phase {
+  display: grid;
+  grid-template-columns: 6.5em 1fr 3em;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.coach-phase b {
+  text-align: right;
+  color: var(--text-1);
+}
+.coach-mistakes {
+  display: grid;
+  gap: var(--s-2);
+}
+.coach-mistake {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.coach-mistake-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2);
+  color: var(--text-1);
+}
+.coach-mistake-top b {
+  font-size: var(--fs-lg);
+}
+.coach-mistake-top small {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+.coach-mistake .link-btn {
+  justify-self: start;
+}
+.coach-foot {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+/* Thẻ dẫn sang Huấn luyện viên (Hồ sơ, tab Học) */
+.coach-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+  color: var(--text-1);
+  text-decoration: none;
+}
+.coach-banner:hover {
+  border-color: var(--line-strong);
+  border-left-color: var(--accent);
+}
+.coach-banner .quick-text span {
+  color: var(--text-2);
+}
+.tag-coach {
+  margin-left: var(--s-1);
+  border-color: var(--accent-dim);
+  color: var(--accent-text);
+  font-weight: 400;
+}
+/* Dòng dẫn sang Huấn luyện viên dưới bảng xem lại ván */
+.rv-coach {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+.rv-coach b {
+  color: var(--text-1);
+}
+.rv-coach > .icon:first-child {
+  flex: none;
+  color: var(--accent-text);
+}
+.rv-coach:hover {
+  color: var(--text-1);
+}

@@ -155,3 +155,10 @@ function forcing(fen: string, uci: string): boolean {
 
 let engine: BotEngine | null = null;
 export const botEngine = (): BotEngine => (engine ??= new BotEngine());
+
+/**
+ * Engine thứ hai, riêng cho việc chấm ván ở máy chủ (server/analyst.ts): chấm
+ * mất hàng chục giây một ván, dùng chung với bot thì bot phải xếp hàng chờ.
+ */
+let analysis: BotEngine | null = null;
+export const analysisEngine = (): BotEngine => (analysis ??= new BotEngine());

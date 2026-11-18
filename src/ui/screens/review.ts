@@ -286,7 +286,8 @@ async function runReview(rerender: () => void): Promise<void> {
 export function mountReview(rerender: () => void): void {
   const muốn = Number(routeQuery().get('game'));
   if (muốn && state.gameId !== muốn && state.phase !== 'loading' && state.phase !== 'analysing') {
-    openGame(muốn, rerender);
+    // #/xem-lai?game=N&ply=M: mở thẳng tới nước M (Huấn luyện viên "xem ví dụ")
+    openGame(muốn, rerender, Number(routeQuery().get('ply')) || undefined);
     return;
   }
   if (state.phase === 'pick' && auth.user && !state.games.length) {
@@ -299,7 +300,7 @@ export function mountReview(rerender: () => void): void {
 }
 
 /** Mở một ván đã lưu theo id. */
-export function openGame(id: number, rerender: () => void): void {
+export function openGame(id: number, rerender: () => void, ply?: number): void {
   state.phase = 'loading';
   state.names = null;
   state.shared = false;
@@ -327,7 +328,7 @@ export function openGame(id: number, rerender: () => void): void {
     if (data.review) {
       // Đã chấm rồi thì mở ra ngay, không chấm lại
       state.review = data.review;
-      state.ply = firstPly(data.review, state.playerSide);
+      state.ply = ply && ply <= data.review.moves.length ? ply : firstPly(data.review, state.playerSide);
       state.phase = 'done';
       void loadOpenings().then(rerender);
       rerender();

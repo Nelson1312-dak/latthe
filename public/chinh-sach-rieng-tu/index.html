@@ -33,7 +33,7 @@
 <main>
   <a class="home" href="/">← Về Lật Cờ</a>
   <h1>Chính sách quyền riêng tư</h1>
-  <p class="meta">Áp dụng cho trang <b>latbai.vn</b> (Lật Cờ). Cập nhật ngày 18/11/2026 (thêm đếm lượt ẩn danh, ván chia sẻ).</p>
+  <p class="meta">Áp dụng cho trang <b>latbai.vn</b> (Lật Cờ). Cập nhật ngày 18/11/2026 (thêm Huấn luyện viên đọc lịch sử ván, máy chủ tự chấm ván).</p>
 
   <p class="box">Ngắn gọn: Lật Cờ <b>không lưu email</b>, không bán hay chia sẻ dữ liệu cho ai,
   không chạy quảng cáo, không gắn công cụ theo dõi — chỉ đếm số lượt theo ngày, không biết ai là ai. Chơi với máy và giải bài tập không cần
@@ -55,6 +55,7 @@
     <tr><th>Dữ liệu</th><th>Dùng để</th></tr>
     <tr><td>Các ván đã chơi (nước đi, kết quả, cấp độ máy)</td><td>Cho bạn xem lại ván, chấm từng nước</td></tr>
     <tr><td>Kết quả chấm ván, thẻ ôn tập từ những nước đi sai</td><td>Nhắc bạn ôn lại đúng chỗ hay sai</td></tr>
+    <tr><td>Tóm tắt lỗi của từng ván (độ chính xác, số nước hỏng, kiểu lỗi như để hở quân, dính đòn đôi)</td><td>Huấn luyện viên chỉ ra lỗi bạn hay lặp lại và gợi ý bài nên học</td></tr>
     <tr><td>Lần giải bài tập, tiến độ bài học, điểm Elo, trình độ bạn tự chọn lúc đăng nhập lần đầu</td><td>Chọn bài và máy vừa sức, ghép trận với người cùng trình độ</td></tr>
     <tr><td>Cài đặt hiển thị (màu bàn cờ, sáng/tối, âm thanh, toạ độ…)</td><td>Đăng nhập ở máy khác vẫn y như cũ</td></tr>
     <tr><td>Phiên đăng nhập (một cookie)</td><td>Giữ bạn đăng nhập trong 30 ngày</td></tr>
@@ -77,8 +78,12 @@
   <ul>
     <li>Dữ liệu ở mục 1 và 2 nằm trong <b>một cơ sở dữ liệu trên máy chủ riêng của người làm app</b>, tại Việt Nam.
       Có bản sao lưu hằng ngày, giữ 14 bản gần nhất.</li>
-    <li>Engine cờ (Stockfish) chạy <b>ngay trong trình duyệt của bạn</b>. Phần lời bình sau ván dùng một mô hình
-      ngôn ngữ chạy trên chính máy chủ đó — ván cờ không bị gửi cho dịch vụ AI bên ngoài.</li>
+    <li>Engine cờ (Stockfish) chạy <b>ngay trong trình duyệt của bạn</b>. Ván đã lưu nào trình duyệt chưa chấm
+      xong (ví dụ bạn đóng trang sớm) thì <b>chính máy chủ đó</b> chấm bằng Stockfish.</li>
+    <li>Huấn luyện viên dùng một mô hình ngôn ngữ (AI) chạy <b>trên chính máy chủ đó</b>, đọc số liệu tóm tắt các
+      ván gần nhất của bạn để viết nhận xét — ván cờ không bị gửi cho dịch vụ AI bên ngoài.</li>
+    <li>Người làm app xem được <b>số liệu gộp của mọi người chơi</b> (ví dụ "lỗi để hở quân gặp 120 lần trong 300
+      ván") để biết nên làm thêm bài học nào. Số liệu gộp không có tên, không chỉ ra ván của ai.</li>
     <li>Khi đấu online, đối thủ thấy tên hiển thị, ảnh đại diện và điểm Elo của bạn.</li>
     <li>Đường truyền đi qua hai nhà cung cấp hạ tầng: <b>Vercel</b> (lưu trữ trang web) và <b>ngrok</b>
       (đường hầm tới máy chủ). Như mọi dịch vụ mạng, họ có thể ghi nhật ký kỹ thuật như địa chỉ IP
@@ -87,7 +92,7 @@
   </ul>
 
   <h2>4. Xoá dữ liệu</h2>
-  <p>Bạn tự xoá được: vào <b>Hồ sơ → Xoá tài khoản</b>. Hồ sơ, toàn bộ ván cờ, thẻ ôn tập, tiến độ và
+  <p>Bạn tự xoá được: vào <b>Hồ sơ → Xoá tài khoản</b>. Hồ sơ, toàn bộ ván cờ, kết quả chấm và tóm tắt lỗi, thẻ ôn tập, tiến độ và
   cài đặt bị xoá khỏi cơ sở dữ liệu ngay lập tức, và tự biến mất khỏi bản sao lưu sau 14 ngày.
   Gặp trục trặc thì mở một yêu cầu tại
   <a href="https://github.com/Nelson1312-dak/latthe/issues" rel="noopener">trang dự án trên GitHub</a>.</p>

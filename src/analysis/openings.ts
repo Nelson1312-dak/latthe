@@ -43,3 +43,9 @@ export function openingOfGame(fens: string[]): { opening: Opening; ply: number }
   }
   return found;
 }
+
+/** Nạp bảng khai cuộc có sẵn trong tay (máy chủ đọc thẳng từ file, không fetch). */
+export function setOpenings(data: Record<string, [string, string]>): void {
+  table = data;
+  loading = Promise.resolve();
+}

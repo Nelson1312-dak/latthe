@@ -26,6 +26,7 @@ import type { ReviewResult } from '../../analysis/review.ts';
 import { saveReview } from '../../app/reviews.ts';
 import { boardMarks, createReporter, reviewPanel, reviewProgress } from '../report.ts';
 import { dropBackground, preAnalyse } from '../../analysis/precompute.ts';
+import { invalidateCoach } from '../../app/coach.ts';
 import { buildFacts } from '../../../shared/advisor/facts.ts';
 import { detectMotifs } from '../../../shared/advisor/motifs.ts';
 import { hintSteps } from '../../../shared/advisor/templates.ts';
@@ -107,7 +108,8 @@ function trySaveReview(): void {
   const r = reviewed();
   if (!r || !savedGameId || reviewSaved) return;
   reviewSaved = true;
-  void saveReview(savedGameId, r);
+  // Lưu xong thì máy chủ tính lại nhận xét: quên số cũ của Huấn luyện viên
+  void saveReview(savedGameId, r).then(() => invalidateCoach());
 }
 
 function dropReport(): void {
@@ -918,6 +920,7 @@ function reviewBlock(): string {
     opponent: `Máy ${levelById(setup.level).name.toLowerCase()}`,
     ply: game.ply,
     share: shareStateFor(game.pgn()),
+    coach: Boolean(auth.user) && setup.mode === 'bot',
   });
 }
 

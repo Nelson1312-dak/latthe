@@ -159,6 +159,8 @@ export interface PanelView {
   share?: ShareState | null;
   /** Tên người chơi khi người xem không phải họ (ván được chia sẻ); thay cho chữ "bạn". */
   meName?: string;
+  /** Có dòng dẫn sang Huấn luyện viên (người đã đăng nhập, ván của chính mình). */
+  coach?: boolean;
 }
 
 const CLASS_NOTE: Partial<Record<MoveClass, string>> = {
@@ -256,6 +258,11 @@ export function reviewPanel(r: ReviewResult, v: PanelView): string {
       }
       ${focusCard(current, me, v.meName?.replace(/[<>&"]/g, ''))}
     </div>
+    ${
+      v.coach
+        ? `<a class="rv-coach" href="#/huan-luyen">${icon('coach', 18)}<span><b>Huấn luyện viên</b> đã tính ván này vào nhận xét — xem lỗi bạn hay lặp lại qua các ván</span>${icon('next', 14)}</a>`
+        : ''
+    }
     ${
       v.share === undefined
         ? ''

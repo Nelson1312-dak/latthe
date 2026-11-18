@@ -91,6 +91,17 @@ Nút "Luyện bài này ngay" mở `/#/hoc?bai=<id>` — app vào thẳng bài �
 - Nút "Cài Lật Cờ lên máy" nằm trong Cài đặt, chỉ hiện khi trình duyệt cho cài
   (Chrome/Edge/Android). iPhone chỉ có dòng hướng dẫn Chia sẻ → Thêm vào MH chính.
 
+## Người chấm ván nền (Huấn luyện viên)
+
+`server/analyst.ts` chạy cùng server: cứ 4 giây xem có ván đã lưu nào chưa chấm thì chấm
+MỘT ván (Stockfish, tiến trình riêng, ~20–40 giây/ván), rồi ghi bảng `game_insights`.
+Lần đầu bật nó chấm dồn các ván cũ (mới nhất trước) — một lõi CPU bận vài chục phút,
+xong thì gần như nghỉ. Ván lỗi không chấm được thì bỏ qua tới lần khởi động sau
+(log: `[chấm ván] ván N lỗi`).
+
+Số ván còn chờ: trang Thống kê (dòng "Máy chủ còn … ván chưa chấm"), hoặc
+`SELECT count(*) FROM games g LEFT JOIN reviews r ON r.game_id = g.id WHERE r.game_id IS NULL`.
+
 ## Không thuê VPS
 
 Máy ở nhà là máy chủ riêng, bật thường trực cho việc này (quyết định 18/11/2026).

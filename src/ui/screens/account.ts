@@ -13,8 +13,8 @@ import { progress, type Progress } from '../../app/training.ts';
 import { icon } from '../icons.ts';
 import { CLASS_LABEL } from '../../board/Board.ts';
 import type { MoveClass } from '../../../shared/winrate.ts';
-import { loadAdvice, loadCoach, type CoachData } from '../../app/coach.ts';
-import { MOTIF_NAME, type Advice } from '../../../shared/coach.ts';
+import { loadCoach, type CoachData } from '../../app/coach.ts';
+import { MOTIF_NAME } from '../../../shared/coach.ts';
 
 /** Tiến độ học, nạp riêng vì cần gọi server. */
 let tienDo: Progress | null = null;
@@ -23,10 +23,9 @@ let bậcThang: ProfileLadderStep[] = [];
 let elo: { online: EloPoint[]; puzzles: EloPoint[] } = { online: [], puzzles: [] };
 let daHoi = false;
 let hỏiLúc = 0;
-/** Huấn luyện viên: nhận định (có ngay) và lời khuyên AI viết (có thể chậm). */
+/** Huấn luyện viên: tóm tắt một dòng, đầy đủ ở tab riêng. */
 let coach: CoachData | null = null;
-let advice: { advice: Advice | null; source: string } | null = null;
-let adviceLoading = false;
+
 /** Đang sửa tên gọi. */
 let sửaTên = false;
 let lỗiTên: string | null = null;
@@ -50,61 +49,23 @@ export function mountAccount(rerender: () => void): void {
   void loadCoach().then((c) => {
     coach = c;
     rerender();
-    if (!c?.facts) return;
-    adviceLoading = true;
-    rerender();
-    void loadAdvice().then((a) => {
-      advice = a;
-      adviceLoading = false;
-      rerender();
-    });
   });
 }
 
-/**
- * Huấn luyện viên: nhìn cả lịch sử ván (không phải từng ván) để nói lỗi bạn hay
- * lặp lại và nên học gì tiếp. Số liệu do code tính từ kết quả engine; AI chỉ viết
- * lời khuyên từ đúng số liệu đó (server kiểm chặt, sai là dùng lời viết sẵn).
- */
+/** Thẻ dẫn sang tab Huấn luyện viên: một câu (lỗi hay lặp lại nhất) + bài nên học. */
 function coachBlock(): string {
   if (!coach) return '';
-  if (!coach.facts) {
-    return `${rule('Huấn luyện viên')}
-      ${notice(
-        `Chơi thêm ${coach.need} ván nữa để Huấn luyện viên đủ dữ liệu nhận xét. Ván nào xong cũng được chấm và lưu tự động.`,
-        'info',
-        'coach',
-      )}`;
-  }
-  const f = coach.facts;
-  const a = advice?.advice;
-  const lỗi = f.motifs.slice(0, 3);
-  return `${rule('Huấn luyện viên', `<span class="rule-note">từ ${f.games} ván gần nhất</span>`)}
-    <div class="coach">
-      <p class="coach-text${a ? '' : ' is-typing'}">${
-        a ? esc(a.nhanXet) : adviceLoading ? 'Huấn luyện viên đang đọc các ván của bạn' : 'Chưa viết được nhận xét lúc này.'
-      }</p>
-      ${
-        lỗi.length
-          ? `<div class="coach-facts">${lỗi
-              .map((m) => `<span class="coach-fact"><b class="mono">${m.count}</b> lần ${MOTIF_NAME[m.kind]}</span>`)
-              .join('')}</div>`
-          : ''
-      }
-      <p class="label">Lộ trình gợi ý</p>
-      <div class="quick-list">${coach.lessons
-        .map(
-          (l, i) =>
-            `<a class="quick" href="#/hoc?bai=${l.id}"><span class="quick-icon">${icon('learn', 20)}</span>` +
-            `<span class="quick-text"><b>${esc(l.title)}</b><span>${esc(a?.loTrinh[i] ?? l.keyPoint)}</span></span>${icon('next', 16)}</a>`,
-        )
-        .join('')}</div>
-      <p class="coach-src">${
-        advice?.source === 'llm' || advice?.source === 'cache'
-          ? 'AI viết lời khuyên từ số liệu engine chấm các ván của bạn'
-          : 'Lời khuyên viết sẵn từ số liệu engine chấm các ván của bạn'
-      }</p>
-    </div>`;
+  const lỗi = coach.facts?.motifs[0];
+  const bài = coach.lessons[0];
+  return `<a class="coach-banner" href="#/huan-luyen">
+      <span class="quick-icon">${icon('coach', 20)}</span>
+      <span class="quick-text"><b>Huấn luyện viên</b><span>${
+        coach.facts
+          ? `${lỗi ? `Lỗi bạn hay lặp lại nhất: ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần).` : `Độ chính xác trung bình ${coach.facts.accuracy}%.`}${bài ? ` Nên học: ${esc(bài.title)}.` : ''}`
+          : `Chơi thêm ${coach.need} ván để Huấn luyện viên đủ dữ liệu nhận xét.`
+      }</span></span>
+      ${icon('next', 16)}
+    </a>`;
 }
 
 /** Quên tiến độ khi đăng xuất, để người sau không thấy số của người trước. */
@@ -112,7 +73,6 @@ export function resetAccount(): void {
   tienDo = null;
   thốngKê = null;
   coach = null;
-  advice = null;
   daHoi = false;
   sửaTên = false;
   hỏiXoá = false;

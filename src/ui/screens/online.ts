@@ -11,6 +11,7 @@ import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
 import { boardSvg, endBadgesFor } from '../../board/Board.ts';
 import { boardMarks, createReporter, pgnFromSans, reviewPanel, reviewProgress } from '../report.ts';
 import { preAnalyse } from '../../analysis/precompute.ts';
+import { invalidateCoach } from '../../app/coach.ts';
 import { saveReview } from '../../app/reviews.ts';
 import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
 import { Game, outcomeText, type Side } from '../../../shared/chess.ts';
@@ -540,7 +541,7 @@ function kếtQuả(): string {
     const cur = reporter.current;
     if (!cur || cur.pgn !== pgnFromSans(s.history)) return '';
     if (cur.phase !== 'done' || !cur.result) return reviewProgress(cur);
-    return reviewPanel(cur.result, { me: tôi, opponent: đốiThủ(), ply: plyĐangXem(), share: shareStateFor(cur.pgn) });
+    return reviewPanel(cur.result, { me: tôi, opponent: đốiThủ(), ply: plyĐangXem(), share: shareStateFor(cur.pgn), coach: true });
   })()}`;
 }
 
@@ -584,7 +585,7 @@ export function mountOnline(rerender: () => void): void {
     const gameId = s.over.gameId;
     reporter.start(pgnFromSans(s.history), rerender, (r) => {
       // Lưu kết quả cùng ván (sinh thẻ ôn tập từ nước sai), lần sau mở ra là có ngay
-      if (gameId) void saveReview(gameId, r);
+      if (gameId) void saveReview(gameId, r).then(() => invalidateCoach());
     });
   } else xemPly = null;
 

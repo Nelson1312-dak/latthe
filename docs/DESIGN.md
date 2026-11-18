@@ -439,21 +439,33 @@ chỉ nước nên đi.
 - **Biểu đồ Elo** trong Hồ sơ: Elo online và Elo bài tập theo từng ván/bài (trục ngang là
   thứ tự, không phải ngày — người chơi thất thường thì trục ngày toàn khoảng trống).
 
-### 4.6f Huấn luyện viên (Hồ sơ): AI nhìn cả lịch sử ván
+### 4.6f Huấn luyện viên: tab riêng, AI đọc lịch sử ván
 
-AI không bình từng nước, từng ván nữa (bỏ "Vì sao nước này?" và "Rút ra từ ván
-này"). Nó làm **tư vấn viên** trong Hồ sơ, nhìn 20 ván gần nhất đã chấm:
+AI không bình từng nước, từng ván. Nó là **tư vấn viên** nhìn cả lịch sử ván:
 
-1. Code tính nhận định (`shared/coach.ts`): thắng/thua, độ chính xác trung bình và
-   theo giai đoạn, số nước sai mỗi ván, **kiểu lỗi lặp lại** (cùng bộ nhận diện mô-típ
-   của bảng xem lại) — đây là nguồn sự thật duy nhất.
-2. Code chọn 3 bài học theo kiểu lỗi hay gặp nhất (bỏ bài đã học xong).
-3. AI (Ollama trên máy chủ) viết 2–3 câu nhận xét + một câu "vì sao học bài này" cho
-   từng bài. Bị bỏ, dùng lời viết sẵn, nếu có con số không có trong nhận định, có ô
-   cờ, hay hứa kết quả ("sẽ thắng", "sẽ lên Elo"). Nhận định không đổi thì dùng lại
-   lời đã viết.
+**Dữ liệu (máy nhà).** Mọi ván đã lưu đều được chấm: trình duyệt chấm ngay khi hết
+ván; ván nào trình duyệt chưa chấm (ván cũ, đóng trang sớm, ván online không mở lại)
+thì `server/analyst.ts` chấm nền bằng Stockfish trên máy chủ (engine riêng, mới nhất
+trước, nhường trình duyệt 3 phút đầu). Mỗi ván đã chấm có một dòng **game_insights**:
+độ chính xác, số nước hỏng, độ chính xác theo giai đoạn, kiểu lỗi từng nước hỏng
+(`shared/coach.ts gameInsight`) — AI chỉ đọc bảng này, không đọc ván thô.
 
-Cần ít nhất 3 ván đã chấm; chưa đủ thì báo còn thiếu mấy ván.
+**Tab Huấn luyện viên** (`#/huan-luyen`, có trên thanh điều hướng): nhận xét (AI viết),
+ba ô số, độ chính xác theo giai đoạn, lỗi hay lặp lại (mỗi kiểu một thanh + "Xem lần
+gần nhất" mở đúng nước đó trong ván), lộ trình 3 bài. Chưa đủ 3 ván / máy chủ đang
+chấm ván cũ thì nói rõ.
+
+**Gắn vào luồng:** Sảnh ("Hôm nay": Huấn luyện viên gợi ý bài X vì bạn hay …; mục
+"Lỗi bạn hay lặp lại"), tab Học (khung gợi ý ở đầu + nhãn "Huấn luyện viên gợi ý" trên
+bài), bảng xem lại sau ván (dòng dẫn sang tab), Hồ sơ (thẻ một dòng).
+
+**AI viết, code kiểm** (`validateAdvice`): mọi con số phải có trong nhận định, không ô
+cờ, không hứa kết quả, đúng số câu; sai là dùng lời viết sẵn. Nhận định không đổi thì
+dùng lại lời đã viết.
+
+**Toàn trang (chỉ chủ trang, #/thong-ke):** gộp game_insights của mọi người chơi 30
+ngày, không tên, không ván cụ thể; AI nhận xét người chơi đang vướng gì và gợi ý nên
+làm gì với từng bài học cần nhất.
 
 ### 4.7 Âm thanh
 

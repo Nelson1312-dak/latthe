@@ -13,9 +13,13 @@ import { progress, type Progress } from '../../app/training.ts';
 import { CLASS_LABEL } from '../../board/Board.ts';
 import { END_TEXT, type EndReason } from '../../../shared/chess.ts';
 import type { MoveClass } from '../../../shared/winrate.ts';
+import { loadCoach, type CoachData } from '../../app/coach.ts';
+import { MOTIF_NAME } from '../../../shared/coach.ts';
 
 let games: GameRow[] = [];
 let tienDo: Progress | null = null;
+/** Huấn luyện viên: bài nên học tiếp và lỗi hay lặp lại (đọc từ lịch sử ván). */
+let coach: CoachData | null = null;
 let daHoi = false;
 
 let hỏiNgày = false;
@@ -28,9 +32,10 @@ export function mountHome(rerender: () => void): void {
   }
   if (daHoi || !auth.user) return;
   daHoi = true;
-  void Promise.all([recentGames(), progress()]).then(([g, p]) => {
+  void Promise.all([recentGames(), progress(), loadCoach()]).then(([g, p, c]) => {
     games = g;
     tienDo = p;
+    coach = c;
     rerender();
   });
 }
@@ -39,6 +44,7 @@ export function mountHome(rerender: () => void): void {
 export function resetHome(): void {
   games = [];
   tienDo = null;
+  coach = null;
   daHoi = false;
   hỏiNgày = false;
 }
@@ -72,6 +78,25 @@ const gameRow = (g: GameRow) => {
  * Bản trước là hộp lồng trong hộp, câu chữ bị nút bấm ép xuống hai dòng, hai
  * bên còn thừa hai dải nền khác màu — trông như dựng dở.
  */
+/**
+ * Dòng "Hôm nay" của Huấn luyện viên: đủ dữ liệu thì gợi ý đúng bài nên học
+ * (kèm lý do: lỗi bạn hay lặp lại nhất); chưa đủ thì mời mở tab Huấn luyện viên.
+ */
+function coachRow(): string {
+  const bài = coach?.lessons[0];
+  const lỗi = coach?.facts?.motifs[0];
+  if (bài) {
+    return quickRow(
+      `hoc?bai=${bài.id}`,
+      'coach',
+      `Huấn luyện viên gợi ý: ${bài.title}`,
+      lỗi ? `Vì bạn hay ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần gần đây)` : bài.keyPoint,
+    );
+  }
+  if (auth.user) return quickRow('huan-luyen', 'coach', 'Huấn luyện viên', 'Đọc các ván của bạn, chỉ ra lỗi hay lặp lại');
+  return quickRow('hoc', 'learn', 'Học chiến thuật', 'Bài ngắn, có bài tập kèm theo');
+}
+
 function quickRow(go: string, name: IconName, title: string, note: string): string {
   return (
     `<button class="quick" data-go="${go}">` +
@@ -115,7 +140,7 @@ export function homeSide(): string {
         due ? 'Từ chính những nước bạn đi sai' : 'Chưa có thẻ nào đến hạn',
       )}
       ${quickRow('ban', 'friends', 'Đấu với người', 'Ghép với người cùng trình độ')}
-      ${quickRow('hoc', 'learn', 'Học chiến thuật', 'Bài ngắn, có bài tập kèm theo')}
+      ${coachRow()}
     </div>
 
     ${
@@ -130,7 +155,13 @@ export function homeSide(): string {
     }
 
     ${
-      tienDo?.chuDeHaySai.length
+      coach?.facts?.motifs.length
+        ? `${rule('Lỗi bạn hay lặp lại', '<a class="rule-link" href="#/huan-luyen">Huấn luyện viên</a>')}
+           <ul class="tag-list">${coach.facts.motifs
+             .slice(0, 3)
+             .map((m) => `<li>${MOTIF_NAME[m.kind]} <b class="mono">${m.count}</b></li>`)
+             .join('')}</ul>`
+        : tienDo?.chuDeHaySai.length
         ? `${rule('Kiểu lỗi bạn hay gặp', '<a class="rule-link" href="#/on-tap">Luyện</a>')}
            <ul class="tag-list">${tienDo.chuDeHaySai
              .slice(0, 4)

@@ -13,7 +13,8 @@ import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
 import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
 import { advise, explain, ollamaAlive, queueDepth } from './advisor.ts';
-import { coachReport } from './coach.ts';
+import { coachReport, communityReport } from './coach.ts';
+import { saveInsight, startAnalyst } from './analyst.ts';
 import { pickPuzzle, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
 import { Live } from './live/index.ts';
 import { CONTROLS, DEFAULT_CONTROL, REFUSALS } from '../shared/protocol.ts';
@@ -73,6 +74,8 @@ setInterval(() => purgeExpiredSessions(db), 3600_000).unref();
 
 // Ván online. Nhịp mỗi giây: ghép trận, kiểm tra rơi cờ, dọn phòng cũ.
 const live = new Live(db);
+// Người chấm nền: chấm mọi ván đã lưu mà trình duyệt chưa chấm, tính tóm tắt lỗi cho Huấn luyện viên
+startAnalyst(db);
 setInterval(() => live.tick(), 1_000).unref();
 // Tunnel hay cắt kết nối đang rảnh, nên 15 giây gửi một nhịp tim.
 setInterval(() => live.heartbeat(), 15_000).unref();
@@ -296,6 +299,8 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
       if (!review) return json(res, 400, { error: 'Kết quả chấm không hợp lệ' });
       saveReview(db, gameId, review);
       const cards = makeCards(db, user.id, gameId, review, game.player_side === 'b' ? 'b' : 'w');
+      // Tóm tắt lỗi của ván cho Huấn luyện viên đọc
+      saveInsight(db, gameId);
       return json(res, 201, { ok: true, newCards: cards });
     }
   }
@@ -630,6 +635,18 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     if (!user || !ADMIN_IDS.has(user.id)) return json(res, 403, { error: 'Không có quyền' });
     const n = Math.min(90, Math.max(7, Number(new URL(req.url ?? '/', 'http://x').searchParams.get('days')) || 30));
     return json(res, 200, statsFor(db, n));
+  }
+
+  // Huấn luyện viên toàn trang: gộp ván của mọi người chơi, không tên — chỉ chủ trang
+  if (path === '/api/admin/coach' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user || !ADMIN_IDS.has(user.id)) return json(res, 403, { error: 'Không có quyền' });
+    const n = Math.min(90, Math.max(7, Number(new URL(req.url ?? '/', 'http://x').searchParams.get('days')) || 30));
+    const rp = communityReport(db, n);
+    const withAdvice = new URL(req.url ?? '/', 'http://x').searchParams.get('advice') === '1';
+    if (!withAdvice || !rp.facts) return json(res, 200, { ...rp, advice: null });
+    const a = await advise(db, user.id, rp.facts, rp.lessons, { players: rp.players, days: rp.days });
+    return json(res, 200, { ...rp, advice: a.advice, source: a.source });
   }
 
   /* ---- Ván chia sẻ ---- */

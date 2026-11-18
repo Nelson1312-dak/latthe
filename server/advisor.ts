@@ -13,9 +13,12 @@ import type { Facts } from '../shared/advisor/facts.ts';
 import {
   COACH_PROMPT,
   COACH_VERSION,
+  COMMUNITY_PROMPT,
   coachUserPrompt,
+  communityLines,
   factLines,
   templateAdvice,
+  templateCommunity,
   validateAdvice,
   type Advice,
   type CoachFacts,
@@ -169,7 +172,11 @@ export interface AdviceResult {
   rejected?: string;
 }
 
-async function askCoach(lines: string[], lessons: { title: string; keyPoint: string }[]): Promise<string | null> {
+async function askCoach(
+  lines: string[],
+  lessons: { title: string; keyPoint: string }[],
+  prompt: string,
+): Promise<string | null> {
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -186,7 +193,7 @@ async function askCoach(lines: string[], lessons: { title: string; keyPoint: str
       },
       options: { temperature: 0.4, num_predict: 520 },
       messages: [
-        { role: 'system', content: COACH_PROMPT },
+        { role: 'system', content: prompt },
         { role: 'user', content: coachUserPrompt(lines, lessons) },
       ],
     }),
@@ -207,10 +214,13 @@ export async function advise(
   userId: number,
   facts: CoachFacts,
   lessons: { title: string; keyPoint: string }[],
+  /** Bảng toàn trang (chủ trang xem): nhận định gộp mọi người, lời dặn AI khác. */
+  community?: { players: number; days: number },
 ): Promise<AdviceResult> {
-  const lines = factLines(facts);
-  const fallback = templateAdvice(facts, lessons);
-  const key = hash(`${COACH_VERSION}|${JSON.stringify(lines)}|${lessons.map((l) => l.title).join('|')}`);
+  const lines = community ? communityLines(facts, community.players, community.days) : factLines(facts);
+  const prompt = community ? COMMUNITY_PROMPT : COACH_PROMPT;
+  const fallback = community ? templateCommunity(facts, community.players, lessons) : templateAdvice(facts, lessons);
+  const key = hash(`${COACH_VERSION}|${community ? 'all' : 'one'}|${JSON.stringify(lines)}|${lessons.map((l) => l.title).join('|')}`);
   const cached = one<{ comment: string }>(db, 'SELECT comment FROM advisor_cache WHERE key = ?', key);
   if (cached) {
     try {
@@ -220,7 +230,7 @@ export async function advise(
     }
   }
   if (!withinLimit(userId)) return { advice: fallback, source: 'template', rejected: 'quá giới hạn mỗi giờ' };
-  const raw = await withSlot(() => askCoach(lines, lessons).catch(() => null));
+  const raw = await withSlot(() => askCoach(lines, lessons, prompt).catch(() => null));
   if (raw === null) return { advice: fallback, source: 'template', rejected: 'không gọi được mô hình' };
   noteHit(userId);
   let parsed: unknown;
