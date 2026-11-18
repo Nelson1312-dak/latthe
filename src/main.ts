@@ -40,6 +40,9 @@ import { live } from './app/live.ts';
 import { routeName, routeQuery } from './app/route.ts';
 import { LESSONS } from './training/lessons.ts';
 import { canInstall, initPwa, installApp, iosHint } from './app/pwa.ts';
+import { IS_MINI, closeMini, miniOpen, openMini, saveHandoff, takeHandoff } from './app/mini.ts';
+import { exportPlayState, importPlayState, miniPlay, resetPlay, type PlayHandoff } from './ui/screens/play.ts';
+import { muteHere } from './app/sound.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
@@ -294,7 +297,45 @@ function onlineView(): boolean {
 }
 const PLAY_ROUTES = ['', 'choi'];
 
+/* ---------------- Bàn cờ nổi ---------------- */
+
+/** Trong bàn cờ nổi: đang che bàn cờ bằng tấm trơn (Esc). */
+let miniCovered = false;
+
+/** Bàn cờ nổi chỉ có một màn: bàn cờ chơi với máy. */
+function renderMini(): void {
+  document.title = APP_NAME;
+  const app = document.querySelector<HTMLDivElement>('#app')!;
+  app.className = 'app-mini';
+  app.innerHTML = miniPlay(miniCovered);
+  mountPlay(render);
+  snapBoards(app);
+  // Ghi ván sau mỗi lần vẽ: đóng cửa sổ lúc nào thì trang chính cũng có ván mới nhất
+  saveHandoff(exportPlayState());
+}
+
+/** Trang chính, trong lúc bàn cờ đang ở cửa sổ nổi. */
+function miniAway(): string {
+  return `<div class="screen"><div class="mini-away">
+    <span class="mini-away-icon">${icon('float', 28)}</span>
+    <h1>Bàn cờ đang ở cửa sổ nổi</h1>
+    <p>Ván cờ tiếp tục ở cửa sổ nhỏ. Thu nhỏ trang này lại cũng được — đóng cửa sổ nổi thì ván quay về đây.</p>
+    <button class="btn btn-primary" data-mini-back>Đưa bàn cờ về đây</button>
+  </div></div>`;
+}
+
+/** Cửa sổ nổi vừa đóng: lấy ván về chơi tiếp ở trang chính. */
+function onMiniClosed(): void {
+  const h = takeHandoff<PlayHandoff>();
+  if (h) importPlayState(h);
+  render();
+}
+
 function render(): void {
+  if (IS_MINI) {
+    renderMini();
+    return;
+  }
   // Link cũ #/ban (tab Đấu đã gộp vào tab Chơi): về Chơi, chế độ Với người
   if (routeName() === 'ban') {
     setPlayMode('online');
@@ -338,14 +379,15 @@ function render(): void {
   document.title = r ? `${screen.title} · ${APP_NAME}` : APP_NAME;
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
+  const away = miniOpen() && PLAY_ROUTES.includes(r);
   app.innerHTML =
     siteHeader(r) +
-    `<main>${screen.render()}${siteFooter()}</main>` +
+    `<main>${away ? miniAway() : screen.render()}${siteFooter()}</main>` +
     bottomNav(r) +
     (settingsOpen ? settingsDialog() : '') +
     (currentGate() && !auth.user ? gateDialog(currentGate()!) : '') +
     (welcomeOpen && auth.user ? welcomeDialog() : '');
-  if (r === 'choi' || r === '') {
+  if ((r === 'choi' || r === '') && !away) {
     if (onlineView()) mountOnline(render);
     else {
       mountPlay(render);
@@ -487,6 +529,27 @@ document.addEventListener('click', (e) => {
     return;
   }
 
+  // Bàn cờ nổi: che / mở lại bàn cờ
+  if (IS_MINI && (el.closest('[data-mini-hide]') || el.closest('[data-mini-cover]'))) {
+    miniCovered = !miniCovered;
+    render();
+    return;
+  }
+  // Trang chính: mở bàn cờ nổi (mang theo ván đang dở), hoặc đưa nó về
+  if (!IS_MINI && el.closest('button[title="Bàn cờ nổi"]')) {
+    saveHandoff(exportPlayState());
+    void openMini(onMiniClosed).then((ok) => {
+      if (ok) resetPlay();
+      else saveHandoff(null);
+      render();
+    });
+    return;
+  }
+  if (el.closest('[data-mini-back]')) {
+    closeMini();
+    return;
+  }
+
   // Màn chơi và màn xem lại tự lo các nút của chúng
   if (route() === 'choi' || route() === '') {
     if (onlineView()) {
@@ -562,6 +625,12 @@ const KEYS: Record<string, string> = {
 };
 
 document.addEventListener('keydown', (e) => {
+  // Bàn cờ nổi: Esc che bàn cờ ngay, bấm lại là mở
+  if (IS_MINI && e.key === 'Escape') {
+    miniCovered = !miniCovered;
+    render();
+    return;
+  }
   if (e.key === 'Escape' && settingsOpen) {
     settingsOpen = false;
     render();
@@ -584,10 +653,20 @@ initTheme();
 applyPrefs();
 onAuthChange(onAuth);
 window.addEventListener('hashchange', render);
-initPwa(() => {
-  if (settingsOpen) render();
-});
+if (IS_MINI) {
+  // Bàn cờ nổi để chơi ở chỗ làm: không kêu, không hỏi đăng nhập (đã đăng nhập
+  // thì ván vẫn được lưu), chỉ chơi với máy, và nhận ván đang dở từ trang chính.
+  muteHere();
+  chooseGuest();
+  setPlayMode('machine');
+  const h = takeHandoff<PlayHandoff>();
+  if (h) importPlayState(h);
+} else {
+  initPwa(() => {
+    if (settingsOpen) render();
+  });
+}
 render();
 void loadPieces().catch((err) => console.error(err));
 void loadMe();
-pingVisit();
+if (!IS_MINI) pingVisit();

@@ -2331,3 +2331,129 @@ button.ta-item {
 button.ta-item:hover {
   text-decoration: underline;
 }
+
+/* ---- Bàn cờ nổi (?mini=1): cửa sổ nhỏ chỉ có bàn cờ ----
+   Kín đáo: nền trơn, chữ nhỏ, không màu nhấn — liếc qua chỉ thấy một ô cửa sổ.
+   Bàn cờ chiếm hết bề ngang, hai thanh 36px trên dưới. */
+.app-mini {
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-1);
+}
+.mini {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.mini-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 0 4px 0 8px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.mini-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-title b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.mini-gap {
+  flex: 1;
+}
+.mini .mini-board {
+  /* Vuông, vừa khít chỗ còn lại; snapBoards làm tròn theo điểm ảnh thật */
+  flex: none;
+  width: min(100vw, calc(100vh - 72px));
+  margin: 0 auto;
+  display: flex;
+}
+.mini-btn.btn-icon {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+}
+.mini-btn.btn-icon:hover:not(:disabled) {
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+.mini-btn.is-armed {
+  color: var(--danger);
+}
+.mini .mini-go {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 12px;
+  margin-left: 4px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.mini .mini-go:hover {
+  background: var(--bg-3);
+}
+.mini-level {
+  display: inline-flex;
+  align-items: center;
+}
+.mini-lv {
+  min-width: 44px;
+  text-align: center;
+  color: var(--text-2);
+}
+.mini-side {
+  display: inline-flex;
+  margin-left: auto;
+}
+.mini-king {
+  width: 22px;
+  height: 22px;
+}
+/* Tấm che (Esc): trơn như một cửa sổ trống. Bấm vào là mở lại. */
+.mini-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  border: 0;
+  background: var(--bg-1);
+  cursor: default;
+}
+
+/* Trang chính trong lúc bàn cờ ở cửa sổ nổi */
+.mini-away {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-3);
+  max-width: 520px;
+  margin: var(--s-6) auto;
+  padding: var(--s-6);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.mini-away h1 {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+.mini-away p {
+  margin: 0;
+  color: var(--text-2);
+}
+.mini-away-icon {
+  color: var(--text-3);
+}

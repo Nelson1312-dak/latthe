@@ -28,6 +28,8 @@ const PATHS = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/>',
   moon: '<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5Z"/>',
   sound: '<path d="M5 9.5h3l4-3.5v12l-4-3.5H5Z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5"/>',
+  hide: '<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/><path d="M4.5 19.5 19.5 4.5"/>',
+  float: '<path d="M3.5 5h17v14h-17Z"/><path d="M12 12h6v4.5h-6Z"/>',
   copy: '<path d="M8.5 8.5h11v11h-11Z"/><path d="M15.5 5.5h-11v11"/>',
   settings: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   random: '<path d="M4 7h3.5l9 10H20"/><path d="M4 17h3.5l2.5-2.8"/><path d="M14 9.8 16.5 7H20"/><path d="M17.5 4.5 20 7l-2.5 2.5"/><path d="M17.5 14.5 20 17l-2.5 2.5"/>',

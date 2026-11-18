@@ -351,6 +351,10 @@ function gameScreen(extraSide = ''): string {
             : `Máy ${levelById(setup.level).name.toLowerCase()}`
       }</span>
       ${toolbar([
+        // Bàn cờ nổi: cửa sổ nhỏ chỉ có bàn cờ (máy tính, chơi với máy)
+        ...(playMode() === 'online'
+          ? []
+          : [iconButton('float', 'Bàn cờ nổi').replace('class="btn btn-icon"', 'class="btn btn-icon only-mouse"')]),
         iconButton('flip', 'Lật bàn cờ'),
         ...(started ? [iconButton('engine', 'Thanh đánh giá', { pressed: showEval })] : []),
         iconButton('settings', 'Cài đặt'),
@@ -405,19 +409,7 @@ function gameScreen(extraSide = ''): string {
       </div>
     </div>
 
-    ${
-      pendingPromotion
-        ? dialog(
-            'Phong cấp thành quân gì?',
-            `<div class="promo-row">${PROMOTION_PIECES.map(
-              ([code, name]) =>
-                `<button class="promo" data-promote="${code}" title="${name}">` +
-                `${pieceGlyph(((game.turn === 'w' ? 'w' : 'b') + code) as never, 'promo-piece')}<span>${name}</span></button>`,
-            ).join('')}</div>`,
-            button({ label: 'Hủy', kind: 'text' }),
-          )
-        : ''
-    }
+    ${promoDialog()}
   </div>`;
 }
 
@@ -992,4 +984,121 @@ function openFullReview(): boolean {
   ping('report_detail');
   location.hash = '#/xem-lai';
   return true;
+}
+
+/* ---------------- Bàn cờ nổi (cửa sổ nhỏ, xem src/app/mini.ts) ---------------- */
+
+/** Ván đang dở, gói lại để chuyển giữa trang chính và bàn cờ nổi. */
+export interface PlayHandoff {
+  pgn: string;
+  level: number;
+  pick: Pick;
+  side: Side;
+  orientation: Side;
+  resigned: Side | null;
+  saved: boolean;
+}
+
+/** Ván với máy đang có (kể cả vừa xong); null nếu chưa vào ván. */
+export function exportPlayState(): PlayHandoff | null {
+  if (!started || setup.mode !== 'bot') return null;
+  return { pgn: game.pgn(), level: setup.level, pick: setup.pick, side: setup.side, orientation, resigned, saved };
+}
+
+/** Nhận ván được chuyển sang và chơi tiếp đúng chỗ đó. */
+export function importPlayState(h: PlayHandoff): void {
+  let g: Game;
+  try {
+    g = Game.fromPgn(h.pgn);
+  } catch {
+    return;
+  }
+  newGame();
+  setup = { mode: 'bot', level: h.level, pick: h.pick, side: h.side };
+  game = g;
+  orientation = h.orientation;
+  animatedOrientation = orientation;
+  animatedPly = game.length;
+  resigned = h.resigned;
+  saved = h.saved;
+  ended = outcome() !== null;
+  started = true;
+}
+
+/** Bỏ ván đang hiện ở đây (ván đã chuyển sang bàn cờ nổi). */
+export function resetPlay(): void {
+  newGame();
+  started = false;
+}
+
+/** Hỏi chọn quân khi Tốt tới hàng cuối (dùng chung cho màn to và bàn cờ nổi). */
+function promoDialog(): string {
+  return pendingPromotion
+    ? dialog(
+        'Phong cấp thành quân gì?',
+        `<div class="promo-row">${PROMOTION_PIECES.map(
+          ([code, name]) =>
+            `<button class="promo" data-promote="${code}" title="${name}">` +
+            `${pieceGlyph(((game.turn === 'w' ? 'w' : 'b') + code) as never, 'promo-piece')}<span>${name}</span></button>`,
+        ).join('')}</div>`,
+        button({ label: 'Hủy', kind: 'text' }),
+      )
+    : '';
+}
+
+/**
+ * Bàn cờ nổi: chỉ bàn cờ và hai thanh mỏng. Không chữ to, không logo, không màu
+ * nhấn chói — liếc qua chỉ thấy một ô cửa sổ nhỏ. Esc (hoặc nút mắt) che bàn cờ
+ * bằng một tấm trơn; bấm vào tấm đó là mở lại.
+ */
+export function miniPlay(covered: boolean): string {
+  const result = outcome();
+  const lv = levelById(setup.level);
+  const nút = (name: IconName, title: string, attrs = '', disabled = false) =>
+    `<button class="btn btn-icon mini-btn" title="${title}" aria-label="${title}"${attrs}${disabled ? ' disabled' : ''}>${icon(name, 17)}</button>`;
+
+  let trên: string;
+  if (!started) trên = `<span class="mini-title">Chơi với máy</span>`;
+  else if (result) {
+    const [ai] = outcomeText(result).split(' · ');
+    trên = `<span class="mini-title"><b>${result.winner === 'draw' ? 'Hòa' : result.winner === setup.side ? 'Bạn thắng' : 'Bạn thua'}</b>${result.winner === 'draw' ? '' : ` · ${ai}`}</span>`;
+  } else
+    trên =
+      `<span class="mini-title"><b>Máy ${lv.name.toLowerCase()}</b>` +
+      `${thinking ? ' · đang nghĩ…' : game.turn === setup.side && game.atLive ? ' · tới lượt bạn' : ''}</span>`;
+
+  let dưới: string;
+  if (!started)
+    dưới =
+      `<span class="mini-level">` +
+      nút('prev', 'Dễ hơn', ` data-level="${setup.level - 1}"`, setup.level <= 1) +
+      `<span class="mini-lv mono">${lv.name}</span>` +
+      nút('next', 'Khó hơn', ` data-level="${setup.level + 1}"`, setup.level >= LEVELS.length) +
+      `</span>` +
+      `<span class="mini-side">${pieceGlyph((setup.side + 'k') as never, 'mini-king')}</span>` +
+      nút('flip', 'Lật bàn cờ') +
+      `<button class="btn btn-primary mini-go">Chơi</button>`;
+  else if (result)
+    dưới =
+      nút('prev', 'Lùi một nước', '', game.ply === 0) +
+      nút('next', 'Tiến một nước', '', game.atLive) +
+      `<span class="mini-gap"></span>` +
+      `<button class="btn btn-secondary mini-go">Ván mới</button>` +
+      `<button class="btn btn-primary mini-go">Chơi lại</button>`;
+  else
+    dưới =
+      nút('prev', 'Lùi một nước', '', game.ply === 0) +
+      nút('next', 'Tiến một nước', '', game.atLive) +
+      `<span class="mini-gap"></span>` +
+      nút('undo', 'Đi lại', ' data-act="undo"', game.length === 0 || thinking) +
+      `<button class="btn btn-icon mini-btn${resignArmed ? ' is-armed' : ''}" data-act="resign"` +
+      ` title="${resignArmed ? 'Bấm lần nữa để đầu hàng' : 'Đầu hàng'}" aria-label="Đầu hàng"${game.length === 0 ? ' disabled' : ''}>${icon('resign', 17)}</button>`;
+
+  return `<div class="mini">
+    <div class="mini-bar">${trên}<span class="mini-gap"></span>${nút('hide', 'Che bàn cờ (Esc)', ' data-mini-hide')}</div>
+    <div class="board-row mini-board"><div id="board" class="board-host"></div></div>
+    <div class="mini-bar">${dưới}</div>
+    ${covered ? '<button class="mini-cover" data-mini-cover aria-label="Mở lại bàn cờ"></button>' : ''}
+    ${promoDialog()}
+  </div>`;
 }

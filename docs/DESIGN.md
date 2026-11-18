@@ -440,6 +440,18 @@ có trong câu gốc, hoặc đoán kết cục kiểu "sẽ thắng / sẽ khô
 
 Bốn âm ngắn: đi quân, ăn quân, chiếu, kết thúc ván; thêm tiếng tích khi đồng hồ dưới 10 giây. Mặc định bật, có nút tắt. Nguồn âm thanh phải có giấy phép rõ ràng (CC0 hoặc tự thu).
 
+### 4.6g Bàn cờ nổi (chơi kín đáo trên máy tính)
+
+Nút "Bàn cờ nổi" trên thanh màn Chơi (chỉ máy có chuột, chỉ chế độ Với máy) mở một
+cửa sổ 320×392 chỉ có bàn cờ. Chrome/Edge: Document Picture-in-Picture, cửa sổ luôn nổi
+trên cùng; trình duyệt khác: popup nhỏ. Bên trong là app ở `?mini=1` (src/app/mini.ts).
+
+- Kín đáo: không logo, chữ 12px màu --text-3, nút trơn không màu nhấn, không âm thanh.
+- Esc hoặc nút mắt: che bàn cờ bằng tấm trơn cùng màu nền; bấm vào là mở lại.
+- Ván đang dở đi theo cửa sổ (localStorage `mini-van`), đóng cửa sổ là ván về trang chính.
+  Trang chính trong lúc đó chỉ hiện thẻ "Bàn cờ đang ở cửa sổ nổi" + nút Đưa về.
+- Không có đấu online trong bàn cờ nổi: đồng hồ chạy và hai luồng kết nối cùng lúc là dễ hỏng.
+
 ## 5. Bàn cờ
 
 | Phần | Quy định |

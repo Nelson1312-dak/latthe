@@ -19,6 +19,11 @@ export function soundEnabled(): boolean {
   return enabled;
 }
 
+/** Tắt tiếng riêng cửa sổ này, không đổi cài đặt đã lưu (bàn cờ nổi: chơi ở chỗ làm). */
+export function muteHere(): void {
+  enabled = false;
+}
+
 export function setSoundEnabled(on: boolean): void {
   enabled = on;
   try {

@@ -639,3 +639,10 @@
     width: auto;
   }
 }
+
+/* Chỉ cho máy có chuột (bàn cờ nổi chỉ có trên máy tính) */
+@media (pointer: coarse), (max-width: 767px) {
+  .only-mouse {
+    display: none;
+  }
+}
