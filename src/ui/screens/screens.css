@@ -1972,3 +1972,58 @@ button.top-link {
   gap: var(--s-2);
   font-size: var(--fs-lg);
 }
+
+/* ================= Đấu với AI (bot vào thay khi hàng chờ trống) ================= */
+.tag-ai {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+.ai-alert {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--accent-dim);
+  color: var(--text-1);
+}
+.ai-alert p {
+  margin: 0;
+}
+.ai-alert-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-lg);
+}
+.ai-alert-head .icon {
+  color: var(--accent-text);
+}
+.ai-alert-note {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+/* Lời thoại của bot: vài dòng ngắn, dòng mới nhất đậm nhất */
+.bot-chat {
+  display: grid;
+  gap: var(--s-1);
+}
+.bot-line {
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.bot-line b {
+  flex: none;
+  color: var(--text-1);
+}
+.bot-line:last-child {
+  color: var(--text-1);
+}

@@ -13,6 +13,21 @@ import type { Square } from '../../shared/fen.ts';
 import { Queue } from './queue.ts';
 import { Room, type RoomPlayer } from './rooms.ts';
 import { rateGame, scoreFor } from './rating.ts';
+import { remaining } from './clock.ts';
+import { BOT_AFTER_MS, BOTS, chooseMove, lineFor, pickBot, thinkMs, type BotEvent, type BotPersona } from './bots.ts';
+import { botEngine } from './bot-engine.ts';
+
+/** Những gì bot nhớ trong một ván, để nói đúng lúc và biết lúc nào nên xin thua. */
+interface BotMemo {
+  /** Điểm (góc nhìn bot) ở lượt trước của bot. */
+  lastCp: number | null;
+  saidWinning: boolean;
+  saidLosing: boolean;
+  /** Số lượt liên tiếp thấy hết cửa. */
+  hopeless: number;
+  /** Nước (ply) lần cuối bot nói, để không nói liên tục. */
+  lastSaidPly: number;
+}
 
 /** Mã mời: bỏ các chữ dễ nhìn nhầm (0/O, 1/I/L). */
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -50,13 +65,19 @@ export class Live {
    * luồng bằng vé.
    */
   private tickets = new Map<string, { userId: number; hết: number }>();
+  /** Phòng đang có bot nghĩ nước — để không cho bot đi hai lần. */
+  private botThinking = new Set<string>();
+  private botMemo = new Map<string, BotMemo>();
   // Khai riêng chứ không viết `constructor(private db: Db)`: Node chạy
   // TypeScript ở chế độ chỉ-bóc-kiểu, mà thuộc tính khai trong tham số
   // constructor thì không bóc được, phải sinh thêm mã.
   private db: Db;
+  /** Cho bot tự nghĩ và đi (tắt trong test để khỏi chạy engine thật). */
+  private botMoves: boolean;
 
-  constructor(db: Db) {
+  constructor(db: Db, opts: { botMoves?: boolean } = {}) {
     this.db = db;
+    this.botMoves = opts.botMoves ?? true;
   }
 
   /** Cấp vé mở luồng cho người đã đăng nhập. */
@@ -280,6 +301,11 @@ export class Live {
       const ub = one<User>(this.db, 'SELECT * FROM users WHERE id = ?', b.userId);
       if (ua && ub) this.open(ua, ub, a.control, now);
     }
+    // Chờ đủ lâu mà không ai ghép được: cho bot vào thay
+    for (const w of this.queue.takeWaitedOver(now, BOT_AFTER_MS)) {
+      const u = one<User>(this.db, 'SELECT * FROM users WHERE id = ?', w.userId);
+      if (u && !this.playing.has(u.id)) this.openWithBot(u, w.control, now);
+    }
 
     // Rơi cờ và hết hạn vào lại
     for (const room of this.rooms.values()) {
@@ -292,6 +318,7 @@ export class Live {
     for (const [id, room] of this.rooms) {
       if (room.isOver && now - room.touchedAt > KEEP_FINISHED_MS) {
         this.rooms.delete(id);
+        this.botMemo.delete(id);
         for (const p of [room.white, room.black]) {
           if (this.playing.get(p.userId) === id) this.playing.delete(p.userId);
         }
@@ -316,6 +343,8 @@ export class Live {
       [room.white, điểm.whiteAfter],
       [room.black, điểm.blackAfter],
     ] as const) {
+      // Bot có Elo cố định, không lưu gì vào database
+      if (p.bot) continue;
       this.db
         .prepare('UPDATE users SET game_rating = ?, game_count = game_count + 1 WHERE id = ?')
         .run(after, p.userId);
@@ -323,6 +352,7 @@ export class Live {
 
     const pgn = room.game.pgn();
     const lưu = (p: RoomPlayer, side: 'w' | 'b', đối: RoomPlayer, after: number): number | null => {
+      if (p.bot) return null;
       try {
         return insertGame(
           this.db,
@@ -334,7 +364,7 @@ export class Live {
             pgn,
             winner: kq.winner,
             reason: kq.reason,
-            opponentName: đối.name,
+            opponentName: đối.bot ? `${đối.name} (AI)` : đối.name,
             opponentRating: đối.rating,
             ratingBefore: p.rating,
             ratingAfter: after,
@@ -369,6 +399,14 @@ export class Live {
       if (!st) continue;
       const riêng: LiveState = { ...st, over: { ...room.over, gameId } };
       this.push(p.userId, { type: 'ended', state: riêng });
+    }
+
+    // Bot chào kết thúc ván
+    for (const p of [room.white, room.black]) {
+      if (!p.bot) continue;
+      const botSide = p === room.white ? 'w' : 'b';
+      const ev: BotEvent = kq.winner === 'draw' ? 'drawn' : kq.winner === botSide ? 'won' : 'lost';
+      if (kq.reason !== 'resign' || kq.winner === botSide) this.botSay(room, p.bot, ev, 700);
     }
   }
 
@@ -408,7 +446,149 @@ export class Live {
     }
 
     if (room.isOver && !đãXong) this.finish(room, now);
-    else if (kq.ok) this.pushState(room, now);
+    else if (kq.ok) {
+      this.pushState(room, now);
+      this.scheduleBot(room);
+      if (what === 'draw-offer') this.botAnswerDraw(room);
+    }
     return kq;
+  }
+
+  /* ---------------- Bot (AI thay người khi hàng chờ trống) ---------------- */
+
+  /** Mở ván giữa một người và một bot có Elo gần nhất. Màu quân bốc ngẫu nhiên. */
+  private openWithBot(u: User, control: string, now: number): Room {
+    const bot = pickBot(u.game_rating);
+    // Bot không có tài khoản thật: id âm, không bao giờ trùng người dùng
+    const botPlayer: RoomPlayer = {
+      userId: -(BOTS.indexOf(bot) + 1),
+      name: bot.name,
+      rating: bot.elo,
+      played: 500,
+      connected: true,
+      goneSince: null,
+      bot,
+    };
+    const người: RoomPlayer = { ...this.asPlayer(u), connected: this.streams.has(u.id), goneSince: null };
+    const [trắng, đen] = randomInt(2) === 1 ? [botPlayer, người] : [người, botPlayer];
+    const id = code(8);
+    const room = new Room(id, trắng, đen, CONTROLS[control] ?? CONTROLS[DEFAULT_CONTROL], now);
+    this.rooms.set(id, room);
+    // Chỉ người mới vào sổ "đang chơi": một bot đánh được nhiều ván cùng lúc
+    this.playing.set(u.id, id);
+    this.botMemo.set(id, { lastCp: null, saidWinning: false, saidLosing: false, hopeless: 0, lastSaidPly: -10 });
+    this.pushState(room, now);
+    this.botSay(room, bot, 'greet', 900);
+    this.scheduleBot(room);
+    return room;
+  }
+
+  /** Bot nói một câu với người đối diện (sau `delayMs`). */
+  private botSay(room: Room, bot: BotPersona, ev: BotEvent, delayMs = 0): void {
+    const người = room.white.bot ? room.black : room.white;
+    const text = lineFor(bot, ev);
+    if (!text) return;
+    const gửi = () => this.push(người.userId, { type: 'say', name: bot.name, text });
+    if (delayMs > 0) setTimeout(gửi, delayMs).unref();
+    else gửi();
+  }
+
+  /** Tới lượt bot thì cho bot nghĩ rồi đi. Gọi thừa cũng không sao. */
+  private scheduleBot(room: Room): void {
+    if (!this.botMoves || room.isOver || this.botThinking.has(room.id)) return;
+    const side = room.game.turn;
+    const p = side === 'w' ? room.white : room.black;
+    if (!p.bot) return;
+    this.botThinking.add(room.id);
+    void this.botTurn(room, p, side).finally(() => this.botThinking.delete(room.id));
+  }
+
+  private async botTurn(room: Room, p: RoomPlayer, side: 'w' | 'b'): Promise<void> {
+    const bot = p.bot!;
+    const fen = room.game.fen;
+    const ply = room.game.length;
+    const now = Date.now();
+    const think = thinkMs(bot, { ply, remainingMs: remaining(room.clock, side, now), incrementMs: room.control.incrementMs });
+    // Nghĩ và "ngẫm" cùng lúc: engine xong sớm thì vẫn chờ cho đủ thời gian nghĩ của người
+    const [cands] = await Promise.all([
+      botEngine().search(fen, bot.search),
+      new Promise((r) => setTimeout(r, think)),
+    ]);
+    // Trong lúc nghĩ, ván có thể đã xong (người đầu hàng, hết giờ)
+    if (room.isOver || room.game.fen !== fen || !cands.length) return;
+
+    const memo = this.botMemo.get(room.id);
+    const best = cands[0].cp;
+    const nói = (ev: BotEvent) => {
+      if (!memo || ply - memo.lastSaidPly < 4) return;
+      memo.lastSaidPly = ply;
+      this.botSay(room, bot, ev);
+    };
+
+    if (memo) {
+      // Người vừa đi hỏng: điểm của bot vọt lên
+      if (memo.lastCp !== null && best - memo.lastCp >= 250 && best < 90_000) nói('pounce');
+      // Hết cửa vài lượt liền thì xin thua (bot nào chịu thua)
+      memo.hopeless = best <= -900 ? memo.hopeless + 1 : 0;
+      if (bot.resigns && memo.hopeless >= 2 && ply >= 30) {
+        memo.lastSaidPly = -100;
+        this.botSay(room, bot, 'resign');
+        this.botAct(room, p.userId, 'resign', {});
+        return;
+      }
+      if (best >= 500 && !memo.saidWinning) {
+        memo.saidWinning = true;
+        nói('winning');
+      } else if (best <= -500 && !memo.saidLosing) {
+        memo.saidLosing = true;
+        nói('losing');
+      }
+    }
+
+    const uci = chooseMove(bot, cands);
+    if (!uci) return;
+    const chosen = cands.find((c) => c.uci === uci);
+    if (memo) memo.lastCp = chosen?.cp ?? best;
+    // Bot yếu cố ý đi lệch: thỉnh thoảng tự nhận là sơ ý
+    if (chosen && best - chosen.cp >= 250 && Math.random() < 0.5) nói('oops');
+
+    this.botAct(room, p.userId, 'move', { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+  }
+
+  /** Bot trả lời lời đề nghị hòa: thế cờ cân và ván đã dài thì nhận. */
+  private botAnswerDraw(room: Room): void {
+    const p = room.white.bot ? room.white : room.black.bot ? room.black : null;
+    if (!p?.bot || room.isOver) return;
+    const bot = p.bot;
+    const memo = this.botMemo.get(room.id);
+    setTimeout(() => {
+      if (room.isOver || !room.drawOfferFrom) return;
+      const cân = memo?.lastCp !== null && memo?.lastCp !== undefined && Math.abs(memo.lastCp) <= 60;
+      if (cân && room.game.length >= 40) {
+        this.botSay(room, bot, 'draw-yes');
+        this.botAct(room, p.userId, 'draw-accept', {});
+      } else {
+        this.botSay(room, bot, 'draw-no');
+        this.botAct(room, p.userId, 'draw-decline', {});
+      }
+    }, 1_200).unref();
+  }
+
+  /** Bot đi / xin thua / trả lời hòa — như act() nhưng chỉ đúng phòng (một bot chơi nhiều ván). */
+  private botAct(
+    room: Room,
+    botId: number,
+    what: 'move' | 'resign' | 'draw-accept' | 'draw-decline',
+    arg: { from?: string; to?: string; promotion?: string },
+  ): void {
+    const now = Date.now();
+    const đãXong = room.isOver;
+    let kq: { ok: boolean };
+    if (what === 'move') kq = room.move(botId, arg.from as Square, arg.to as Square, arg.promotion, now);
+    else if (what === 'resign') kq = room.resign(botId, now);
+    else if (what === 'draw-accept') kq = room.acceptDraw(botId, now);
+    else kq = room.declineDraw(botId, now);
+    if (room.isOver && !đãXong) this.finish(room, now);
+    else if (kq.ok) this.pushState(room, now);
   }
 }

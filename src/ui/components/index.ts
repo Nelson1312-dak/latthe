@@ -113,6 +113,8 @@ export interface PlayerOptions {
   diff?: number;
   status?: string;
   you?: boolean;
+  /** Đối thủ là AI của server (ván online khi hàng chờ trống). */
+  ai?: boolean;
   /** Độ chính xác cả ván, chỉ có ở màn xem lại. */
   accuracy?: number;
   /** Nút gắn ở cuối thanh (ví dụ Lật bàn cờ trên điện thoại). */
@@ -144,6 +146,7 @@ export function playerStrip(o: PlayerOptions): string {
     (o.rating !== undefined ? `<span class="player-rating mono">${esc(String(o.rating))}</span>` : '') +
     (o.you ? '<span class="tag">bạn</span>' : '') +
     (o.bot ? '<span class="tag">máy</span>' : '') +
+    (o.ai ? '<span class="tag tag-ai">AI</span>' : '') +
     (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
     `</span>` +
     hàngHai +

@@ -138,6 +138,34 @@ Máy tính bảng (768–1100px): như desktop nhưng các mục trên header ch
   Hồ sơ → Ván đã chơi. Màn `#/xem-lai` vẫn còn, vào từ "Xem lại chi tiết" hoặc Hồ sơ.
 - **Đấu** không còn là tab; link cũ `#/ban` tự chuyển về Chơi, chế độ Với người.
 
+### Đấu với AI khi chưa có người (server/live/bots.ts)
+
+Tìm trận 5 giây không ghép được người thì server ghép với một bot có Elo gần
+nhất. **Bot luôn được báo rõ là AI**: khung "Bạn đang đấu với AI" ở đầu cột
+phải suốt ván, nhãn **AI** cạnh tên, tiêu đề ghi "(AI)", ván lưu với tên
+"Bot … (AI)". Không bao giờ giả làm người.
+
+| Bot | Elo | Tính cách |
+|---|---|---|
+| Bot Nhím | 600 | Mới tập, hay quên giữ quân |
+| Bot Sen | 900 | Chậm rãi, chắc tay |
+| Bot Mai | 1200 | Ưa tấn công, thấy chiếu là chiếu |
+| Bot Tùng | 1500 | Chơi thế trận, kiên nhẫn |
+| Bot Đại Bàng | 1900 | Tính sâu, đòn chiến thuật |
+| Bot Thầy Đồ | 2300 | Cao thủ trầm tính |
+
+- Engine Stockfish chạy trên server (tiến trình Node con, xếp hàng các yêu cầu).
+  Bot dưới 1320 nghĩ nông rồi bốc nước theo trọng số; bot từ 1500 dùng giới hạn
+  Elo của Stockfish.
+- Nghĩ giống người: khai cuộc nhanh, giữa ván lâu hơn, gần hết giờ thì vội; tiêu
+  đúng đồng hồ của bot.
+- Lời thoại viết sẵn (không dùng mô hình ngôn ngữ): chào, bắt lỗi, tự nhận hớ,
+  đang thắng/thua, xin thua, trả lời đề nghị hòa, chào cuối ván. Tối đa một câu
+  mỗi 4 nước.
+- Ván với bot tính Elo cho người chơi; Elo bot cố định, không lưu gì cho bot.
+- Bot chịu thua khi hết cửa hai lượt liền sau nước thứ 30 (trừ Nhím và Sen —
+  người mới thích được chiếu hết). Nhận hòa khi thế cân và ván đã dài.
+
 ### Bảng bên khi chơi với máy
 
 Trước khi vào ván (như "Play Bots" của chess.com):

@@ -372,7 +372,7 @@ describe('ghép trận rồi lưu kết quả', () => {
     const db = openDb(':memory:');
     const a = createLocalUser(db, 'Nelson');
     const b = createLocalUser(db, 'Hùng');
-    return { db, a, b, live: new Live(db) };
+    return { db, a, b, live: new Live(db, { botMoves: false }) };
   };
 
   it('hai người cùng thể thức thì ghép vào một ván', () => {
@@ -470,7 +470,7 @@ describe('vé mở luồng SSE', () => {
   const dựng = () => {
     const db = openDb(':memory:');
     const a = createLocalUser(db, 'Nelson');
-    return { db, a, live: new Live(db) };
+    return { db, a, live: new Live(db, { botMoves: false }) };
   };
 
   it('vé đổi được đúng một lần', () => {

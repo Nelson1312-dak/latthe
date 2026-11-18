@@ -9,6 +9,7 @@ import { Game, type EndReason, type Outcome, type Side } from '../../shared/ches
 import { piecesFromFen, type Square } from '../../shared/fen.ts';
 import type { LiveOver, LiveState, TimeControl } from '../../shared/protocol.ts';
 import { afterMove, flagged, remaining, startClock, timeoutWinner, type Clock } from './clock.ts';
+import type { BotPersona } from './bots.ts';
 
 /** Mất kết nối quá lâu thì xử thua. */
 export const RECONNECT_MS = 60_000;
@@ -23,6 +24,8 @@ export interface RoomPlayer {
   connected: boolean;
   /** Lúc mất kết nối, epoch ms. null nghĩa là đang kết nối bình thường. */
   goneSince: number | null;
+  /** Người chơi này là bot (AI) của server. */
+  bot?: BotPersona;
 }
 
 export type Refusal =
@@ -241,6 +244,7 @@ export class Room {
       rating: p.rating,
       clockMs: this.isOver ? (side === 'w' ? this.clock.whiteMs : this.clock.blackMs) : remaining(this.clock, side, now),
       connected: p.connected,
+      ...(p.bot ? { bot: { id: p.bot.id, blurb: p.bot.blurb } } : {}),
     });
     return {
       id: this.id,

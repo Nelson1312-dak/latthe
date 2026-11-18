@@ -61,6 +61,14 @@ export class Queue {
     return this.waiters.delete(userId);
   }
 
+  /** Lấy ra những ai đã chờ ít nhất `ms` mà chưa ghép được — để cho bot vào thay. */
+  takeWaitedOver(now: number, ms: number): Waiter[] {
+    const out: Waiter[] = [];
+    for (const w of this.waiters.values()) if (now - w.since >= ms) out.push(w);
+    for (const w of out) this.waiters.delete(w.userId);
+    return out;
+  }
+
   /** Số người đang chờ cùng một thể thức. */
   waitingFor(control: string): number {
     let n = 0;

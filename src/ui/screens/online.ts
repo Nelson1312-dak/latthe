@@ -341,6 +341,7 @@ function vánCờ(): string {
       clockId: side,
       clockState: xong ? 'idle' : s.turn === side ? (ms < 30_000 ? 'low' : 'running') : 'idle',
       status: p.connected ? (xong ? undefined : s.turn === side ? 'đang nghĩ' : undefined) : 'mất kết nối',
+      ai: Boolean(p.bot),
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
       diff: side === 'w' ? mat.diff : -mat.diff,
     });
@@ -359,10 +360,26 @@ function vánCờ(): string {
            <div class="row-actions">${button({ label: 'Đồng ý hòa', kind: 'primary' })}${button({ label: 'Từ chối' })}</div></div>`
       : '';
 
+  // Đối thủ là AI: báo thật rõ ngay đầu cột phải, suốt ván — không giả làm người
+  const đối = tôi === 'w' ? s.black : s.white;
+  const aiBáo = đối.bot
+    ? `<div class="ai-alert" role="status">
+        <p class="ai-alert-head">${icon('engine', 18)}<b>Bạn đang đấu với AI</b></p>
+        <p>${đối.name} · Elo ${đối.rating} — ${đối.bot.blurb}</p>
+        <p class="ai-alert-note">Chưa có người chơi khác đang chờ nên AI vào thay. Ván vẫn tính Elo cho bạn.</p>
+      </div>`
+    : '';
+  const lờiThoại = live.chat.length
+    ? `<div class="bot-chat" aria-live="polite">${live.chat
+        .slice(-3)
+        .map((c) => `<p class="bot-line"><b>${c.name}</b><span>${c.text.replace(/[<>&]/g, '')}</span></p>`)
+        .join('')}</div>`
+    : '';
+
   return `<div class="screen">
     <div class="screen-head">
       <h1>Chơi với người</h1>
-      <span class="head-meta">${s.control.label} · ${s.white.name} – ${s.black.name}</span>
+      <span class="head-meta">${s.control.label} · ${s.white.name}${s.white.bot ? ' (AI)' : ''} – ${s.black.name}${s.black.bot ? ' (AI)' : ''}</span>
       ${
         xong
           ? '' // Hai nút đã nằm trong ô kết quả, không bày lại ở đây
@@ -387,6 +404,8 @@ function vánCờ(): string {
         ${sheet(
           live.error ? notice(live.error, 'danger') : '',
           live.connected ? '' : notice('Mất kết nối tới server, đang thử nối lại…', 'danger'),
+          aiBáo,
+          lờiThoại,
           đợiVàoLại,
           hòaĐangChờ,
           xong ? kếtQuả() : '',
@@ -752,11 +771,13 @@ export function onlinePanel(modeTabs: string): string {
         ['Đang chờ cùng thể thức', `${q.waiting} người`],
         ['Chấp nhận lệch Elo', `±${q.band}`],
       ])}
-      ${
+      ${notice(
         mộtMình
-          ? notice('Hiện chỉ có mình bạn đang chờ. Cứ để đó, hoặc chơi với máy trong lúc chờ.', 'info', 'clock')
-          : `<p class="muted">Càng chờ khoảng Elo càng nới, sớm muộn cũng ghép được.</p>`
-      }
+          ? 'Chưa có ai khác đang chờ. Sau 5 giây, một AI cùng trình độ sẽ vào đấu với bạn.'
+          : 'Không ghép được người trong 5 giây thì một AI cùng trình độ sẽ vào thay.',
+        'info',
+        'engine',
+      )}
       ${button({ label: 'Hủy tìm', kind: 'danger', full: true })}
     </div>`;
   }

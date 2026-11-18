@@ -43,6 +43,8 @@ export interface LivePlayer {
   /** Giờ còn lại tại thời điểm server gửi gói tin này. */
   clockMs: number;
   connected: boolean;
+  /** Đối thủ là AI (bot của server, vào thay khi hàng chờ trống). */
+  bot?: { id: string; blurb: string };
 }
 
 export interface LiveOver {
@@ -101,7 +103,9 @@ export type LiveEvent =
   | { type: 'queue-left' }
   | { type: 'state'; state: LiveState }
   /** Ván vừa kết thúc; `state.over` có đủ thông tin. */
-  | { type: 'ended'; state: LiveState };
+  | { type: 'ended'; state: LiveState }
+  /** Bot nói một câu (lời thoại viết sẵn). */
+  | { type: 'say'; name: string; text: string };
 
 /* ---------------- Mô tả lỗi ---------------- */
 

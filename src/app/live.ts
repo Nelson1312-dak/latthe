@@ -14,9 +14,11 @@ export interface LiveStore {
   connected: boolean;
   /** Lỗi lần gọi gần nhất, để hiện lên rồi thôi. */
   error: string | null;
+  /** Lời thoại của bot trong ván đang xem (mới nhất ở cuối). */
+  chat: { name: string; text: string; at: number }[];
 }
 
-export const live: LiveStore = { state: null, queue: null, connected: false, error: null };
+export const live: LiveStore = { state: null, queue: null, connected: false, error: null, chat: [] };
 
 let rerender: (() => void) | null = null;
 /** Việc làm mỗi giây khi đang có ván: mặc định vẽ lại, màn hình có thể thay. */
@@ -49,7 +51,12 @@ function apply(ev: LiveEvent): void {
     case 'queue-left':
       live.queue = null;
       break;
+    case 'say':
+      live.chat = [...live.chat, { name: ev.name, text: ev.text, at: Date.now() }].slice(-4);
+      break;
     case 'state':
+      // Sang ván khác thì lời thoại ván cũ không còn liên quan
+      if (live.state?.id !== ev.state.id) live.chat = [];
       live.state = ev.state;
       live.queue = null;
       startTicker();
