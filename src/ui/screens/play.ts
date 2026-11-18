@@ -18,14 +18,20 @@ import { auth } from '../../app/session.ts';
 import { prefs } from '../../app/prefs.ts';
 import { openGate, shouldAskLogin } from '../../app/gate.ts';
 import { icon, type IconName } from '../icons.ts';
-import { offerReview } from './review.ts';
+import { offerReview, openReviewResult } from './review.ts';
+import { reviewGame, ReviewCancelled, type ReviewResult, type ReviewedMove } from '../../analysis/review.ts';
+import { saveReview } from '../../app/reviews.ts';
+import { CLASS_LABEL } from '../../board/Board.ts';
+import type { MoveClass } from '../../../shared/winrate.ts';
 import { buildFacts } from '../../../shared/advisor/facts.ts';
 import { detectMotifs } from '../../../shared/advisor/motifs.ts';
 import { hintSteps } from '../../../shared/advisor/templates.ts';
 import {
   button,
+  classBadge,
   dialog,
   evalBar,
+  figurine,
   iconButton,
   moveList,
   notice,
@@ -83,6 +89,75 @@ let resignTimer: ReturnType<typeof setTimeout> | null = null;
 /** Vừa chép PGN xong: đổi chữ trên nút một lúc cho biết là đã chép. */
 let copied = false;
 
+/**
+ * Bảng chấm ván: hết ván là engine chấm luôn từng nước, ngay trong cột phải.
+ * Chạy trong trình duyệt nên miễn phí, không cần đăng nhập.
+ */
+interface Report {
+  phase: 'running' | 'done' | 'error';
+  done: number;
+  total: number;
+  /** PGN của ván đã chấm: ván đổi (đi lại, ván mới) là bảng này hết dùng được. */
+  pgn: string;
+  result: ReviewResult | null;
+  error?: string;
+}
+let report: Report | null = null;
+/** Tăng lên là huỷ lần chấm đang chạy. */
+let reportToken = 0;
+/** Id của ván trên server (khi đã đăng nhập), để lưu luôn kết quả chấm. */
+let savedGameId: number | null = null;
+let reviewSaved = false;
+
+/** Kết quả chấm còn khớp với ván đang hiện không. */
+function reviewed(): ReviewResult | null {
+  return report?.phase === 'done' && report.result && report.pgn === game.pgn() ? report.result : null;
+}
+
+/** Kết quả chấm đã lưu lên server chưa; lưu thì sinh thẻ ôn tập từ nước sai. */
+function trySaveReview(): void {
+  const r = reviewed();
+  if (!r || !savedGameId || reviewSaved) return;
+  reviewSaved = true;
+  void saveReview(savedGameId, r);
+}
+
+function dropReport(): void {
+  reportToken++;
+  report = null;
+}
+
+/** Chấm cả ván vừa xong. Nhanh hơn màn Xem lại (250ms mỗi thế cờ) vì người chơi đang chờ. */
+async function startReport(rerender: () => void): Promise<void> {
+  if (game.length < 2) return;
+  const token = ++reportToken;
+  const pgn = game.pgn();
+  report = { phase: 'running', done: 0, total: game.length + 1, pgn, result: null };
+  rerender();
+  try {
+    await loadOpenings();
+    const result = await reviewGame(pgn, engine(), {
+      movetimeMs: 250,
+      multipv: 2,
+      onProgress: (done, total) => {
+        if (token !== reportToken || !report) return;
+        report.done = done;
+        report.total = total;
+        if (done % 3 === 0 || done === total) rerender();
+      },
+      cancelled: () => token !== reportToken,
+    });
+    if (token !== reportToken) return;
+    report = { phase: 'done', done: report?.total ?? 0, total: report?.total ?? 0, pgn, result };
+    trySaveReview();
+    rerender();
+  } catch (err) {
+    if (err instanceof ReviewCancelled || token !== reportToken) return;
+    report = { phase: 'error', done: 0, total: 0, pgn, result: null, error: (err as Error).message };
+    rerender();
+  }
+}
+
 /** Kết quả ván: tính cả đầu hàng, thứ mà thế cờ không biết. */
 function outcome(): Outcome | null {
   if (resigned) return { winner: resigned === 'w' ? 'b' : 'w', reason: 'resign' };
@@ -115,6 +190,9 @@ function newGame(): void {
   resigned = null;
   resignArmed = false;
   copied = false;
+  dropReport();
+  savedGameId = null;
+  reviewSaved = false;
   // Bốc thăm bên cầm quân ngay lúc vào ván, mỗi ván một lần
   setup.side = setup.pick === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : setup.pick;
   orientation = setup.mode === 'bot' ? setup.side : 'w';
@@ -231,7 +309,10 @@ function resultCard(result: Outcome): string {
     <b class="result-head">${!mine ? who : won ? 'Bạn thắng' : 'Bạn thua'}</b>
     <span class="result-why">${mine ? `${who} · ${why}` : why}</span>
     <div class="result-actions">
-      ${button({ label: 'Xem lại ván', kind: 'primary', icon: 'review', full: true })}
+      ${
+        // Có bảng chấm ván ngay bên dưới thì nút xem lại nằm ở đó, khỏi lặp
+        report ? '' : button({ label: 'Xem lại ván', kind: 'primary', icon: 'review', full: true })
+      }
       ${button({ label: 'Chơi lại', icon: 'play' })}
       ${button({ label: 'Ván mới', icon: 'settings' })}
     </div>
@@ -310,10 +391,11 @@ function gameScreen(extraSide = ''): string {
           !started
             ? sheet(setupPanel())
             : sheet(
+                ...(result ? [resultCard(result), reportCard()] : []),
                 khaiCuoc() || '<p class="opening-line">Thế cờ ban đầu</p>',
                 game.length
                   ? moveList(
-                      game.history.map((m) => ({ san: m.san })),
+                      game.history.map((m, i) => ({ san: m.san, cls: reviewed()?.moves[i]?.cls })),
                       game.ply,
                     )
                   : '<p class="muted moves-empty">Chưa có nước nào. Kéo quân, hoặc bấm quân rồi bấm ô.</p>',
@@ -324,7 +406,7 @@ function gameScreen(extraSide = ''): string {
                   ${iconButton('next', 'Tiến một nước', { disabled: game.atLive })}
                   ${iconButton('last', 'Tới nước mới nhất', { disabled: game.atLive })}
                 </div>`,
-                result ? resultCard(result) : actionRow(),
+                result ? '' : actionRow(),
               )
         }
         ${showEval && currentEval ? `<p class="head-meta">Đánh giá: <span class="mono">${formatScore(currentEval)}</span> (góc nhìn Trắng)</p>` : ''}
@@ -465,8 +547,11 @@ function drawBoard(): void {
       lastMove: last ? [last.from, last.to] : undefined,
       check: res && game.atLive ? undefined : (checked ?? undefined),
       premove: premove ?? undefined,
-      // Hết ván và đang xem thế cờ cuối: huy hiệu trên hai ô Vua như chess.com
+      // Hết ván và đang xem thế cờ cuối: huy hiệu trên hai ô Vua
       endBadges: res && game.atLive ? endBadgesFor(game.fen, res) : undefined,
+      // Ván đã chấm: nước đang xem mang nhãn xếp loại (?!, ?, ??...), nước hỏng
+      // thì có mũi tên chỉ nước tốt hơn
+      ...markForPly(),
       label: `Bàn cờ, lượt ${sideName(game.turn)}`,
     },
     stepped ? [last.from, last.to] : undefined,
@@ -479,7 +564,7 @@ function afterMove(rerender: () => void): void {
   if (result) {
     ended = true;
     playSound('end');
-    void storeGame();
+    void storeGame(rerender);
   } else if (game.inCheck) playSound('check');
   else playSound(last.captured ? 'capture' : 'move');
 
@@ -589,7 +674,7 @@ async function botMove(rerender: () => void): Promise<void> {
       if (result) {
         ended = true;
         playSound('end');
-        void storeGame();
+        void storeGame(rerender);
       } else if (game.inCheck) playSound('check');
       else playSound(last.captured ? 'capture' : 'move');
     }
@@ -616,14 +701,16 @@ async function refreshEval(rerender: () => void): Promise<void> {
 }
 
 /** Lưu ván lên server khi kết thúc; không đăng nhập thì bỏ qua. */
-async function storeGame(): Promise<void> {
+async function storeGame(rerender: () => void): Promise<void> {
   if (saved) return;
   saved = true;
   const result = outcome();
   if (!result) return;
   const who = setup.mode === 'bot' ? levelById(setup.level).name : 'Hai người một máy';
   offerReview(game.pgn(), setup.mode === 'bot' ? setup.side : null, `${who} · ${outcomeText(result)}`);
-  await saveFinishedGame({
+  // Chấm ván ngay, song song với việc lưu
+  void startReport(rerender);
+  savedGameId = await saveFinishedGame({
     mode: setup.mode,
     level: setup.mode === 'bot' ? setup.level : undefined,
     playerSide: setup.mode === 'bot' ? setup.side : 'w',
@@ -631,6 +718,7 @@ async function storeGame(): Promise<void> {
     winner: result.winner,
     reason: result.reason,
   });
+  trySaveReview();
 }
 
 /* ---------------- Nút bấm ---------------- */
@@ -660,6 +748,14 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
   const mv = target.closest<HTMLElement>('.move[data-ply]');
   if (mv && started) {
     game.goTo(Number(mv.dataset.ply));
+    rerender();
+    return true;
+  }
+
+  // Bảng chấm ván: ô nhịp ván, khoảnh khắc đáng xem -> bàn cờ nhảy tới nước đó
+  const rp = target.closest<HTMLElement>('[data-report-ply]');
+  if (rp) {
+    game.goTo(Number(rp.dataset.reportPly));
     rerender();
     return true;
   }
@@ -724,8 +820,12 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
       newGame();
       started = false;
     },
+    // Đã chấm xong thì mở luôn kết quả; chưa thì sang màn Xem lại để chấm
     'Xem lại ván': () => {
-      location.hash = '#/xem-lai';
+      if (!openFullReview()) location.hash = '#/xem-lai';
+    },
+    'Xem lại chi tiết': () => {
+      if (!openFullReview()) location.hash = '#/xem-lai';
     },
     'Về đầu ván': () => game.first(),
     'Lùi một nước': () => game.prev(),
@@ -759,6 +859,9 @@ function runAct(id: string, rerender: () => void): void {
     thinking = false;
     premove = null;
     resigned = null;
+    dropReport();
+    savedGameId = null;
+    reviewSaved = false;
     game.last();
     game.undo();
     if (setup.mode === 'bot' && game.length && game.turn !== setup.side) game.undo();
@@ -785,7 +888,7 @@ function runAct(id: string, rerender: () => void): void {
       ended = true;
       game.last();
       playSound('end');
-      void storeGame();
+      void storeGame(rerender);
     }
   } else if (id === 'pgn') {
     void navigator.clipboard?.writeText(game.pgn()).then(() => {
@@ -804,4 +907,128 @@ function runAct(id: string, rerender: () => void): void {
 /** Cấp máy gợi ý sau màn chào mừng (theo trình độ người chơi tự chọn). */
 export function setBotLevel(level: number): void {
   if (level >= 1 && level <= 8) setup = { ...setup, mode: 'bot', level };
+}
+
+/** Nhãn xếp loại và mũi tên nước tốt hơn cho nước đang xem, khi ván đã chấm. */
+function markForPly(): { badge?: { square: Square; cls: MoveClass }; arrows?: { from: Square; to: Square; kind: 'coach' }[] } {
+  const r = reviewed();
+  if (!r || game.ply === 0) return {};
+  const m = r.moves[game.ply - 1];
+  if (!m) return {};
+  const bad = BAD.includes(m.cls);
+  const best = m.best[0];
+  return {
+    badge: { square: m.uci.slice(2, 4) as Square, cls: m.cls },
+    arrows:
+      bad && best && best.uci !== m.uci
+        ? [{ from: best.uci.slice(0, 2) as Square, to: best.uci.slice(2, 4) as Square, kind: 'coach' }]
+        : undefined,
+  };
+}
+
+const BAD: MoveClass[] = ['inaccuracy', 'mistake', 'blunder', 'miss'];
+/** Mức nặng nhẹ, để chọn ra những khoảnh khắc đáng xem nhất. */
+const SEVERITY: Record<MoveClass, number> = { miss: 4, blunder: 4, mistake: 3, inaccuracy: 2, good: 0, best: 0, book: 0 };
+
+const moveNo = (m: ReviewedMove) => `${Math.ceil(m.ply / 2)}.${m.side === 'b' ? '..' : ''}`;
+
+/**
+ * Bảng chấm ván, hiện ngay khi hết ván. Thiết kế riêng, không theo khuôn
+ * "Game Review" của chess.com:
+ * - độ chính xác hai bên là hai thanh ngang;
+ * - "nhịp ván": một dải ô màu, mỗi ô một nước của bạn, tô theo xếp loại — nhìn
+ *   là thấy ván đổ ở đoạn nào; bấm ô nào thì bàn cờ nhảy tới nước đó;
+ * - tối đa ba khoảnh khắc đáng xem nhất, kèm nước tốt hơn.
+ */
+function reportCard(): string {
+  if (!report || report.pgn !== game.pgn()) return '';
+  if (report.phase === 'running') {
+    const pct = report.total ? Math.round((report.done / report.total) * 100) : 0;
+    return `<div class="report">
+      <p class="report-title">${icon('engine', 18)}<span>Đang chấm ván…</span><b class="mono">${pct}%</b></p>
+      <div class="progress"><span style="width:${pct}%"></span></div>
+      <p class="report-note">Engine chấm từng nước ngay trên máy bạn — miễn phí, không cần đăng nhập.</p>
+    </div>`;
+  }
+  if (report.phase === 'error' || !report.result) {
+    return `<div class="report">${notice(`Không chấm được ván: ${report.error ?? 'lỗi lạ'}`, 'danger', 'engine')}</div>`;
+  }
+  const r = report.result;
+  const me: Side | null = setup.mode === 'bot' ? setup.side : null;
+  const opp = me === 'w' ? 'b' : 'w';
+  const accRow = (name: string, v: number, mine: boolean) =>
+    `<div class="acc-row${mine ? ' is-me' : ''}"><span>${name}</span>` +
+    `<span class="acc-bar"><i style="width:${Math.max(2, v)}%"></i></span><b class="mono">${v.toFixed(1)}</b></div>`;
+  const acc = me
+    ? accRow('Bạn', me === 'w' ? r.accuracy.w : r.accuracy.b, true) +
+      accRow(`Máy ${levelById(setup.level).name.toLowerCase()}`, opp === 'w' ? r.accuracy.w : r.accuracy.b, false)
+    : accRow('Trắng', r.accuracy.w, false) + accRow('Đen', r.accuracy.b, false);
+
+  const mine = r.moves.filter((m) => !me || m.side === me);
+  const beats = mine
+    .map(
+      (m) =>
+        `<button class="beat${m.ply === game.ply ? ' is-current' : ''}" data-report-ply="${m.ply}" ` +
+        `style="--c:var(--cls-${m.cls})" title="${moveNo(m)} ${m.san} — ${CLASS_LABEL[m.cls]}" aria-label="${moveNo(m)} ${m.san}, ${CLASS_LABEL[m.cls]}"></button>`,
+    )
+    .join('');
+
+  const counts = new Map<MoveClass, number>();
+  for (const m of mine) counts.set(m.cls, (counts.get(m.cls) ?? 0) + 1);
+  const order: MoveClass[] = ['best', 'good', 'book', 'inaccuracy', 'mistake', 'blunder', 'miss'];
+  const chips = order
+    .filter((c) => counts.get(c))
+    .map((c) => `<span class="cls-chip" title="${CLASS_LABEL[c]}">${classBadge(c)}<span>${CLASS_LABEL[c]}</span><b class="mono">${counts.get(c)}</b></span>`)
+    .join('');
+
+  const moments = mine
+    .filter((m) => BAD.includes(m.cls))
+    .sort((a, b) => SEVERITY[b.cls] - SEVERITY[a.cls] || a.accuracy - b.accuracy)
+    .slice(0, 3)
+    .sort((a, b) => a.ply - b.ply)
+    .map((m) => {
+      const best = m.best[0];
+      return (
+        `<button class="moment${m.ply === game.ply ? ' is-current' : ''}" data-report-ply="${m.ply}">` +
+        `<span class="moment-move"><span class="mono">${moveNo(m)}</span>${figurine(m.san, m.side)}${classBadge(m.cls)}</span>` +
+        `<span class="moment-text">${CLASS_LABEL[m.cls]}${best && best.uci !== m.uci ? ` · nên đi ${figurine(best.san, m.side)}` : ''}</span>` +
+        `</button>`
+      );
+    })
+    .join('');
+
+  return `<div class="report">
+    <p class="report-title">${icon('engine', 18)}<span>Chấm ván</span></p>
+    <div class="acc-rows">${acc}</div>
+    <div class="beats-wrap">
+      <p class="report-label">Nhịp ván${me ? ' của bạn' : ''} <span>· bấm một ô để xem nước đó</span></p>
+      <div class="beats">${beats}</div>
+    </div>
+    <div class="cls-chips">${chips}</div>
+    ${
+      moments
+        ? `<p class="report-label">Đáng xem lại</p><div class="moments">${moments}</div>`
+        : `<p class="report-note">Không có nước hỏng nào đáng kể. Ván đẹp!</p>`
+    }
+    ${button({ label: 'Xem lại chi tiết', icon: 'review', full: true })}
+  </div>`;
+}
+
+/** Mở màn Xem lại với kết quả vừa chấm, không chấm lại. */
+function openFullReview(): boolean {
+  const r = reviewed();
+  const res = outcome();
+  if (!r || !res) return false;
+  const who = setup.mode === 'bot' ? `Máy ${levelById(setup.level).name.toLowerCase()}` : 'Hai người một máy';
+  openReviewResult({
+    pgn: game.pgn(),
+    playerSide: setup.mode === 'bot' ? setup.side : null,
+    label: `${who} · ${outcomeText(res)}`,
+    opponent: setup.mode === 'bot' ? `Máy ${levelById(setup.level).name.toLowerCase()}` : null,
+    gameId: savedGameId,
+    result: r,
+    ply: game.ply && game.ply < r.moves.length ? game.ply : undefined,
+  });
+  location.hash = '#/xem-lai';
+  return true;
 }

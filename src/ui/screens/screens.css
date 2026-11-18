@@ -1710,3 +1710,184 @@ button.top-link {
 .prose a:visited {
   color: var(--accent-text);
 }
+
+/* ================= Bảng chấm ván (hiện ngay khi hết ván) ================= */
+.report {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+}
+.report-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text-1);
+}
+.report-title .icon {
+  color: var(--accent-text);
+}
+.report-title b {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.report-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.report-label {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.report-label span {
+  font-weight: 400;
+  color: var(--text-3);
+}
+.report .progress {
+  height: 6px;
+}
+/* Độ chính xác: tên · thanh · số */
+.acc-rows {
+  display: grid;
+  gap: var(--s-2);
+}
+.acc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 7.5em) 1fr 3.2em;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.acc-row span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acc-row b {
+  text-align: right;
+  color: var(--text-1);
+}
+.acc-bar {
+  height: 8px;
+  border-radius: 2px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+.acc-bar i {
+  display: block;
+  height: 100%;
+  background: var(--text-3);
+}
+.acc-row.is-me {
+  color: var(--text-1);
+  font-weight: 600;
+}
+.acc-row.is-me .acc-bar i {
+  background: var(--accent);
+}
+/* Nhịp ván: mỗi ô một nước, tô theo xếp loại. Nước hỏng cao hơn cho dễ thấy. */
+.beats-wrap {
+  display: grid;
+  gap: var(--s-2);
+}
+.beats {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  min-height: 24px;
+}
+.beat {
+  flex: 1 1 0;
+  min-width: 4px;
+  max-width: 14px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 1px;
+  background: var(--c);
+  cursor: pointer;
+}
+.beat[style*='inaccuracy'] {
+  height: 16px;
+}
+.beat[style*='mistake'] {
+  height: 20px;
+}
+.beat[style*='blunder'],
+.beat[style*='miss'] {
+  height: 24px;
+}
+.beat:hover {
+  filter: brightness(1.15);
+}
+.beat.is-current {
+  outline: 2px solid var(--text-1);
+  outline-offset: 1px;
+}
+.cls-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+}
+.cls-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.cls-chip b {
+  color: var(--text-1);
+}
+/* Khoảnh khắc đáng xem lại */
+.moments {
+  display: grid;
+  gap: 2px;
+}
+.moment {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--s-2);
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.moment:hover {
+  background: var(--bg-3);
+}
+.moment.is-current {
+  border-left-color: var(--accent);
+}
+.moment-move {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-weight: 700;
+}
+.moment-move .mono {
+  color: var(--text-3);
+  font-weight: 400;
+}
+.moment-text {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.report .btn-full {
+  width: 100%;
+  justify-content: center;
+}

@@ -195,8 +195,9 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     }
     const g = parseNewGame(body);
     if (!g) return json(res, 400, { error: 'Thiếu dữ liệu ván' });
-    insertGame(db, user.id, g);
-    return json(res, 201, { ok: true });
+    const id = insertGame(db, user.id, g);
+    // Trả id để trình duyệt lưu luôn kết quả chấm ván (chấm ngay khi hết ván)
+    return json(res, 201, { ok: true, id });
   }
 
   /* ---- Một ván cụ thể và kết quả chấm ---- */

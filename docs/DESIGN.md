@@ -355,6 +355,27 @@ Theo đúng thói quen của người đã chơi chess.com/Lichess, không bắt
 Huy hiệu hết ván "nảy" ra một lần (CSS `.end-badge`); vẽ lại bàn cờ thì đứng yên.
 Lùi về xem nước cũ thì huy hiệu ẩn đi, quay lại nước cuối thì hiện.
 
+### 4.6d Chấm ván ngay khi hết ván (USP: miễn phí)
+
+chess.com bắt trả tiền cho "Game Review". Ở đây hết ván là engine chấm luôn,
+ngay trong cột phải của tab Chơi, **chạy trong trình duyệt** — không tốn server,
+không cần đăng nhập. 250ms mỗi thế cờ: ván 40 nước khoảng 20 giây, có thanh tiến độ.
+
+Bảng chấm ván cố ý KHÔNG theo khuôn của chess.com (ông huấn luyện viên + bảng
+đếm hai cột + nút "Start Review"):
+
+- **Độ chính xác**: hai thanh ngang, thanh của mình màu nhấn.
+- **Nhịp ván**: một dải ô, mỗi ô một nước của mình, tô theo xếp loại; nước càng
+  hỏng ô càng cao. Nhìn là biết ván đổ ở đoạn nào. Bấm ô → bàn cờ nhảy tới nước đó.
+- **Đáng xem lại**: tối đa 3 nước hỏng nặng nhất, kèm "nên đi …".
+- **Xem lại chi tiết** mở màn Xem lại với kết quả đã chấm (không chấm lại).
+
+Trên bàn cờ, nước đang xem mang **nhãn xếp loại**: khung màu quanh ô đến và một
+nhãn vuông dán ở góc trên phải ô (★ ✓ ?! ? ?? ✕). Khác chấm tròn nổi ra ngoài
+góc ô của chess.com. Nước hỏng có thêm mũi tên mảnh chỉ nước tốt hơn.
+
+Đã đăng nhập thì kết quả chấm được lưu cùng ván, nước sai thành thẻ ôn tập.
+
 ### 4.7 Âm thanh
 
 Bốn âm ngắn: đi quân, ăn quân, chiếu, kết thúc ván; thêm tiếng tích khi đồng hồ dưới 10 giây. Mặc định bật, có nút tắt. Nguồn âm thanh phải có giấy phép rõ ràng (CC0 hoặc tự thu).

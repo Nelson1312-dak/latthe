@@ -11,17 +11,21 @@ export interface FinishedGame {
   reason: string;
 }
 
-export async function saveFinishedGame(game: FinishedGame): Promise<void> {
-  if (!auth.user) return;
+/** Lưu ván. Trả về id của ván trên server, null nếu không lưu được (chưa đăng nhập, mất mạng). */
+export async function saveFinishedGame(game: FinishedGame): Promise<number | null> {
+  if (!auth.user) return null;
   try {
-    await fetch('/api/games', {
+    const res = await fetch('/api/games', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(game),
     });
+    if (!res.ok) return null;
+    return ((await res.json()) as { id?: number }).id ?? null;
   } catch {
     // Mất mạng thì thôi: ván vẫn còn trên màn hình, không chặn người chơi
+    return null;
   }
 }
 

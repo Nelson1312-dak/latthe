@@ -353,13 +353,22 @@ export function boardSvg(o: BoardOptions): string {
     );
   }
 
-  // Huy hiệu xếp loại ở góc trên phải ô đến
+  // Xếp loại nước vừa đi: khung màu quanh ô đến + một nhãn vuông dán ở góc
+  // trên phải, mang ký hiệu (?!, ?, ??...). Cố ý KHÔNG làm chấm tròn nổi lên
+  // góc ô như chess.com: nhãn nằm gọn trong ô, dính liền với khung.
   if (o.badge && o.badge.cls !== 'book') {
     const [x, y] = xy(o.badge.square, or);
-    const r = SQ * 0.3;
+    const c = `var(--cls-${o.badge.cls})`;
+    const sym = CLASS_SYMBOL[o.badge.cls];
+    const th = SQ * 0.32;
+    const tw = sym.length > 1 ? SQ * 0.46 : SQ * 0.34;
     parts.push(
-      `<circle cx="${x + SQ - r * 0.7}" cy="${y + r * 0.7}" r="${r}" fill="var(--cls-${o.badge.cls})" stroke="var(--bg-0)" stroke-width="1.5"/>`,
-      `<text x="${x + SQ - r * 0.7}" y="${y + r * 0.7}" text-anchor="middle" dominant-baseline="central" font-size="${r}" font-weight="700" fill="var(--on-badge)">${CLASS_SYMBOL[o.badge.cls]}</text>`,
+      `<g class="move-tag">` +
+        `<rect x="${x + 1.5}" y="${y + 1.5}" width="${SQ - 3}" height="${SQ - 3}" fill="none" stroke="${c}" stroke-width="3"/>` +
+        `<rect x="${x + SQ - tw}" y="${y}" width="${tw}" height="${th}" fill="${c}"/>` +
+        `<text x="${(x + SQ - tw / 2).toFixed(2)}" y="${(y + th / 2 + 0.5).toFixed(2)}" text-anchor="middle" dominant-baseline="central" ` +
+        `font-size="${(th * 0.74).toFixed(2)}" font-weight="800" fill="var(--on-badge)">${sym}</text>` +
+        `</g>`,
     );
   }
 

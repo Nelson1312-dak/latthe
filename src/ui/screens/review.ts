@@ -553,3 +553,29 @@ export function handleReviewClick(target: HTMLElement, rerender: () => void): bo
   rerender();
   return true;
 }
+
+/**
+ * Mở màn Xem lại với một ván ĐÃ chấm xong (chấm ngay lúc hết ván ở tab Chơi),
+ * để không phải chấm lại lần nữa.
+ */
+export function openReviewResult(o: {
+  pgn: string;
+  playerSide: Side | null;
+  label: string;
+  opponent: string | null;
+  gameId: number | null;
+  result: ReviewResult;
+  ply?: number;
+}): void {
+  state.phase = 'done';
+  state.gameId = o.gameId;
+  state.pgn = o.pgn;
+  state.playerSide = o.playerSide;
+  state.orientation = o.playerSide ?? 'w';
+  state.label = o.label;
+  state.opponent = o.opponent;
+  state.review = o.result;
+  state.newCards = 0;
+  state.coach = null;
+  state.ply = o.ply ?? mistakesOf(o.result, o.playerSide ?? undefined)[0]?.ply ?? o.result.moves.length;
+}
