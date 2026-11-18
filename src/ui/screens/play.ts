@@ -366,7 +366,7 @@ function gameScreen(extraSide = ''): string {
           orientation,
           // Điện thoại và máy tính bảng không có dòng tiêu đề màn (xem .play-head):
           // nút Lật bàn chuyển xuống ngay cạnh tên mình, Cài đặt đã có trên thanh trên cùng.
-          `<span class="only-narrow">${iconButton('flip', 'Lật bàn cờ')}</span>`,
+          `<span class="only-narrow">${iconButton('float', 'Bàn cờ nổi').replace('class="btn btn-icon"', 'class="btn btn-icon only-mouse"')}${iconButton('flip', 'Lật bàn cờ')}</span>`,
         )}
       </div>
 

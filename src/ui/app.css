@@ -641,8 +641,8 @@
   }
 }
 
-/* Chỉ cho máy có chuột (bàn cờ nổi chỉ có trên máy tính) */
-@media (pointer: coarse), (max-width: 767px) {
+/* Chỉ cho máy có chuột (bàn cờ nổi chỉ có trên máy tính) — cửa sổ hẹp trên máy tính vẫn có */
+@media (pointer: coarse) {
   .only-mouse {
     display: none;
   }
