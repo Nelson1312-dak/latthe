@@ -2195,7 +2195,8 @@ button.top-link {
 
 /* Bài tập của ngày chưa giải: vạch nhấn bên trái cho nổi giữa danh sách */
 .quick.is-due {
-  box-shadow: inset 3px 0 0 var(--accent);
+  border-left: 3px solid var(--accent);
+  padding-left: calc(var(--s-3) - 3px);
 }
 
 /* ---- Thử thách AI (bậc thang) ---- */
