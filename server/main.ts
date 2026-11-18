@@ -26,6 +26,8 @@ import {
   clearCookie,
   createSession,
   destroySession,
+  adminKeys,
+  isAdminUser,
   loginWithGoogle,
   fromThisMachine,
   purgeExpiredSessions,
@@ -110,27 +112,12 @@ const isSecure = (req: IncomingMessage) =>
   (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0].trim() === 'https';
 
 /**
- * Ai được xem bảng thống kê: id người dùng trong ADMIN_USER_IDS (.env.chess),
- * cách nhau bằng dấu phẩy. Để trống là không ai xem được.
+ * Chủ trang (xem Thống kê): CHỈ tài khoản đăng nhập Google bằng Gmail có trong
+ * ADMIN_EMAILS (.env.chess). Kiểm ở mỗi request (isAdminUser). Không có cách nào
+ * khác để thành chủ trang: không theo mã tài khoản, không qua đăng nhập thử.
  */
-const ADMIN_IDS = new Set(
-  (process.env.ADMIN_USER_IDS ?? '')
-    .split(',')
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isInteger(n) && n > 0),
-);
-/**
- * Hoặc theo Gmail: ADMIN_EMAILS=a@gmail.com,b@gmail.com. Lúc đăng nhập Google, email
- * (đã xác minh) có trong danh sách thì tài khoản được đánh dấu chủ trang. Email chỉ
- * để so, không lưu.
- */
-const ADMIN_EMAILS = new Set(
-  (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter((s) => s.includes('@')),
-);
-const isAdmin = (u: User) => ADMIN_IDS.has(u.id) || u.is_admin === 1;
+const ADMIN_KEYS = adminKeys(process.env.ADMIN_EMAILS);
+const isAdmin = (u: User) => isAdminUser(u, ADMIN_KEYS);
 
 /**
  * Giới hạn số lần gọi theo địa chỉ, chỉ để chặn spam (đếm lượt, tạo link chia
@@ -199,7 +186,7 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     const credential = typeof body.credential === 'string' ? body.credential : '';
     if (!credential) return json(res, 400, { error: 'Thiếu credential' });
     try {
-      const { user, session } = await loginWithGoogle(db, credential, GOOGLE_CLIENT_ID, undefined, ADMIN_EMAILS);
+      const { user, session } = await loginWithGoogle(db, credential, GOOGLE_CLIENT_ID, undefined, ADMIN_KEYS);
       bump(db, 'login');
       // Tài khoản vừa tạo trong lần đăng nhập này
       if (Date.now() - Date.parse(user.created_at) < 10_000) bump(db, 'signup');

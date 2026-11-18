@@ -81,8 +81,13 @@ export interface User {
   custom_name: number;
   /** Tuỳ chọn hiển thị dạng JSON. */
   prefs: string | null;
-  /** Chủ trang (0/1): email Google lúc đăng nhập có trong ADMIN_EMAILS. Email không được lưu. */
+  /** Thôi dùng (xem migration 013). */
   is_admin?: number;
+  /**
+   * Băm của Gmail chủ trang (adminKey), chỉ có ở tài khoản đăng nhập bằng đúng Gmail
+   * trong ADMIN_EMAILS; mọi tài khoản khác là null. So với ADMIN_EMAILS ở mỗi request.
+   */
+  admin_key?: string | null;
   created_at: string;
   last_seen_at: string;
 }

@@ -131,24 +131,49 @@ export function purgeExpiredSessions(db: Db, now = new Date()): number {
   return Number(info.changes);
 }
 
+/* ---------------- Chủ trang ---------------- */
+
+/** Băm Gmail chủ trang để đối chiếu (không lưu email gốc). */
+export const adminKey = (email: string): string =>
+  createHash('sha256').update(`admin:${email.trim().toLowerCase()}`).digest('hex');
+
+/** Bộ băm của danh sách ADMIN_EMAILS (đọc một lần lúc server chạy). */
+export function adminKeys(emails: string | undefined): ReadonlySet<string> {
+  return new Set(
+    (emails ?? '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s))
+      .map(adminKey),
+  );
+}
+
+/**
+ * Có phải chủ trang không — kiểm ở MỖI request. Chỉ đúng khi tài khoản đã đăng
+ * nhập bằng Gmail (Google xác minh) có trong ADMIN_EMAILS HIỆN TẠI. Không còn cách
+ * nào khác (bỏ hẳn ADMIN_USER_IDS): tài khoản thử, tài khoản khách đều không thể.
+ */
+export function isAdminUser(u: Pick<User, 'google_sub' | 'admin_key'>, keys: ReadonlySet<string>): boolean {
+  return Boolean(u.google_sub && u.admin_key && keys.has(u.admin_key));
+}
+
 /** Đăng nhập bằng Google: xác minh token rồi tạo người dùng và phiên. */
 export async function loginWithGoogle(
   db: Db,
   idToken: string,
   clientId: string,
   jwks?: JWTVerifyGetKey,
-  /** Gmail của chủ trang (ADMIN_EMAILS). Có đặt thì mỗi lần đăng nhập so lại: có trong danh sách là bật, không có là tắt. */
-  adminEmails?: ReadonlySet<string>,
+  /** Băm Gmail chủ trang (adminKeys(ADMIN_EMAILS)). Mỗi lần đăng nhập so lại. */
+  admins: ReadonlySet<string> = new Set(),
 ): Promise<{ user: User; session: Session }> {
   const id = await verifyGoogleToken(idToken, clientId, jwks);
   let user = upsertGoogleUser(db, id.sub, id.name, id.picture);
-  if (adminEmails && adminEmails.size) {
-    // Chỉ tin email Google đã xác minh. So xong là thôi: email không đi vào CSDL.
-    const admin = id.emailVerified && Boolean(id.email) && adminEmails.has(id.email!) ? 1 : 0;
-    if ((user.is_admin ?? 0) !== admin) {
-      db.prepare('UPDATE users SET is_admin = ? WHERE id = ?').run(admin, user.id);
-      user = { ...user, is_admin: admin };
-    }
+  // Chỉ tin email Google ĐÃ XÁC MINH. Đúng Gmail chủ trang thì ghi bản băm, không
+  // thì xoá (đổi tài khoản Google, hay bị bỏ khỏi danh sách). Email gốc không lưu.
+  const key = id.emailVerified && id.email && admins.has(adminKey(id.email)) ? adminKey(id.email) : null;
+  if ((user.admin_key ?? null) !== key) {
+    db.prepare('UPDATE users SET admin_key = ? WHERE id = ?').run(key, user.id);
+    user = { ...user, admin_key: key };
   }
   return { user, session: createSession(db, user.id) };
 }

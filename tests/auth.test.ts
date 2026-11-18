@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type JWK } from 'jose';
 import { openDb, upsertGoogleUser, type Db } from '../server/db.ts';
-import { createSession, destroySession, fromThisMachine, loginWithGoogle, purgeExpiredSessions, readCookie, sessionCookie, userForSession, verifyGoogleToken } from '../server/auth.ts';
+import { adminKeys, createSession, destroySession, fromThisMachine, isAdminUser, loginWithGoogle, purgeExpiredSessions, readCookie, sessionCookie, userForSession, verifyGoogleToken } from '../server/auth.ts';
 
 const CLIENT_ID = '1234567890-abc.apps.googleusercontent.com';
 const ISSUER = 'https://accounts.google.com';
@@ -144,23 +144,45 @@ describe('phiên đăng nhập', () => {
     expect(userForSession(db, a.session.token)?.id).toBe(a.user.id);
   });
 
-  it('chủ trang theo Gmail: email đã xác minh có trong danh sách thì bật, bỏ khỏi danh sách thì tắt', async () => {
-    const ds = new Set(['chu@example.test']);
+  it('chủ trang CHỈ là tài khoản Google đăng nhập bằng đúng Gmail trong ADMIN_EMAILS', async () => {
+    const ds = adminKeys('chu@example.test');
     const a = await loginWithGoogle(db, await token({ claims: { email: 'Chu@Example.test' } }), CLIENT_ID, keys.jwks, ds);
-    expect(a.user.is_admin).toBe(1);
-    // Không lưu email ở bất cứ cột nào
+    expect(isAdminUser(a.user, ds)).toBe(true);
+    // Đọc lại từ CSDL qua phiên (như mỗi request): vẫn là chủ trang
+    expect(isAdminUser(userForSession(db, a.session.token)!, ds)).toBe(true);
+    // Không lưu email gốc ở bất cứ cột nào
     expect(JSON.stringify(db.prepare('SELECT * FROM users').all()).toLowerCase()).not.toContain('chu@');
-    const b = await loginWithGoogle(db, await token({ claims: { email: 'chu@example.test' } }), CLIENT_ID, keys.jwks, new Set(['khac@example.test']));
-    expect(b.user.is_admin).toBe(0);
-    // Email chưa xác minh thì không tin
-    const c = await loginWithGoogle(
+    // Bỏ Gmail khỏi danh sách: mất quyền NGAY, không cần đăng nhập lại
+    expect(isAdminUser(a.user, adminKeys('khac@example.test'))).toBe(false);
+    expect(isAdminUser(a.user, adminKeys(''))).toBe(false);
+  });
+
+  it('người khác không thể là chủ trang', async () => {
+    const ds = adminKeys('chu@example.test');
+    // Gmail khác
+    const khác = await loginWithGoogle(
       db,
-      await token({ claims: { email: 'chu@example.test', email_verified: false } }),
+      await token({ sub: 'sub-khac', claims: { email: 'nguoila@example.test' } }),
       CLIENT_ID,
       keys.jwks,
       ds,
     );
-    expect(c.user.is_admin).toBe(0);
+    expect(isAdminUser(khác.user, ds)).toBe(false);
+    expect(khác.user.admin_key ?? null).toBeNull();
+    // Đúng Gmail nhưng Google chưa xác minh email: không tin
+    const chưaXácMinh = await loginWithGoogle(
+      db,
+      await token({ sub: 'sub-gia', claims: { email: 'chu@example.test', email_verified: false } }),
+      CLIENT_ID,
+      keys.jwks,
+      ds,
+    );
+    expect(isAdminUser(chưaXácMinh.user, ds)).toBe(false);
+    // Tài khoản thử (không phải Google) dù có mang dấu chủ trang cũng không được
+    expect(isAdminUser({ google_sub: null, admin_key: [...ds][0] }, ds)).toBe(false);
+    // Danh sách rỗng hay sai dạng: không ai là chủ trang
+    expect(adminKeys('').size).toBe(0);
+    expect(adminKeys('khong-phai-email, @x, a@b').size).toBe(0);
   });
 
   it('token hỏng thì không tạo tài khoản nào', async () => {

@@ -1,4 +1,4 @@
-// Bảng thống kê cho chủ trang (#/thong-ke). Chỉ tài khoản trong ADMIN_USER_IDS xem được.
+// Bảng thống kê cho chủ trang (#/thong-ke). Chỉ tài khoản Google đăng nhập bằng Gmail trong ADMIN_EMAILS xem được (máy chủ kiểm, xem server/auth.ts isAdminUser).
 //
 // Trả lời ba câu: có ai vào không, họ làm gì, bỏ đi ở bước nào. Số liệu ẩn
 // danh: lượt đếm theo ngày, không biết ai là ai.

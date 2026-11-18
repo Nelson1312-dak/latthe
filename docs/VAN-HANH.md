@@ -55,7 +55,13 @@ LatCo-Server`. Sửa phần web thì chỉ cần `npm run deploy`.
 
 ## Thống kê (#/thong-ke)
 
-Chỉ tài khoản có id trong `ADMIN_USER_IDS` (`.env.chess`, hiện là 218) xem được.
+**Chỉ** tài khoản đăng nhập Google bằng Gmail có trong `ADMIN_EMAILS` (`.env.chess`) xem
+được — hiện là một địa chỉ của chủ trang. Không còn cách nào khác: không theo mã tài
+khoản (đã bỏ `ADMIN_USER_IDS`), không qua đăng nhập thử, Google phải xác minh email.
+Lúc đăng nhập, server chỉ lưu bản băm của Gmail chủ trang (cột `admin_key`, các tài
+khoản khác để trống) và so với danh sách ở MỖI request; email gốc không lưu. Đổi chủ
+trang: sửa `ADMIN_EMAILS` rồi khởi động lại server — người bị bỏ mất quyền ngay, người
+mới đăng nhập lại là có.
 Tài khoản đó thấy mục **Thống kê** ngay trên thanh điều hướng (máy tính: cột trái;
 điện thoại: thanh dưới). Cài latbai.vn lên điện thoại như app là mở một chạm.
 
