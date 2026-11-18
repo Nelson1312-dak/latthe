@@ -216,22 +216,6 @@
 }
 
 /* ---------------- Xem lại ---------------- */
-.graph-block {
-  display: grid;
-  gap: var(--s-2);
-}
-.evalgraph {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 72px;
-  border-radius: 2px;
-}
-.graph-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-}
 .tally {
   display: flex;
   flex-wrap: wrap;
@@ -802,15 +786,6 @@
   height: 100%;
   background: var(--accent);
   transition: width 200ms linear;
-}
-.verdict .note-move {
-  margin-bottom: var(--s-1);
-}
-.graph-dot {
-  cursor: pointer;
-}
-.graph-dot:hover {
-  r: 5;
 }
 button.log-row {
   width: 100%;
@@ -1711,88 +1686,161 @@ button.top-link {
   color: var(--accent-text);
 }
 
-/* ================= Bảng chấm ván (hiện ngay khi hết ván) ================= */
-.report {
+/* ================= Xem lại ván (ngay dưới thẻ kết quả, và ván đã lưu) =================
+   Ít chữ, một chỗ để mắt nhìn: số độ chính xác to, dải nhịp ván, rồi thẻ nước đang
+   xem. Không biểu đồ, không bảng đếm 7 loại, không nút to. */
+.rv {
   display: grid;
   gap: var(--s-3);
+}
+.rv-wait {
   padding: var(--s-3);
   border-radius: var(--r-md);
   background: var(--bg-2);
 }
-.report-title {
+.rv-kicker {
   display: flex;
   align-items: center;
   gap: var(--s-2);
   margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+.rv-kicker b {
+  margin-left: auto;
+}
+.rv-acc {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.rv-acc > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.rv-acc span {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rv-acc-main b {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--text-1);
+}
+.rv-acc-opp {
+  text-align: right;
+}
+.rv-acc-opp b {
   font-size: var(--fs-lg);
+  line-height: 1;
+  color: var(--text-2);
+}
+/* Thẻ nước đang xem */
+.rv-focus {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+}
+.rv-focus-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+.rv-focus-head .rv-kicker {
+  flex: 1;
+}
+.rv-focus-head .btn-icon {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+.rv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+.rv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 32px;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.rv-chip .mono {
+  color: var(--text-3);
+}
+.rv-chip:hover {
+  border-color: var(--line-strong);
+}
+.rv-chip.is-current {
+  border-color: var(--accent);
+}
+.rv-move {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) 6px;
+  margin: var(--s-1) 0 0;
   font-weight: 700;
   color: var(--text-1);
 }
-.report-title .icon {
-  color: var(--accent-text);
-}
-.report-title b {
-  margin-left: auto;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-.report-note {
-  margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-.report-label {
-  margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-1);
-}
-.report-label span {
+.rv-move .mono {
   font-weight: 400;
   color: var(--text-3);
 }
-.report .progress {
-  height: 6px;
+.rv-who {
+  width: 100%;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--text-3);
 }
-/* Độ chính xác: tên · thanh · số */
-.acc-rows {
-  display: grid;
-  gap: var(--s-2);
+.rv-why {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-1);
 }
-.acc-row {
-  display: grid;
-  grid-template-columns: minmax(0, 7.5em) 1fr 3.2em;
+.rv-better {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-2);
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.rv-better > span:first-child {
+  color: var(--accent-text);
+}
+.rv-note {
+  margin: 0;
+  font-weight: 400;
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
-.acc-row span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.rv-shift {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
 }
-.acc-row b {
-  text-align: right;
+.rv-shift b {
   color: var(--text-1);
-}
-.acc-bar {
-  height: 8px;
-  border-radius: 2px;
-  background: var(--bg-3);
-  overflow: hidden;
-}
-.acc-bar i {
-  display: block;
-  height: 100%;
-  background: var(--text-3);
-}
-.acc-row.is-me {
-  color: var(--text-1);
-  font-weight: 600;
-}
-.acc-row.is-me .acc-bar i {
-  background: var(--accent);
 }
 /* Nhịp ván: mỗi ô một nước, tô theo xếp loại. Nước hỏng cao hơn cho dễ thấy. */
 .beats-wrap {
@@ -1833,65 +1881,6 @@ button.top-link {
   outline: 2px solid var(--text-1);
   outline-offset: 1px;
 }
-.cls-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-1) var(--s-3);
-}
-.cls-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-1);
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-.cls-chip b {
-  color: var(--text-1);
-}
-/* Khoảnh khắc đáng xem lại */
-.moments {
-  display: grid;
-  gap: 2px;
-}
-.moment {
-  display: grid;
-  gap: 2px;
-  min-height: 44px;
-  padding: var(--s-2);
-  border: 0;
-  border-left: 3px solid transparent;
-  border-radius: var(--r-sm);
-  background: var(--bg-1);
-  color: var(--text-1);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.moment:hover {
-  background: var(--bg-3);
-}
-.moment.is-current {
-  border-left-color: var(--accent);
-}
-.moment-move {
-  display: flex;
-  align-items: center;
-  gap: var(--s-1);
-  font-weight: 700;
-}
-.moment-move .mono {
-  color: var(--text-3);
-  font-weight: 400;
-}
-.moment-text {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-.report .btn-full {
-  width: 100%;
-  justify-content: center;
-}
-
 /* ================= Tab Chơi: hai chế độ Với máy / Với người ================= */
 .mode-tabs {
   display: grid;
@@ -2282,56 +2271,6 @@ button.top-link {
   font-size: var(--fs-sm);
 }
 
-/* ---- Rút ra từ ván này ---- */
-.takeaways {
-  display: grid;
-  gap: var(--s-2);
-}
-.takeaways ol {
-  display: grid;
-  gap: var(--s-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: ta;
-}
-.takeaways li {
-  counter-increment: ta;
-  display: flex;
-  gap: var(--s-2);
-}
-.takeaways li::before {
-  content: counter(ta);
-  flex: none;
-  width: 22px;
-  height: 22px;
-  margin-top: 2px;
-  border-radius: var(--r-sm);
-  background: var(--bg-3);
-  color: var(--text-1);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  line-height: 22px;
-  text-align: center;
-}
-.ta-item {
-  flex: 1;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text-1);
-  font: inherit;
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  text-align: left;
-}
-button.ta-item {
-  cursor: pointer;
-}
-button.ta-item:hover {
-  text-decoration: underline;
-}
-
 /* ---- Bàn cờ nổi (?mini=1): cửa sổ nhỏ chỉ có bàn cờ ----
    Kín đáo: nền trơn, chữ nhỏ, không màu nhấn — liếc qua chỉ thấy một ô cửa sổ.
    Bàn cờ chiếm hết bề ngang, hai thanh 36px trên dưới. */
@@ -2468,4 +2407,47 @@ button.ta-item:hover {
 }
 .mini-away-icon {
   color: var(--text-3);
+}
+
+/* ---- Huấn luyện viên (Hồ sơ) ---- */
+.coach {
+  display: grid;
+  gap: var(--s-3);
+}
+.coach-text {
+  margin: 0;
+  font-size: var(--fs-md, 16px);
+  line-height: 1.55;
+  color: var(--text-1);
+}
+.coach-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.coach-fact {
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.coach-fact b {
+  color: var(--text-1);
+}
+.coach .label {
+  margin: 0;
+}
+.coach-src {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.coach-text.is-typing::after {
+  content: "…";
+}
+/* Dòng bài học là thẻ <a>: không gạch chân như link chữ */
+a.quick {
+  color: inherit;
+  text-decoration: none;
 }

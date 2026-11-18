@@ -43,6 +43,9 @@ describe('classify', () => {
 
   it('bỏ lỡ chiếu hết', () => {
     expect(classify({ before: { mate: 2 }, after: { cp: 600 }, side: 'w', isBest: false })).toBe('miss');
+    // Bỏ chiếu hết nhưng vẫn hơn cả Hậu: không phải bỏ lỡ (Đen, -19 vẫn thắng chắc)
+    expect(classify({ before: { mate: -6 }, after: { cp: -1900 }, side: 'b', isBest: false })).not.toBe('miss');
+    expect(classify({ before: { mate: -6 }, after: { cp: -1900 }, side: 'b', isBest: false })).toBe('good');
   });
 
   it('nước tốt nhất và nước sách', () => {

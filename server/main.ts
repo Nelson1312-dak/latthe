@@ -12,7 +12,8 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
 import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
-import { explain, ollamaAlive, queueDepth, summarize } from './advisor.ts';
+import { advise, explain, ollamaAlive, queueDepth } from './advisor.ts';
+import { coachReport } from './coach.ts';
 import { pickPuzzle, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
 import { Live } from './live/index.ts';
 import { CONTROLS, DEFAULT_CONTROL, REFUSALS } from '../shared/protocol.ts';
@@ -442,17 +443,25 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     return json(res, 200, { ollama: await ollamaAlive(), hangCho: queueDepth() });
   }
 
-  // Ba điều rút ra từ ván: viết lại các nhận định đã tính sẵn cho tự nhiên
-  if (path === '/api/advisor/summary' && method === 'POST') {
+  // Huấn luyện viên (Hồ sơ): nhận định từ các ván gần nhất đã chấm — tính ngay, nhanh
+  if (path === '/api/coach' && method === 'GET') {
     const user = currentUser(req);
-    const body = await readJson(req, 8_000).catch(() => null);
-    const items = body?.items;
-    if (!Array.isArray(items) || !items.length || items.length > 4 || items.some((t) => typeof t !== 'string' || t.length > 400)) {
-      return json(res, 400, { error: 'Dữ kiện không đúng dạng' });
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    return json(res, 200, coachReport(db, user.id));
+  }
+
+  // Lời khuyên bằng chữ (AI viết, code kiểm) — có thể mất vài chục giây lần đầu
+  if (path === '/api/coach/advice' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const rp = coachReport(db, user.id);
+    if (!rp.facts) return json(res, 200, { advice: null, source: 'template' });
+    // Đang dở ván online thì không gọi mô hình (GPU để dành, và cho chắc không ai hỏi máy giữa ván)
+    if (live.isPlaying(user.id)) {
+      const { templateAdvice } = await import('../shared/coach.ts');
+      return json(res, 200, { advice: templateAdvice(rp.facts, rp.lessons), source: 'template' });
     }
-    // Chưa đăng nhập, hoặc đang dở ván online: trả nguyên câu gốc, không dùng mô hình
-    if (!user || live.isPlaying(user.id)) return json(res, 200, { items, source: 'template' });
-    return json(res, 200, await summarize(db, user.id, items as string[]));
+    return json(res, 200, await advise(db, user.id, rp.facts, rp.lessons));
   }
 
   if (path === '/api/advisor/explain' && method === 'POST') {

@@ -22,11 +22,10 @@ import { ping } from '../../app/ping.ts';
 import { copyShareLink, createShareLink, downloadShareImage, shareStateFor, type ShareMeta } from '../../app/share.ts';
 import { leaveOnlineMode, onlinePanel } from './online.ts';
 import { icon, type IconName } from '../icons.ts';
-import { offerReview, openReviewResult } from './review.ts';
 import type { ReviewResult } from '../../analysis/review.ts';
 import { saveReview } from '../../app/reviews.ts';
-import type { MoveClass } from '../../../shared/winrate.ts';
-import { BAD_MOVES, createReporter, reportCard as reportHtml } from '../report.ts';
+import { boardMarks, createReporter, reviewPanel, reviewProgress } from '../report.ts';
+import { dropBackground, preAnalyse } from '../../analysis/precompute.ts';
 import { buildFacts } from '../../../shared/advisor/facts.ts';
 import { detectMotifs } from '../../../shared/advisor/motifs.ts';
 import { hintSteps } from '../../../shared/advisor/templates.ts';
@@ -117,7 +116,7 @@ function dropReport(): void {
 
 /** Chấm cả ván vừa xong, ngay tại chỗ. */
 function startReport(rerender: () => void): void {
-  reporter.start(game.pgn(), rerender, () => trySaveReview(), setup.mode === 'bot' ? setup.side : null);
+  reporter.start(game.pgn(), rerender, () => trySaveReview());
 }
 
 /** Kết quả ván: tính cả đầu hàng, thứ mà thế cờ không biết. */
@@ -139,6 +138,7 @@ const isBotTurn = () => setup.mode === 'bot' && game.turn === botSide() && !ende
 
 function newGame(): void {
   void engine().cancel();
+  dropBackground();
   game = new Game();
   pendingPromotion = null;
   premove = null;
@@ -287,11 +287,7 @@ function resultCard(result: Outcome): string {
     <b class="result-head">${!mine ? who : won ? 'Bạn thắng' : 'Bạn thua'}</b>
     <span class="result-why">${mine ? `${who} · ${why}` : why}</span>
     <div class="result-actions">
-      ${
-        // Có bảng chấm ván ngay bên dưới thì nút xem lại nằm ở đó, khỏi lặp
-        reporter.current ? '' : button({ label: 'Xem lại ván', kind: 'primary', icon: 'review', full: true })
-      }
-      ${button({ label: 'Chơi lại', icon: 'play' })}
+      ${button({ label: 'Chơi lại', kind: 'primary', icon: 'play' })}
       ${button({ label: 'Ván mới', icon: 'settings' })}
     </div>
     <button class="link-btn" data-act="pgn">${icon('copy', 16)}<span>${copied ? 'Đã chép PGN' : 'Sao chép PGN'}</span></button>
@@ -381,7 +377,7 @@ function gameScreen(extraSide = ''): string {
           !started
             ? sheet(setupPanel())
             : sheet(
-                ...(result ? [resultCard(result), reportCard()] : []),
+                ...(result ? [resultCard(result), reviewBlock()] : []),
                 khaiCuoc() || '<p class="opening-line">Thế cờ ban đầu</p>',
                 game.length
                   ? moveList(
@@ -470,6 +466,8 @@ export function mountPlay(rerender: () => void): void {
   });
 
   drawBoard();
+  // Chấm ngầm từng thế cờ ngay trong lúc chơi (engine riêng), hết ván là có kết quả
+  if (started) preAnalyse(fensOfGame());
   // Kho khai cuộc: nạp đúng MỘT lần rồi vẽ lại đúng một lần.
   // mountPlay chạy sau mỗi lần vẽ, nên gọi .then(rerender) vô điều kiện ở đây
   // là tự gọi lại mình mãi mãi — trang treo cứng.
@@ -684,8 +682,6 @@ async function storeGame(rerender: () => void): Promise<void> {
   saved = true;
   const result = outcome();
   if (!result) return;
-  const who = setup.mode === 'bot' ? levelById(setup.level).name : 'Hai người một máy';
-  offerReview(game.pgn(), setup.mode === 'bot' ? setup.side : null, `${who} · ${outcomeText(result)}`);
   ping('play_end');
   // Chấm ván ngay, song song với việc lưu
   startReport(rerender);
@@ -827,13 +823,6 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
       newGame();
       started = false;
     },
-    // Đã chấm xong thì mở luôn kết quả; chưa thì sang màn Xem lại để chấm
-    'Xem lại ván': () => {
-      if (!openFullReview()) location.hash = '#/xem-lai';
-    },
-    'Xem lại chi tiết': () => {
-      if (!openFullReview()) location.hash = '#/xem-lai';
-    },
     'Về đầu ván': () => game.first(),
     'Lùi một nước': () => game.prev(),
     'Tiến một nước': () => game.next(),
@@ -917,33 +906,28 @@ export function setBotLevel(level: number): void {
 }
 
 /** Nhãn xếp loại và mũi tên nước tốt hơn cho nước đang xem, khi ván đã chấm. */
-function markForPly(): { badge?: { square: Square; cls: MoveClass }; arrows?: { from: Square; to: Square; kind: 'coach' }[] } {
-  const r = reviewed();
-  if (!r || game.ply === 0) return {};
-  const m = r.moves[game.ply - 1];
-  if (!m) return {};
-  const bad = BAD_MOVES.includes(m.cls);
-  const best = m.best[0];
-  return {
-    badge: { square: m.uci.slice(2, 4) as Square, cls: m.cls },
-    arrows:
-      bad && best && best.uci !== m.uci
-        ? [{ from: best.uci.slice(0, 2) as Square, to: best.uci.slice(2, 4) as Square, kind: 'coach' }]
-        : undefined,
-  };
+function markForPly(): ReturnType<typeof boardMarks> {
+  return boardMarks(reviewed(), game.ply);
 }
 
-/** Bảng chấm ván của tab Chơi. */
-function reportCard(): string {
+/** Xem lại ván ngay dưới thẻ kết quả: đang chấm thì thanh tiến độ, xong thì bảng xem lại. */
+function reviewBlock(): string {
   const cur = reporter.current;
   if (!cur || cur.pgn !== game.pgn()) return '';
-  return reportHtml(cur, {
+  if (cur.phase !== 'done' || !cur.result) return reviewProgress(cur);
+  return reviewPanel(cur.result, {
     me: setup.mode === 'bot' ? setup.side : null,
     opponent: `Máy ${levelById(setup.level).name.toLowerCase()}`,
-    currentPly: game.ply,
+    ply: game.ply,
     share: shareStateFor(game.pgn()),
   });
 }
+
+/** Mọi thế cờ của ván đang chơi, để chấm ngầm. */
+function fensOfGame(): string[] {
+  return [START_FEN, ...game.history.map((m) => m.fen)];
+}
+const START_FEN = new Game().fen;
 
 /** Thông tin ván để chia sẻ: tên hai bên, kết quả. */
 function shareMeta(): ShareMeta | null {
@@ -960,26 +944,6 @@ function shareMeta(): ShareMeta | null {
     label: outcomeText(res),
     side: setup.mode === 'bot' ? setup.side : null,
   };
-}
-
-/** Mở màn Xem lại với kết quả vừa chấm, không chấm lại. */
-function openFullReview(): boolean {
-  const r = reviewed();
-  const res = outcome();
-  if (!r || !res) return false;
-  const who = setup.mode === 'bot' ? `Máy ${levelById(setup.level).name.toLowerCase()}` : 'Hai người một máy';
-  openReviewResult({
-    pgn: game.pgn(),
-    playerSide: setup.mode === 'bot' ? setup.side : null,
-    label: `${who} · ${outcomeText(res)}`,
-    opponent: setup.mode === 'bot' ? `Máy ${levelById(setup.level).name.toLowerCase()}` : null,
-    gameId: savedGameId,
-    result: r,
-    ply: game.ply && game.ply < r.moves.length ? game.ply : undefined,
-  });
-  ping('report_detail');
-  location.hash = '#/xem-lai';
-  return true;
 }
 
 /* ---------------- Bàn cờ nổi (cửa sổ nhỏ, xem src/app/mini.ts) ---------------- */

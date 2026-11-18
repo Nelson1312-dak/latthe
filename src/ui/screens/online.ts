@@ -9,8 +9,8 @@
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
 import { endBadgesFor } from '../../board/Board.ts';
-import { createReporter, pgnFromSans, reportCard } from '../report.ts';
-import { openReviewResult } from './review.ts';
+import { boardMarks, createReporter, pgnFromSans, reviewPanel, reviewProgress } from '../report.ts';
+import { preAnalyse } from '../../analysis/precompute.ts';
 import { saveReview } from '../../app/reviews.ts';
 import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
 import { Game, outcomeText, type Side } from '../../../shared/chess.ts';
@@ -421,13 +421,21 @@ function vánCờ(): string {
           hòaĐangChờ,
           xong ? kếtQuả() : '',
           moveList(
-            s.history.map((san) => ({ san })),
-            s.history.length,
+            s.history.map((san, i) => ({ san, cls: đãChấm()?.moves[i]?.cls })),
+            xong ? plyĐangXem() : s.history.length,
           ),
+          xong
+            ? `<div class="move-bar">
+                ${iconButton('first', 'Về đầu ván', { disabled: plyĐangXem() === 0 })}
+                ${iconButton('prev', 'Lùi một nước', { disabled: plyĐangXem() === 0 })}
+                ${iconButton('next', 'Tiến một nước', { disabled: plyĐangXem() >= s.history.length })}
+                ${iconButton('last', 'Tới nước mới nhất', { disabled: plyĐangXem() >= s.history.length })}
+              </div>`
+            : '',
           xong
             ? ''
             : `<div class="locked-block">
-                ${notice('Engine và Huấn luyện viên mở lại sau khi ván kết thúc.', 'locked', 'engine')}
+                ${notice('Bảng chấm ván hiện ra ngay khi ván kết thúc.', 'locked', 'engine')}
               </div>`,
         )}
       </div>
@@ -468,28 +476,30 @@ function đốiThủ(): string {
 }
 
 /**
- * Mở màn Xem lại với kết quả vừa chấm (không chấm lại). Ván online không có
- * nút tua trên bàn cờ đang đánh, nên bấm vào khoảnh khắc là sang thẳng màn
- * Xem lại, đúng nước đó.
+ * Hết ván thì tua lại được ngay trên bàn cờ vừa đánh: nước đang xem (null là
+ * thế cờ cuối). Ván mới bắt đầu thì về null.
  */
-function mởXemLại(ply?: number): boolean {
+let xemPly: number | null = null;
+
+function plyĐangXem(): number {
   const s = live.state;
-  if (!s?.over) return false;
-  const pgn = pgnFromSans(s.history);
-  const r = reporter.resultFor(pgn);
-  if (!r) return false;
-  openReviewResult({
-    pgn,
-    playerSide: s.youAre,
-    label: `Đấu với ${đốiThủ()} · ${outcomeText({ winner: s.over.winner, reason: s.over.reason })}`,
-    opponent: đốiThủ(),
-    gameId: s.over.gameId,
-    result: r,
-    ply,
-  });
-  ping('report_detail');
-  location.hash = '#/xem-lai';
-  return true;
+  return xemPly ?? s?.history.length ?? 0;
+}
+
+/** Kết quả chấm của ván vừa xong (nếu đã chấm xong). */
+function đãChấm() {
+  const s = live.state;
+  return s?.over ? reporter.resultFor(pgnFromSans(s.history)) : null;
+}
+
+/** Mọi thế cờ của ván online, để chấm ngầm trong lúc đánh. */
+function fensOf(history: readonly string[]): string[] {
+  try {
+    const g = Game.fromPgn(pgnFromSans(history));
+    return [new Game().fen, ...g.history.map((m) => m.fen)];
+  } catch {
+    return [];
+  }
 }
 
 /** Thông tin ván online để chia sẻ. Đối thủ là AI thì ghi rõ "(AI)". */
@@ -519,19 +529,15 @@ function kếtQuả(): string {
     <span class="muted">${outcomeText({ winner: o.winner, reason: o.reason })}</span>
     ${stats([['Elo mới', `${mới} (${đổi > 0 ? `+${đổi}` : đổi})`]])}
     <div class="row-actions">
-      ${
-        // Có bảng chấm ngay bên dưới thì nút xem lại nằm trong bảng, khỏi lặp
-        o.gameId && !reporter.current ? button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' }) : ''
-      }
-      ${button({ label: 'Tìm trận mới', icon: 'play' })}
+      ${button({ label: 'Tìm trận mới', kind: 'primary', icon: 'play' })}
       ${button({ label: 'Về sảnh', kind: 'text' })}
     </div>
   </div>
   ${(() => {
     const cur = reporter.current;
-    return cur && cur.pgn === pgnFromSans(s.history)
-      ? reportCard(cur, { me: tôi, opponent: đốiThủ(), currentPly: s.history.length, share: shareStateFor(cur.pgn) })
-      : '';
+    if (!cur || cur.pgn !== pgnFromSans(s.history)) return '';
+    if (cur.phase !== 'done' || !cur.result) return reviewProgress(cur);
+    return reviewPanel(cur.result, { me: tôi, opponent: đốiThủ(), ply: plyĐangXem(), share: shareStateFor(cur.pgn) });
   })()}`;
 }
 
@@ -576,8 +582,8 @@ export function mountOnline(rerender: () => void): void {
     reporter.start(pgnFromSans(s.history), rerender, (r) => {
       // Lưu kết quả cùng ván (sinh thẻ ôn tập từ nước sai), lần sau mở ra là có ngay
       if (gameId) void saveReview(gameId, r);
-    }, s.youAre);
-  }
+    });
+  } else xemPly = null;
 
   // Ván cục bộ chỉ dùng để tô ô đi được. Dựng lại mỗi khi thế cờ đổi.
   if (shownFen !== s.fen) board = new Game(s.fen);
@@ -631,12 +637,28 @@ export function mountOnline(rerender: () => void): void {
   // Trượt quân khi vừa có thêm đúng một nước
   const thêmMộtNước = s.history.length === shownPly + 1 && s.lastMove;
   if (s.history.length !== shownPly) {
+    // Chấm ngầm từng thế cờ (kết quả chỉ hiện khi ván xong)
+    preAnalyse(fensOf(s.history));
     const cuối = s.history[s.history.length - 1];
     if (cuối && shownPly >= 0) playSound(cuối.includes('x') ? 'capture' : 'move');
     if (s.over && shownPly >= 0) playSound('end');
   }
   shownPly = s.history.length;
   shownFen = s.fen;
+
+  // Hết ván và đang tua lại một nước cũ: thế cờ lúc đó, nhãn xếp loại, mũi tên nước nên đi
+  const r = đãChấm();
+  if (s.over && r && xemPly !== null && xemPly !== s.history.length) {
+    const m = xemPly > 0 ? r.moves[xemPly - 1] : null;
+    view.render({
+      fen: m ? m.fenAfter : (r.moves[0]?.fenBefore ?? new Game().fen),
+      orientation: s.youAre,
+      lastMove: m ? [m.uci.slice(0, 2) as Square, m.uci.slice(2, 4) as Square] : undefined,
+      ...boardMarks(r, xemPly),
+      label: m ? `Thế cờ sau nước ${Math.ceil(xemPly / 2)}.${m.san}` : 'Thế cờ đầu ván',
+    });
+    return;
+  }
 
   view.render(
     {
@@ -647,6 +669,7 @@ export function mountOnline(rerender: () => void): void {
       premove: premove ?? undefined,
       // Hết ván: vương miện cho bên thắng, dấu # / lá cờ / đồng hồ cho bên thua
       endBadges: s.over ? endBadgesFor(s.fen, s.over) : undefined,
+      ...(s.over ? boardMarks(r, s.history.length) : {}),
       label: `Bàn cờ, lượt ${sideName(s.turn)}`,
     },
     thêmMộtNước ? s.lastMove! : undefined,
@@ -689,12 +712,28 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
     return true;
   }
 
-  // Bảng chấm ván: bấm ô nhịp ván / khoảnh khắc -> sang Xem lại đúng nước đó
-  const rp = target.closest<HTMLElement>('[data-report-ply]');
-  if (rp) {
-    mởXemLại(Number(rp.dataset.reportPly));
-    rerender();
-    return true;
+  // Hết ván: tua lại ngay trên bàn cờ (ô nhịp ván, khoảnh khắc, sổ nước, nút tua)
+  const s0 = live.state;
+  if (s0?.over) {
+    const n = s0.history.length;
+    const rp = target.closest<HTMLElement>('[data-report-ply], .move[data-ply]');
+    if (rp) {
+      xemPly = Number(rp.dataset.reportPly ?? rp.dataset.ply);
+      rerender();
+      return true;
+    }
+    const t = target.closest<HTMLButtonElement>('button')?.getAttribute('title');
+    const tới: Record<string, number> = {
+      'Về đầu ván': 0,
+      'Lùi một nước': Math.max(0, plyĐangXem() - 1),
+      'Tiến một nước': Math.min(n, plyĐangXem() + 1),
+      'Tới nước mới nhất': n,
+    };
+    if (t && t in tới) {
+      xemPly = tới[t];
+      rerender();
+      return true;
+    }
   }
 
   if (target.closest('[data-invite]')) {
@@ -784,16 +823,6 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
     },
     Hủy: () => {
       pendingPromotion = null;
-    },
-    'Xem lại ván': () => {
-      if (mởXemLại()) return;
-      const id = live.state?.over?.gameId;
-      if (id) location.hash = `#/xem-lai?game=${id}`;
-    },
-    'Xem lại chi tiết': () => {
-      if (mởXemLại()) return;
-      const id = live.state?.over?.gameId;
-      if (id) location.hash = `#/xem-lai?game=${id}`;
     },
     'Tới trang đăng nhập': () => {
       location.hash = '#/tai-khoan';

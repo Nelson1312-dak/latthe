@@ -1,20 +1,30 @@
-// Bảng chấm ván: hết ván là engine chấm luôn từng nước, ngay tại chỗ.
-// Dùng chung cho tab Chơi (đấu với máy, hai người một máy) và tab Đấu (online).
+// Xem lại ván: hết ván là có ngay, ngay trên bàn cờ vừa chơi — không sang màn khác.
+// Dùng chung cho tab Chơi (với máy, hai người một máy), ván online, và ván đã lưu.
 //
-// Chạy trong trình duyệt nên miễn phí, không cần đăng nhập, không tốn server.
-// 250ms mỗi thế cờ (màn Xem lại dùng 450ms) vì người chơi đang ngồi chờ.
+// Việc chấm là của Stockfish chạy trên máy người chơi (không phải AI), và phần lớn
+// đã chấm ngầm trong lúc chơi (src/analysis/precompute.ts), nên thường không phải chờ.
+//
+// Bố cục cột phải sau ván, từ trên xuống:
+// 1. Độ chính xác: của bạn (to) và của đối thủ (nhỏ).
+// 2. Nhịp ván: mỗi ô một nước của bạn, tô theo xếp loại — thấy ngay ván đổ ở đâu.
+// 3. Khoảnh khắc đáng xem (tối đa 5) và thẻ nước đang xem: vì sao hỏng, nên đi gì,
+//    thế cờ đổi ra sao. Nút ‹ › nhảy qua từng khoảnh khắc; bàn cờ đi theo.
+// Lời giải thích lấy từ engine và bộ nhận diện mô-típ, không gọi AI — AI chỉ làm
+// Huấn luyện viên nhìn cả lịch sử ván (Hồ sơ).
 
 import { reviewGame, ReviewCancelled, type ReviewResult, type ReviewedMove } from '../analysis/review.ts';
+import { cachedAnalyser, REVIEW_PV } from '../analysis/precompute.ts';
 import { loadOpenings } from '../analysis/openings.ts';
-import { engine } from '../engine/engine.ts';
 import { CLASS_LABEL } from '../board/Board.ts';
 import { Game, type Side } from '../../shared/chess.ts';
-import type { MoveClass } from '../../shared/winrate.ts';
-import { button, classBadge, figurine, notice } from './components/index.ts';
+import type { Square } from '../../shared/fen.ts';
+import { scoreFor, type MoveClass } from '../../shared/winrate.ts';
+import { whyText } from '../../shared/advisor/templates.ts';
+import { factsForMove } from '../app/advisor.ts';
+import { sanVi, thếCờ } from '../analysis/words.ts';
+import { classBadge, figurine, notice } from './components/index.ts';
 import { icon } from './icons.ts';
 import type { ShareState } from '../app/share.ts';
-import { takeaways, type Takeaway } from '../analysis/takeaways.ts';
-import { auth } from '../app/session.ts';
 
 export interface Report {
   phase: 'running' | 'done' | 'error';
@@ -24,8 +34,6 @@ export interface Report {
   pgn: string;
   result: ReviewResult | null;
   error?: string;
-  /** Ba điều rút ra từ ván; `llm` là đã được Huấn luyện viên viết lại. */
-  ta?: { items: Takeaway[]; source: 'facts' | 'llm'; polishing: boolean };
 }
 
 /** Một "người chấm" giữ đúng một bảng chấm; chấm ván mới là huỷ ván cũ. */
@@ -33,37 +41,13 @@ export interface Reporter {
   readonly current: Report | null;
   /** Kết quả chấm, nếu đã xong và đúng là của ván `pgn`. */
   resultFor(pgn: string): ReviewResult | null;
-  /** `me`: bên của người chơi (null là hai người một máy) — để rút ra điều đúng cho người đó. */
-  start(pgn: string, rerender: () => void, onDone?: (r: ReviewResult) => void, me?: Side | null): void;
+  start(pgn: string, rerender: () => void, onDone?: (r: ReviewResult) => void): void;
   drop(): void;
 }
 
 export function createReporter(): Reporter {
   let report: Report | null = null;
   let token = 0;
-
-  async function polish(my: number, items: Takeaway[]): Promise<void> {
-    let out: Takeaway[] | null = null;
-    try {
-      const r = await fetch('/api/advisor/summary', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ items: items.map((t) => t.text) }),
-      });
-      const d = (await r.json()) as { items?: string[]; source?: string };
-      if (r.ok && (d.source === 'llm' || d.source === 'cache') && d.items?.length === items.length) {
-        out = items.map((t, i) => ({ ...t, text: d.items![i] }));
-      }
-    } catch {
-      /* máy chủ AI nghỉ: giữ câu gốc */
-    }
-    if (my !== token || !report?.ta) return;
-    report.ta = out ? { items: out, source: 'llm', polishing: false } : { ...report.ta, polishing: false };
-    rerenderRef?.();
-  }
-  let rerenderRef: (() => void) | null = null;
-
   return {
     get current() {
       return report;
@@ -75,10 +59,9 @@ export function createReporter(): Reporter {
       token++;
       report = null;
     },
-    start(pgn, rerender, onDone, me = null) {
+    start(pgn, rerender, onDone) {
       if (report && report.pgn === pgn) return; // đang chấm / đã chấm đúng ván này
       const my = ++token;
-      rerenderRef = rerender;
       let plies = 0;
       try {
         plies = Game.fromPgn(pgn).length;
@@ -90,36 +73,23 @@ export function createReporter(): Reporter {
         return;
       }
       report = { phase: 'running', done: 0, total: plies + 1, pgn, result: null };
-      rerender();
       void (async () => {
         try {
           await loadOpenings();
-          const result = await reviewGame(pgn, engine(), {
-            movetimeMs: 250,
-            multipv: 2,
+          const result = await reviewGame(pgn, cachedAnalyser, {
+            multipv: REVIEW_PV,
             onProgress: (done, total) => {
               if (my !== token || !report) return;
               report.done = done;
               report.total = total;
-              if (done % 3 === 0 || done === total) rerender();
+              if (done % 4 === 0) rerender();
             },
             cancelled: () => my !== token,
           });
           if (my !== token) return;
-          const items = takeaways(result, me);
-          report = {
-            phase: 'done',
-            done: report?.total ?? 0,
-            total: report?.total ?? 0,
-            pgn,
-            result,
-            ta: { items, source: 'facts', polishing: Boolean(auth.user) && items.length > 0 },
-          };
+          report = { phase: 'done', done: plies + 1, total: plies + 1, pgn, result };
           onDone?.(result);
           rerender();
-          // Nhờ Huấn luyện viên viết lại cho tự nhiên (chạy trên máy chủ, có thể mất
-          // vài chục giây lần đầu). Không được thì giữ nguyên câu gốc.
-          if (report.ta?.polishing) void polish(my, items);
         } catch (err) {
           if (err instanceof ReviewCancelled || my !== token) return;
           report = { phase: 'error', done: 0, total: 0, pgn, result: null, error: (err as Error).message };
@@ -133,121 +103,178 @@ export function createReporter(): Reporter {
 export const BAD_MOVES: MoveClass[] = ['inaccuracy', 'mistake', 'blunder', 'miss'];
 /** Mức nặng nhẹ, để chọn ra những khoảnh khắc đáng xem nhất. */
 const SEVERITY: Record<MoveClass, number> = { miss: 4, blunder: 4, mistake: 3, inaccuracy: 2, good: 0, best: 0, book: 0 };
+/** Tối đa ngần này khoảnh khắc: nhiều hơn là thành đọc lại cả ván. */
+const MAX_MOMENTS = 5;
 
 const moveNo = (m: ReviewedMove) => `${Math.ceil(m.ply / 2)}.${m.side === 'b' ? '..' : ''}`;
 
-export interface ReportView {
+/** Những nước đáng xem lại nhất của bạn (hai người một máy: của cả hai), theo thứ tự ván. */
+export function momentsOf(r: ReviewResult, me: Side | null): ReviewedMove[] {
+  return r.moves
+    .filter((m) => (!me || m.side === me) && BAD_MOVES.includes(m.cls))
+    .sort((a, b) => SEVERITY[b.cls] - SEVERITY[a.cls] || a.accuracy - b.accuracy)
+    .slice(0, MAX_MOMENTS)
+    .sort((a, b) => a.ply - b.ply);
+}
+
+/** Nhãn xếp loại và mũi tên nước nên đi, cho thế cờ sau nước `ply`. */
+export function boardMarks(
+  r: ReviewResult | null,
+  ply: number,
+): { badge?: { square: Square; cls: MoveClass }; arrows?: { from: Square; to: Square; kind: 'coach' }[] } {
+  const m = r && ply > 0 ? r.moves[ply - 1] : null;
+  if (!m) return {};
+  const best = m.best[0];
+  return {
+    badge: { square: m.uci.slice(2, 4) as Square, cls: m.cls },
+    arrows:
+      BAD_MOVES.includes(m.cls) && best && best.uci !== m.uci
+        ? [{ from: best.uci.slice(0, 2) as Square, to: best.uci.slice(2, 4) as Square, kind: 'coach' }]
+        : undefined,
+  };
+}
+
+/** Trong lúc chấm (thường chỉ vài giây vì đã chấm ngầm phần lớn). */
+export function reviewProgress(report: Report | null): string {
+  if (!report) return '';
+  if (report.phase === 'error') {
+    return notice(`Không chấm được ván: ${report.error ?? 'lỗi lạ'}`, 'danger', 'engine');
+  }
+  if (report.phase !== 'running') return '';
+  const pct = report.total ? Math.round((report.done / report.total) * 100) : 0;
+  return `<div class="rv rv-wait">
+    <p class="rv-kicker">${icon('engine', 16)}<span>Đang chấm ván</span><b class="mono">${pct}%</b></p>
+    <div class="progress"><span style="width:${pct}%"></span></div>
+  </div>`;
+}
+
+export interface PanelView {
   /** Bên của người chơi; null là hai người một máy (chấm cả hai bên). */
   me: Side | null;
   /** Tên đối thủ ("Máy cấp 3", tên người chơi online). */
   opponent: string;
-  /** Nước đang xem trên bàn cờ, để tô ô / khoảnh khắc tương ứng. */
-  currentPly: number;
-  /** Tình trạng chia sẻ ván này (null là chưa bấm chia sẻ). */
+  /** Nước đang xem trên bàn cờ (0 là thế cờ đầu). */
+  ply: number;
+  /** Tình trạng chia sẻ; undefined là không có nút chia sẻ (ván người khác). */
   share?: ShareState | null;
+  /** Tên người chơi khi người xem không phải họ (ván được chia sẻ); thay cho chữ "bạn". */
+  meName?: string;
+}
+
+const CLASS_NOTE: Partial<Record<MoveClass, string>> = {
+  best: 'Đúng nước engine chọn.',
+  good: 'Nước ổn, thế cờ giữ nguyên.',
+  book: 'Nước theo sách khai cuộc.',
+};
+
+/** Nước nên đi, kèm điều nó mang lại, nhìn từ bên vừa đi. */
+function betterLine(m: ReviewedMove): string {
+  const best = m.best[0];
+  if (!best || best.uci === m.uci) return '';
+  const s = scoreFor(best.score, m.side);
+  const được =
+    s.mate !== undefined && s.mate > 0 ? `chiếu hết sau ${s.mate} nước` : `thế cờ ${thếCờ(best.score, m.side)}`;
+  return `<p class="rv-better"><span>Nên đi</span>${figurine(best.san, m.side)}<span class="rv-note">— ${được}</span></p>`;
+}
+
+/** Thẻ nước đang xem: xếp loại, vì sao, nên đi gì, thế cờ đổi ra sao. */
+function focusCard(m: ReviewedMove | null, me: Side | null, meName?: string): string {
+  if (!m) return `<p class="rv-why">Thế cờ đầu ván.</p>`;
+  const bad = BAD_MOVES.includes(m.cls);
+  const ai = me && m.side !== me ? 'Đối thủ' : me ? (meName ?? 'Bạn') : m.side === 'w' ? 'Trắng' : 'Đen';
+  const trước = thếCờ(m.scoreBefore, m.side);
+  const sau = thếCờ(m.scoreAfter, m.side);
+  return `<p class="rv-move">
+      <span class="mono">${moveNo(m)}</span>${figurine(m.san, m.side)}${classBadge(m.cls, 'md')}
+      <b style="color:var(--cls-${m.cls})">${CLASS_LABEL[m.cls]}</b>
+      <span class="rv-who">${ai} đi ${sanVi(m.san)}</span>
+    </p>
+    <p class="rv-why">${bad ? whyText(factsForMove(m)) : (CLASS_NOTE[m.cls] ?? '')}</p>
+    ${bad ? betterLine(m) : ''}
+    ${bad && trước !== sau ? `<p class="rv-shift">Thế cờ của ${meName && ai === meName ? ai : ai.toLowerCase()}: ${trước} → <b>${sau}</b></p>` : ''}`;
 }
 
 /**
- * Bảng chấm ván. Thiết kế riêng, không theo khuôn "Game Review" của chess.com:
- * - độ chính xác hai bên là hai thanh ngang;
- * - "nhịp ván": một dải ô màu, mỗi ô một nước của bạn, tô theo xếp loại, nước
- *   càng hỏng ô càng cao — nhìn là thấy ván đổ ở đoạn nào;
- * - tối đa ba khoảnh khắc đáng xem nhất, kèm nước tốt hơn.
- * Ô nhịp ván và khoảnh khắc mang `data-report-ply`; màn hình tự lo khi bấm.
+ * Khối xem lại ván ở cột phải. Mọi thứ bấm được mang `data-report-ply` (nước
+ * cần nhảy tới); màn hình chứa nó tự lo việc đổi thế cờ trên bàn.
  */
-export function reportCard(report: Report | null, v: ReportView): string {
-  if (!report) return '';
-  if (report.phase === 'running') {
-    const pct = report.total ? Math.round((report.done / report.total) * 100) : 0;
-    return `<div class="report">
-      <p class="report-title">${icon('engine', 18)}<span>Đang chấm ván…</span><b class="mono">${pct}%</b></p>
-      <div class="progress"><span style="width:${pct}%"></span></div>
-      <p class="report-note">Engine chấm từng nước ngay trên máy bạn — miễn phí, không cần đăng nhập.</p>
-    </div>`;
-  }
-  if (report.phase === 'error' || !report.result) {
-    return `<div class="report">${notice(`Không chấm được ván: ${report.error ?? 'lỗi lạ'}`, 'danger', 'engine')}</div>`;
-  }
-  const r = report.result;
+export function reviewPanel(r: ReviewResult, v: PanelView): string {
   const me = v.me;
-  const opp: Side = me === 'w' ? 'b' : 'w';
-  const accRow = (name: string, value: number, mine: boolean) =>
-    `<div class="acc-row${mine ? ' is-me' : ''}"><span>${name}</span>` +
-    `<span class="acc-bar"><i style="width:${Math.max(2, value)}%"></i></span><b class="mono">${value.toFixed(1)}</b></div>`;
-  const acc = me
-    ? accRow('Bạn', me === 'w' ? r.accuracy.w : r.accuracy.b, true) +
-      accRow(v.opponent.replace(/[<>&"]/g, ''), opp === 'w' ? r.accuracy.w : r.accuracy.b, false)
-    : accRow('Trắng', r.accuracy.w, false) + accRow('Đen', r.accuracy.b, false);
+  const accMe = me === 'b' ? r.accuracy.b : r.accuracy.w;
+  const accOpp = me === 'b' ? r.accuracy.w : r.accuracy.b;
+  const tênOpp = (me ? v.opponent : 'Đen').replace(/[<>&"]/g, '');
 
   const mine = r.moves.filter((m) => !me || m.side === me);
   const beats = mine
     .map(
       (m) =>
-        `<button class="beat${m.ply === v.currentPly ? ' is-current' : ''}" data-report-ply="${m.ply}" ` +
+        `<button class="beat${m.ply === v.ply ? ' is-current' : ''}" data-report-ply="${m.ply}" ` +
         `style="--c:var(--cls-${m.cls})" title="${moveNo(m)} ${m.san} — ${CLASS_LABEL[m.cls]}" ` +
         `aria-label="${moveNo(m)} ${m.san}, ${CLASS_LABEL[m.cls]}"></button>`,
     )
     .join('');
 
-  const counts = new Map<MoveClass, number>();
-  for (const m of mine) counts.set(m.cls, (counts.get(m.cls) ?? 0) + 1);
-  const order: MoveClass[] = ['best', 'good', 'book', 'inaccuracy', 'mistake', 'blunder', 'miss'];
-  const chips = order
-    .filter((c) => counts.get(c))
-    .map(
-      (c) =>
-        `<span class="cls-chip" title="${CLASS_LABEL[c]}">${classBadge(c)}<span>${CLASS_LABEL[c]}</span><b class="mono">${counts.get(c)}</b></span>`,
-    )
-    .join('');
+  const moments = momentsOf(r, me);
+  const idx = moments.findIndex((m) => m.ply === v.ply);
+  const prev = [...moments].reverse().find((m) => m.ply < v.ply);
+  const next = moments.find((m) => m.ply > v.ply);
+  const nav = (m: ReviewedMove | undefined, name: 'prev' | 'next', title: string) =>
+    `<button class="btn btn-icon" title="${title}" aria-label="${title}"${m ? ` data-report-ply="${m.ply}"` : ' disabled'}>${icon(name, 17)}</button>`;
 
-  const moments = mine
-    .filter((m) => BAD_MOVES.includes(m.cls))
-    .sort((a, b) => SEVERITY[b.cls] - SEVERITY[a.cls] || a.accuracy - b.accuracy)
-    .slice(0, 3)
-    .sort((a, b) => a.ply - b.ply)
-    .map((m) => {
-      const best = m.best[0];
-      return (
-        `<button class="moment${m.ply === v.currentPly ? ' is-current' : ''}" data-report-ply="${m.ply}">` +
-        `<span class="moment-move"><span class="mono">${moveNo(m)}</span>${figurine(m.san, m.side)}${classBadge(m.cls)}</span>` +
-        `<span class="moment-text">${CLASS_LABEL[m.cls]}${best && best.uci !== m.uci ? ` · nên đi ${figurine(best.san, m.side)}` : ''}</span>` +
-        `</button>`
-      );
-    })
-    .join('');
+  const current = v.ply > 0 ? (r.moves[v.ply - 1] ?? null) : null;
 
-  return `<div class="report">
-    <p class="report-title">${icon('engine', 18)}<span>Chấm ván</span></p>
-    <div class="acc-rows">${acc}</div>
-    ${taBlock(report)}
-    <div class="beats-wrap">
-      <p class="report-label">Nhịp ván${me ? ' của bạn' : ''} <span>· bấm một ô để xem nước đó</span></p>
-      <div class="beats">${beats}</div>
+  return `<section class="rv">
+    <div class="rv-acc">
+      <div class="rv-acc-main"><b class="mono">${accMe.toFixed(1)}</b><span>độ chính xác của ${
+        me ? (v.meName ?? 'bạn').replace(/[<>&"]/g, '') : 'Trắng'
+      }</span></div>
+      <div class="rv-acc-opp"><b class="mono">${accOpp.toFixed(1)}</b><span>${tênOpp}</span></div>
     </div>
-    <div class="cls-chips">${chips}</div>
+    <div class="beats" aria-label="Nhịp ván${me ? ' của bạn' : ''}">${beats}</div>
+
+    <div class="rv-focus">
+      <div class="rv-focus-head">
+        <span class="rv-kicker">${
+          moments.length
+            ? idx >= 0
+              ? `Khoảnh khắc ${idx + 1}/${moments.length}`
+              : `${moments.length} khoảnh khắc đáng xem`
+            : 'Không có nước hỏng đáng kể'
+        }</span>
+        ${moments.length ? nav(prev, 'prev', 'Khoảnh khắc trước') + nav(next, 'next', 'Khoảnh khắc sau') : ''}
+      </div>
+      ${
+        moments.length
+          ? `<div class="rv-chips">${moments
+              .map(
+                (m) =>
+                  `<button class="rv-chip${m.ply === v.ply ? ' is-current' : ''}" data-report-ply="${m.ply}">` +
+                  `<span class="mono">${moveNo(m)}</span>${figurine(m.san, m.side)}${classBadge(m.cls)}</button>`,
+              )
+              .join('')}</div>`
+          : ''
+      }
+      ${focusCard(current, me, v.meName?.replace(/[<>&"]/g, ''))}
+    </div>
     ${
-      moments
-        ? `<p class="report-label">Đáng xem lại</p><div class="moments">${moments}</div>`
-        : `<p class="report-note">Không có nước hỏng nào đáng kể. Ván đẹp!</p>`
+      v.share === undefined
+        ? ''
+        : v.share
+          ? shareBox(v.share)
+          : `<button class="link-btn" data-share-create>${icon('friends', 16)}<span>Chia sẻ ván này</span></button>`
     }
-    <div class="report-actions">
-      ${button({ label: 'Xem lại chi tiết', icon: 'review' })}
-      ${v.share ? '' : `<button class="btn btn-secondary" data-share-create>${icon('friends', 17)}<span>Chia sẻ ván</span></button>`}
-    </div>
-    ${shareBox(v.share ?? null)}
-  </div>`;
+  </section>`;
 }
 
 /** Ô chia sẻ: link để gửi, chép link, tải ảnh tóm tắt. */
-function shareBox(s: ShareState | null): string {
-  if (!s) return '';
-  if (s.busy) return `<p class="report-note">Đang tạo link chia sẻ…</p>`;
+function shareBox(s: ShareState): string {
+  if (s.busy) return `<p class="rv-note">Đang tạo link chia sẻ…</p>`;
   if (s.error || !s.url) {
     return `<div class="share-box">${notice(`Không tạo được link: ${s.error ?? 'lỗi lạ'}`, 'danger')}
       <button class="link-btn" data-share-create>Thử lại</button></div>`;
   }
   return `<div class="share-box">
-    <p class="report-label">Link ván này <span>· ai mở cũng xem được bàn cờ và bảng chấm</span></p>
+    <p class="rv-note">Link ván này — ai mở cũng xem được bàn cờ và bảng chấm</p>
     <div class="share-link">
       <input class="field mono" readonly value="${s.url}" aria-label="Link chia sẻ" onclick="this.select()">
       <button class="btn btn-primary" data-share-copy>${icon(s.copied ? 'check' : 'copy', 17)}<span>${s.copied ? 'Đã chép' : 'Chép link'}</span></button>
@@ -261,25 +288,4 @@ export function pgnFromSans(sans: readonly string[]): string {
   const out: string[] = [];
   sans.forEach((san, i) => out.push(i % 2 === 0 ? `${i / 2 + 1}. ${san}` : san));
   return out.join(' ');
-}
-
-/** Mục "Rút ra từ ván này": ba câu, bấm vào câu có nước cụ thể là xem nước đó. */
-function taBlock(report: Report): string {
-  const ta = report.ta;
-  if (!ta || !ta.items.length) return '';
-  const nguồn = ta.polishing
-    ? 'Huấn luyện viên đang viết lại…'
-    : ta.source === 'llm'
-      ? 'Huấn luyện viên'
-      : 'tóm tắt từ engine';
-  return `<div class="takeaways">
-    <p class="report-label">Rút ra từ ván này <span>· ${nguồn}</span></p>
-    <ol>${ta.items
-      .map((t) =>
-        t.ply
-          ? `<li><button class="ta-item" data-report-ply="${t.ply}">${t.text.replace(/[<>&]/g, '')}</button></li>`
-          : `<li><span class="ta-item">${t.text.replace(/[<>&]/g, '')}</span></li>`,
-      )
-      .join('')}</ol>
-  </div>`;
 }

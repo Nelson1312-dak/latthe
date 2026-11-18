@@ -31,6 +31,13 @@ const CLASS_OPENING: Record<string, string> = {
   Sách: 'Nước này nằm trong sách khai cuộc.',
 };
 
+/** Câu đầu của lời bình: vì sao nước này hay/dở (mô-típ nếu nhận ra, không thì theo xếp loại). */
+export function whyText(f: Facts): string {
+  const motif = f.the[0];
+  const viết = motif ? MOTIF_TEXT[motif.kind] : undefined;
+  return viết ? viết(f, motif!) : (CLASS_OPENING[f.xepLoai] ?? 'Nước đi bình thường.');
+}
+
 /** Lời bình viết sẵn cho một nước. Luôn trả về một câu dùng được. */
 export function templateComment(f: Facts): string {
   const parts: string[] = [];

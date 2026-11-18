@@ -394,24 +394,38 @@ Theo đúng thói quen của người đã chơi chess.com/Lichess, không bắt
 Huy hiệu hết ván "nảy" ra một lần (CSS `.end-badge`); vẽ lại bàn cờ thì đứng yên.
 Lùi về xem nước cũ thì huy hiệu ẩn đi, quay lại nước cuối thì hiện.
 
-### 4.6d Chấm ván ngay khi hết ván (USP: miễn phí)
+### 4.6d Xem lại ván: ngay trên bàn cờ vừa chơi (USP: miễn phí)
 
-chess.com bắt trả tiền cho "Game Review". Ở đây hết ván là engine chấm luôn,
-ngay trong cột phải của tab Chơi, **chạy trong trình duyệt** — không tốn server,
-không cần đăng nhập. 250ms mỗi thế cờ: ván 40 nước khoảng 20 giây, có thanh tiến độ.
+chess.com bắt trả tiền cho "Game Review". Ở đây hết ván là có bảng xem lại, ngay
+trong cột phải của tab Chơi (và ván online), **không sang màn khác**. Việc chấm là
+của Stockfish chạy trong trình duyệt — không phải AI, không tốn server.
 
-Bảng chấm ván cố ý KHÔNG theo khuôn của chess.com (ông huấn luyện viên + bảng
-đếm hai cột + nút "Start Review"):
+**Chấm ngầm trong lúc chơi** (`src/analysis/precompute.ts`): mỗi thế cờ vừa có là
+một engine riêng (không đụng engine đang đánh) chấm ngay, 300ms/thế cờ, 2 dòng.
+Hết ván chỉ việc lấy kết quả: đo được 0,4 giây cho ván 12 nước. Ván online cũng
+chấm ngầm nhưng chỉ hiện khi ván xong.
 
-- **Độ chính xác**: hai thanh ngang, thanh của mình màu nhấn.
-- **Nhịp ván**: một dải ô, mỗi ô một nước của mình, tô theo xếp loại; nước càng
-  hỏng ô càng cao. Nhìn là biết ván đổ ở đoạn nào. Bấm ô → bàn cờ nhảy tới nước đó.
-- **Đáng xem lại**: tối đa 3 nước hỏng nặng nhất, kèm "nên đi …".
-- **Xem lại chi tiết** mở màn Xem lại với kết quả đã chấm (không chấm lại).
+Bảng xem lại (`src/ui/report.ts`), từ trên xuống — ít chữ, một chỗ để mắt nhìn:
+
+- **Độ chính xác**: số của mình to, của đối thủ nhỏ bên phải. Không thanh, không %.
+- **Nhịp ván**: dải ô, mỗi ô một nước của mình, tô theo xếp loại; nước càng hỏng
+  ô càng cao. Bấm ô → bàn cờ nhảy tới nước đó.
+- **Khoảnh khắc** (tối đa 5 nước hỏng nặng nhất) dạng thẻ nhỏ, nút ‹ › nhảy qua
+  từng cái, và **thẻ nước đang xem**: xếp loại, vì sao (bộ nhận diện mô-típ: để hở
+  quân, đòn đôi…), "Nên đi … — chiếu hết sau N nước / thế cờ …", thế cờ của bạn đổi
+  ra sao **bằng lời** (thắng rõ → ngang ngửa), không in điểm engine (−19.0 khi cầm
+  Đen là điểm theo Trắng, người mới đọc ngược).
+- Không biểu đồ, không bảng đếm 7 loại, không nút "Nước hỏng trước/sau" to.
+
+Ván đã lưu (Hồ sơ → Ván đã chơi, `#/xem-lai?game=N`) và ván được chia sẻ mở đúng
+bố cục này: bàn cờ trái, bảng xem lại + sổ nước + nút tua phải.
+
+"Bỏ lỡ" chỉ khi bỏ chiếu hết mà **không còn thắng chắc** (cơ hội thắng < 0,9).
+Bỏ chiếu hết mà vẫn hơn cả Hậu chỉ là thắng chậm hơn, không phạt.
 
 Trên bàn cờ, nước đang xem mang **nhãn xếp loại**: khung màu quanh ô đến và một
-nhãn vuông dán ở góc trên phải ô (★ ✓ ?! ? ?? ✕). Khác chấm tròn nổi ra ngoài
-góc ô của chess.com. Nước hỏng có thêm mũi tên mảnh chỉ nước tốt hơn.
+nhãn vuông dán ở góc trên phải ô (★ ✓ ?! ? ?? ✕). Nước hỏng có thêm mũi tên mảnh
+chỉ nước nên đi.
 
 Đã đăng nhập thì kết quả chấm được lưu cùng ván, nước sai thành thẻ ôn tập.
 
@@ -425,16 +439,21 @@ góc ô của chess.com. Nước hỏng có thêm mũi tên mảnh chỉ nước
 - **Biểu đồ Elo** trong Hồ sơ: Elo online và Elo bài tập theo từng ván/bài (trục ngang là
   thứ tự, không phải ngày — người chơi thất thường thì trục ngày toàn khoảng trống).
 
-### 4.6f "Rút ra từ ván này"
+### 4.6f Huấn luyện viên (Hồ sơ): AI nhìn cả lịch sử ván
 
-Trong bảng chấm ván, tối đa ba ý, **tính từ kết quả engine** (`src/analysis/takeaways.ts`):
-nước ngoặt (nước hỏng nặng nhất + nên đi gì + thế cờ đổi ra sao), giai đoạn chơi tốt/kém
-nhất, cơ hội bỏ lỡ khi đối thủ đi hỏng. Hiện ngay.
+AI không bình từng nước, từng ván nữa (bỏ "Vì sao nước này?" và "Rút ra từ ván
+này"). Nó làm **tư vấn viên** trong Hồ sơ, nhìn 20 ván gần nhất đã chấm:
 
-Sau đó Huấn luyện viên (mô hình trên máy chủ, ~10 giây) **chỉ viết lại** cho tự nhiên và
-thêm một lời khuyên chung. Bản viết lại bị bỏ (giữ câu gốc) nếu có ô cờ hay con số không
-có trong câu gốc, hoặc đoán kết cục kiểu "sẽ thắng / sẽ không thua"
-(`shared/advisor/summary.ts`). Máy chủ AI nghỉ thì giữ câu gốc, ghi "tóm tắt từ engine".
+1. Code tính nhận định (`shared/coach.ts`): thắng/thua, độ chính xác trung bình và
+   theo giai đoạn, số nước sai mỗi ván, **kiểu lỗi lặp lại** (cùng bộ nhận diện mô-típ
+   của bảng xem lại) — đây là nguồn sự thật duy nhất.
+2. Code chọn 3 bài học theo kiểu lỗi hay gặp nhất (bỏ bài đã học xong).
+3. AI (Ollama trên máy chủ) viết 2–3 câu nhận xét + một câu "vì sao học bài này" cho
+   từng bài. Bị bỏ, dùng lời viết sẵn, nếu có con số không có trong nhận định, có ô
+   cờ, hay hứa kết quả ("sẽ thắng", "sẽ lên Elo"). Nhận định không đổi thì dùng lại
+   lời đã viết.
+
+Cần ít nhất 3 ván đã chấm; chưa đủ thì báo còn thiếu mấy ván.
 
 ### 4.7 Âm thanh
 

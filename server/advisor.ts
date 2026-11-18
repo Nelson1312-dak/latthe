@@ -10,7 +10,16 @@ import { cacheKey, SYSTEM_PROMPT, userPrompt } from '../shared/advisor/prompt.ts
 import { templateComment } from '../shared/advisor/templates.ts';
 import { parseModelReply, validateComment } from '../shared/advisor/validate.ts';
 import type { Facts } from '../shared/advisor/facts.ts';
-import { SUMMARY_PROMPT, SUMMARY_VERSION, summaryUserPrompt, validateSummary } from '../shared/advisor/summary.ts';
+import {
+  COACH_PROMPT,
+  COACH_VERSION,
+  coachUserPrompt,
+  factLines,
+  templateAdvice,
+  validateAdvice,
+  type Advice,
+  type CoachFacts,
+} from '../shared/coach.ts';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
 const MODEL = process.env.OLLAMA_MODEL ?? 'qwen3:8b';
@@ -152,15 +161,15 @@ export async function explain(db: Db, userId: number, rawFacts: Facts): Promise<
   return { comment: text, source: 'llm' };
 }
 
-/* ---------------- Ba điều rút ra từ ván (viết lại cho tự nhiên) ---------------- */
+/* ---------------- Huấn luyện viên: lời khuyên từ lịch sử ván ---------------- */
 
-export interface SummaryResult {
-  items: string[];
+export interface AdviceResult {
+  advice: Advice;
   source: Source;
   rejected?: string;
 }
 
-async function askSummary(items: string[]): Promise<string | null> {
+async function askCoach(lines: string[], lessons: { title: string; keyPoint: string }[]): Promise<string | null> {
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -170,11 +179,15 @@ async function askSummary(items: string[]): Promise<string | null> {
       stream: false,
       keep_alive: '15m',
       think: false,
-      format: { type: 'object', properties: { y: { type: 'array', items: { type: 'string' } } }, required: ['y'] },
-      options: { temperature: 0.4, num_predict: 420 },
+      format: {
+        type: 'object',
+        properties: { nhanXet: { type: 'string' }, loTrinh: { type: 'array', items: { type: 'string' } } },
+        required: ['nhanXet', 'loTrinh'],
+      },
+      options: { temperature: 0.4, num_predict: 520 },
       messages: [
-        { role: 'system', content: SUMMARY_PROMPT },
-        { role: 'user', content: summaryUserPrompt(items) },
+        { role: 'system', content: COACH_PROMPT },
+        { role: 'user', content: coachUserPrompt(lines, lessons) },
       ],
     }),
   });
@@ -184,36 +197,45 @@ async function askSummary(items: string[]): Promise<string | null> {
 }
 
 /**
- * Viết lại các nhận định đã kiểm chứng. Mô hình tắt, chậm quá hạn, hay viết
- * thêm ô cờ / con số không có trong câu gốc thì trả nguyên câu gốc.
+ * Lời khuyên tổng quát + vì sao nên học từng bài, từ các nhận định đã tính.
+ * Nhận định không đổi thì dùng lại lời đã viết (không gọi mô hình lại).
+ * Mô hình tắt, quá hạn, hay viết con số / ô cờ không có trong nhận định thì
+ * dùng lời viết sẵn.
  */
-export async function summarize(db: Db, userId: number, items: string[]): Promise<SummaryResult> {
-  const key = hash(`${SUMMARY_VERSION}|${JSON.stringify(items)}`);
+export async function advise(
+  db: Db,
+  userId: number,
+  facts: CoachFacts,
+  lessons: { title: string; keyPoint: string }[],
+): Promise<AdviceResult> {
+  const lines = factLines(facts);
+  const fallback = templateAdvice(facts, lessons);
+  const key = hash(`${COACH_VERSION}|${JSON.stringify(lines)}|${lessons.map((l) => l.title).join('|')}`);
   const cached = one<{ comment: string }>(db, 'SELECT comment FROM advisor_cache WHERE key = ?', key);
   if (cached) {
     try {
-      return { items: JSON.parse(cached.comment) as string[], source: 'cache' };
+      return { advice: JSON.parse(cached.comment) as Advice, source: 'cache' };
     } catch {
       /* đệm hỏng: viết lại */
     }
   }
-  if (!withinLimit(userId)) return { items, source: 'template', rejected: 'quá giới hạn mỗi giờ' };
-  const raw = await withSlot(() => askSummary(items).catch(() => null));
-  if (raw === null) return { items, source: 'template', rejected: 'không gọi được mô hình' };
+  if (!withinLimit(userId)) return { advice: fallback, source: 'template', rejected: 'quá giới hạn mỗi giờ' };
+  const raw = await withSlot(() => askCoach(lines, lessons).catch(() => null));
+  if (raw === null) return { advice: fallback, source: 'template', rejected: 'không gọi được mô hình' };
   noteHit(userId);
   let parsed: unknown;
   try {
-    parsed = (JSON.parse(raw) as { y?: unknown }).y;
+    parsed = JSON.parse(raw);
   } catch {
-    return { items, source: 'template', rejected: 'câu trả lời sai dạng' };
+    return { advice: fallback, source: 'template', rejected: 'câu trả lời sai dạng' };
   }
-  const ok = validateSummary(items, parsed);
-  if (!ok) return { items, source: 'template', rejected: 'viết thêm điều không có trong nhận định' };
+  const ok = validateAdvice(lines, lessons.length, parsed);
+  if (!ok) return { advice: fallback, source: 'template', rejected: 'viết thêm điều không có trong nhận định' };
   db.prepare('INSERT OR REPLACE INTO advisor_cache (key, comment, source, created_at) VALUES (?, ?, ?, ?)').run(
     key,
     JSON.stringify(ok),
     'llm',
     new Date().toISOString(),
   );
-  return { items: ok, source: 'llm' };
+  return { advice: ok, source: 'llm' };
 }
