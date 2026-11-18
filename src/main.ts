@@ -4,6 +4,7 @@ import './ui/components/components.css';
 import './ui/app.css';
 import './ui/screens/screens.css';
 
+import { installApiHeader } from './app/api-header.ts';
 import { loadPieces } from './board/sprite.ts';
 import { snapBoards } from './board/snap.ts';
 import { icon, type IconName } from './ui/icons.ts';
@@ -342,6 +343,7 @@ document.addEventListener('keydown', (e) => {
   btn.click();
 });
 
+installApiHeader();
 initTheme();
 applyPrefs();
 onAuthChange(render);

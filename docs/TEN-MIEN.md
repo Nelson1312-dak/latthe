@@ -89,3 +89,19 @@ Chưa kiểm được vì chưa có địa chỉ tunnel cố định. Khi có r�
 mở hai trình duyệt vào latbai.vn, tìm trận, đi vài nước. Nếu SSE bị cắt thật
 thì vẫn còn đường: cho riêng `/api/live/stream` đi thẳng tới tunnel thay vì
 qua Vercel (lúc đó mới cần CORS cho đúng một đường dẫn đó).
+
+## Trang cảnh báo của ngrok miễn phí (đã xử lý)
+
+Gói miễn phí của ngrok chèn trang HTML "You are about to visit…" trước mọi
+request **GET** có User-Agent trình duyệt (POST và OPTIONS thì lọt). Thử bằng
+`curl` không thấy, vì curl không phải trình duyệt — nên lỗi này nằm im một thời
+gian: trên latbai.vn, trình duyệt hỏi `/api/me` thì nhận về HTML, đăng nhập,
+ôn tập, đấu online đều không chạy.
+
+Cách xử lý: mọi lời gọi `/api` gắn header `ngrok-skip-browser-warning: 1`
+(`src/app/api-header.ts`). Vercel chuyển nguyên header đó sang ngrok. Luồng đấu
+online đi thẳng tới ngrok nên đọc bằng `fetch` (gắn được header) thay cho
+`EventSource` (không gắn được); server trả lời OPTIONS cho đúng đường luồng,
+chỉ với origin `https://latbai.vn`.
+
+Kiểm cho đúng thì phải kiểm **bằng trình duyệt**, hoặc curl giả User-Agent trình duyệt.

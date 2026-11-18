@@ -271,6 +271,21 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     return json(res, 200, { ticket: live.newTicket(user.id), url: quaWeb ? STREAM_BASE : '' });
   }
 
+  // Trang latbai.vn mở luồng thẳng tới đây (khác origin) kèm header của ngrok,
+  // nên trình duyệt hỏi trước bằng OPTIONS. Chỉ trả lời cho đúng trang của mình.
+  if (path === '/api/live/stream' && method === 'OPTIONS') {
+    const cors = corsFor(req);
+    if (!cors['access-control-allow-origin']) return json(res, 403, { error: 'Không được phép' });
+    res.writeHead(204, {
+      ...cors,
+      'access-control-allow-methods': 'GET',
+      'access-control-allow-headers': 'ngrok-skip-browser-warning',
+      'access-control-max-age': '600',
+    });
+    res.end();
+    return;
+  }
+
   if (path === '/api/live/stream' && method === 'GET') {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const vé = url.searchParams.get('ticket');

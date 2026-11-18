@@ -1472,3 +1472,10 @@ button.top-link {
   flex: none;
   color: var(--text-3);
 }
+
+/* Nút Google là một iframe nền sáng. Trang đang ở giao diện tối thì trình duyệt
+   tô nền trắng đặc sau iframe (khác color-scheme), thành một khung trắng quanh
+   nút. Cho iframe cùng color-scheme với trang bên trong nó là hết. */
+.google-btn iframe {
+  color-scheme: light;
+}

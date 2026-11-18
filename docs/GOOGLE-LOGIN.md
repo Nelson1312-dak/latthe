@@ -8,27 +8,29 @@ và cũng không nên có quyền.
 
 ## 1. Tạo OAuth client ID
 
-1. Mở https://console.cloud.google.com/ và đăng nhập.
-2. Tạo một project mới (góc trên bên trái, chỗ chọn project → **New Project**). Đặt tên gì cũng được, ví dụ `co-vua`.
-3. Vào **APIs & Services → OAuth consent screen**:
-   - Kiểu người dùng: **External**.
-   - Điền tên app (`Lật Cờ`), email hỗ trợ, email liên hệ. Các mục khác để trống được.
-   - Phần **Test users**: thêm chính địa chỉ Gmail của bạn. Khi app còn ở trạng thái *Testing*,
-     chỉ những địa chỉ trong danh sách này mới đăng nhập được — thêm bạn bè vào đây nếu muốn họ thử.
-4. Vào **APIs & Services → Credentials → Create Credentials → OAuth client ID**:
-   - Application type: **Web application**.
-   - **Authorized JavaScript origins** — thêm đúng những dòng này (không có dấu `/` ở cuối):
+1. Mở https://console.cloud.google.com/ và đăng nhập, tạo một project mới.
+2. **Google Auth Platform** (giao diện cũ: *OAuth consent screen*):
+   - **Branding**: tên app `Lật Cờ`, email hỗ trợ, email liên hệ.
+   - **Audience**: **External**.
+3. **Clients → Create client → Web application**:
+   - **Authorized JavaScript origins**: MỖI Ô MỘT ĐỊA CHỈ, bấm **+ Add URI** để thêm ô.
+     Không có dấu `/` ở cuối:
      ```
+     https://latbai.vn
      http://localhost:5173
      ```
-     Sau này khi chạy thật qua tunnel thì thêm tên miền đó, ví dụ `https://co-vua.ngrok.app`.
-   - **Authorized redirect URIs**: để trống. Cách đăng nhập app đang dùng (nút của Google,
-     trả về ID token ngay trong trang) không cần chuyển trang.
-5. Bấm **Create**. Google hiện ra **Client ID** dạng
-   `123456789012-abcdefghijk.apps.googleusercontent.com`.
+   - **Authorized redirect URIs**: để trống. Nút của Google trả về ID token ngay
+     trong trang, không chuyển trang.
+4. Bấm **Create**, chép **Client ID** dạng `123…-abc….apps.googleusercontent.com`.
+5. **Audience → Publish app → In production.** Bỏ qua bước này thì app ở chế độ
+   *Testing*: chỉ những Gmail trong danh sách Test users đăng nhập được, khách lạ
+   bị chặn. App chỉ xin tên, ảnh và mã định danh (quyền thường) nên không phải
+   chờ Google duyệt.
 
-**Client secret không cần dùng.** App chỉ xác minh chữ ký của ID token bằng khoá công khai
-của Google, không trao đổi mã nào với Google từ phía server.
+**Client secret không cần dùng, đừng lưu nó ở đâu cả.** App chỉ xác minh chữ ký của ID
+token bằng khoá công khai của Google, không trao đổi mã nào với Google từ phía server.
+Lỡ để lộ secret thì vào Clients → client đó → xoá secret cũ / tạo secret mới; app không
+bị ảnh hưởng. Client ID thì không phải bí mật — ai mở trang web cũng thấy.
 
 ## 2. Đưa Client ID vào app
 
@@ -61,7 +63,8 @@ Thấy `"googleConfigured":true` là được.
 | Nút Google không hiện, báo "Server chưa đặt GOOGLE_CLIENT_ID" | Thiếu dòng trong `.env.chess`, hoặc chưa chạy lại `npm run dev` |
 | Google báo `origin_mismatch` | Địa chỉ đang mở không có trong **Authorized JavaScript origins**. Phải khớp cả giao thức và cổng: `http://localhost:5173` khác `http://127.0.0.1:5173` |
 | Đăng nhập xong báo "Token Google không hợp lệ" | Client ID trong `.env.chess` không phải cái vừa tạo, hoặc đã bị xoá bên Google Cloud |
-| Google báo app chưa được xác minh | Bình thường khi app ở trạng thái *Testing*. Bấm **Advanced → Continue**, hoặc thêm địa chỉ đó vào **Test users** |
+| Khách lạ bấm đăng nhập thì Google báo bị chặn / chưa xác minh | App còn ở *Testing*. Vào **Audience → Publish app** |
+| Trên latbai.vn mọi thứ cần đăng nhập đều hỏng, mở `/api/me` thấy trang "You are about to visit…" | Trang cảnh báo của ngrok miễn phí. Mọi lời gọi `/api` phải có header `ngrok-skip-browser-warning` — `src/app/api-header.ts` lo việc này |
 
 ## 4. Lưu ý về riêng tư
 

@@ -1,9 +1,10 @@
 // Nối với server cho ván online.
 //
-// Server đẩy xuống bằng SSE, mình gửi lên bằng POST. `EventSource` tự kết nối
-// lại khi đứt mạng, nên chỗ "rớt mạng rồi vào lại" không phải tự viết.
+// Server đẩy xuống bằng SSE, mình gửi lên bằng POST. Luồng tự nối lại khi đứt
+// mạng (xem mởLuồng).
 
 import type { LiveEvent, LiveState, QueueState } from '../../shared/protocol.ts';
+import { NGROK_SKIP } from './api-header.ts';
 
 export interface LiveStore {
   /** Ván đang chơi, hoặc ván vừa xong (còn `over`). */
@@ -17,7 +18,6 @@ export interface LiveStore {
 
 export const live: LiveStore = { state: null, queue: null, connected: false, error: null };
 
-let es: EventSource | null = null;
 let rerender: (() => void) | null = null;
 /** Việc làm mỗi giây khi đang có ván: mặc định vẽ lại, màn hình có thể thay. */
 let onTick: (() => void) | null = null;
@@ -67,53 +67,106 @@ function apply(ev: LiveEvent): void {
 export function connect(onChange: () => void, tick?: () => void): void {
   rerender = onChange;
   onTick = tick ?? null;
-  if (es) return;
+  if (stream) return;
   void mởLuồng();
 }
 
+/** Luồng đang mở; huỷ nó là đóng luồng. */
+let stream: AbortController | null = null;
+
 /**
- * Mở luồng SSE.
+ * Mở luồng sự kiện và giữ nó sống: đứt thì tự nối lại (chờ 1, 2, 4… tối đa 10 giây).
  *
  * Trên bản web công khai, `/api` đi qua Vercel — mà Vercel gom đệm kết nối dài
- * nên luồng SSE không bao giờ tới (thử thật: 12 giây không một gói nào). Nên
- * xin một cái vé qua đường thường rồi mở luồng THẲNG tới máy chủ bằng vé đó.
- * Chạy trong máy thì server trả url rỗng, dùng đường tương đối như cũ.
+ * nên luồng không bao giờ tới (thử thật: 12 giây không một gói nào). Nên xin
+ * một cái vé qua đường thường rồi mở luồng THẲNG tới máy chủ bằng vé đó.
+ * Chạy trong máy thì server trả url rỗng, dùng đường tương đối.
+ *
+ * Đọc bằng fetch chứ không dùng EventSource, vì hai lẽ:
+ * - EventSource không gắn được header, mà thiếu header `ngrok-skip-browser-warning`
+ *   thì ngrok miễn phí trả về trang cảnh báo HTML thay vì luồng sự kiện.
+ * - EventSource tự nối lại bằng ĐÚNG địa chỉ cũ, tức là bằng cái vé đã dùng rồi
+ *   → bị từ chối → nó bỏ cuộc luôn. Mỗi lần nối lại phải xin vé mới.
  */
 async function mởLuồng(): Promise<void> {
-  let địaChỉ = '/api/live/stream';
-  try {
-    const r = await fetch('/api/live/ticket', { method: 'POST', credentials: 'same-origin' });
-    if (r.ok) {
-      const { ticket, url } = (await r.json()) as { ticket: string; url: string };
-      if (url) địaChỉ = `${url}/api/live/stream?ticket=${encodeURIComponent(ticket)}`;
-      else địaChỉ = `/api/live/stream?ticket=${encodeURIComponent(ticket)}`;
-    }
-  } catch {
-    /* không xin được vé thì cứ thử đường cũ */
-  }
-  if (es) return;
-  es = new EventSource(địaChỉ, { withCredentials: true });
-  es.onmessage = (e) => {
+  if (stream) return;
+  const me = new AbortController();
+  stream = me;
+  let lần = 0;
+  while (stream === me) {
+    let địaChỉ = '/api/live/stream';
+    let khácOrigin = false;
     try {
-      apply(JSON.parse(e.data) as LiveEvent);
+      const r = await fetch('/api/live/ticket', { method: 'POST', credentials: 'same-origin' });
+      if (r.status === 401) {
+        // Chưa đăng nhập: không có gì để nghe
+        if (stream === me) stream = null;
+        return;
+      }
+      if (r.ok) {
+        const { ticket, url } = (await r.json()) as { ticket: string; url: string };
+        địaChỉ = `${url}/api/live/stream?ticket=${encodeURIComponent(ticket)}`;
+        khácOrigin = Boolean(url);
+      }
     } catch {
-      /* gói tin lạ: bỏ qua */
+      /* chưa xin được vé: thử lại sau */
     }
-  };
-  es.onerror = () => {
-    // EventSource tự nối lại; chỉ cần báo cho người dùng biết đang mất kết nối.
+    if (stream !== me) return;
+
+    try {
+      const res = await fetch(địaChỉ, {
+        signal: me.signal,
+        // Khác origin thì đi bằng vé, không gửi cookie
+        credentials: khácOrigin ? 'omit' : 'same-origin',
+        cache: 'no-store',
+        headers: { accept: 'text/event-stream', [NGROK_SKIP]: '1' },
+      });
+      if (!res.ok || !res.body) throw new Error(`Lỗi ${res.status}`);
+      live.connected = true;
+      lần = 0;
+      rerender?.();
+      await đọcLuồng(res.body);
+    } catch {
+      if (me.signal.aborted) return;
+    }
+    if (stream !== me) return;
     live.connected = false;
     rerender?.();
-  };
-  es.onopen = () => {
-    live.connected = true;
-    rerender?.();
-  };
+    await new Promise((r) => setTimeout(r, Math.min(10_000, 1000 * 2 ** lần++)));
+  }
+}
+
+/** Đọc luồng SSE: mỗi gói cách nhau một dòng trống, dữ liệu nằm sau "data:". */
+async function đọcLuồng(body: ReadableStream<Uint8Array>): Promise<void> {
+  const reader = body.getReader();
+  const giải = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buf += giải.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+    let i: number;
+    while ((i = buf.indexOf('\n\n')) >= 0) {
+      const gói = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      const data = gói
+        .split('\n')
+        .filter((d) => d.startsWith('data:'))
+        .map((d) => d.slice(5).trimStart())
+        .join('\n');
+      if (!data) continue; // dòng giữ kết nối (": .") hoặc "retry:"
+      try {
+        apply(JSON.parse(data) as LiveEvent);
+      } catch {
+        /* gói tin lạ: bỏ qua */
+      }
+    }
+  }
 }
 
 export function disconnect(): void {
-  es?.close();
-  es = null;
+  stream?.abort();
+  stream = null;
   stopTicker();
   live.connected = false;
 }
