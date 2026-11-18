@@ -39,6 +39,7 @@ import { hintSteps } from '../../../shared/advisor/templates.ts';
 import {
   button,
   classBadge,
+  hintLabel,
   dialog,
   evalBar,
   iconButton,
@@ -204,7 +205,7 @@ function assistCard(): string {
   }
   if (v && v.ply <= game.length) {
     const tốt = !HOLD_ON.includes(v.cls) && v.cls !== 'inaccuracy';
-    return `<p class="assist-line">${icon('coach', 16)}${classBadge(v.cls)}<span>${sanVi(v.san)}: <b>${CLASS_LABEL[v.cls]}</b>${
+    return `<p class="assist-line">${classBadge(v.cls)}<span>${sanVi(v.san)} — <b>${CLASS_LABEL[v.cls].toLowerCase()}</b>${
       !tốt && v.best ? ` · hay hơn là ${sanVi(v.best.san)}` : ''
     }</span></p>`;
   }
@@ -382,23 +383,12 @@ function actionRow(): string {
   ) =>
     `<button class="act${opts.danger ? ' is-danger' : ''}" data-act="${id}"${opts.disabled ? ' disabled' : ''}>` +
     `${icon(name, 22)}<span>${label}</span>${opts.extra ?? ''}</button>`;
-  const dots =
-    `<span class="hint-dots" aria-label="Đã dùng ${hintLevel} trên 3 nấc gợi ý">` +
-    [0, 1, 2].map((i) => `<span class="hint-dot${i < hintLevel ? ' is-on' : ''}"></span>`).join('') +
-    `</span>`;
-  const hintLabel = hintLoading
-    ? 'Đang xem…'
-    : hintLevel === 0
-      ? 'Gợi ý'
-      : hintLevel === 3
-        ? 'Hết gợi ý'
-        : 'Gợi ý thêm';
+  const nhãnGợiÝ = hintLoading ? 'Đang xem…' : hintLabel(hintLevel);
   return `<div class="game-actions">
     ${
       setup.mode === 'bot'
-        ? act('hint', 'hint', hintLabel, {
+        ? act('hint', 'hint', nhãnGợiÝ, {
             disabled: hintLevel === 3 || hintLoading || !game.atLive,
-            extra: dots,
           })
         : act('flip', 'flip', 'Lật bàn')
     }

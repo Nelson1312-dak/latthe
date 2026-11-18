@@ -163,7 +163,7 @@ export function playerStrip(o: PlayerOptions): string {
 /* ---------------- Huy hiệu xếp loại ---------------- */
 export function classBadge(cls: MoveClass, size: 'sm' | 'md' = 'sm'): string {
   if (cls === 'book') {
-    return `<span class="badge badge-book badge-${size}" title="Sách">${icon('book', size === 'sm' ? 13 : 16)}</span>`;
+    return `<span class="badge badge-book badge-${size}" title="Khai cuộc chuẩn">${icon('book', size === 'sm' ? 13 : 16)}</span>`;
   }
   return `<span class="badge badge-${size}" style="--badge:var(--cls-${cls})" title="${CLASS_LABEL[cls]}">${CLASS_SYMBOL[cls]}</span>`;
 }
@@ -259,15 +259,16 @@ export function coachPanel(o: CoachOptions): string {
 }
 
 /* ---------------- HintButton ---------------- */
+/**
+ * Chữ trên nút gợi ý theo số nấc đã mở (tối đa 3): "Gợi ý" → "Gợi ý 2/3" →
+ * "Gợi ý 3/3" → "Hết gợi ý". Trước đây là ba chấm nhỏ ở góc nút — không ai hiểu.
+ */
+export function hintLabel(used: number): string {
+  return used <= 0 ? 'Gợi ý' : used >= 3 ? 'Hết gợi ý' : `Gợi ý ${used + 1}/3`;
+}
+
 export function hintButton(used: 0 | 1 | 2 | 3): string {
-  const labels = ['Gợi ý', 'Gợi ý: quân nào', 'Gợi ý: nước cụ thể', 'Hết gợi ý'];
-  return (
-    `<div class="hint">` +
-    button({ label: labels[used], icon: 'hint', disabled: used === 3 }) +
-    `<span class="hint-dots" aria-label="Đã dùng ${used} trên 3 nấc gợi ý">` +
-    [0, 1, 2].map((i) => `<span class="hint-dot${i < used ? ' is-on' : ''}"></span>`).join('') +
-    `</span></div>`
-  );
+  return `<div class="hint">${button({ label: hintLabel(used), icon: 'hint', disabled: used === 3 })}</div>`;
 }
 
 /* ---------------- Mặt nền và nhịp ---------------- */

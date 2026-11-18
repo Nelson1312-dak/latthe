@@ -84,7 +84,7 @@ export const CLASS_SYMBOL: Record<MoveClass, string> = {
 };
 
 export const CLASS_LABEL: Record<MoveClass, string> = {
-  book: 'Sách',
+  book: 'Khai cuộc chuẩn',
   best: 'Tốt nhất',
   good: 'Tốt',
   inaccuracy: 'Thiếu chính xác',

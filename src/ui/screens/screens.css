@@ -1198,11 +1198,6 @@ button.log-row {
 .act.is-danger .icon {
   color: var(--danger);
 }
-.act .hint-dots {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-}
 /* Kết quả ván */
 .result-card {
   display: grid;
@@ -2848,4 +2843,11 @@ a.quick {
     align-items: center;
     min-height: 44px;
   }
+}
+/* Danh sách gợi ý: chữ thường như phần còn lại, số thứ tự không dính mép cột */
+.hint-list {
+  padding: var(--s-2) var(--s-4) var(--s-2) calc(var(--s-4) + 1.4em);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
 }
