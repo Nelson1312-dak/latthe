@@ -39,6 +39,7 @@ import { playMode, setPlayMode } from './app/playmode.ts';
 import { live } from './app/live.ts';
 import { routeName, routeQuery } from './app/route.ts';
 import { LESSONS } from './training/lessons.ts';
+import { canInstall, initPwa, installApp, iosHint } from './app/pwa.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
@@ -266,7 +267,14 @@ function settingsDialog(): string {
     toggleRow('coords', 'Toạ độ', 'Chữ a–h và số 1–8 ở mép bàn cờ', p.coords) +
     toggleRow('legal', 'Chấm nước đi được', 'Hiện các ô đi tới được khi cầm quân', p.legal) +
     toggleRow('autoQueen', 'Tự phong Hậu', 'Tốt tới hàng cuối thì thành Hậu luôn, không hỏi', p.autoQueen) +
+    (canInstall()
+      ? `<button class="pref-row" data-install-app><span class="pref-text"><b>Cài Lật Cờ lên máy</b>` +
+        `<span>Mở như một app từ màn hình chính, không cần trình duyệt</span></span>${icon('next', 16)}</button>`
+      : '') +
     `</div>` +
+    (iosHint()
+      ? `<p class="pref-keys">Cài như app trên iPhone/iPad: trong Safari bấm nút Chia sẻ rồi chọn <b>Thêm vào MH chính</b>.</p>`
+      : '') +
     `<p class="pref-keys">Phím tắt: <kbd>←</kbd> <kbd>→</kbd> lùi/tiến một nước, <kbd>Home</kbd> <kbd>End</kbd> về đầu/cuối ván, <kbd>F</kbd> lật bàn cờ.</p>` +
     `<p class="pref-keys">Vẽ trên bàn cờ: giữ chuột phải kéo để vẽ mũi tên (đi đúng đường quân đi được), ` +
     `bấm chuột phải để tô ô. Giữ thêm <kbd>Shift</kbd> xanh lá, <kbd>Ctrl</kbd> đỏ, <kbd>Alt</kbd> xanh dương. ` +
@@ -452,6 +460,10 @@ document.addEventListener('click', (e) => {
     render();
     return;
   }
+  if (el.closest('[data-install-app]')) {
+    void installApp().then(() => render());
+    return;
+  }
   const pref = el.closest<HTMLElement>('[data-pref]');
   if (pref) {
     const key = pref.dataset.pref as keyof Prefs | 'sound';
@@ -572,6 +584,9 @@ initTheme();
 applyPrefs();
 onAuthChange(onAuth);
 window.addEventListener('hashchange', render);
+initPwa(() => {
+  if (settingsOpen) render();
+});
 render();
 void loadPieces().catch((err) => console.error(err));
 void loadMe();

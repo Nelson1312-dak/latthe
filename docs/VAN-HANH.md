@@ -67,6 +67,30 @@ Facebook/Zalo là ảnh chung `public/og.png`, không phải ảnh riêng từng
 link của mạng xã hội đi qua ngrok miễn phí sẽ gặp trang cảnh báo. Người chơi có
 nút tải ảnh tóm tắt riêng của ván để đăng kèm.
 
+## Trang bài học (latbai.vn/hoc/)
+
+Sinh từ `src/training/lessons.ts` + kho bài tập `data/chess.db` (chỉ có trên máy
+này, nên file sinh ra được đưa vào git):
+
+```
+node --experimental-strip-types --no-warnings scripts/build-lessons.ts
+```
+
+Chạy lại khi thêm/sửa bài học, rồi deploy. Script cũng viết lại `public/sitemap.xml`.
+Nút "Luyện bài này ngay" mở `/#/hoc?bai=<id>` — app vào thẳng bài đó.
+
+## Cài như app (PWA)
+
+`public/manifest.webmanifest`, icon trong `public/icons/` (sinh bằng
+`node scripts/make-icons.mjs`), service worker `public/sw.js` (chỉ đăng ký ở bản build).
+
+- Trang luôn lấy mạng trước; mạng chậm quá 4 giây hoặc mất mạng mới dùng bản đã lưu.
+  Deploy xong thì lần mở tiếp theo người chơi có bản mới, không cần làm gì.
+- `/api/*` không bao giờ qua service worker (đăng nhập Google, ván online...).
+- Đổi cách lưu trong `sw.js` thì tăng `PHIÊN_BẢN` để xoá bộ nhớ cũ trên máy người chơi.
+- Nút "Cài Lật Cờ lên máy" nằm trong Cài đặt, chỉ hiện khi trình duyệt cho cài
+  (Chrome/Edge/Android). iPhone chỉ có dòng hướng dẫn Chia sẻ → Thêm vào MH chính.
+
 ## Không thuê VPS
 
 Máy ở nhà là máy chủ riêng, bật thường trực cho việc này (quyết định 18/11/2026).

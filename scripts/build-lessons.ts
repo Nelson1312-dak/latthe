@@ -112,6 +112,9 @@ function page(o: { title: string; desc: string; path: string; body: string; with
 <meta property="og:image" content="${SITE}/og.png">
 <meta property="og:url" content="${SITE}${o.path}">
 <meta name="theme-color" content="#262421">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <style>${STYLE}</style>
 </head>
 <body>
