@@ -40,7 +40,7 @@ import { live } from './app/live.ts';
 import { routeName, routeQuery } from './app/route.ts';
 import { LESSONS } from './training/lessons.ts';
 import { canInstall, initPwa, installApp, iosHint } from './app/pwa.ts';
-import { IS_MINI, MINI_MODE, closeMini, miniOpen, openMini, saveHandoff, takeHandoff } from './app/mini.ts';
+import { IS_MINI, MINI_MODE, closeMini, fitMiniWindow, miniOpen, openMini, saveHandoff, takeHandoff } from './app/mini.ts';
 import { exportPlayState, importPlayState, miniPlay, playStarted, resetPlay, startBotGame, type PlayHandoff } from './ui/screens/play.ts';
 import { muteHere } from './app/sound.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
@@ -305,6 +305,12 @@ const PLAY_ROUTES = ['', 'choi'];
 
 /** Trong bàn cờ nổi: đang che bàn cờ bằng tấm trơn (Esc). */
 let miniCovered = false;
+/** Che / hiện bàn cờ nổi: che thì thu cửa sổ thành thanh ngang, hiện thì trả cỡ cũ. */
+function setMiniCovered(v: boolean): void {
+  miniCovered = v;
+  fitMiniWindow(v);
+  render();
+}
 /** Lúc vừa bỏ tấm che: cú click đi kèm cú nhấn đó không được tính là bấm vào bàn cờ. */
 let miniUncoveredAt = 0;
 
@@ -544,8 +550,7 @@ document.addEventListener('click', (e) => {
 
   // Bàn cờ nổi: che / hiện bàn cờ (tấm che tự mở khi vừa chạm, xem pointerdown bên dưới)
   if (IS_MINI && el.closest('[data-mini-hide]')) {
-    miniCovered = !miniCovered;
-    render();
+    setMiniCovered(!miniCovered);
     return;
   }
   // Trang chính: mở bàn cờ nổi (mang theo ván đang dở), hoặc đưa nó về
@@ -638,9 +643,8 @@ document.addEventListener('pointerdown', (e) => {
   const t = e.target as HTMLElement;
   if (miniCovered && t.closest('[data-mini-cover]')) {
     e.preventDefault();
-    miniCovered = false;
     miniUncoveredAt = performance.now();
-    render();
+    setMiniCovered(false);
     return;
   }
   // Bàn cờ nổi chưa vào ván: bấm vào bàn cờ là vào ván luôn, khỏi tìm nút Chơi
@@ -668,8 +672,7 @@ const KEYS: Record<string, string> = {
 document.addEventListener('keydown', (e) => {
   // Bàn cờ nổi: Esc che bàn cờ ngay, bấm lại là mở
   if (IS_MINI && e.key === 'Escape') {
-    miniCovered = !miniCovered;
-    render();
+    setMiniCovered(!miniCovered);
     return;
   }
   if (e.key === 'Escape' && settingsOpen) {

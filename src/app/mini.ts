@@ -116,3 +116,38 @@ export async function openMini(onClose: () => void, mode: 'machine' | 'online' =
   }, 1000);
   return true;
 }
+
+/* ---------------- Che bàn cờ: thu cửa sổ nổi thành một thanh ngang ---------------- */
+
+/** Cửa sổ chứa bàn cờ nổi: cửa sổ PiP (trang nằm trong iframe của nó) hoặc chính popup. */
+function hostWindow(): Window {
+  try {
+    return window.parent !== window ? window.parent : window;
+  } catch {
+    return window;
+  }
+}
+
+/** Chiều cao thanh ngang khi che (khớp .mini-tab). */
+const THANH_PX = 40;
+let cỡCũ: { w: number; h: number } | null = null;
+
+/**
+ * Che: thu cửa sổ nổi chỉ còn một thanh ngang (giữ bề ngang), nhớ cỡ cũ. Hiện: trả
+ * lại đúng cỡ cũ. Trình duyệt chỉ cho đổi cỡ ngay sau một cú bấm chuột (Esc không
+ * tính), nên che bằng Esc thì cửa sổ giữ cỡ — vẫn chỉ hiện thanh ngang ở trên cùng.
+ */
+export function fitMiniWindow(covered: boolean): void {
+  const w = hostWindow();
+  try {
+    if (covered) {
+      cỡCũ ??= { w: w.outerWidth, h: w.outerHeight };
+      w.resizeTo(w.outerWidth, w.outerHeight - w.innerHeight + THANH_PX);
+    } else if (cỡCũ) {
+      w.resizeTo(cỡCũ.w, cỡCũ.h);
+      cỡCũ = null;
+    }
+  } catch {
+    /* không được đổi cỡ: để nguyên */
+  }
+}

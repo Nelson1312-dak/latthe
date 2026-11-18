@@ -979,6 +979,24 @@ export function miniOnline(covered: boolean): string {
     : `<button class="btn btn-icon mini-btn" title="Che bàn cờ (Esc)" aria-label="Che bàn cờ" data-mini-hide>${icon('hide', 17)}</button>`;
   const thanh = (trái: string) => `<div class="mini-bar">${covered ? '' : trái}<span class="mini-gap"></span>${mắt}</div>`;
 
+  // Đang che: cả cửa sổ chỉ còn một thanh ngang. Đang đánh thì có đồng hồ của mình
+  // (data-clock: tự chạy mỗi giây) để không hết giờ trong lúc che.
+  if (covered) {
+    const s = live.state;
+    let tt = '<span>Hiện bàn cờ</span>';
+    if (s && !s.over) {
+      const ms = clockNow(s, s.youAre);
+      const mình = s.turn === s.youAre;
+      tt =
+        clock(ms, mình ? (ms < 30_000 ? 'low' : 'running') : 'idle', s.youAre) +
+        `<span class="mini-dot${mình ? ' is-you' : ''}"></span><span>${mình ? 'tới lượt bạn' : 'đối thủ đang nghĩ'}</span>`;
+    } else if (s?.over) tt = '<span>ván đã xong</span>';
+    else if (live.queue) tt = '<span class="mini-dot"></span><span>đang tìm trận</span>';
+    return `<div class="mini is-covered" data-mini-cover role="button" aria-label="Hiện bàn cờ">
+      <div class="mini-tab">${icon('show', 16)}${tt}</div>
+    </div>`;
+  }
+
   if (!auth.user) {
     return `<div class="mini">${thanh('<span class="mini-title">Đấu với người</span>')}${tĩnh()}
       <div class="mini-bar"><span class="mini-title">Đăng nhập ở trang chính để đấu với người</span></div>${che}</div>`;

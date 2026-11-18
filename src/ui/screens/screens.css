@@ -2851,3 +2851,41 @@ a.quick {
   font-size: var(--fs-sm);
   line-height: 1.5;
 }
+
+/* Bàn cờ nổi đang che: chỉ một thanh ngang (cửa sổ cũng thu lại cỡ đó) */
+.mini.is-covered {
+  height: 100vh;
+  background: var(--bg-1);
+  cursor: pointer;
+}
+.mini-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-3);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.mini-tab:hover {
+  color: var(--text-2);
+}
+.mini-tab .clock {
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 14px;
+  line-height: 24px;
+}
+.mini-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+.mini-dot.is-you {
+  background: var(--accent-text);
+}

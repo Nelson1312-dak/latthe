@@ -1222,6 +1222,13 @@ function promoDialog(): string {
 export function miniPlay(covered: boolean): string {
   const result = outcome();
   const lv = levelById(setup.level);
+  // Đang che: cả cửa sổ chỉ còn một thanh ngang, kèm trạng thái kín đáo
+  if (covered) {
+    const tt = !started || result ? '' : thinking ? 'máy đang nghĩ' : game.turn === setup.side ? 'tới lượt bạn' : '';
+    return `<div class="mini is-covered" data-mini-cover role="button" aria-label="Hiện bàn cờ">
+      <div class="mini-tab">${icon('show', 16)}${tt ? `<span class="mini-dot${game.turn === setup.side ? ' is-you' : ''}"></span><span>${tt}</span>` : '<span>Hiện bàn cờ</span>'}</div>
+    </div>`;
+  }
   const nút = (name: IconName, title: string, attrs = '', disabled = false) =>
     `<button class="btn btn-icon mini-btn" title="${title}" aria-label="${title}"${attrs}${disabled ? ' disabled' : ''}>${icon(name, 17)}</button>`;
 
