@@ -63,7 +63,10 @@ function example(db: DatabaseSync, l: Lesson): Example | null {
   return { fen, side, lastMove: [m0.from, m0.to], solution: sans };
 }
 
-const sprite = readFileSync('public/pieces/cburnett.svg', 'utf8');
+// Bỏ <title>/<?xml> của file sprite: trang chỉ được có một <title>
+const sprite = readFileSync('public/pieces/cburnett.svg', 'utf8')
+  .replace(/<\?xml[^>]*>/, '')
+  .replace(/<title>[\s\S]*?<\/title>/g, '');
 
 const STYLE = `
   :root { color-scheme: dark; --bg: #302e2b; --card: #262421; --card2: #3c3a37; --text: #fff; --text2: #c9c8c6; --text3: #a7a5a3; --line: #3f3d39; --accent: #1f8f80; --accent-text: #56cdbb;
