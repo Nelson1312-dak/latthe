@@ -263,8 +263,7 @@ function profile(): string {
     ${progressBlock()}
 
     ${rule('Tài khoản')}
-    <p class="prose">Ván cờ, thẻ ôn tập, tiến độ và cả cài đặt (màu bàn cờ, âm thanh…) được lưu theo tài khoản —
-      đăng nhập ở máy khác vẫn y như cũ. <a href="/chinh-sach-rieng-tu/">App lưu những gì</a>.</p>
+    <p class="prose">Mọi thứ lưu theo tài khoản, đăng nhập máy khác vẫn còn. <a href="/chinh-sach-rieng-tu/">App lưu gì?</a></p>
     <div class="account-actions">
       <button class="btn btn-secondary" title="Cài đặt">${icon('settings', 17)}<span>Cài đặt</span></button>
       ${button({ label: 'Đăng xuất', icon: 'close' })}

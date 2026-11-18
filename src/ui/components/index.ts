@@ -144,8 +144,6 @@ export function playerStrip(o: PlayerOptions): string {
     `<span class="player-id">` +
     `<b class="player-name">${esc(o.name)}</b>` +
     (o.rating !== undefined ? `<span class="player-rating mono">${esc(String(o.rating))}</span>` : '') +
-    (o.you ? '<span class="tag">bạn</span>' : '') +
-    (o.bot ? '<span class="tag">máy</span>' : '') +
     (o.ai ? '<span class="tag tag-ai">AI</span>' : '') +
     (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
     `</span>` +

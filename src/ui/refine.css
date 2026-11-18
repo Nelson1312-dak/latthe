@@ -1,0 +1,260 @@
+/* ======================================================================
+   Tinh chỉnh 18/11/2026: gỡ những dấu hiệu "giao diện AI làm".
+   Nạp SAU CÙNG (src/main.ts) để đè lên kiểu cũ. Quy tắc tương ứng ghi ở
+   docs/DESIGN.md mục 2 (danh sách cấm).
+
+   Nguyên tắc: phân cấp bằng cỡ chữ và khoảng trắng, không bằng hộp, icon hay
+   màu nhấn. Một màn chỉ có MỘT thứ màu nhấn (nút chính).
+   ====================================================================== */
+
+/* ---- 1. Số: chữ số đều nhau của font chữ thường, không dùng font mã ----
+   Font mã (IBM Plex Mono) cho số làm trang trông như công cụ lập trình. */
+.mono {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* ---- 2. Tiêu đề mục: viết thường đầu câu, đậm vừa, không kẻ ngang ----
+   "HÔM NAY ———" viết hoa giãn chữ kèm đường kẻ là mẫu dashboard quen mắt nhất. */
+.rule-label {
+  font-size: var(--fs-md);
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-1);
+}
+.rule > i {
+  height: 0;
+  background: none;
+}
+.rule-note,
+.rule .rule-note {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* ---- 3. Danh sách việc: dòng phẳng ngăn bằng nét kẻ ----
+   Bỏ ô icon vuông bên trái và mũi tên bên phải (mẫu "menu cài đặt" của AI). */
+.quick-list {
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.quick {
+  min-height: 52px;
+  padding: var(--s-3) var(--s-1);
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+}
+.quick:hover {
+  background: none;
+}
+.quick:hover .quick-text b {
+  color: var(--accent-text);
+}
+.quick-icon,
+.quick > .icon:last-child {
+  display: none;
+}
+.quick-text {
+  gap: 2px;
+}
+.quick.is-due {
+  border-left: 0;
+}
+.quick.is-due .quick-text b::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: var(--s-2);
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--accent-text);
+}
+
+/* ---- 4. Ô số: không nền hộp, chỉ số và nhãn ---- */
+.stat-tiles {
+  gap: var(--s-4) var(--s-6);
+}
+.stat-tile {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+.stat-tile b {
+  font-size: 26px;
+  font-weight: 650;
+}
+.stat-tile span {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-2);
+}
+.stat-tile small {
+  color: var(--text-3);
+}
+@media (max-width: 767px) {
+  .stat-tiles-3 .stat-tile {
+    padding: 0;
+  }
+}
+
+/* ---- 5. Không viền nhấn bên trái ----
+   Khung có vạch màu bên trái là mẫu "callout" của AI. Thông điệp quan trọng thì
+   đặt lên đầu và viết rõ, không cần vạch màu. */
+.coach-say {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.coach-say .coach-text {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.coach-banner {
+  padding: var(--s-3) var(--s-1);
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+.coach-banner:hover {
+  border-color: var(--line);
+}
+.coach-banner .quick-icon,
+.coach-banner > .icon:last-child {
+  display: none;
+}
+.coach-banner:hover .quick-text b {
+  color: var(--accent-text);
+}
+.assist {
+  border-left: 1px solid var(--line);
+}
+.ai-alert {
+  border-left: 1px solid var(--line);
+}
+.note-key {
+  border-left: 0;
+  padding-left: 0;
+}
+.live-main {
+  border: 0;
+}
+.coach-mistake {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+.coach-mistakes {
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.coach-fact {
+  border: 0;
+  padding: 0;
+}
+
+/* ---- 6. Nút có chữ: không icon trang trí ----
+   Chữ đã nói nút làm gì; icon cạnh chữ chỉ thêm nhiễu. Nút chỉ có icon (.btn-icon)
+   giữ nguyên. */
+.btn:not(.btn-icon) > .icon {
+  display: none;
+}
+
+/* ---- 7. Tiêu đề màn: một dòng, cỡ lớn hơn, không gạch chân ---- */
+.screen-head:not(.play-head) {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.screen-head:not(.play-head) h1 {
+  font-size: 26px;
+  letter-spacing: -0.01em;
+}
+
+/* ---- 8. Lề thẳng: dòng danh sách không thụt so với đoạn chữ ---- */
+.quick,
+.coach-banner {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ---- 9. Link cạnh tiêu đề mục: chữ thường, không đóng khung như nút ---- */
+.rule-link {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  font-size: var(--fs-sm);
+  color: var(--accent-text);
+}
+.rule-link:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+/* ---- 10. Hàng số trình độ và thẻ kiểu lỗi: không hộp ---- */
+.level-row {
+  gap: var(--s-4);
+  border-radius: 0;
+}
+.level-row > div {
+  padding: 0;
+  background: none;
+}
+.tag-list li {
+  padding: 0;
+  border: 0;
+}
+.tag-list li + li::before {
+  content: '·';
+  margin-right: var(--s-2);
+  color: var(--text-3);
+}
+
+/* ---- 11. Danh sách trong màn một cột (Học, Ván đã chơi...): dòng phẳng ---- */
+.screen-narrow .sheet {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+.screen-narrow .sheet .lesson-row,
+.screen-narrow .sheet .log-row {
+  padding-left: 0;
+  padding-right: 0;
+}
+.lesson-row:hover,
+.screen-narrow .log-row:hover {
+  background: none;
+}
+.lesson-row:hover .lesson-text b,
+.screen-narrow .log-row:hover .log-name {
+  color: var(--accent-text);
+}
+/* Dòng bài học: chữ bên trái; dấu tích (bài đã xong) và số bài tập bên phải.
+   Không còn icon quyển sách lặp lại ở mọi dòng. */
+.lesson-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+.lesson-text {
+  order: 1;
+}
+.lesson-mark {
+  order: 2;
+}
+.lesson-count {
+  order: 3;
+}
+
+/* ---- 12. Hồ sơ: khối tên không đóng hộp ---- */
+.profile-card {
+  padding: 0;
+  border: 0;
+  background: none;
+}

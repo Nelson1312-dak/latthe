@@ -30,6 +30,22 @@ Danh sách **cấm**, dùng để duyệt mọi màn hình:
 - Văn phong: "Hãy cùng khám phá!", dấu chấm than dày đặc, gọi AI là "trợ lý thông minh".
 - Nội dung giả: "Lorem ipsum", "Người chơi 1", bàn cờ ở thế khai cuộc trong ảnh minh họa.
 
+Thêm sau đợt rà soát 18/11/2026 (`src/ui/refine.css`, nạp sau cùng), cũng **cấm**:
+
+- Tiêu đề mục VIẾT HOA giãn chữ kèm đường kẻ ngang ("HÔM NAY ———"). Dùng chữ thường đầu
+  câu, đậm vừa, cỡ `--fs-md`.
+- Dòng danh sách kiểu menu cài đặt: ô icon vuông bên trái + chữ xám phụ + mũi tên ▷ bên phải.
+  Dòng phẳng ngăn bằng nét kẻ; rê chuột chỉ đổi màu chữ tiêu đề.
+- Icon lặp lại ở mọi dòng (quyển sách trước mỗi bài học). Icon chỉ khi nó mang nghĩa (dấu tích bài đã xong).
+- Icon trang trí trong nút có chữ. Nút chỉ có icon (`.btn-icon`) thì giữ.
+- Khung có vạch màu nhấn bên trái (kiểu "callout"). Thông điệp quan trọng đặt lên đầu, viết rõ.
+- Ô số có nền hộp. Ô số chỉ là số + nhãn, không nền.
+- Số in font mã (monospace). Số dùng font chữ thường với `tabular-nums`; font mã chỉ cho
+  phím (`kbd`), PGN, mã mời.
+- Thẻ "bạn" / "máy" cạnh tên người chơi (chess.com, Lichess không có). Riêng thẻ "AI" giữ,
+  vì đã cam kết luôn báo rõ khi đối thủ là AI.
+- Danh sách trong màn một cột bọc trong hộp. Dùng nét kẻ trên/dưới.
+
 Thay vào đó:
 
 - **Ít hộp, nhiều nhịp.** Đây là luật quan trọng nhất. Thứ làm giao diện trông như máy sinh ra

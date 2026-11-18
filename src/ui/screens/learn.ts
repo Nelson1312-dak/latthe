@@ -51,7 +51,7 @@ export function learn(): string {
   const row = (l: Lesson) => {
     const đãXong = done.has(l.id);
     return `<button class="lesson-row${đãXong ? ' is-done' : ''}" data-lesson="${l.id}">
-      <span class="lesson-mark">${đãXong ? icon('check', 18) : icon('learn', 18)}</span>
+      <span class="lesson-mark">${đãXong ? icon('check', 18) : ''}</span>
       <span class="lesson-text">
         <b>${l.title}${gợiÝ.has(l.id) ? ' <span class="tag tag-coach">gợi ý</span>' : ''}</b>
         <span>${l.keyPoint}</span>

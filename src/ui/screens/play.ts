@@ -364,7 +364,7 @@ function setupPanel(): string {
         <div class="side-row" role="group" aria-label="Bên cầm quân">${sides}</div>
       </div>
       <button class="pref-row assist-toggle" data-pref="assist" role="switch" aria-checked="${prefs().assist}">
-        <span class="pref-text"><b>${icon('coach', 17)} Trợ lý</b><span>Dừng lại chỉ khi bạn đi hỏng</span></span>
+        <span class="pref-text"><b>Trợ lý</b><span>Dừng lại chỉ khi bạn đi hỏng</span></span>
         <span class="switch${prefs().assist ? ' is-on' : ''}" aria-hidden="true"><i></i></span>
       </button>
       ${button({ label: 'Chơi', kind: 'primary', icon: 'play', full: true })}
@@ -437,7 +437,7 @@ function gameScreen(extraSide = ''): string {
           ? (auth.user?.name ?? 'Bạn')
           : 'Đối thủ'
         : isBot
-          ? levelById(setup.level).name
+          ? `Máy ${levelById(setup.level).name.toLowerCase()}`
           : setup.mode === 'bot' && side === setup.side && auth.user
             ? auth.user.name
             : sideName(side),

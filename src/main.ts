@@ -3,6 +3,8 @@ import './ui/base.css';
 import './ui/components/components.css';
 import './ui/app.css';
 import './ui/screens/screens.css';
+// Nạp sau cùng: lớp tinh chỉnh gỡ các dấu hiệu "giao diện AI làm" (docs/DESIGN.md mục 2)
+import './ui/refine.css';
 
 import { installApiHeader } from './app/api-header.ts';
 import { ping, pingVisit, startPresence } from './app/ping.ts';
