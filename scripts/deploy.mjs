@@ -34,6 +34,15 @@ function upstream() {
 const lên = upstream().replace(/\/+$/, '');
 const cấu = { ...NỀN };
 
+// Trang tĩnh viết tay (không phải app): Vercel không tự trả index.html cho
+// đường dẫn thư mục, nên chỉ đường cho nó. Google đòi đúng địa chỉ này cho
+// trang chính sách quyền riêng tư.
+const TRANG_TĨNH = ['/chinh-sach-rieng-tu'];
+cấu.rewrites = TRANG_TĨNH.flatMap((t) => [
+  { source: t, destination: `${t}/index.html` },
+  { source: `${t}/`, destination: `${t}/index.html` },
+]);
+
 if (lên) {
   if (!/^https:\/\//.test(lên)) {
     console.error(`PUBLIC_UPSTREAM phải bắt đầu bằng https:// — đang là "${lên}"`);
@@ -41,7 +50,7 @@ if (lên) {
   }
   // Chỉ chuyển tiếp /api. Phần còn lại vẫn là file tĩnh trên Vercel, nên máy
   // ở nhà tắt thì trang vẫn mở được và vẫn chơi với máy được.
-  cấu.rewrites = [{ source: '/api/:path*', destination: `${lên}/api/:path*` }];
+  cấu.rewrites.push({ source: '/api/:path*', destination: `${lên}/api/:path*` });
   console.log(`Chuyển tiếp /api → ${lên}`);
 } else {
   console.log('Không có PUBLIC_UPSTREAM: chỉ đưa bản tĩnh lên (không có /api).');
