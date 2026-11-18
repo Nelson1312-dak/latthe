@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quyền riêng tư · Lật Cờ</title>
+<meta name="description" content="Lật Cờ lưu những gì, dùng vào việc gì, và cách xoá.">
+<style>
+  :root { color-scheme: dark; --bg: #302e2b; --card: #262421; --text: #fff; --text2: #c9c8c6; --line: #3f3d39; --accent: #95c862; }
+  @media (prefers-color-scheme: light) { :root { color-scheme: light; --bg: #f3f1ec; --card: #fff; --text: #1d1b18; --text2: #57524a; --line: #d9d4c9; --accent: #3b6420; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text2); font: 16px/1.65 'IBM Plex Sans', system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  a { color: var(--accent); }
+  h1, h2 { color: var(--text); line-height: 1.25; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 32px 0 8px; }
+  .meta { margin: 0 0 24px; font-size: 14px; }
+  .home { display: inline-block; margin-bottom: 24px; font-weight: 600; text-decoration: none; }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  b { color: var(--text); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--text); font-weight: 600; }
+  .box { background: var(--card); border-radius: 6px; padding: 12px 16px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="home" href="/">← Về Lật Cờ</a>
+  <h1>Chính sách quyền riêng tư</h1>
+  <p class="meta">Áp dụng cho trang <b>latbai.vn</b> (Lật Cờ). Cập nhật ngày 18/11/2026.</p>
+
+  <p class="box">Ngắn gọn: Lật Cờ <b>không lưu email</b>, không bán hay chia sẻ dữ liệu cho ai,
+  không chạy quảng cáo, không gắn công cụ theo dõi. Chơi với máy và giải bài tập không cần
+  đăng nhập. Đăng nhập chỉ để lưu ván cờ và tiến độ học của bạn.</p>
+
+  <h2>1. Khi đăng nhập bằng Google, app nhận và lưu gì</h2>
+  <p>Google gửi cho app một mã xác nhận đã ký. Từ đó app chỉ lưu:</p>
+  <ul>
+    <li><b>Mã định danh tài khoản Google</b> (một dãy số, gọi là <code>sub</code>) — để lần sau nhận ra bạn;</li>
+    <li><b>Tên hiển thị</b> và <b>đường dẫn ảnh đại diện</b> — để hiện trên trang và cho đối thủ thấy khi đấu online.</li>
+  </ul>
+  <p>Email có trong mã Google gửi, nhưng app <b>không lưu email</b>. (Chỉ khi tài khoản Google không có
+  tên hiển thị, app mới lấy phần trước dấu @ của email làm tên.) App không bao giờ thấy mật khẩu
+  Google của bạn, và không xin quyền đọc Gmail, Drive hay bất cứ dữ liệu nào khác trong tài khoản Google.</p>
+
+  <h2>2. Dữ liệu sinh ra khi bạn dùng app</h2>
+  <table>
+    <tr><th>Dữ liệu</th><th>Dùng để</th></tr>
+    <tr><td>Các ván đã chơi (nước đi, kết quả, cấp độ máy)</td><td>Cho bạn xem lại ván, chấm từng nước</td></tr>
+    <tr><td>Kết quả chấm ván, thẻ ôn tập từ những nước đi sai</td><td>Nhắc bạn ôn lại đúng chỗ hay sai</td></tr>
+    <tr><td>Lần giải bài tập, tiến độ bài học, điểm Elo</td><td>Chọn bài vừa sức, ghép trận với người cùng trình độ</td></tr>
+    <tr><td>Phiên đăng nhập (một cookie)</td><td>Giữ bạn đăng nhập trong 30 ngày</td></tr>
+  </table>
+  <p>Cookie phiên là loại <code>HttpOnly</code>, máy chủ chỉ lưu <b>bản băm</b> của nó chứ không lưu mã gốc.
+  App không dùng cookie quảng cáo hay cookie của bên thứ ba.</p>
+  <p>Tuỳ chọn hiển thị (màu bàn cờ, âm thanh, sáng/tối…) chỉ lưu trong trình duyệt của bạn
+  (<code>localStorage</code>), không gửi lên máy chủ.</p>
+
+  <h2>3. Dữ liệu nằm ở đâu, ai thấy</h2>
+  <ul>
+    <li>Dữ liệu ở mục 1 và 2 nằm trong <b>một cơ sở dữ liệu trên máy chủ riêng của người làm app</b>, tại Việt Nam.
+      Có bản sao lưu hằng ngày, giữ 14 bản gần nhất.</li>
+    <li>Engine cờ (Stockfish) chạy <b>ngay trong trình duyệt của bạn</b>. Phần lời bình sau ván dùng một mô hình
+      ngôn ngữ chạy trên chính máy chủ đó — ván cờ không bị gửi cho dịch vụ AI bên ngoài.</li>
+    <li>Khi đấu online, đối thủ thấy tên hiển thị, ảnh đại diện và điểm Elo của bạn.</li>
+    <li>Đường truyền đi qua hai nhà cung cấp hạ tầng: <b>Vercel</b> (lưu trữ trang web) và <b>ngrok</b>
+      (đường hầm tới máy chủ). Như mọi dịch vụ mạng, họ có thể ghi nhật ký kỹ thuật như địa chỉ IP
+      theo chính sách của họ. App không gửi thêm dữ liệu nào cho họ.</li>
+    <li>Không bán, không cho thuê, không chia sẻ dữ liệu với bên nào khác. Không dùng dữ liệu để quảng cáo.</li>
+  </ul>
+
+  <h2>4. Xoá dữ liệu</h2>
+  <p>Muốn xoá tài khoản cùng toàn bộ ván cờ, thẻ ôn tập và tiến độ: mở một yêu cầu tại
+  <a href="https://github.com/Nelson1312-dak/latthe/issues" rel="noopener">trang dự án trên GitHub</a>
+  (ghi tên hiển thị của bạn trong app). Dữ liệu được xoá khỏi cơ sở dữ liệu trong vòng 7 ngày và tự biến mất
+  khỏi bản sao lưu sau 14 ngày.</p>
+  <p>Bạn cũng có thể gỡ quyền của Lật Cờ bất cứ lúc nào tại
+  <a href="https://myaccount.google.com/connections" rel="noopener">trang kết nối của tài khoản Google</a>.</p>
+
+  <h2>5. Trẻ em</h2>
+  <p>App không cố ý thu thập thêm thông tin gì về trẻ em ngoài những gì nêu trên. Tài khoản Google của trẻ
+  em do phụ huynh quản lý theo quy định của Google.</p>
+
+  <h2>6. Thay đổi</h2>
+  <p>Nếu chính sách này thay đổi, ngày cập nhật ở đầu trang sẽ đổi theo. Mã nguồn của app là phần mềm
+  tự do (GPL-3), ai cũng kiểm tra được app thực sự làm gì:
+  <a href="https://github.com/Nelson1312-dak/latthe" rel="noopener">github.com/Nelson1312-dak/latthe</a>.</p>
+</main>
+</body>
+</html>

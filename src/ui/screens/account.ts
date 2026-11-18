@@ -143,6 +143,7 @@ export function account(): string {
         <p class="prose">
           Đăng nhập để lưu ván đã chơi, thẻ ôn tập và tiến độ, dùng được trên nhiều thiết bị.
           App không bao giờ thấy mật khẩu của bạn: Google lo phần đó.
+          <a href="/chinh-sach-rieng-tu/">App lưu những gì</a>.
         </p>
         <div id="google-btn" class="google-btn"></div>
         ${

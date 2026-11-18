@@ -100,7 +100,8 @@ function siteFooter(): string {
     `<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3</a>.</span> ` +
     `<span>Engine <a href="https://stockfishchess.org/" target="_blank" rel="noopener">Stockfish</a>, ` +
     `bộ quân cburnett (CC BY-SA 3.0).</span> ` +
-    `<a href="https://github.com/Nelson1312-dak/latthe" target="_blank" rel="noopener">Mã nguồn</a>` +
+    `<a href="https://github.com/Nelson1312-dak/latthe" target="_blank" rel="noopener">Mã nguồn</a> ` +
+    `<a href="/chinh-sach-rieng-tu/">Quyền riêng tư</a>` +
     `</footer>`
   );
 }
