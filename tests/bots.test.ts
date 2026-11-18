@@ -28,10 +28,10 @@ describe('danh sách bot', () => {
 
 describe('pickBot', () => {
   it('chọn bot có Elo gần nhất', () => {
-    expect(pickBot(620).id).toBe('nhim');
-    expect(pickBot(1000).id).toBe('sen');
-    expect(pickBot(1550).id).toBe('tung');
-    expect(pickBot(2800).id).toBe('thay-do');
+    expect(pickBot(620).id).toBe('rookie');
+    expect(pickBot(1000).id).toBe('steady');
+    expect(pickBot(1550).id).toBe('solid');
+    expect(pickBot(2800).id).toBe('master');
   });
 });
 
@@ -43,7 +43,7 @@ describe('chooseMove', () => {
   ];
 
   it('bot mạnh (một dòng) đi đúng nước engine chọn', () => {
-    expect(chooseMove(BOTS.find((b) => b.id === 'thay-do')!, [cands[0]])).toBe('e2e4');
+    expect(chooseMove(BOTS.find((b) => b.id === 'master')!, [cands[0]])).toBe('e2e4');
   });
 
   it('bot yếu đôi khi đi lệch theo trọng số', () => {
@@ -61,7 +61,7 @@ describe('chooseMove', () => {
   });
 
   it('bot ưa tấn công nghiêng về nước ăn/chiếu không kém hơn quá 60cp', () => {
-    const mai = BOTS.find((b) => b.id === 'mai')!;
+    const mai = BOTS.find((b) => b.id === 'blitz')!;
     const n = 400;
     let chiếu = 0;
     let seed = 7;
@@ -115,7 +115,7 @@ describe('ghép bot khi hàng chờ trống', () => {
     const st = live.roomOf(a.id)!.stateFor(a.id, T0 + BOT_AFTER_MS)!;
     const đối = st.youAre === 'w' ? st.black : st.white;
     expect(đối.bot?.id).toBeTruthy();
-    expect(đối.name).toMatch(/^Bot /);
+    expect(BOTS.map((b) => b.name)).toContain(đối.name);
   });
 
   it('hai người cùng chờ thì ghép với nhau, không ghép bot', () => {
