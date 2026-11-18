@@ -4,6 +4,8 @@
 // giữ sự kiện đó lại để nút "Cài Lật Cờ lên máy" trong Cài đặt gọi ra hộp cài.
 // iPhone/iPad (Safari) không có sự kiện này: chỉ hướng dẫn Chia sẻ → Thêm vào MH chính.
 
+import { ping } from './ping.ts';
+
 interface InstallPrompt extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -47,6 +49,7 @@ export function initPwa(onChange: () => void): void {
   });
   window.addEventListener('appinstalled', () => {
     hộpCài = null;
+    ping('pwa_install');
     onChange();
   });
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;

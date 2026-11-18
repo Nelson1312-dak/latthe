@@ -11,9 +11,14 @@ export const CLIENT_EVENTS = [
   'visit', // mở trang (một lần mỗi phiên trình duyệt)
   'play_start', // bắt đầu một ván với máy / hai người một máy
   'play_end', // ván đó kết thúc
-  'report_detail', // bấm "Xem lại chi tiết" từ bảng chấm ván
   'share_open', // có người mở link ván được chia sẻ
   'online_queue', // bấm Tìm trận
+  'assist_hold', // Trợ lý dừng máy lại vì người chơi đi hỏng
+  'assist_guide', // người chơi mở hướng dẫn của Trợ lý
+  'coach_open', // mở tab Huấn luyện viên
+  'mini_open', // mở bàn cờ nổi
+  'pwa_install', // cài app lên máy
+  'lesson_page', // mở trang bài học công khai /hoc/... (thường từ Google)
 ] as const;
 
 /** Việc server tự đếm. */
@@ -38,10 +43,15 @@ export interface DayRow {
   visit: number;
   play_start: number;
   play_end: number;
-  report_detail: number;
   share_create: number;
   share_open: number;
   online_queue: number;
+  assist_hold: number;
+  assist_guide: number;
+  coach_open: number;
+  mini_open: number;
+  pwa_install: number;
+  lesson_page: number;
   match_human: number;
   match_ai: number;
   signup: number;
@@ -67,10 +77,15 @@ const EMPTY = (day: string): DayRow => ({
   visit: 0,
   play_start: 0,
   play_end: 0,
-  report_detail: 0,
   share_create: 0,
   share_open: 0,
   online_queue: 0,
+  assist_hold: 0,
+  assist_guide: 0,
+  coach_open: 0,
+  mini_open: 0,
+  pwa_install: 0,
+  lesson_page: 0,
   match_human: 0,
   match_ai: 0,
   signup: 0,

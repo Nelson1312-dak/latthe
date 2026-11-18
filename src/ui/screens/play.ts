@@ -799,6 +799,7 @@ async function botMove(rerender: () => void): Promise<void> {
         assist.verdict = v;
         assist.held = true;
         premove = null;
+        ping('assist_hold');
         return;
       }
     }
@@ -992,6 +993,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     },
     'Xem hướng dẫn': () => {
       assist.step = 0;
+      ping('assist_guide');
     },
     'Bước trước': () => {
       if (assist.step !== null) assist.step = Math.max(0, assist.step - 1);

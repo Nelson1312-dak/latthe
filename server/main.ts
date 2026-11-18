@@ -14,6 +14,7 @@ import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
 import { advise, explain, ollamaAlive, queueDepth } from './advisor.ts';
 import { coachReport, communityReport } from './coach.ts';
+import { presenceBeat, presenceNow } from './presence.ts';
 import { saveInsight, startAnalyst } from './analyst.ts';
 import { pickPuzzle, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
 import { Live } from './live/index.ts';
@@ -627,6 +628,22 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     res.writeHead(204);
     res.end();
     return;
+  }
+
+  // Đang mở trang: mỗi tab gửi mã ngẫu nhiên ~45 giây một lần (chỉ giữ trong bộ nhớ, xem presence.ts)
+  if (path === '/api/presence' && method === 'POST') {
+    const body = await readJson(req, 256).catch(() => ({}) as Record<string, unknown>);
+    if (!fromThisMachine(req) && !quáGiới(req, 'presence', 30, 60_000)) presenceBeat(body.id, body.where);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // Thống kê trực tiếp (chủ trang): ai đang trên trang, ván online đang đánh, hàng chờ
+  if (path === '/api/admin/live' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user || !ADMIN_IDS.has(user.id)) return json(res, 403, { error: 'Không có quyền' });
+    return json(res, 200, { online: presenceNow(), live: live.snapshot(), at: new Date().toISOString() });
   }
 
   // Bảng thống kê: chỉ chủ trang

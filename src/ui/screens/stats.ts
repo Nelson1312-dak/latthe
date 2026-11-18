@@ -13,10 +13,15 @@ interface DayRow {
   visit: number;
   play_start: number;
   play_end: number;
-  report_detail: number;
   share_create: number;
   share_open: number;
   online_queue: number;
+  assist_hold: number;
+  assist_guide: number;
+  coach_open: number;
+  mini_open: number;
+  pwa_install: number;
+  lesson_page: number;
   match_human: number;
   match_ai: number;
   signup: number;
@@ -50,8 +55,79 @@ interface Community {
 let cộngĐồng: Community | null = null;
 let cộngĐồngĐang = false;
 
+/** Trực tiếp: ai đang trên trang, ván online đang đánh, hàng chờ. Tự hỏi lại mỗi 15 giây. */
+interface Live {
+  online: { total: number; byWhere: Record<string, number> };
+  live: { games: number; vsAi: number; queue: number };
+  at: string;
+}
+let trựcTiếp: Live | null = null;
+let nhịp: ReturnType<typeof setInterval> | null = null;
+let lầnNhịp = 0;
+let ngheẨnHiện = false;
+const NHỊP_MS = 15_000;
+
+function hỏiTrựcTiếp(rerender: () => void): void {
+  void fetch('/api/admin/live', { credentials: 'same-origin' })
+    .then(async (r) => {
+      if (r.ok) trựcTiếp = (await r.json()) as Live;
+    })
+    .catch(() => {})
+    .finally(rerender);
+}
+
+/** Lấy số theo ngày (không xoá số cũ trên màn trong lúc chờ: tự cập nhật thì không nháy). */
+function hỏiSốNgày(rerender: () => void): void {
+  void fetch('/api/admin/stats?days=30', { credentials: 'same-origin' })
+    .then(async (r) => {
+      if (!r.ok) throw new Error(r.status === 403 ? 'Không có quyền xem' : `Lỗi ${r.status}`);
+      data = (await r.json()) as Stats;
+      error = null;
+    })
+    .catch((e: Error) => {
+      if (!data) error = e.message;
+    })
+    .finally(() => {
+      loading = false;
+      rerender();
+    });
+}
+
+/**
+ * Đang mở trang Thống kê thì tự cập nhật: trực tiếp mỗi 15 giây, số theo ngày mỗi
+ * phút. Rời trang là thôi (không hỏi server khi không ai xem).
+ */
+function tựCậpNhật(rerender: () => void): void {
+  if (nhịp) return;
+  nhịp = setInterval(() => {
+    if (!location.hash.startsWith('#/thong-ke') || !auth.user?.admin) {
+      clearInterval(nhịp!);
+      nhịp = null;
+      return;
+    }
+    // Tab đang ẩn thì thôi, quay lại là hỏi ngay (visibilitychange bên dưới)
+    if (document.visibilityState !== 'visible') return;
+    lầnNhịp++;
+    hỏiTrựcTiếp(rerender);
+    if (lầnNhịp % 4 === 0) hỏiSốNgày(rerender);
+  }, NHỊP_MS);
+  if (ngheẨnHiện) return;
+  ngheẨnHiện = true;
+  document.addEventListener('visibilitychange', () => {
+    if (nhịp && document.visibilityState === 'visible') {
+      hỏiTrựcTiếp(rerender);
+      hỏiSốNgày(rerender);
+    }
+  });
+}
+
 export function mountStats(rerender: () => void): void {
-  if (loading || data || !auth.user?.admin) return;
+  if (!auth.user?.admin) return;
+  if (!nhịp) {
+    tựCậpNhật(rerender);
+    hỏiTrựcTiếp(rerender);
+  }
+  if (loading || data) return;
   loading = true;
   // Phần AI chậm hơn (mô hình có thể phải nạp): xin riêng, không bắt cả trang chờ
   cộngĐồngĐang = true;
@@ -66,18 +142,7 @@ export function mountStats(rerender: () => void): void {
       cộngĐồngĐang = false;
       rerender();
     });
-  void fetch('/api/admin/stats?days=30', { credentials: 'same-origin' })
-    .then(async (r) => {
-      if (!r.ok) throw new Error(r.status === 403 ? 'Không có quyền xem' : `Lỗi ${r.status}`);
-      data = (await r.json()) as Stats;
-    })
-    .catch((e: Error) => {
-      error = e.message;
-    })
-    .finally(() => {
-      loading = false;
-      rerender();
-    });
+  hỏiSốNgày(rerender);
 }
 
 /** Bấm "Tải lại" thì xin số mới. */
@@ -85,10 +150,42 @@ export function refreshStats(rerender: () => void): void {
   data = null;
   error = null;
   cộngĐồng = null;
+  hỏiTrựcTiếp(rerender);
   mountStats(rerender);
 }
 
 const sum = (rows: DayRow[], k: keyof DayRow) => rows.reduce((a, r) => a + (r[k] as number), 0);
+
+/** Khối trực tiếp ở đầu trang: lúc này có ai, đang làm gì. */
+function liveBlock(): string {
+  const t = trựcTiếp;
+  if (!t) return `<div class="live-strip is-loading"><p class="muted">Đang hỏi số trực tiếp…</p></div>`;
+  const w = t.online.byWhere;
+  const học = (w['hoc'] ?? 0) + (w['on-tap'] ?? 0) + (w['huan-luyen'] ?? 0);
+  const ô = (v: number, nhãn: string, nhỏ = '') =>
+    `<div class="live-cell"><b class="mono">${fmt(v)}</b><span>${nhãn}</span>${nhỏ ? `<small>${nhỏ}</small>` : ''}</div>`;
+  return `<div class="live-strip">
+      <div class="live-cell live-main"><span class="live-dot" aria-hidden="true"></span><b class="mono">${fmt(t.online.total)}</b><span>đang mở trang</span></div>
+      ${ô(w['choi'] ?? 0, 'ở tab Chơi')}
+      ${ô(t.live.games, 'ván online đang đánh', t.live.vsAi ? `${t.live.vsAi} ván với AI` : '')}
+      ${ô(t.live.queue, 'đang chờ ghép')}
+      ${ô(học, 'đang học / ôn tập')}
+    </div>
+    <p class="muted live-note">Trực tiếp · tự cập nhật mỗi 15 giây · lúc ${new Date(t.at).toLocaleTimeString('vi-VN')}. Tính cả chính bạn nếu đang mở latbai.vn.</p>`;
+}
+
+/** Các tính năng mới: có ai dùng không (7 ngày). */
+function featureBlock(last7: DayRow[]): string {
+  return `${rule('Tính năng mới · 7 ngày')}
+    <div class="stat-tiles">
+      ${tile(sum(last7, 'assist_hold'), 'Trợ lý dừng máy', `${sum(last7, 'assist_guide')} lần mở hướng dẫn`)}
+      ${tile(sum(last7, 'coach_open'), 'Mở Huấn luyện viên', 'lượt mở tab')}
+      ${tile(sum(last7, 'lesson_page'), 'Xem trang bài học', 'latbai.vn/hoc — thường từ Google')}
+      ${tile(sum(last7, 'mini_open'), 'Mở bàn cờ nổi', 'cửa sổ nhỏ trên máy tính')}
+      ${tile(sum(last7, 'pwa_install'), 'Cài app lên máy', 'từ nút trong Cài đặt / trình duyệt')}
+      ${tile(sum(last7, 'online_queue'), 'Bấm Tìm trận', `ghép người: ${sum(last7, 'match_human')} · AI: ${sum(last7, 'match_ai')}`)}
+    </div>`;
+}
 const fmt = (n: number) => n.toLocaleString('vi-VN');
 const dm = (day: string) => `${Number(day.slice(8, 10))}/${Number(day.slice(5, 7))}`;
 
@@ -212,7 +309,6 @@ function funnel(rows: DayRow[]): string {
     ['Lượt vào trang', sum(rows, 'visit')],
     ['Bắt đầu một ván', sum(rows, 'play_start') + sum(rows, 'online_queue')],
     ['Chơi xong một ván', sum(rows, 'play_end') + sum(rows, 'match_human') + sum(rows, 'match_ai')],
-    ['Mở xem lại chi tiết', sum(rows, 'report_detail')],
     ['Tạo tài khoản', sum(rows, 'signup')],
   ];
   const đầu = Math.max(1, steps[0][1]);
@@ -252,13 +348,14 @@ export function stats(): string {
     .map(
       (r) =>
         `<tr><td>${dm(r.day)}</td><td>${r.visit}</td><td>${r.play_start}</td><td>${r.play_end}</td>` +
-        `<td>${r.match_ai}</td><td>${r.match_human}</td><td>${r.report_detail}</td><td>${r.share_create}</td>` +
+        `<td>${r.match_ai}</td><td>${r.match_human}</td><td>${r.assist_hold}</td><td>${r.share_create}</td>` +
         `<td>${r.share_open}</td><td>${r.signup}</td><td>${r.puzzles}</td></tr>`,
     )
     .join('');
 
   return `<div class="screen screen-narrow stats-screen">
     ${head}
+    ${liveBlock()}
     <p class="muted">Hôm nay ${dm(today.day)} · cập nhật lúc ${new Date(data.generatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
     <div class="stat-tiles">
       ${tile(sum(last7, 'visit'), 'Lượt vào · 7 ngày', so('visit'))}
@@ -270,12 +367,13 @@ export function stats(): string {
     </div>
     ${barChart(d, 'visit', 'Lượt vào trang', 'lượt')}
     ${barChart(d, 'play_end', 'Ván chơi xong (với máy, hai người)', 'ván')}
+    ${featureBlock(last7)}
     ${rule('Phễu 30 ngày')}
     ${funnel(d)}
     ${communityBlock()}
     ${rule('Từng ngày')}
     <div class="table-wrap"><table class="stats-table">
-      <thead><tr><th>Ngày</th><th>Vào</th><th>Bắt đầu ván</th><th>Xong ván</th><th>Với AI</th><th>Với người</th><th>Xem chi tiết</th><th>Chia sẻ</th><th>Mở link</th><th>Đăng ký</th><th>Bài tập</th></tr></thead>
+      <thead><tr><th>Ngày</th><th>Vào</th><th>Bắt đầu ván</th><th>Xong ván</th><th>Với AI</th><th>Với người</th><th>Trợ lý dừng</th><th>Chia sẻ</th><th>Mở link</th><th>Đăng ký</th><th>Bài tập</th></tr></thead>
       <tbody>${rowsHtml || '<tr><td colspan="11">Chưa có hoạt động nào trong 30 ngày.</td></tr>'}</tbody>
     </table></div>
     ${cóViệc.length < d.length ? `<p class="muted">Ẩn ${d.length - cóViệc.length} ngày không có hoạt động.</p>` : ''}

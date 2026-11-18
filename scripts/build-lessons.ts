@@ -116,6 +116,7 @@ function page(o: { title: string; desc: string; path: string; body: string; with
 <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <style>${STYLE}</style>
+<script>try{fetch('/api/ping',{method:'POST',headers:{'content-type':'application/json','ngrok-skip-browser-warning':'1'},body:'{"e":"lesson_page"}',keepalive:true}).catch(function(){})}catch(e){}</script>
 </head>
 <body>
 ${o.withSprite ? `<div style="display:none" aria-hidden="true">${sprite}</div>` : ''}

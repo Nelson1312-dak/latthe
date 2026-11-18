@@ -281,6 +281,18 @@ export class Live {
   }
 
   /** Đang có ván chưa xong — dùng để chặn engine và HLV. */
+  /** Lúc này: bao nhiêu ván online đang đánh (trong đó với AI), bao nhiêu người chờ ghép. */
+  snapshot(): { games: number; vsAi: number; queue: number } {
+    let games = 0;
+    let vsAi = 0;
+    for (const r of this.rooms.values()) {
+      if (r.isOver) continue;
+      games++;
+      if (r.white.userId < 0 || r.black.userId < 0) vsAi++;
+    }
+    return { games, vsAi, queue: this.queue.size };
+  }
+
   isPlaying(userId: number): boolean {
     const r = this.roomOf(userId);
     return Boolean(r && !r.isOver);

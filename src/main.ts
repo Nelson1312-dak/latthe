@@ -5,7 +5,7 @@ import './ui/app.css';
 import './ui/screens/screens.css';
 
 import { installApiHeader } from './app/api-header.ts';
-import { pingVisit } from './app/ping.ts';
+import { ping, pingVisit, startPresence } from './app/ping.ts';
 import { currentDaily } from './app/daily.ts';
 import { loadPieces } from './board/sprite.ts';
 import { snapBoards } from './board/snap.ts';
@@ -109,6 +109,7 @@ function siteHeader(current: string): string {
     `<span>${APP_NAME}</span></a>` +
     `<nav class="top-nav" aria-label="Chính">` +
     NAV.map((n) => topLink(n.route, n.label, n.icon, current === '' ? 'choi' : current)).join('') +
+    (auth.user?.admin ? topLink('thong-ke', 'Thống kê', 'review', current) : '') +
     `</nav>` +
     // "Thiết kế" (trang mẫu của design system) không còn trên thanh điều hướng:
     // người chơi không cần nó, và nó làm trang trông như công cụ của dev.
@@ -144,6 +145,7 @@ function bottomNav(current: string): string {
   return (
     `<nav class="nav" aria-label="Chính (điện thoại)">` +
     NAV.map((n) => item(n.route, n.label, n.icon)).join('') +
+    (auth.user?.admin ? item('thong-ke', 'Thống kê', 'review') : '') +
     item('tai-khoan', shortName(), 'user') +
     `</nav>`
   );
@@ -554,6 +556,7 @@ document.addEventListener('click', (e) => {
     const chếĐộ = playMode();
     saveHandoff(chếĐộ === 'machine' ? exportPlayState() : null);
     void openMini(onMiniClosed, chếĐộ).then((ok) => {
+      if (ok) ping('mini_open');
       if (ok && chếĐộ === 'machine') resetPlay();
       if (!ok) saveHandoff(null);
       render();
@@ -711,4 +714,12 @@ if (IS_MINI) {
 render();
 void loadPieces().catch((err) => console.error(err));
 void loadMe();
-if (!IS_MINI) pingVisit();
+if (!IS_MINI) {
+  pingVisit();
+  // Đang ở mục nào (cho bảng Thống kê trực tiếp): ván online tính riêng
+  startPresence(() => {
+    const r = route();
+    if (r === '' || r === 'choi') return onlineView() || playMode() === 'online' ? 'online' : 'choi';
+    return r;
+  });
+}

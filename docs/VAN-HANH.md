@@ -55,10 +55,22 @@ LatCo-Server`. Sửa phần web thì chỉ cần `npm run deploy`.
 
 ## Thống kê (#/thong-ke)
 
-Chỉ tài khoản có id trong `ADMIN_USER_IDS` (`.env.chess`, hiện là 218) xem được;
-vào từ Hồ sơ → "Thống kê trang". Đếm ẩn danh theo ngày: lượt vào, bắt đầu/xong
-ván, xem chi tiết, tìm trận, ghép người/AI, đăng ký, chia sẻ, mở link. Lượt từ
-chính máy chủ (lúc phát triển, lúc chạy `check:design` qua Vite) không được tính.
+Chỉ tài khoản có id trong `ADMIN_USER_IDS` (`.env.chess`, hiện là 218) xem được.
+Tài khoản đó thấy mục **Thống kê** ngay trên thanh điều hướng (máy tính: cột trái;
+điện thoại: thanh dưới). Cài latbai.vn lên điện thoại như app là mở một chạm.
+
+- **Trực tiếp** (đầu trang, tự cập nhật mỗi 15 giây khi đang mở trang): số người đang
+  mở trang và đang ở mục nào, ván online đang đánh (bao nhiêu với AI), người đang chờ
+  ghép. "Đang mở trang" là mã ngẫu nhiên mỗi tab gửi ~45 giây/lần, server chỉ giữ trong
+  bộ nhớ 2 phút (`server/presence.ts`) — khởi động lại server là về 0, vài chục giây
+  sau đủ lại. Tính cả chính bạn nếu đang mở latbai.vn.
+- **Theo ngày** (tự cập nhật mỗi phút): lượt vào, bắt đầu/xong ván, tìm trận, ghép
+  người/AI, đăng ký, chia sẻ, mở link, bài tập.
+- **Tính năng mới · 7 ngày**: Trợ lý dừng máy / mở hướng dẫn, mở Huấn luyện viên, xem
+  trang bài học /hoc/ (trang tĩnh, tự gửi một lượt), bàn cờ nổi, cài app.
+- **Người chơi hay sai gì**: AI đọc tóm tắt lỗi gộp của mọi người (xem Huấn luyện viên).
+
+Lượt từ chính máy chủ (lúc phát triển, lúc chạy `check:design` qua Vite) không được tính.
 
 ## Ván chia sẻ (latbai.vn/van/<id>)
 

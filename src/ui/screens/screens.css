@@ -2706,3 +2706,72 @@ a.quick {
   padding: 0 var(--s-3);
   font-size: var(--fs-sm);
 }
+
+/* ================= Thống kê trực tiếp (chủ trang) ================= */
+.live-strip {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.live-cell {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.live-cell b {
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--text-1);
+}
+.live-cell span {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.live-cell small {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.live-main {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: var(--s-2);
+  border: 1px solid var(--accent-dim);
+}
+.live-main b {
+  font-size: 32px;
+}
+.live-main span:last-child {
+  grid-column: 1 / -1;
+}
+.live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: live-pulse 2s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+.live-note {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-xs);
+}
+@media (max-width: 767px) {
+  .live-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .live-main {
+    grid-column: 1 / -1;
+  }
+}

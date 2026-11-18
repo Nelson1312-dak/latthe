@@ -6,6 +6,7 @@
 // kiểm chặt, viết sai là dùng lời viết sẵn.
 
 import { auth } from '../../app/session.ts';
+import { ping } from '../../app/ping.ts';
 import { invalidateCoach, loadAdvice, loadCoach, type AdviceData, type CoachData } from '../../app/coach.ts';
 import { MOTIF_NAME } from '../../../shared/coach.ts';
 import { esc, notice, rule } from '../components/index.ts';
@@ -27,6 +28,7 @@ export function resetCoach(): void {
 export function mountCoach(rerender: () => void): void {
   if (!auth.user) return;
   if (Date.now() - hỏiLúc < 10_000) return;
+  if (!hỏiLúc) ping('coach_open');
   hỏiLúc = Date.now();
   loading = !data;
   void loadCoach().then((c) => {

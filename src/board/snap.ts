@@ -69,6 +69,10 @@ function snap(row: HTMLElement): void {
 
 let ngheCửaSổ = false;
 
+function đoHết(): void {
+  for (const row of document.querySelectorAll<HTMLElement>('.board-row')) snap(row);
+}
+
 /** Gọi sau mỗi lần vẽ màn hình: căn mọi bàn cờ đang có trên trang. */
 export function snapBoards(root: ParentNode = document): void {
   if (typeof ResizeObserver === 'undefined') return;
@@ -77,11 +81,21 @@ export function snapBoards(root: ParentNode = document): void {
   });
   // Cửa sổ thấp đi/cao lên không đổi bề ngang hàng bàn cờ, nên ResizeObserver
   // không báo: nghe thêm sự kiện đổi cỡ cửa sổ.
+  // Không dùng sự kiện "resize" của cửa sổ: nó có lúc chạy TRƯỚC khi trình duyệt
+  // tính lại bố cục, đo ra cỡ cũ (bàn cờ 744px trong cửa sổ 390px, tràn ngang).
+  // ResizeObserver trên <html> chỉ báo SAU khi bố cục đã xong.
   if (!ngheCửaSổ) {
     ngheCửaSổ = true;
-    window.addEventListener('resize', () => {
-      for (const row of document.querySelectorAll<HTMLElement>('.board-row')) snap(row);
-    });
+    let rộng = 0;
+    let cao = 0;
+    new ResizeObserver(() => {
+      // Chỉ đo lại khi cửa sổ đổi cỡ, không phải mỗi lần nội dung trang dài ra
+      if (window.innerWidth === rộng && window.innerHeight === cao) return;
+      rộng = window.innerWidth;
+      cao = window.innerHeight;
+      đoHết();
+    }).observe(document.documentElement);
+    window.addEventListener('resize', () => requestAnimationFrame(đoHết));
   }
   // Màn hình vẽ lại là thay cả cây DOM, nên bỏ theo dõi các hàng cũ đã mất
   ro.disconnect();

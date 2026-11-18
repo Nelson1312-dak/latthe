@@ -411,7 +411,9 @@
     padding: var(--s-3);
   }
   .game {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): cột không nở theo phần tử con. Có lúc --board-fit còn là số đo của
+       cỡ cửa sổ cũ (vừa thu nhỏ, JS chưa kịp đo lại) — 1fr sẽ nở theo, tràn cả trang. */
+    grid-template-columns: minmax(0, 1fr);
   }
   .game-side {
     gap: var(--s-2);
