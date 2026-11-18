@@ -3185,10 +3185,21 @@ a.quick {
   justify-self: stretch;
   padding-top: var(--s-2);
 }
-.quick-start .btn-full {
-  justify-content: center;
-  height: 52px;
+.quick-start .qs-play {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0;
+  height: 56px;
+  line-height: 1.2;
+}
+.qs-play b {
   font-size: var(--fs-lg);
+}
+.qs-play small {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  opacity: 0.85;
 }
 .qs-sum {
   margin: 0;
@@ -3202,5 +3213,75 @@ a.quick {
 @media (min-width: 1101px) {
   .quick-start {
     display: none;
+  }
+}
+
+/* ================= Điện thoại: màn có bàn cờ theo kiểu chess.com =================
+   Bàn cờ liền mép màn hình (không lề hai bên), mọi thứ khác giữ lề 12px. Header,
+   thanh người chơi gọn lại để nút Chơi lọt màn đầu dù Safari ăn bớt chiều cao.
+   Cột dưới bàn cờ phẳng, không đóng khung (khung trong khung nhìn chật). */
+@media (max-width: 767px) {
+  :root {
+    --head-h: 46px;
+  }
+  .brand {
+    font-size: 20px;
+  }
+  .brand-mark {
+    width: 24px;
+    height: 24px;
+  }
+  .screen:has(> .game) {
+    padding: var(--s-1) 0 var(--s-4);
+  }
+  /* "Tuỳ chọn" cuộn tới cột này: chừa chỗ cho header dính trên cùng */
+  .screen:has(> .game) .game-side {
+    scroll-margin-top: calc(var(--head-h) + var(--s-2));
+  }
+  .screen:has(> .game) .quick-start {
+    padding-top: var(--s-1);
+    gap: 2px;
+  }
+  .screen:has(> .game) .quick-start .qs-play {
+    height: 52px;
+  }
+  .screen:has(> .game) .qs-acts .gb-act {
+    min-height: 46px;
+    padding: 2px 0;
+  }
+  .screen:has(> .game) > .screen-head,
+  .screen:has(> .game) .game-board > .player,
+  .screen:has(> .game) .quick-start,
+  .screen:has(> .game) .game-side {
+    padding-left: var(--s-3);
+    padding-right: var(--s-3);
+  }
+  .screen:has(> .game) .game-board {
+    gap: 2px;
+  }
+  .screen:has(> .game) .game-board > .player {
+    min-height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .screen:has(> .game) .player-face {
+    width: 34px;
+    height: 34px;
+  }
+  .screen:has(> .game) .face-piece {
+    width: 24px;
+    height: 24px;
+  }
+  .screen:has(> .game) .player-name {
+    font-size: var(--fs-md);
+  }
+  .screen:has(> .game) .game-side .sheet {
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .screen:has(> .game) .game-side .sheet > * {
+    padding-left: 0;
+    padding-right: 0;
   }
 }

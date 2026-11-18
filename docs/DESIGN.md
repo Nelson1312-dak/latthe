@@ -549,6 +549,11 @@ thanh người chơi phía dưới và thanh điều hướng dính đáy (đi�
 hơn giữa bề ngang và chiều cao đó (không nhỏ hơn 220px), nghe cả sự kiện đổi cỡ cửa sổ.
 Bàn cờ phải nhỏ lại thì cả cột (hai thanh người chơi, và cột dưới ở bố cục một cột) thu
 theo bằng `--board-fit` để thẳng mép. CSS ở bố cục một cột chỉ còn giới hạn bề ngang.
+**Ngoại lệ: điện thoại cầm dọc** (rộng < 768px, cao > rộng): bàn cờ KHÔNG co theo chiều cao mà luôn
+tràn hết bề ngang, liền mép màn hình như chess.com; phần dưới thì cuộn. Co theo chiều cao làm bàn cờ lọt
+thỏm giữa hai khoảng trống trên iPhone (Safari ăn bớt chiều cao cho thanh địa chỉ) và kéo cả cột tuỳ chọn
+hẹp theo. Đổi lại header 46px, thanh người chơi 44px, nút Chơi mang luôn dòng tóm tắt, để ở cỡ iPhone có
+thanh Safari (390x705) vẫn thấy nút Chơi và hàng lối tắt ngay màn đầu. Cột dưới bàn cờ phẳng, không đóng khung.
 
 ### 4.6j Thanh điều khiển ván và hộp thoại hết ván (theo mẫu chess.com)
 

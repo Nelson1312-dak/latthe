@@ -55,7 +55,12 @@ function snap(row: HTMLElement): void {
   const barW = bar?.offsetWidth ?? 0;
   const ngang = row.clientWidth - barW;
   if (ngang <= 0) return;
-  const avail = vừaCửaSổ ? Math.min(ngang, Math.max(MIN_BOARD, roomBelowTop(row))) : ngang;
+  // Điện thoại cầm dọc: bàn cờ luôn tràn hết bề ngang như chess.com, phần dưới thì
+  // cuộn. Co bàn cờ cho vừa chiều cao (Safari còn ăn bớt chỗ cho thanh địa chỉ) làm
+  // bàn cờ lọt thỏm giữa hai khoảng trống, cả cột tuỳ chọn bên dưới cũng hẹp theo.
+  const điệnThoạiDọc = window.innerWidth < 768 && window.innerHeight > window.innerWidth;
+  const avail =
+    vừaCửaSổ && !điệnThoạiDọc ? Math.min(ngang, Math.max(MIN_BOARD, roomBelowTop(row))) : ngang;
   const px = snapSize(avail, window.devicePixelRatio || 1);
   const v = `${px}px`;
   if (row.style.getPropertyValue('--board-px') !== v) row.style.setProperty('--board-px', v);

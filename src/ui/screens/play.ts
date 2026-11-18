@@ -562,16 +562,18 @@ function quickStart(): string {
     : setup.mode === 'human'
       ? 'Hai người một máy'
       : `Máy ${levelById(setup.level).name.toLowerCase()} · ${PICK_NAME[setup.pick]}${prefs().assist ? ' · có Trợ lý' : ''}`;
+  // Nút chính mang luôn dòng tóm tắt ở dòng dưới: bấm là biết mình vào ván gì
+  const chính = (label: string, kind: 'primary' | 'danger') =>
+    `<button class="btn btn-${kind} btn-full qs-play" data-label="${label}"><b>${label}</b><small>${tómTắt}</small></button>`;
   const nút = online
     ? q
-      ? button({ label: q.label, kind: q.label === 'Hủy tìm' ? 'danger' : 'primary', full: true })
-      : ''
-    : button({ label: 'Chơi', kind: 'primary', full: true });
+      ? chính(q.label, q.label === 'Hủy tìm' ? 'danger' : 'primary')
+      : `<p class="qs-sum">${tómTắt}</p>`
+    : chính('Chơi', 'primary');
   const tắt = (attrs: string, name: IconName, label: string) =>
     `<${attrs.startsWith('href') ? 'a' : 'button'} class="gb-act" ${attrs}>${icon(name, 22)}<span>${label}</span></${attrs.startsWith('href') ? 'a' : 'button'}>`;
   return `<div class="quick-start only-narrow">
     ${nút}
-    <p class="qs-sum">${tómTắt}</p>
     <div class="gb-acts qs-acts">
       ${tắt('data-qs-options', 'settings', 'Tuỳ chọn')}
       ${online ? tắt('data-play-mode="machine"', 'engine', 'Với máy') : tắt('data-play-mode="online"', 'friends', 'Với người')}
@@ -1053,7 +1055,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
 
   const btn = target.closest<HTMLButtonElement>('button');
   if (!btn) return false;
-  const label = btn.getAttribute('title') ?? btn.textContent?.trim() ?? '';
+  const label = btn.dataset.label ?? btn.getAttribute('title') ?? btn.textContent?.trim() ?? '';
 
   const actions: Record<string, () => void> = {
     Chơi: () => {

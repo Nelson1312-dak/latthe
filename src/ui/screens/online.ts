@@ -880,7 +880,7 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
 
   const btn = target.closest<HTMLButtonElement>('button');
   if (!btn) return false;
-  const nhãn = (btn.textContent ?? '').trim();
+  const nhãn = (btn.dataset.label ?? btn.textContent ?? '').trim();
 
   const việc: Record<string, () => void> = {
     'Tìm trận': () => {
