@@ -49,6 +49,8 @@ class BotEngine {
     if (this.proc) return Promise.resolve();
     const p = spawn(process.execPath, [ENGINE], { stdio: ['pipe', 'pipe', 'pipe'] });
     this.proc = p;
+    // Server tắt thì tắt luôn engine, không để tiến trình con chạy ngầm
+    process.once('exit', () => p.kill());
     this.buf = '';
     this.lastElo = -1;
     this.lastMultipv = -1;
