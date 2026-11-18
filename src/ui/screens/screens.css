@@ -2889,3 +2889,33 @@ a.quick {
 .mini-dot.is-you {
   background: var(--accent-text);
 }
+
+/* Thống kê: Ngày / Tuần / Tháng nằm ở đầu dòng tiêu đề mục */
+.rule .range-seg {
+  flex: none;
+}
+.range-seg .seg-item {
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  font-size: var(--fs-sm);
+}
+.stat-tiles.stat-tiles-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 767px) {
+  .stat-tiles.stat-tiles-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .range-seg .seg-item {
+    min-height: 44px;
+  }
+}
+.activity {
+  display: grid;
+  gap: var(--s-3);
+}
+/* Ngày / Tuần / Tháng luôn nằm một hàng (trên điện thoại .seg mặc định xếp dọc) */
+.seg.range-seg {
+  flex-direction: row;
+  flex-wrap: nowrap;
+}

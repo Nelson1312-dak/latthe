@@ -24,7 +24,7 @@ import {
 import { chooseGuest, closeGate, currentGate, type Gate } from './app/gate.ts';
 import { esc } from './ui/components/index.ts';
 import { handleWelcomeClick, welcomeDialog } from './ui/screens/welcome.ts';
-import { mountStats, refreshStats, stats } from './ui/screens/stats.ts';
+import { handleStatsClick, mountStats, refreshStats, stats } from './ui/screens/stats.ts';
 import { mountShared, sharedIdFromPath, sharedView } from './ui/screens/shared.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
 import { applyPrefs, BOARD_THEMES, prefs, setPref, type BoardTheme, type Prefs } from './app/prefs.ts';
@@ -492,6 +492,7 @@ document.addEventListener('click', (e) => {
   )
     return;
 
+  if (route() === 'thong-ke' && handleStatsClick(el, render)) return;
   if (route() === 'thong-ke' && el.closest('[data-stats-refresh]')) {
     refreshStats(render);
     render();

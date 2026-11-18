@@ -156,3 +156,92 @@ export function statsFor(db: Db, n = 30, now: Date = new Date()): Stats {
     generatedAt: now.toISOString(),
   };
 }
+
+/* ---------------- Người dùng hoạt động theo ngày / tuần / tháng ---------------- */
+
+/** Một cột của biểu đồ xu hướng. */
+export interface Bucket {
+  /** Ngày đầu kỳ (YYYY-MM-DD) hoặc tháng (YYYY-MM). */
+  key: string;
+  /** Nhãn ngắn dưới cột: "18/11", "T11". */
+  label: string;
+  /** Số tài khoản (Google) có hoạt động trong kỳ — mỗi người tính một lần. */
+  users: number;
+  /** Lượt vào trang trong kỳ (cả khách, ẩn danh). */
+  visits: number;
+}
+
+export interface Activity {
+  days: Bucket[];
+  weeks: Bucket[];
+  months: Bucket[];
+  /** Người hoạt động hôm nay / 7 ngày / 30 ngày gần nhất (tính cả hôm nay). */
+  dau: number;
+  wau: number;
+  mau: number;
+}
+
+const cộngNgày = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
+
+/** Thứ Hai của tuần chứa `day`. */
+function đầuTuần(day: string): string {
+  const thứ = new Date(`${day}T00:00:00Z`).getUTCDay(); // 0 = Chủ nhật
+  return cộngNgày(day, -((thứ + 6) % 7));
+}
+
+/**
+ * Xu hướng người dùng hoạt động: 30 ngày, 12 tuần (bắt đầu thứ Hai), 12 tháng.
+ * Chỉ tính tài khoản Google thật (không tính tài khoản thử).
+ */
+export function activityFor(db: Db, now: Date = new Date()): Activity {
+  const hômNay = vnDay(now);
+  const từ = cộngNgày(hômNay, -400);
+  const rows = all<{ user_id: number; day: string }>(
+    db,
+    `SELECT a.user_id, a.day FROM user_activity a JOIN users u ON u.id = a.user_id
+      WHERE u.google_sub IS NOT NULL AND a.day >= ? AND a.day <= ?`,
+    từ,
+    hômNay,
+  );
+  const lượt = new Map(
+    all<{ day: string; n: number }>(db, `SELECT day, n FROM daily_counts WHERE event = 'visit' AND day >= ?`, từ).map(
+      (r) => [r.day, r.n],
+    ),
+  );
+
+  const gom = (keys: string[], keyOf: (day: string) => string, label: (k: string) => string): Bucket[] => {
+    const người = new Map(keys.map((k) => [k, new Set<number>()]));
+    const vào = new Map(keys.map((k) => [k, 0]));
+    for (const r of rows) người.get(keyOf(r.day))?.add(r.user_id);
+    for (const [d, n] of lượt) {
+      const k = keyOf(d);
+      if (vào.has(k) && d <= hômNay) vào.set(k, vào.get(k)! + n);
+    }
+    return keys.map((k) => ({ key: k, label: label(k), users: người.get(k)!.size, visits: vào.get(k)! }));
+  };
+  const dm = (d: string) => `${Number(d.slice(8, 10))}/${Number(d.slice(5, 7))}`;
+
+  const ngày = Array.from({ length: 30 }, (_, i) => cộngNgày(hômNay, i - 29));
+  const tuầnNày = đầuTuần(hômNay);
+  const tuần = Array.from({ length: 12 }, (_, i) => cộngNgày(tuầnNày, (i - 11) * 7));
+  const [y, m] = hômNay.split('-').map(Number);
+  const tháng = Array.from({ length: 12 }, (_, i) => {
+    const t = new Date(Date.UTC(y, m - 1 - (11 - i), 1));
+    return t.toISOString().slice(0, 7);
+  });
+
+  const trong = (n: number) => {
+    const đầu = cộngNgày(hômNay, -(n - 1));
+    return new Set(rows.filter((r) => r.day >= đầu).map((r) => r.user_id)).size;
+  };
+
+  return {
+    days: gom(ngày, (d) => d, dm),
+    weeks: gom(tuần, đầuTuần, dm),
+    months: gom(tháng, (d) => d.slice(0, 7), (k) => `T${Number(k.slice(5, 7))}/${k.slice(2, 4)}`),
+    dau: trong(1),
+    wau: trong(7),
+    mau: trong(30),
+  };
+}

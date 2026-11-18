@@ -32,10 +32,46 @@ interface DayRow {
   games_ai: number;
   puzzles: number;
 }
+/** Một cột của biểu đồ xu hướng (server/stats.ts activityFor). */
+interface Bucket {
+  key: string;
+  label: string;
+  users: number;
+  visits: number;
+}
+interface Activity {
+  days: Bucket[];
+  weeks: Bucket[];
+  months: Bucket[];
+  dau: number;
+  wau: number;
+  mau: number;
+}
 interface Stats {
   days: DayRow[];
   users: { total: number; active1: number; active7: number; active30: number };
   generatedAt: string;
+  activity?: Activity;
+}
+
+/** Xu hướng người dùng xem theo ngày, tuần hay tháng. */
+type Khung = 'days' | 'weeks' | 'months';
+let khung: Khung = 'days';
+const KHUNG: Record<Khung, { tên: string; kỳNày: string; số: string }> = {
+  days: { tên: 'Ngày', kỳNày: 'hôm nay', số: '30 ngày' },
+  weeks: { tên: 'Tuần', kỳNày: 'tuần này', số: '12 tuần' },
+  months: { tên: 'Tháng', kỳNày: 'tháng này', số: '12 tháng' },
+};
+
+/** Bấm Ngày / Tuần / Tháng. */
+export function handleStatsClick(target: HTMLElement, rerender: () => void): boolean {
+  const k = target.closest<HTMLElement>('[data-range]')?.dataset.range as Khung | undefined;
+  if (k && k in KHUNG) {
+    khung = k;
+    rerender();
+    return true;
+  }
+  return false;
 }
 
 let data: Stats | null = null;
@@ -303,6 +339,89 @@ function barChart(rows: DayRow[], key: keyof DayRow, title: string, unit: string
   </figure>`;
 }
 
+/**
+ * Biểu đồ cột một chuỗi cho xu hướng (cùng kiểu với barChart theo ngày): mỗi cột
+ * một kỳ, rê chuột hiện số, nhãn dưới cột thưa vừa đủ đọc.
+ */
+function trendChart(rows: Bucket[], key: 'users' | 'visits', title: string, unit: string): string {
+  const W = 640;
+  const H = 180;
+  const vals = rows.map((r) => r[key]);
+  const max = Math.max(1, ...vals);
+  const step = Math.max(1, Math.ceil(max / 2));
+  const top = step * 2;
+  // Lề trái vừa đủ cho số lớn nhất trên trục ("2.474" cần rộng hơn "40")
+  const pad = { l: Math.max(32, 12 + fmt(top).length * 9), r: 8, t: 12, b: 24 };
+  const iw = W - pad.l - pad.r;
+  const ih = H - pad.t - pad.b;
+  const slot = iw / rows.length;
+  const bw = Math.min(28, Math.max(3, slot - 3));
+  const y = (v: number) => pad.t + ih - (v / top) * ih;
+  const grid = [0, step, top]
+    .map(
+      (v) =>
+        `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" class="chart-grid"/>` +
+        `<text x="${pad.l - 6}" y="${y(v)}" class="chart-tick" text-anchor="end" dominant-baseline="middle">${fmt(v)}</text>`,
+    )
+    .join('');
+  const bars = rows
+    .map((r, i) => {
+      const v = r[key];
+      const x = pad.l + i * slot + (slot - bw) / 2;
+      const h = (v / top) * ih;
+      const r4 = Math.min(4, h / 2, bw / 2);
+      const path =
+        h <= 0
+          ? ''
+          : `M${x},${pad.t + ih} V${pad.t + ih - h + r4} Q${x},${pad.t + ih - h} ${x + r4},${pad.t + ih - h} ` +
+            `H${x + bw - r4} Q${x + bw},${pad.t + ih - h} ${x + bw},${pad.t + ih - h + r4} V${pad.t + ih} Z`;
+      const kỳ = khung === 'weeks' ? `tuần từ ${r.label}` : r.label;
+      return (
+        `<g class="chart-bar"><title>${kỳ}: ${fmt(v)} ${unit}</title>` +
+        `<rect x="${pad.l + i * slot}" y="${pad.t}" width="${slot}" height="${ih}" fill="transparent"/>` +
+        (path ? `<path d="${path}" class="chart-mark"/>` : '') +
+        `</g>`
+      );
+    })
+    .join('');
+  // Nhãn: ngày thì mỗi tuần một mốc; tuần, tháng thì cách một
+  const mỗi = khung === 'days' ? 7 : 2;
+  const ticks = rows
+    .map((r, i) =>
+      (i % mỗi === 0 && rows.length - 1 - i >= mỗi) || i === rows.length - 1
+        ? `<text x="${pad.l + i * slot + slot / 2}" y="${H - 6}" class="chart-tick" text-anchor="middle">${r.label}</text>`
+        : '',
+    )
+    .join('');
+  const k = KHUNG[khung];
+  const tb = vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : 0;
+  return `<figure class="chart">
+    <figcaption><b>${title}</b><span>${k.kỳNày} <b class="mono">${fmt(vals[vals.length - 1] ?? 0)}</b> · trung bình <b class="mono">${fmt(tb)}</b></span></figcaption>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} theo ${k.tên.toLowerCase()}, ${k.số} gần nhất">${grid}${bars}${ticks}</svg>
+  </figure>`;
+}
+
+/** Xu hướng người dùng: DAU/WAU/MAU và hai biểu đồ, xem theo Ngày / Tuần / Tháng. */
+function activityBlock(a: Activity | undefined): string {
+  if (!a) return '';
+  const gắnBó = a.mau ? Math.round((a.dau / a.mau) * 100) : 0;
+  const nút = (Object.keys(KHUNG) as Khung[])
+    .map(
+      (k) =>
+        `<button class="seg-item${khung === k ? ' is-active' : ''}" data-range="${k}" aria-pressed="${khung === k}">${KHUNG[k].tên}</button>`,
+    )
+    .join('');
+  return `<section class="activity">${rule('Người dùng hoạt động', `<div class="seg range-seg" role="group" aria-label="Xem theo">${nút}</div>`)}
+    <div class="stat-tiles stat-tiles-4">
+      ${tile(a.dau, 'Hôm nay', 'người dùng hoạt động')}
+      ${tile(a.wau, '7 ngày', 'người khác nhau')}
+      ${tile(a.mau, '30 ngày', 'người khác nhau')}
+      ${tile(gắnBó, 'Độ gắn bó (%)', 'hôm nay ÷ 30 ngày')}
+    </div>
+    ${trendChart(a[khung], 'users', 'Người dùng hoạt động', 'người')}
+    ${trendChart(a[khung], 'visits', 'Lượt vào trang (cả khách)', 'lượt')}</section>`;
+}
+
 /** Phễu 30 ngày: từ lượt vào tới đăng ký. Thanh ngang, tỉ lệ so với bước đầu. */
 function funnel(rows: DayRow[]): string {
   const steps: [string, number][] = [
@@ -361,12 +480,13 @@ export function stats(): string {
       ${tile(sum(last7, 'visit'), 'Lượt vào · 7 ngày', so('visit'))}
       ${tile(games7, 'Ván đã chơi · 7 ngày', 'với máy, AI và người')}
       ${tile(sum(last7, 'signup'), 'Tài khoản mới · 7 ngày', `tổng ${fmt(data.users.total)} tài khoản`)}
-      ${tile(data.users.active7, 'Người dùng hoạt động · 7 ngày', `hôm nay ${data.users.active1}`)}
+      ${tile(data.activity?.wau ?? data.users.active7, 'Người dùng hoạt động · 7 ngày', `hôm nay ${data.activity?.dau ?? data.users.active1}`)}
       ${tile(sum(last7, 'match_ai'), 'Ván đấu với AI · 7 ngày', `với người: ${sum(last7, 'match_human')}`)}
       ${tile(sum(last7, 'share_create'), 'Ván được chia sẻ · 7 ngày', `${sum(last7, 'share_open')} lượt mở link`)}
     </div>
     ${barChart(d, 'visit', 'Lượt vào trang', 'lượt')}
     ${barChart(d, 'play_end', 'Ván chơi xong (với máy, hai người)', 'ván')}
+    ${activityBlock(data.activity)}
     ${featureBlock(last7)}
     ${rule('Phễu 30 ngày')}
     ${funnel(d)}

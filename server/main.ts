@@ -3,7 +3,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { applyProfile, deleteUser, parsePrefs, parseProfilePatch, profileStats, readPrefs, savePrefs } from './profile.ts';
-import { bump, CLIENT_EVENTS, statsFor, type StatEvent } from './stats.ts';
+import { activityFor, bump, CLIENT_EVENTS, statsFor, type StatEvent } from './stats.ts';
 import { createShare, getShare, parseShare } from './shares.ts';
 import { dailyCount, dailyMe, dailyPuzzle, recordDaily, today } from './daily.ts';
 import { botLadder, eloHistory } from './profile.ts';
@@ -650,7 +650,7 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     const user = currentUser(req);
     if (!user || !isAdmin(user)) return json(res, 403, { error: 'Không có quyền' });
     const n = Math.min(90, Math.max(7, Number(new URL(req.url ?? '/', 'http://x').searchParams.get('days')) || 30));
-    return json(res, 200, statsFor(db, n));
+    return json(res, 200, { ...statsFor(db, n), activity: activityFor(db) });
   }
 
   // Huấn luyện viên toàn trang: gộp ván của mọi người chơi, không tên — chỉ chủ trang

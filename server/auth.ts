@@ -114,8 +114,16 @@ export function userForSession(db: Db, token: string | undefined, now = new Date
   const user = one<User>(db, 'SELECT * FROM users WHERE id = ?', row.user_id) ?? null;
   // "Lần cuối thấy" chỉ để biết ai còn dùng, không cần chính xác tới giây. Ghi
   // mỗi request thì mỗi request phải chờ đĩa, nên năm phút mới ghi lại một lần.
-  if (user && (!user.last_seen_at || now.getTime() - new Date(user.last_seen_at).getTime() > 5 * 60_000)) {
+  const ngày = (t: Date | string) => new Date(new Date(t).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+  if (
+    user &&
+    (!user.last_seen_at ||
+      now.getTime() - new Date(user.last_seen_at).getTime() > 5 * 60_000 ||
+      ngày(user.last_seen_at) !== ngày(now))
+  ) {
     db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?').run(now.toISOString(), row.user_id);
+    // Hôm nay tài khoản này có hoạt động (cho biểu đồ xu hướng ở trang Thống kê)
+    db.prepare('INSERT OR IGNORE INTO user_activity (user_id, day) VALUES (?, ?)').run(row.user_id, ngày(now));
     user.last_seen_at = now.toISOString();
   }
   return user;
