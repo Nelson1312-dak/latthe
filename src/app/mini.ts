@@ -6,10 +6,15 @@
 // nạp qua một iframe, nên mọi thứ (engine, đăng nhập, lưu ván) chạy như thường.
 // Trình duyệt khác: mở một cửa sổ popup nhỏ (không nổi trên cùng được).
 //
+// Chơi với người: ván nằm trên server, cửa sổ nổi tự mở luồng kết nối của nó
+// (server cho một người nhiều luồng) — không chuyển gì qua localStorage.
+//
 // Ván đang dở chuyển qua lại giữa trang chính và bàn cờ nổi bằng localStorage:
 // bàn cờ nổi ghi ván sau mỗi nước, đóng nó lại thì trang chính đọc và chơi tiếp.
 
 export const IS_MINI = new URLSearchParams(location.search).has('mini');
+/** Bàn cờ nổi mở ở chế độ nào: chơi với máy, hay với người (?che=online). */
+export const MINI_MODE: 'machine' | 'online' = new URLSearchParams(location.search).get('che') === 'online' ? 'online' : 'machine';
 
 const KEY = 'mini-van';
 
@@ -63,12 +68,12 @@ const CAO = 392;
  * Mở bàn cờ nổi. `onClose` chạy khi cửa sổ đóng (tự đóng, hay bấm Đưa về).
  * Phải gọi ngay trong lúc bấm chuột: trình duyệt chỉ cho mở cửa sổ khi đó.
  */
-export async function openMini(onClose: () => void): Promise<boolean> {
+export async function openMini(onClose: () => void, mode: 'machine' | 'online' = 'machine'): Promise<boolean> {
   if (miniOpen()) {
     cửaSổ!.focus();
     return true;
   }
-  const url = new URL('/?mini=1#/choi', location.href).href;
+  const url = new URL(`/?mini=1${mode === 'online' ? '&che=online' : ''}#/choi`, location.href).href;
   const pip = docPip();
   if (pip) {
     let w: Window;

@@ -375,7 +375,8 @@
 @media (max-width: 1100px) {
   /* Một cột: bàn cờ ở trên, cột bên xuống dưới và rộng bằng bàn cờ */
   :root {
-    --board-w: min(calc(100vh - var(--head-h) - 188px), calc(100vw - 2 * var(--s-3)));
+    /* Chỉ giới hạn bề ngang; chiều cao do src/board/snap.ts đo đúng chỗ trống */
+    --board-w: calc(100vw - 2 * var(--s-3));
   }
   .game {
     grid-template-columns: minmax(0, var(--board-w));
@@ -644,5 +645,20 @@
 @media (pointer: coarse), (max-width: 767px) {
   .only-mouse {
     display: none;
+  }
+}
+
+/* Cửa sổ thấp: snap.ts thu bàn cờ cho vừa chiều cao, và thu cả cột (hai thanh
+   người chơi) theo bằng --board-fit, để hai thanh thẳng mép với bàn cờ. */
+.game-board[style*='--board-fit'] {
+  width: var(--board-fit);
+  max-width: 100%;
+  justify-self: center;
+}
+@media (max-width: 1100px) {
+  .game[style*='--board-fit'] > .game-side {
+    width: var(--board-fit);
+    max-width: 100%;
+    justify-self: center;
   }
 }

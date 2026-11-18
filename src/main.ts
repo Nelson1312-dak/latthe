@@ -34,13 +34,13 @@ import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
 import { handleTrainClick, mountTrain, startDaily, startLesson, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
-import { handleOnlineClick, hasLiveGame, leaveOnline, mountOnline, online } from './ui/screens/online.ts';
+import { handleOnlineClick, hasLiveGame, leaveOnline, miniOnline, mountOnline, online } from './ui/screens/online.ts';
 import { playMode, setPlayMode } from './app/playmode.ts';
 import { live } from './app/live.ts';
 import { routeName, routeQuery } from './app/route.ts';
 import { LESSONS } from './training/lessons.ts';
 import { canInstall, initPwa, installApp, iosHint } from './app/pwa.ts';
-import { IS_MINI, closeMini, miniOpen, openMini, saveHandoff, takeHandoff } from './app/mini.ts';
+import { IS_MINI, MINI_MODE, closeMini, miniOpen, openMini, saveHandoff, takeHandoff } from './app/mini.ts';
 import { exportPlayState, importPlayState, miniPlay, playStarted, resetPlay, startBotGame, type PlayHandoff } from './ui/screens/play.ts';
 import { muteHere } from './app/sound.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
@@ -309,6 +309,12 @@ function renderMini(): void {
   document.title = APP_NAME;
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app-mini';
+  if (playMode() === 'online') {
+    app.innerHTML = miniOnline(miniCovered);
+    mountOnline(render);
+    snapBoards(app);
+    return;
+  }
   app.innerHTML = miniPlay(miniCovered);
   mountPlay(render);
   snapBoards(app);
@@ -539,10 +545,12 @@ document.addEventListener('click', (e) => {
   }
   // Trang chính: mở bàn cờ nổi (mang theo ván đang dở), hoặc đưa nó về
   if (!IS_MINI && el.closest('button[title="Bàn cờ nổi"]')) {
-    saveHandoff(exportPlayState());
-    void openMini(onMiniClosed).then((ok) => {
-      if (ok) resetPlay();
-      else saveHandoff(null);
+    // Với máy: ván đang dở đi theo cửa sổ. Với người: ván nằm trên server, cửa sổ tự nối vào.
+    const chếĐộ = playMode();
+    saveHandoff(chếĐộ === 'machine' ? exportPlayState() : null);
+    void openMini(onMiniClosed, chếĐộ).then((ok) => {
+      if (ok && chếĐộ === 'machine') resetPlay();
+      if (!ok) saveHandoff(null);
       render();
     });
     return;
@@ -628,7 +636,7 @@ document.addEventListener('pointerdown', (e) => {
     return;
   }
   // Bàn cờ nổi chưa vào ván: bấm vào bàn cờ là vào ván luôn, khỏi tìm nút Chơi
-  if (!miniCovered && !playStarted() && t.closest('#board') && performance.now() - miniUncoveredAt > 500) {
+  if (playMode() === 'machine' && !miniCovered && !playStarted() && t.closest('#board') && performance.now() - miniUncoveredAt > 500) {
     startBotGame();
     render();
   }
@@ -680,12 +688,14 @@ onAuthChange(onAuth);
 window.addEventListener('hashchange', render);
 if (IS_MINI) {
   // Bàn cờ nổi để chơi ở chỗ làm: không kêu, không hỏi đăng nhập (đã đăng nhập
-  // thì ván vẫn được lưu), chỉ chơi với máy, và nhận ván đang dở từ trang chính.
+  // thì ván vẫn được lưu), và nhận ván với máy đang dở từ trang chính.
   muteHere();
   chooseGuest();
-  setPlayMode('machine');
-  const h = takeHandoff<PlayHandoff>();
-  if (h) importPlayState(h);
+  setPlayMode(MINI_MODE);
+  if (MINI_MODE === 'machine') {
+    const h = takeHandoff<PlayHandoff>();
+    if (h) importPlayState(h);
+  }
 } else {
   initPwa(() => {
     if (settingsOpen) render();

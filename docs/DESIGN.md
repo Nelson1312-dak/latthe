@@ -461,7 +461,7 @@ Bốn âm ngắn: đi quân, ăn quân, chiếu, kết thúc ván; thêm tiếng
 
 ### 4.6g Bàn cờ nổi (chơi kín đáo trên máy tính)
 
-Nút "Bàn cờ nổi" trên thanh màn Chơi (chỉ máy có chuột, chỉ chế độ Với máy) mở một
+Nút "Bàn cờ nổi" trên thanh màn Chơi (chỉ máy có chuột; cả Với máy lẫn Với người) mở một
 cửa sổ 320×392 chỉ có bàn cờ. Chrome/Edge: Document Picture-in-Picture, cửa sổ luôn nổi
 trên cùng; trình duyệt khác: popup nhỏ. Bên trong là app ở `?mini=1` (src/app/mini.ts).
 
@@ -469,7 +469,19 @@ trên cùng; trình duyệt khác: popup nhỏ. Bên trong là app ở `?mini=1`
 - Esc hoặc nút mắt: che bàn cờ bằng tấm trơn cùng màu nền; bấm vào là mở lại.
 - Ván đang dở đi theo cửa sổ (localStorage `mini-van`), đóng cửa sổ là ván về trang chính.
   Trang chính trong lúc đó chỉ hiện thẻ "Bàn cờ đang ở cửa sổ nổi" + nút Đưa về.
-- Không có đấu online trong bàn cờ nổi: đồng hồ chạy và hai luồng kết nối cùng lúc là dễ hỏng.
+- Với người (`?che=online`): sảnh gọn (chọn thời gian ‹ ›, Tìm trận), đang chờ, đang đánh
+  (thanh trên: đối thủ + đồng hồ; thanh dưới: đồng hồ mình, mời hòa, đầu hàng có hỏi lại),
+  hết ván (tua ‹ ›, Tìm trận mới). Ván nằm trên server: cửa sổ nổi tự mở luồng kết nối
+  riêng (server cho một người nhiều luồng), trang chính vẫn giữ luồng của nó, không phải
+  chuyển ván qua lại.
+
+### 4.6h Bàn cờ luôn vừa cửa sổ
+
+`src/board/snap.ts` đo chỗ trống theo CẢ chiều cao: cửa sổ trừ phần nằm trên bàn cờ,
+thanh người chơi phía dưới và thanh điều hướng dính đáy (điện thoại). Bàn cờ lấy cạnh nhỏ
+hơn giữa bề ngang và chiều cao đó (không nhỏ hơn 220px), nghe cả sự kiện đổi cỡ cửa sổ.
+Bàn cờ phải nhỏ lại thì cả cột (hai thanh người chơi, và cột dưới ở bố cục một cột) thu
+theo bằng `--board-fit` để thẳng mép. CSS ở bố cục một cột chỉ còn giới hạn bề ngang.
 
 ## 5. Bàn cờ
 

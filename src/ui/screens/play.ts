@@ -347,10 +347,8 @@ function gameScreen(extraSide = ''): string {
             : `Máy ${levelById(setup.level).name.toLowerCase()}`
       }</span>
       ${toolbar([
-        // Bàn cờ nổi: cửa sổ nhỏ chỉ có bàn cờ (máy tính, chơi với máy)
-        ...(playMode() === 'online'
-          ? []
-          : [iconButton('float', 'Bàn cờ nổi').replace('class="btn btn-icon"', 'class="btn btn-icon only-mouse"')]),
+        // Bàn cờ nổi: cửa sổ nhỏ chỉ có bàn cờ (máy tính; cả với máy lẫn với người)
+        iconButton('float', 'Bàn cờ nổi').replace('class="btn btn-icon"', 'class="btn btn-icon only-mouse"'),
         iconButton('flip', 'Lật bàn cờ'),
         ...(started ? [iconButton('engine', 'Thanh đánh giá', { pressed: showEval })] : []),
         iconButton('settings', 'Cài đặt'),

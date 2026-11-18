@@ -8,7 +8,7 @@
 // đó gọi thẳng API trong lúc đang có ván.
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
-import { endBadgesFor } from '../../board/Board.ts';
+import { boardSvg, endBadgesFor } from '../../board/Board.ts';
 import { boardMarks, createReporter, pgnFromSans, reviewPanel, reviewProgress } from '../report.ts';
 import { preAnalyse } from '../../analysis/precompute.ts';
 import { saveReview } from '../../app/reviews.ts';
@@ -395,7 +395,10 @@ function vánCờ(): string {
         xong
           ? '' // Hai nút đã nằm trong ô kết quả, không bày lại ở đây
           : toolbar(
-              [iconButton('flip', 'Lật bàn cờ', { disabled: true })],
+              [
+                iconButton('float', 'Bàn cờ nổi').replace('class="btn btn-icon"', 'class="btn btn-icon only-mouse"'),
+                iconButton('flip', 'Lật bàn cờ', { disabled: true }),
+              ],
               [
                 button({ label: 'Đề nghị hòa', icon: 'draw', disabled: Boolean(s.drawOfferFrom) }),
                 button({ label: 'Đầu hàng', kind: 'danger', icon: 'resign' }),
@@ -951,4 +954,106 @@ export function onlinePanel(modeTabs: string): string {
 export function leaveOnlineMode(): void {
   if (live.queue) void leaveQueue();
   leaveOnline();
+}
+
+/* ---------------- Bàn cờ nổi: chế độ Với người (cửa sổ nhỏ, xem src/app/mini.ts) ---------------- */
+
+/**
+ * Bản thu nhỏ của chơi với người, cho cửa sổ nổi 320px: thanh trên là đối thủ +
+ * đồng hồ của họ, thanh dưới là đồng hồ của mình + nút. Ván nằm trên server nên
+ * cửa sổ nổi chỉ cần mở luồng kết nối của riêng nó (server cho một người nhiều
+ * luồng), không phải chuyển ván qua lại với trang chính.
+ *
+ * Nút chỉ có icon thì kèm chữ ẩn (.sr): handleOnlineClick nhận nút theo chữ.
+ */
+export function miniOnline(covered: boolean): string {
+  const nút = (name: Parameters<typeof icon>[0], nhãn: string, extra = '', disabled = false) =>
+    `<button class="btn btn-icon mini-btn${extra}" title="${nhãn}" aria-label="${nhãn}"${disabled ? ' disabled' : ''}>` +
+    `${icon(name, 17)}<span class="sr">${nhãn}</span></button>`;
+  const chữ = (nhãn: string, chính = false) =>
+    `<button class="btn ${chính ? 'btn-primary' : 'btn-secondary'} mini-go">${nhãn}</button>`;
+  const tĩnh = (fen?: string) =>
+    `<div class="board-row mini-board">${boardSvg({ fen: fen ?? new Game().fen, orientation: 'w', label: 'Bàn cờ' })}</div>`;
+  const che = covered ? '<button class="mini-cover" data-mini-cover aria-label="Hiện bàn cờ"><span>Bấm để hiện bàn cờ</span></button>' : '';
+  const mắt = covered
+    ? `<button class="btn btn-icon mini-btn" title="Hiện bàn cờ (Esc)" aria-label="Hiện bàn cờ" data-mini-hide>${icon('show', 17)}</button>`
+    : `<button class="btn btn-icon mini-btn" title="Che bàn cờ (Esc)" aria-label="Che bàn cờ" data-mini-hide>${icon('hide', 17)}</button>`;
+  const thanh = (trái: string) => `<div class="mini-bar">${covered ? '' : trái}<span class="mini-gap"></span>${mắt}</div>`;
+
+  if (!auth.user) {
+    return `<div class="mini">${thanh('<span class="mini-title">Đấu với người</span>')}${tĩnh()}
+      <div class="mini-bar"><span class="mini-title">Đăng nhập ở trang chính để đấu với người</span></div>${che}</div>`;
+  }
+
+  const s = live.state;
+  if (!s) {
+    // Sảnh: chọn thời gian, tìm trận — hoặc đang chờ ghép
+    const keys = Object.keys(CONTROLS);
+    const i = keys.indexOf(control);
+    const q = live.queue;
+    const dưới = q
+      ? `<span class="mini-title">Đang tìm trận ${CONTROLS[q.control]?.label ?? q.control} · <span class="mono">${giây(q.waitedMs)}s</span></span>` +
+        `<span class="mini-gap"></span>${chữ('Hủy tìm')}`
+      : `<span class="mini-level">` +
+        `<button class="btn btn-icon mini-btn" title="Nhanh hơn" aria-label="Nhanh hơn" data-control="${keys[Math.max(0, i - 1)]}"${i <= 0 ? ' disabled' : ''}>${icon('prev', 17)}</button>` +
+        `<span class="mini-lv mono">${control}</span>` +
+        `<button class="btn btn-icon mini-btn" title="Chậm hơn" aria-label="Chậm hơn" data-control="${keys[Math.min(keys.length - 1, i + 1)]}"${i >= keys.length - 1 ? ' disabled' : ''}>${icon('next', 17)}</button>` +
+        `</span><span class="mini-gap"></span>${đangVàoHàng ? '<span class="mini-title">Đang vào hàng…</span>' : chữ('Tìm trận', true)}`;
+    return `<div class="mini">${thanh(`<span class="mini-title">${q ? 'Đang chờ người chơi' : 'Đấu với người'}</span>`)}${tĩnh()}
+      <div class="mini-bar">${dưới}</div>${che}</div>`;
+  }
+
+  const tôi = s.youAre;
+  const họ: Side = tôi === 'w' ? 'b' : 'w';
+  const xong = s.over !== null;
+  const ng = (side: Side) => (side === 'w' ? s.white : s.black);
+  const đồngHồ = (side: Side) => {
+    const ms = clockNow(s, side);
+    return clock(ms, xong ? 'idle' : s.turn === side ? (ms < 30_000 ? 'low' : 'running') : 'idle', side);
+  };
+  const tênHọ = ng(họ);
+  const trên = xong
+    ? `<span class="mini-title"><b>${s.over!.winner === 'draw' ? 'Hòa' : s.over!.winner === tôi ? 'Bạn thắng' : 'Bạn thua'}</b> · ${outcomeText({ winner: s.over!.winner, reason: s.over!.reason }).split(' · ')[1] ?? ''}</span>`
+    : `<span class="mini-title"><b>${tênHọ.name}</b>${tênHọ.bot ? ' (AI)' : ''} <span class="mono">${tênHọ.rating}</span>${
+        tênHọ.connected ? '' : ' · mất kết nối'
+      }</span><span class="mini-gap"></span>${đồngHồ(họ)}`;
+
+  let dưới: string;
+  if (xong) {
+    dưới =
+      nút('prev', 'Lùi một nước', '', plyĐangXem() === 0) +
+      nút('next', 'Tiến một nước', '', plyĐangXem() >= s.history.length) +
+      `<span class="mini-gap"></span>${chữ('Về sảnh')}${chữ('Tìm trận mới', true)}`;
+  } else if (confirmResign) {
+    dưới = `<span class="mini-title">Đầu hàng ván này?</span><span class="mini-gap"></span>${chữ('Đánh tiếp')}${chữ('Đầu hàng', true)}`;
+  } else if (s.drawOfferFrom && s.drawOfferFrom !== tôi) {
+    dưới = `<span class="mini-title">Đối thủ mời hòa</span><span class="mini-gap"></span>${chữ('Từ chối')}${chữ('Đồng ý hòa', true)}`;
+  } else {
+    dưới =
+      đồngHồ(tôi) +
+      `<span class="mini-title">${s.turn === tôi ? ' tới lượt bạn' : ''}${s.drawOfferFrom === tôi ? ' · đã mời hòa' : ''}</span>` +
+      `<span class="mini-gap"></span>` +
+      nút('draw', 'Đề nghị hòa', '', Boolean(s.drawOfferFrom)) +
+      nút('resign', 'Đầu hàng');
+  }
+
+  return `<div class="mini">
+    ${thanh(trên)}
+    <div class="board-row mini-board"><div id="board" class="board-host"></div></div>
+    <div class="mini-bar">${dưới}</div>
+    ${che}
+    ${
+      pendingPromotion && !xong && s.turn === tôi
+        ? dialog(
+            'Phong cấp thành quân gì?',
+            `<div class="promo-row">${PROMOTION_PIECES.map(
+              ([code, name]) =>
+                `<button class="promo" data-promote="${code}" title="${name}">` +
+                `${pieceGlyph(((tôi === 'w' ? 'w' : 'b') + code) as never, 'promo-piece')}<span>${name}</span></button>`,
+            ).join('')}</div>`,
+            button({ label: 'Hủy', kind: 'text' }),
+          )
+        : ''
+    }
+  </div>`;
 }
