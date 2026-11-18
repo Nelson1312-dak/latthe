@@ -57,7 +57,7 @@ export function handleCoachClick(target: HTMLElement, rerender: () => void): boo
 }
 
 const tile = (value: string, label: string, note = '') =>
-  `<div class="stat-tile"><b class="mono">${value}</b><span>${label}</span>${note ? `<small>${note}</small>` : ''}</div>`;
+  `<div class="fact"><dt>${label}</dt><dd><b class="mono">${value}</b>${note ? `<small>${note}</small>` : ''}</dd></div>`;
 
 function head(meta = ''): string {
   return `<div class="screen-head"><h1>Huấn luyện viên</h1><span class="head-meta">${meta}</span></div>`;
@@ -94,7 +94,6 @@ export function coachScreen(): string {
   const f = d.facts;
   const a = advice?.advice;
   const từAI = advice?.source === 'llm' || advice?.source === 'cache';
-  const tốiĐa = Math.max(1, ...f.motifs.map((m) => m.count));
 
   return `<div class="screen screen-narrow coach-screen">
     ${head(`${f.games} ván gần nhất`)}
@@ -113,11 +112,11 @@ export function coachScreen(): string {
     </section>
     ${đangChấm}
 
-    <div class="stat-tiles stat-tiles-3">
-      ${tile(`${f.accuracy}%`, 'Chính xác', 'trung bình')}
-      ${tile(`${f.wins}/${f.draws}/${f.losses}`, 'Kết quả', 'thắng/hòa/thua')}
-      ${tile(String(f.perGame.blunder), 'Nước ??', 'mỗi ván')}
-    </div>
+    <dl class="facts">
+      ${tile(`${f.accuracy}%`, 'Độ chính xác trung bình')}
+      ${tile(`${f.wins}/${f.draws}/${f.losses}`, 'Thắng / Hòa / Thua')}
+      ${tile(String(f.perGame.blunder), 'Sai nghiêm trọng mỗi ván')}
+    </dl>
 
     ${
       f.phases.length
@@ -142,9 +141,8 @@ export function coachScreen(): string {
               return (
                 `<div class="coach-mistake"><div class="coach-mistake-top"><b class="mono">${m.count}</b>` +
                 `<span>lần ${MOTIF_NAME[m.kind]}</span><small>trong ${m.games} ván</small></div>` +
-                `<span class="acc-bar"><i style="width:${Math.round((m.count / tốiĐa) * 100)}%"></i></span>` +
                 (ví
-                  ? `<a class="link-btn" href="#/xem-lai?game=${ví.gameId}&ply=${ví.ply}">${icon('review', 15)}` +
+                  ? `<a class="coach-example" href="#/xem-lai?game=${ví.gameId}&ply=${ví.ply}">` +
                     `<span>Xem lần gần nhất: nước ${Math.ceil(ví.ply / 2)}${ví.ply % 2 ? '.' : '...'} ${esc(ví.san)}</span></a>`
                   : '') +
                 `</div>`

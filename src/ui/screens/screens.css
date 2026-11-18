@@ -721,7 +721,7 @@
   padding: var(--s-2) var(--s-3);
   min-height: 48px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--line-strong);
+  border-left: 0;
   border-radius: var(--r-sm);
   background: var(--bg-1);
   color: var(--text-1);
@@ -1968,7 +1968,7 @@ button.top-link {
   display: grid;
   gap: var(--s-1);
   padding: var(--s-3);
-  border-left: 4px solid var(--accent);
+  border-left: 0;
   border-radius: var(--r-md);
   background: var(--accent-dim);
   color: var(--text-1);
@@ -2179,8 +2179,7 @@ button.top-link {
 
 /* Bài tập của ngày chưa giải: vạch nhấn bên trái cho nổi giữa danh sách */
 .quick.is-due {
-  border-left: 3px solid var(--accent);
-  padding-left: calc(var(--s-3) - 3px);
+  border-left: 0;
 }
 
 /* ---- Thử thách AI (bậc thang) ---- */
@@ -2473,7 +2472,7 @@ a.quick {
   display: grid;
   gap: var(--s-2);
   padding: var(--s-4);
-  border-left: 3px solid var(--accent);
+  border-left: 0;
   border-radius: var(--r-md);
   background: var(--bg-1);
 }
@@ -2582,7 +2581,7 @@ a.quick {
   min-height: 56px;
   padding: var(--s-3);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
+  border-left: 0;
   border-radius: var(--r-md);
   background: var(--bg-1);
   color: var(--text-1);
@@ -2631,7 +2630,7 @@ a.quick {
   gap: var(--s-2);
   padding: var(--s-3);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--cls-mistake);
+  border-left: 0;
   border-radius: var(--r-md);
   background: var(--bg-2);
 }

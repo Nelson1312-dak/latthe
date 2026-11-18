@@ -136,7 +136,7 @@
   border-left: 1px solid var(--line);
 }
 .ai-alert {
-  border-left: 1px solid var(--line);
+  border-left: 0;
 }
 .note-key {
   border-left: 0;
@@ -257,4 +257,226 @@
   padding: 0;
   border: 0;
   background: none;
+}
+
+/* ======================================================================
+   Đợt 2 (18/11/2026), rà bằng impeccable (detect + craft-floor) và
+   ui-ux-pro-max (checklist trước khi giao). Chi tiết ở docs/DESIGN.md mục 2.
+   ====================================================================== */
+
+/* ---- 13. Bảng số: nhãn trái, số phải, ngăn bằng nét mảnh ----
+   Thay mẫu "số to + nhãn nhỏ" xếp ô (hero-metric) ở Hồ sơ và Huấn luyện viên. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--s-8);
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 44px;
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.fact dt {
+  color: var(--text-2);
+}
+.fact dd {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin: 0;
+  text-align: right;
+}
+.fact dd b {
+  font-size: var(--fs-lg);
+  font-weight: 650;
+  color: var(--text-1);
+}
+.fact dd small {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+@media (max-width: 767px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- 14. Màn Chơi: không hộp lồng hộp, ô chọn bên gọn một hàng ---- */
+.bot-card {
+  padding: 0;
+  background: none;
+}
+.bot-face {
+  width: 48px;
+  height: 48px;
+  background: none;
+}
+.bot-piece {
+  width: 44px;
+  height: 44px;
+}
+.side-opt {
+  display: flex;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-2);
+}
+.side-opt .side-piece {
+  width: 24px;
+  height: 24px;
+}
+.side-opt .icon {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
+.lv.is-active,
+.side-opt.is-active {
+  background: var(--bg-3);
+}
+
+/* ---- 15. Bậc thang AI: một dòng chữ, bậc đã hạ có dấu tích ---- */
+.ladder-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ladder-line li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--text-3);
+}
+.ladder-line li b {
+  font-weight: 600;
+  color: var(--text-2);
+}
+.ladder-line li.is-beaten b {
+  color: var(--text-1);
+}
+.ladder-line .icon {
+  color: var(--accent-text);
+}
+
+/* ---- 16. Huấn luyện viên: thanh tỉ lệ không kéo hết bề ngang ---- */
+.coach-phases {
+  max-width: 520px;
+}
+.coach-example {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: var(--fs-sm);
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.coach-example:hover {
+  text-decoration: underline;
+}
+
+/* ---- 17. Xem lại ván: thẻ khoảnh khắc không đóng hộp trong hộp ---- */
+.rv-focus {
+  padding: var(--s-3) 0 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+.rv-chip {
+  background: none;
+}
+/* Sổ nước đi: không gắn icon quyển sách vào từng nước khai cuộc — tên khai
+   cuộc đã ở ngay trên sổ. Huy hiệu sai/hay vẫn giữ. */
+.move-list .badge-book,
+.move .badge-book {
+  display: none;
+}
+
+/* ---- 18. Bài tập: chủ đề là chữ thường, không đóng khung như nhãn dán ---- */
+.theme-tag {
+  padding: 0;
+  border: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.tag-coach {
+  border: 0;
+  padding: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* ---- 19. Hồ sơ: ảnh đại diện vừa, chữ cái đầu khi không có ảnh ---- */
+.profile-card .profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  font-size: 26px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+/* ---- 20. Nhịp dọc: khoảng trên tiêu đề mục rộng hơn khoảng dưới ---- */
+.screen-narrow > .rule:not(:first-child) {
+  margin-top: var(--s-6);
+}
+
+/* Ô chọn bên: chữ một dòng ("Ngẫu nhiên" không gãy đôi) */
+.side-opt {
+  gap: 6px;
+  white-space: nowrap;
+}
+/* Huấn luyện viên chỉ có ba số: một cột, thẳng mép với thanh giai đoạn bên dưới */
+.coach-screen .facts {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 520px;
+}
+/* Thẻ theo hộp: năm cột sát nhau, không rải hết bề ngang */
+.box-bars {
+  max-width: 360px;
+}
+/* Bảng số nhỏ ở cột bên (Sảnh): luôn một cột */
+.facts-compact {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---- 21. Ngắt dòng: không để một chữ lẻ loi ở dòng cuối; tiêu đề chia đều ---- */
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* ---- 22. Phần của trình duyệt cũng mang màu của app ----
+   Bôi đen chữ, con trỏ nhập, thanh cuộn, ô tích: mặc định của trình duyệt là
+   dấu hiệu trang "lắp ráp" chứ không phải "làm ra". */
+::selection {
+  background: var(--accent-dim);
+  color: var(--text-1);
+}
+:root {
+  accent-color: var(--accent);
+  caret-color: var(--accent-text);
+  scrollbar-color: var(--bg-3) transparent;
+}
+a {
+  text-underline-offset: 0.18em;
+}
+.side-opt .icon,
+.side-opt .side-piece {
+  flex: none;
 }

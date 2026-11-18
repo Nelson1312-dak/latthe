@@ -46,6 +46,26 @@ Thêm sau đợt rà soát 18/11/2026 (`src/ui/refine.css`, nạp sau cùng), c�
   vì đã cam kết luôn báo rõ khi đối thủ là AI.
 - Danh sách trong màn một cột bọc trong hộp. Dùng nét kẻ trên/dưới.
 
+Đợt 2 cùng ngày, rà bằng hai bộ skill **impeccable** (`impeccable detect` + craft-floor) và
+**ui-ux-pro-max** (checklist trước khi giao). Cũng **cấm**:
+
+- Mẫu "số to + nhãn nhỏ" xếp thành hàng ô (hero-metric) ở Hồ sơ, Huấn luyện viên, Sảnh. Dùng
+  bảng số `.facts`: nhãn trái, số phải, ngăn bằng nét kẻ, như trang hồ sơ Lichess. Riêng trang
+  Thống kê (chỉ chủ trang xem, là bảng điều khiển thật) được giữ ô số.
+- Hộp trong hộp: thẻ đối thủ có nền trong cột phải đã có nền, thẻ "Khoảnh khắc" trong bảng xem lại.
+- Vạch màu bên trái ở MỌI chỗ, kể cả mục đang chọn của thanh điều hướng dọc (chỉ đổi nền).
+- Ô chọn to kèm icon lớn cho lựa chọn nhỏ (chọn bên quân): một hàng nút cao 44px, icon 20px.
+- Một dãy ô bằng nhau cho dữ liệu chỉ để đọc (Bậc thang AI): viết thành một dòng chữ.
+- Thanh tỉ lệ kéo hết bề ngang (lỗi lặp lại, giai đoạn): tối đa 520px, hoặc bỏ nếu số đã nói đủ.
+- Icon quyển sách ở từng nước khai cuộc trong sổ nước đi (tên khai cuộc đã ở ngay trên).
+- Dòng trạng thái chỉ để báo "đang bật" (Trợ lý đang bật, Thế cờ ban đầu): nút trên thanh đã sáng.
+- Chữ trắng trên nền nhấn dưới 4,5:1; chữ chức năng dưới 11px; easing nảy (bounce).
+- Để trình duyệt tự vẽ phần của nó: màu bôi đen chữ, con trỏ nhập, thanh cuộn, ô tích phải theo
+  màu app (`::selection`, `caret-color`, `scrollbar-color`, `accent-color`).
+
+Giữ có chủ ý dù công cụ dò của impeccable báo: gờ dưới 3px của nút (kiểu phím bấm chess.com,
+mục 4.2) và chữ toạ độ trên ô cờ (tương phản ~3,4:1, đúng quy ước bàn cờ chess.com/Lichess).
+
 Thay vào đó:
 
 - **Ít hộp, nhiều nhịp.** Đây là luật quan trọng nhất. Thứ làm giao diện trông như máy sinh ra
@@ -245,7 +265,7 @@ Nền ngả ấm (xám nâu) chứ không phải xám xanh lạnh kiểu dashboa
 
 | Token | Giá trị | Dùng cho |
 |---|---|---|
-| `--accent` | `#1F8F80` tối / `#1A7A6C` sáng (xanh ngọc — cố ý khác xanh lá của chess.com) | Nút hành động chính ("Bắt đầu ván"), trạng thái đang chọn. Chữ trên nền nhấn màu trắng, đậm |
+| `--accent` | `#1B8072` tối (4,8:1 với chữ trắng) / `#1A7A6C` sáng (xanh ngọc — cố ý khác xanh lá của chess.com) | Nút hành động chính ("Bắt đầu ván"), trạng thái đang chọn. Chữ trên nền nhấn màu trắng, đậm |
 | `--accent-edge` | `#156358` | Gờ dưới 3px của nút chính — nút "dày" như chess.com chứ không phẳng lì |
 | `--accent-text` | `#56CDBB` | Chữ màu nhấn trên nền tối (chip đang bật…) |
 | `--danger` | `#F07A6D` tối / `#B5352B` sáng | Đầu hàng, xóa, hết giờ. Bản tối sáng lên vì nền mới xám hơn: đỏ cũ chỉ đạt 4,15:1 |

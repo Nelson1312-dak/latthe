@@ -309,8 +309,9 @@ export { esc };
  */
 export function levelRow(items: [string, string][]): string {
   return (
-    `<div class="level-row">` +
-    items.map(([label, value]) => `<div><b class="mono">${esc(value)}</b><span>${esc(label)}</span></div>`).join('') +
-    `</div>`
+    // Nhãn trái, số phải (cùng kiểu bảng số ở Hồ sơ), không phải ba con số to
+    `<dl class="facts facts-compact">` +
+    items.map(([label, value]) => `<div class="fact"><dt>${esc(label)}</dt><dd><b class="mono">${esc(value)}</b></dd></div>`).join('') +
+    `</dl>`
   );
 }

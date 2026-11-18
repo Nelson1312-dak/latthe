@@ -194,9 +194,9 @@ const ngày = (iso: string) => {
   return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 };
 
-/** Một ô số liệu: con số to, nhãn nhỏ bên dưới. */
+/** Một dòng số liệu: nhãn bên trái, số bên phải (kiểu trang hồ sơ của Lichess). */
 const tile = (value: string, label: string, note = '') =>
-  `<div class="stat-tile"><b class="mono">${value}</b><span>${label}</span>${note ? `<small>${note}</small>` : ''}</div>`;
+  `<div class="fact"><dt>${label}</dt><dd><b class="mono">${value}</b>${note ? `<small>${note}</small>` : ''}</dd></div>`;
 
 function profile(): string {
   const u = auth.user!;
@@ -214,7 +214,7 @@ function profile(): string {
   return `<div class="screen screen-narrow profile">
     <div class="profile-card">
       <span class="profile-avatar">${
-        u.avatar ? `<img src="${esc(u.avatar)}" alt="" width="88" height="88" referrerpolicy="no-referrer">` : icon('user', 40)
+        u.avatar ? `<img src="${esc(u.avatar)}" alt="" width="64" height="64" referrerpolicy="no-referrer">` : esc((u.name.trim()[0] ?? '?').toUpperCase())
       }</span>
       <div class="profile-id">
         ${tênKhối}
@@ -223,14 +223,14 @@ function profile(): string {
       </div>
     </div>
 
-    <div class="stat-tiles">
+    <dl class="facts">
       ${tile(String(u.gameRating), 'Elo đấu với người', `${u.gameCount} ván online`)}
       ${tile(String(tienDo?.rating ?? u.puzzleRating), 'Elo bài tập', pz ? `${pz.solved}/${pz.tried} bài đúng` : '')}
       ${tile(g ? String(g.total) : '–', 'Ván đã chơi', g ? `${g.bot} với máy · ${g.online} online` : '')}
       ${tile(g ? `${g.wins}/${g.draws}/${g.losses}` : '–', 'Thắng / Hòa / Thua')}
       ${tile(thốngKê ? String(thốngKê.lessonsDone) : '–', 'Bài học đã xong')}
-      ${tile(`${tienDo?.streak ?? 0}`, 'Chuỗi luyện', 'ngày liên tiếp')}
-    </div>
+      ${tile(`${tienDo?.streak ?? 0} ngày`, 'Chuỗi luyện')}
+    </dl>
 
     ${coachBlock()}
 
@@ -243,13 +243,12 @@ function profile(): string {
     ${
       bậcThang.length
         ? `${rule('Bậc thang AI', `<span class="rule-note">đã hạ ${bậcThang.filter((b) => b.beaten).length}/${bậcThang.length}</span>`)}
-           <div class="ladder ladder-wide">${bậcThang
+           <ol class="ladder-line">${bậcThang
              .map(
                (b) =>
-                 `<div class="ladder-step${b.beaten ? ' is-beaten' : ''}" title="${esc(b.blurb)}"><b>${esc(b.name)}</b>` +
-                 `<span class="mono">${b.elo}</span>${b.beaten ? icon('check', 14) : ''}</div>`,
+                 `<li class="${b.beaten ? 'is-beaten' : ''}" title="${esc(b.blurb)}">${b.beaten ? icon('check', 14) : ''}<b>${esc(b.name)}</b> <span class="mono">${b.elo}</span></li>`,
              )
-             .join('')}</div>
+             .join('')}</ol>
            <p class="muted">Chơi → Với người → Thử thách AI.</p>`
         : ''
     }

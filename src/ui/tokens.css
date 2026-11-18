@@ -23,8 +23,8 @@
      Xanh ngọc cho hành động chính. Cùng độ "mát" với nút Chơi của chess.com
      nhưng ngả lam, để không bị nhìn ra là chép màu của họ (xanh lá #6a9f3e cũ
      bị chê đúng chỗ đó). Hổ phách thì trùng tông ô cờ nâu và vệt nước vừa đi. */
-  --accent: #1f8f80;
-  --accent-hover: #23a090;
+  --accent: #1b8072;
+  --accent-hover: #1a7a6c;
   /* Mép dưới đậm hơn của nút chính, cho nút có khối như phím bấm */
   --accent-edge: #156358;
   --accent-dim: #1d3a36;

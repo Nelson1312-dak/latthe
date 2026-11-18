@@ -209,7 +209,7 @@ function assistCard(): string {
       !tốt && v.best ? ` · hay hơn là ${sanVi(v.best.san)}` : ''
     }</span></p>`;
   }
-  return `<p class="assist-line">${icon('coach', 16)}<span>Trợ lý đang bật</span></p>`;
+  return '';
 }
 
 /** Bàn cờ lúc đang xem hướng dẫn: thế cờ TRƯỚC nước hỏng, mũi tên và khoanh ô của bước đó. */
@@ -309,10 +309,10 @@ function newGame(): void {
  */
 function modeTabs(): string {
   const m = playMode();
-  const tab = (id: 'machine' | 'online', label: string, ic: 'engine' | 'friends') =>
+  const tab = (id: 'machine' | 'online', label: string) =>
     `<button class="mode-tab${m === id ? ' is-active' : ''}" data-play-mode="${id}" aria-pressed="${m === id}">` +
-    `${icon(ic, 18)}<span>${label}</span></button>`;
-  return `<div class="mode-tabs" role="group" aria-label="Chế độ chơi">${tab('machine', 'Với máy', 'engine')}${tab('online', 'Với người', 'friends')}</div>`;
+    `<span>${label}</span></button>`;
+  return `<div class="mode-tabs" role="group" aria-label="Chế độ chơi">${tab('machine', 'Với máy')}${tab('online', 'Với người')}</div>`;
 }
 
 function setupPanel(): string {
@@ -338,7 +338,7 @@ function setupPanel(): string {
   const sides = (
     [
       ['w', 'Trắng', pieceGlyph('wk', 'side-piece')],
-      ['r', 'Ngẫu nhiên', icon('random', 26)],
+      ['r', 'Ngẫu nhiên', icon('random', 20)],
       ['b', 'Đen', pieceGlyph('bk', 'side-piece')],
     ] as const
   )
@@ -505,7 +505,7 @@ function gameScreen(extraSide = ''): string {
             : sheet(
                 ...(result ? [resultCard(result), reviewBlock()] : []),
                 assistCard(),
-                khaiCuoc() || '<p class="opening-line">Thế cờ ban đầu</p>',
+                khaiCuoc(),
                 game.length
                   ? moveList(
                       game.history.map((m, i) => ({ san: m.san, cls: reviewed()?.moves[i]?.cls })),
