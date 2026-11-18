@@ -3,6 +3,7 @@
 // Thẻ lỗi quan trọng hơn bài tập chung: đó là chỗ bạn thật sự đã sai.
 
 import { boardSvg } from '../../board/Board.ts';
+import { answerDaily } from '../../app/daily.ts';
 import { BoardView } from '../../board/BoardView.ts';
 import { Game, type Side, type Square } from '../../../shared/chess.ts';
 import { playSound } from '../../app/sound.ts';
@@ -73,6 +74,14 @@ export function startLesson(l: Lesson): void {
 
 /** Bài tập người dùng vừa bấm ở Sảnh; mở đúng bài đó chứ không bốc bài khác. */
 let handedPuzzle: Puzzle | null = null;
+/** Id bài tập của ngày đang giải (để ghi kết quả và báo chuỗi ngày). */
+let dailyId: string | null = null;
+
+/** Mở bài tập của ngày. */
+export function startDaily(p: Puzzle): void {
+  startPuzzle(p);
+  dailyId = p.id;
+}
 
 export function startPuzzle(p: Puzzle): void {
   handedPuzzle = p;
@@ -139,7 +148,7 @@ async function loadNext(rerender: () => void): Promise<void> {
     side: game.turn,
     solution: r.puzzle.moves.slice(1),
     step: 0,
-    label: r.puzzle.themes.map(themeName)[0] ?? 'Bài tập',
+    label: r.puzzle.id === dailyId ? 'Bài tập của ngày' : (r.puzzle.themes.map(themeName)[0] ?? 'Bài tập'),
     rating: r.puzzle.rating,
     puzzle: r.puzzle,
   };
@@ -219,6 +228,18 @@ async function finish(correct: boolean, rerender: () => void): Promise<void> {
     };
   } else {
     lastResult = { correct, text: correct ? 'Đúng rồi.' : 'Chưa đúng.' };
+  }
+  // Bài tập của ngày: ghi kết quả (lần đầu), báo chuỗi ngày
+  if (task.puzzle && task.puzzle.id === dailyId) {
+    dailyId = null;
+    const me = await answerDaily(task.puzzle.id, tínhĐúng, Boolean(auth.user));
+    const chuỗi = me && auth.user ? (me.streak > 0 ? ` Chuỗi: ${me.streak} ngày liên tiếp.` : '') : ' Đăng nhập để giữ chuỗi ngày.';
+    lastResult = {
+      correct,
+      text: correct
+        ? `Xong bài tập của ngày!${tínhĐúng ? chuỗi : ' (Có dùng gợi ý nên không tính vào chuỗi.)'}`
+        : 'Chưa đúng — bài của ngày chỉ tính lần đầu. Mai có bài mới.',
+    };
   }
   playSound(correct ? 'end' : 'wrong');
   rerender();

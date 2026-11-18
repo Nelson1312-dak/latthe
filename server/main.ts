@@ -5,6 +5,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { applyProfile, deleteUser, parsePrefs, parseProfilePatch, profileStats, readPrefs, savePrefs } from './profile.ts';
 import { bump, CLIENT_EVENTS, statsFor, type StatEvent } from './stats.ts';
 import { createShare, getShare, parseShare } from './shares.ts';
+import { dailyCount, dailyMe, dailyPuzzle, recordDaily, today } from './daily.ts';
+import { botLadder, eloHistory } from './profile.ts';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
@@ -350,6 +352,23 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     return json(res, 200, { ok: true, control: control in CONTROLS ? control : DEFAULT_CONTROL });
   }
 
+  // Thử thách AI: chọn thẳng một bot để đấu ngay
+  if (path === '/api/live/bot' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const control = typeof body.control === 'string' ? body.control : DEFAULT_CONTROL;
+    const kq = live.challengeBot(user, String(body.bot ?? ''), control);
+    if (!kq.ok) return json(res, 409, { error: REFUSALS[kq.why ?? ''] ?? 'Không bắt đầu được ván' });
+    return json(res, 200, { ok: true });
+  }
+
+  // Danh sách AI và những AI người này đã thắng (bậc thang)
+  if (path === '/api/bots' && method === 'GET') {
+    const user = currentUser(req);
+    return json(res, 200, { bots: botLadder(db, user?.id ?? null) });
+  }
+
   if (path === '/api/live/queue' && method === 'DELETE') {
     const user = currentUser(req);
     if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
@@ -500,6 +519,27 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     return json(res, 200, recordAttempt(db, user.id, id, puzzleRating, body.correct === true));
   }
 
+  /* ---- Bài tập của ngày ---- */
+
+  if (path === '/api/daily' && method === 'GET') {
+    const user = currentUser(req);
+    const day = today();
+    const puzzle = dailyPuzzle(db, day);
+    return json(res, 200, { day, puzzle, me: user ? dailyMe(db, user.id, day) : null, count: dailyCount(db, day) });
+  }
+
+  if (path === '/api/daily/answer' && method === 'POST') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    const day = today();
+    // Chỉ nhận đúng bài của hôm nay (trình duyệt để qua đêm rồi mới giải thì thôi)
+    if (body.id !== dailyPuzzle(db, day)?.id) return json(res, 409, { error: 'Bài của ngày đã đổi, tải lại trang nhé.' });
+    const mới = recordDaily(db, user.id, day, body.correct === true);
+    if (mới && !fromThisMachine(req)) bump(db, 'daily');
+    return json(res, 200, { me: dailyMe(db, user.id, day) });
+  }
+
   if (path === '/api/puzzles/themes' && method === 'GET') {
     return json(res, 200, { themes: themeCounts(db), kho: puzzleCount(db) });
   }
@@ -617,7 +657,12 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
   if (path === '/api/profile' && method === 'GET') {
     const user = currentUser(req);
     if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
-    return json(res, 200, { user: publicUser(user), stats: profileStats(db, user) });
+    return json(res, 200, {
+      user: publicUser(user),
+      stats: profileStats(db, user),
+      ladder: botLadder(db, user.id),
+      elo: eloHistory(db, user.id),
+    });
   }
 
   // Tự xoá tài khoản. Phải gửi kèm confirm: true, để một lời gọi nhầm không xoá được.

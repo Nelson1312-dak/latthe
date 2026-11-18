@@ -1,6 +1,14 @@
 // Màn đăng nhập / tài khoản. Vào thẳng được qua #/tai-khoan.
 import { button, classBadge, dialog, esc, notice, rule } from '../components/index.ts';
-import { auth, deleteAccount, loadProfileStats, updateProfile, type ProfileStats } from '../../app/session.ts';
+import {
+  auth,
+  deleteAccount,
+  loadProfileStats,
+  updateProfile,
+  type EloPoint,
+  type ProfileLadderStep,
+  type ProfileStats,
+} from '../../app/session.ts';
 import { progress, type Progress } from '../../app/training.ts';
 import { icon } from '../icons.ts';
 import { CLASS_LABEL } from '../../board/Board.ts';
@@ -9,7 +17,10 @@ import type { MoveClass } from '../../../shared/winrate.ts';
 /** Tiến độ học, nạp riêng vì cần gọi server. */
 let tienDo: Progress | null = null;
 let thốngKê: ProfileStats | null = null;
+let bậcThang: ProfileLadderStep[] = [];
+let elo: { online: EloPoint[]; puzzles: EloPoint[] } = { online: [], puzzles: [] };
 let daHoi = false;
+let hỏiLúc = 0;
 /** Đang sửa tên gọi. */
 let sửaTên = false;
 let lỗiTên: string | null = null;
@@ -18,11 +29,16 @@ let hỏiXoá = false;
 let lỗiXoá: string | null = null;
 
 export function mountAccount(rerender: () => void): void {
-  if (daHoi || !auth.user) return;
+  if (!auth.user) return;
+  // Mỗi lần mở Hồ sơ lấy số mới: vừa đánh xong một ván thì Elo đã khác
+  if (daHoi && Date.now() - hỏiLúc < 10_000) return;
+  hỏiLúc = Date.now();
   daHoi = true;
   void Promise.all([progress(), loadProfileStats()]).then(([p, s]) => {
     tienDo = p;
-    thốngKê = s;
+    thốngKê = s?.stats ?? null;
+    bậcThang = s?.ladder ?? [];
+    elo = s?.elo ?? { online: [], puzzles: [] };
     rerender();
   });
 }
@@ -197,6 +213,26 @@ function profile(): string {
       ${tile(`${tienDo?.streak ?? 0}`, 'Chuỗi luyện', 'ngày liên tiếp')}
     </div>
 
+    ${
+      elo.online.length || elo.puzzles.length
+        ? `<div class="elo-charts">${eloChart('Elo đấu online', elo.online, 'đấu vài ván online sẽ có')}${eloChart('Elo bài tập', elo.puzzles, 'giải vài bài tập sẽ có')}</div>`
+        : ''
+    }
+
+    ${
+      bậcThang.length
+        ? `${rule('Bậc thang AI', `<span class="rule-note">đã hạ ${bậcThang.filter((b) => b.beaten).length}/${bậcThang.length}</span>`)}
+           <div class="ladder ladder-wide">${bậcThang
+             .map(
+               (b) =>
+                 `<div class="ladder-step${b.beaten ? ' is-beaten' : ''}" title="${esc(b.blurb)}"><b>${esc(b.name)}</b>` +
+                 `<span class="mono">${b.elo}</span>${b.beaten ? icon('check', 14) : ''}</div>`,
+             )
+             .join('')}</div>
+           <p class="muted">Thắng từng AI để leo bậc — vào Chơi → Với người → Thử thách AI.</p>`
+        : ''
+    }
+
     <div class="quick-list profile-links">
       <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b><span>Xem lại, chấm từng nước</span></span>${icon('next', 16)}</button>
       ${u.admin ? `<button class="quick" data-go="thong-ke"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Thống kê trang</b><span>Lượt vào, ván chơi, đăng ký — chỉ bạn thấy</span></span>${icon('next', 16)}</button>` : ''}
@@ -278,4 +314,47 @@ export function handleAccountClick(target: HTMLElement, rerender: () => void, af
     return true;
   }
   return false;
+}
+
+/**
+ * Biểu đồ đường Elo theo từng ván / từng bài (trục ngang là thứ tự, không phải
+ * ngày — người chơi thất thường thì trục ngày toàn khoảng trống). Một chuỗi số
+ * liệu, một trục; nét 2px, chấm cuối; rê chuột vào điểm hiện Elo và ngày.
+ */
+function eloChart(title: string, pts: EloPoint[], empty: string): string {
+  if (pts.length < 2) {
+    return `<figure class="chart"><figcaption><b>${title}</b></figcaption><p class="chart-empty">Chưa đủ dữ liệu — ${empty}.</p></figure>`;
+  }
+  const W = 320;
+  const H = 140;
+  const pad = { l: 36, r: 10, t: 10, b: 10 };
+  const rs = pts.map((p) => p.r);
+  const lo = Math.floor((Math.min(...rs) - 10) / 50) * 50;
+  const hi = Math.ceil((Math.max(...rs) + 10) / 50) * 50;
+  const x = (i: number) => pad.l + (i / (pts.length - 1)) * (W - pad.l - pad.r);
+  const y = (r: number) => pad.t + (1 - (r - lo) / Math.max(1, hi - lo)) * (H - pad.t - pad.b);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`).join(' ');
+  const grid = [lo, hi]
+    .map(
+      (v) =>
+        `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" class="chart-grid"/>` +
+        `<text x="${pad.l - 6}" y="${y(v)}" class="chart-tick" text-anchor="end" dominant-baseline="middle">${v}</text>`,
+    )
+    .join('');
+  const hits = pts
+    .map(
+      (p, i) =>
+        `<circle cx="${x(i).toFixed(1)}" cy="${y(p.r).toFixed(1)}" r="7" fill="transparent"><title>${p.r} · ${ngày(p.t)}</title></circle>`,
+    )
+    .join('');
+  const đầu = pts[0].r;
+  const cuối = pts[pts.length - 1].r;
+  const đổi = cuối - đầu;
+  return `<figure class="chart">
+    <figcaption><b>${title}</b><span>hiện tại <b class="mono">${cuối}</b> · ${đổi >= 0 ? '+' : ''}${đổi} so với lúc đầu</span></figcaption>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} qua ${pts.length} lần, từ ${đầu} tới ${cuối}">
+      ${grid}<path d="${line}" class="chart-line"/>
+      <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(cuối).toFixed(1)}" r="4" class="chart-dot"/>${hits}
+    </svg>
+  </figure>`;
 }

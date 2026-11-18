@@ -107,9 +107,32 @@ export interface ProfileStats {
   lessonsDone: number;
 }
 
-export async function loadProfileStats(): Promise<ProfileStats | null> {
+export interface ProfileLadderStep {
+  id: string;
+  name: string;
+  elo: number;
+  blurb: string;
+  beaten: boolean;
+}
+
+export interface EloPoint {
+  t: string;
+  r: number;
+}
+
+export interface ProfileData {
+  /** Người dùng đọc mới từ server (Elo, số ván có thể đã đổi từ lúc đăng nhập). */
+  user: Me;
+  stats: ProfileStats;
+  ladder: ProfileLadderStep[];
+  elo: { online: EloPoint[]; puzzles: EloPoint[] };
+}
+
+export async function loadProfileStats(): Promise<ProfileData | null> {
   try {
-    return (await callApi<{ stats: ProfileStats }>('/api/profile')).stats;
+    const d = await callApi<ProfileData>('/api/profile');
+    if (auth.user && d.user?.id === auth.user.id) auth.user = d.user;
+    return d;
   } catch {
     return null;
   }

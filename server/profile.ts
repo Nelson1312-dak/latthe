@@ -2,6 +2,7 @@
 // thống kê, và tự xoá tài khoản.
 
 import { all, one, type Db, type User } from './db.ts';
+import { BOTS } from './live/bots.ts';
 
 /** Trình độ tự nhận ở màn chào mừng → điểm khởi đầu và cấp máy gợi ý. */
 export const START_LEVELS = {
@@ -128,4 +129,57 @@ export function profileStats(db: Db, user: User): ProfileStats {
  */
 export function deleteUser(db: Db, userId: number): void {
   db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+}
+
+export interface LadderStep {
+  id: string;
+  name: string;
+  elo: number;
+  blurb: string;
+  /** Đã thắng bot này ít nhất một lần. */
+  beaten: boolean;
+}
+
+/**
+ * Bậc thang AI: sáu bot từ yếu tới mạnh, đánh dấu bot nào người này đã thắng.
+ * Đọc từ ván đã lưu (ván với bot lưu tên "<Bot> (AI)").
+ */
+export function botLadder(db: Db, userId: number | null): LadderStep[] {
+  const thắng = new Set<string>();
+  if (userId !== null) {
+    for (const r of all<{ opponent_name: string }>(
+      db,
+      `SELECT DISTINCT opponent_name FROM games
+        WHERE user_id = ? AND mode = 'online' AND winner = player_side AND opponent_name LIKE '% (AI)'`,
+      userId,
+    )) {
+      thắng.add(r.opponent_name.replace(/ \(AI\)$/, ''));
+    }
+  }
+  return BOTS.map((b) => ({ id: b.id, name: b.name, elo: b.elo, blurb: b.blurb, beaten: thắng.has(b.name) }));
+}
+
+export interface EloPoint {
+  /** Thời điểm, ISO. */
+  t: string;
+  r: number;
+}
+
+/** Elo theo thời gian: đấu online (sau mỗi ván) và bài tập (sau mỗi bài). Tối đa 300 điểm mỗi loại. */
+export function eloHistory(db: Db, userId: number): { online: EloPoint[]; puzzles: EloPoint[] } {
+  const online = all<{ created_at: string; rating_after: number }>(
+    db,
+    `SELECT created_at, rating_after FROM games
+      WHERE user_id = ? AND mode = 'online' AND rating_after IS NOT NULL ORDER BY created_at DESC LIMIT 300`,
+    userId,
+  ).reverse();
+  const puzzles = all<{ created_at: string; rating_after: number }>(
+    db,
+    'SELECT created_at, rating_after FROM puzzle_attempts WHERE user_id = ? ORDER BY created_at DESC LIMIT 300',
+    userId,
+  ).reverse();
+  return {
+    online: online.map((r) => ({ t: r.created_at, r: r.rating_after })),
+    puzzles: puzzles.map((r) => ({ t: r.created_at, r: r.rating_after })),
+  };
 }

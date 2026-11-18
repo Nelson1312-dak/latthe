@@ -17,7 +17,7 @@ export const CLIENT_EVENTS = [
 ] as const;
 
 /** Việc server tự đếm. */
-export const SERVER_EVENTS = ['signup', 'login', 'match_human', 'match_ai', 'share_create'] as const;
+export const SERVER_EVENTS = ['signup', 'login', 'match_human', 'match_ai', 'share_create', 'daily'] as const;
 
 export type StatEvent = (typeof CLIENT_EVENTS)[number] | (typeof SERVER_EVENTS)[number];
 
@@ -46,6 +46,8 @@ export interface DayRow {
   match_ai: number;
   signup: number;
   login: number;
+  /** Lượt giải bài tập của ngày (lần đầu mỗi người). */
+  daily: number;
   /** Ván người đăng nhập lưu lại, theo loại. */
   games_bot: number;
   games_human: number;
@@ -73,6 +75,7 @@ const EMPTY = (day: string): DayRow => ({
   match_ai: 0,
   signup: 0,
   login: 0,
+  daily: 0,
   games_bot: 0,
   games_human: 0,
   games_online: 0,

@@ -6,6 +6,7 @@ import './ui/screens/screens.css';
 
 import { installApiHeader } from './app/api-header.ts';
 import { pingVisit } from './app/ping.ts';
+import { currentDaily } from './app/daily.ts';
 import { loadPieces } from './board/sprite.ts';
 import { snapBoards } from './board/snap.ts';
 import { icon, type IconName } from './ui/icons.ts';
@@ -31,7 +32,7 @@ import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play, setBotLevel } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
-import { handleTrainClick, mountTrain, train } from './ui/screens/train.ts';
+import { handleTrainClick, mountTrain, startDaily, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
 import { handleOnlineClick, hasLiveGame, leaveOnline, mountOnline, online } from './ui/screens/online.ts';
 import { playMode, setPlayMode } from './app/playmode.ts';
@@ -475,6 +476,16 @@ document.addEventListener('click', (e) => {
   if ((route() === 'xem-lai' || sharedIdFromPath()) && handleReviewClick(el, render)) return;
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
   if (route() === 'hoc' && handleLearnClick(el)) return;
+
+  // Bài tập của ngày (dòng ở Sảnh): mở đúng bài đó ở màn Ôn tập
+  if (el.closest('[data-daily]')) {
+    const p = currentDaily()?.puzzle;
+    if (p) {
+      startDaily(p);
+      location.hash = '#/on-tap';
+    }
+    return;
+  }
 
   // Ô có data-go thì chuyển màn
   const go = el.closest<HTMLElement>('[data-go]');

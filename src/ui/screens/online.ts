@@ -41,7 +41,10 @@ import { recentGames, type GameRow } from '../../app/games.ts';
 import { playSound } from '../../app/sound.ts';
 import {
   acceptDraw,
+  challengeBot,
   clockNow,
+  loadLadder,
+  type LadderStep,
   connect,
   createInvite,
   declineDraw,
@@ -80,6 +83,9 @@ let premove: [Square, Square] | null = null;
 let premoveTimer: number | null = null;
 /** Vừa bấm Tìm trận, đang chờ server nhận vào hàng chờ. */
 let đangVàoHàng = false;
+/** Bậc thang AI (sáu bot, đánh dấu bot đã thắng). */
+let bậcThang: LadderStep[] = [];
+let hỏiBậcThangLúc = 0;
 
 /**
  * Rời khỏi màn Đấu.
@@ -533,6 +539,14 @@ function kếtQuả(): string {
 
 export function mountOnline(rerender: () => void): void {
   if (!auth.user) return;
+  // Bậc thang AI: hỏi lại khi quay về sảnh (thắng một bot là đổi)
+  if (!live.state && Date.now() - hỏiBậcThangLúc > 15_000) {
+    hỏiBậcThangLúc = Date.now();
+    void loadLadder().then((l) => {
+      bậcThang = l;
+      rerender();
+    });
+  }
   if (!started) {
     started = true;
     connect(rerender, tickClocks);
@@ -656,6 +670,22 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
   }
   if (target.closest('[data-share-copy]')) {
     void copyShareLink(rerender);
+    return true;
+  }
+
+  // Thử thách AI: đấu ngay với bot vừa chọn
+  const botBtn = target.closest<HTMLElement>('[data-bot]');
+  if (botBtn) {
+    if (đangVàoHàng) return true;
+    đangVàoHàng = true;
+    live.error = null;
+    rerender();
+    void challengeBot(botBtn.dataset.bot!, control).then(async () => {
+      await loadStatus();
+      đangVàoHàng = false;
+      hỏiBậcThangLúc = 0; // ván xong thì bậc thang có thể đã đổi
+      rerender();
+    });
     return true;
   }
 
@@ -862,6 +892,20 @@ export function onlinePanel(modeTabs: string): string {
              <div class="invite"><code class="mono">${inviteCode}</code>${button({ label: 'Sao chép', icon: 'copy' })}</div>
            </div>`
         : `<button class="link-btn" data-invite>Mời người quen bằng mã</button>`
+    }
+    ${
+      bậcThang.length
+        ? `<div class="setup-block">
+            <p class="setup-label">Thử thách AI <span class="setup-label-note">· đã hạ ${bậcThang.filter((b) => b.beaten).length}/${bậcThang.length}</span></p>
+            <div class="ladder">${bậcThang
+              .map(
+                (b) =>
+                  `<button class="ladder-step${b.beaten ? ' is-beaten' : ''}" data-bot="${b.id}" title="${b.blurb}">` +
+                  `<b>${b.name}</b><span class="mono">${b.elo}</span>${b.beaten ? icon('check', 14) : ''}</button>`,
+              )
+              .join('')}</div>
+          </div>`
+        : ''
     }
     <div class="setup-block">
       <p class="setup-label">Có mã mời?</p>

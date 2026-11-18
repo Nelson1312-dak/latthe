@@ -119,5 +119,6 @@ export const REFUSALS: Record<string, string> = {
   'no-draw-offer': 'Không có lời đề nghị hòa nào.',
   'already-queued': 'Bạn đang ở trong hàng chờ rồi.',
   'already-playing': 'Bạn đang có một ván chưa xong.',
+  'no-such-bot': 'Không có AI này.',
   'advisor-during-game': 'Đang trong ván online thì không xem được lời bình.',
 };

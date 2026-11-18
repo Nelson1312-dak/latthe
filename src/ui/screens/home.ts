@@ -5,6 +5,7 @@
 // một trang chữ riêng: muốn đánh phải bấm thêm một nhịp nữa mới thấy bàn cờ.
 
 import { classBadge, notice, rule, sheet, sideGlyph, levelRow } from '../components/index.ts';
+import { currentDaily, loadDaily } from '../../app/daily.ts';
 import { icon, type IconName } from '../icons.ts';
 import { auth } from '../../app/session.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
@@ -17,7 +18,14 @@ let games: GameRow[] = [];
 let tienDo: Progress | null = null;
 let daHoi = false;
 
+let hỏiNgày = false;
+
 export function mountHome(rerender: () => void): void {
+  // Bài tập của ngày: cả khách cũng thấy
+  if (!hỏiNgày) {
+    hỏiNgày = true;
+    void loadDaily().then((d) => d && rerender());
+  }
   if (daHoi || !auth.user) return;
   daHoi = true;
   void Promise.all([recentGames(), progress()]).then(([g, p]) => {
@@ -32,6 +40,7 @@ export function resetHome(): void {
   games = [];
   tienDo = null;
   daHoi = false;
+  hỏiNgày = false;
 }
 
 function when(iso: string): string {
@@ -72,6 +81,25 @@ function quickRow(go: string, name: IconName, title: string, note: string): stri
   );
 }
 
+/** Dòng "Bài tập của ngày": trạng thái hôm nay và chuỗi ngày. */
+function dailyRow(): string {
+  const d = currentDaily();
+  if (!d?.puzzle) return '';
+  const me = d.me;
+  const chuỗi = me?.streak ? ` · chuỗi ${me.streak} ngày` : '';
+  const ghi = !me?.done
+    ? `Chưa giải hôm nay${chuỗi}${d.count.solved ? ` · ${d.count.solved} người đã giải` : ''}`
+    : me.correct
+      ? `Đã giải hôm nay${chuỗi}`
+      : 'Hôm nay chưa đúng — mai có bài mới';
+  return (
+    `<button class="quick${me?.done ? '' : ' is-due'}" data-daily>` +
+    `<span class="quick-icon">${icon(me?.done && me.correct ? 'check' : 'flame', 20)}</span>` +
+    `<span class="quick-text"><b>Bài tập của ngày</b><span>${ghi}</span></span>` +
+    `${icon('next', 16)}</button>`
+  );
+}
+
 export function homeSide(): string {
   const due = tienDo?.the.due ?? 0;
   const u = auth.user;
@@ -79,6 +107,7 @@ export function homeSide(): string {
   return `
     ${rule('Hôm nay')}
     <div class="quick-list">
+      ${dailyRow()}
       ${quickRow(
         'on-tap',
         'cards',

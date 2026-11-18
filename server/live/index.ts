@@ -475,8 +475,21 @@ export class Live {
   /* ---------------- Bot (AI thay người khi hàng chờ trống) ---------------- */
 
   /** Mở ván giữa một người và một bot có Elo gần nhất. Màu quân bốc ngẫu nhiên. */
-  private openWithBot(u: User, control: string, now: number): Room {
-    const bot = pickBot(u.game_rating);
+  /**
+   * Người chơi chọn thẳng một bot để đấu (Thử thách AI / bậc thang bot).
+   * Tính Elo như ván với bot do hàng chờ ghép.
+   */
+  challengeBot(user: User, botId: string, control: string, now = Date.now()): { ok: boolean; why?: string } {
+    const bot = BOTS.find((b) => b.id === botId);
+    if (!bot) return { ok: false, why: 'no-such-bot' };
+    if (this.busy(user.id)) return { ok: false, why: 'already-playing' };
+    this.leaveQueue(user.id, now);
+    this.openWithBot(user, control in CONTROLS ? control : DEFAULT_CONTROL, now, bot);
+    return { ok: true };
+  }
+
+  private openWithBot(u: User, control: string, now: number, chọn?: BotPersona): Room {
+    const bot = chọn ?? pickBot(u.game_rating);
     // Bot không có tài khoản thật: id âm, không bao giờ trùng người dùng
     const botPlayer: RoomPlayer = {
       userId: -(BOTS.indexOf(bot) + 1),

@@ -170,3 +170,35 @@ describe('tìm trận ngay sau khi ván trước vừa xong', () => {
     expect(live.joinQueue(a, '5+0', T0 + 10_000)).toEqual({ ok: false, why: 'already-playing' });
   });
 });
+
+describe('thử thách AI và bậc thang', () => {
+  it('chọn thẳng một bot là vào ván với đúng bot đó', () => {
+    const db = openDb(':memory:');
+    const a = createLocalUser(db, 'An');
+    const live = new Live(db, { botMoves: false });
+    expect(live.challengeBot(a, 'master', '10+0', T0)).toEqual({ ok: true });
+    const st = live.roomOf(a.id)!.stateFor(a.id, T0)!;
+    const đối = st.youAre === 'w' ? st.black : st.white;
+    expect(đối.name).toBe('Master');
+    expect(live.challengeBot(a, 'master', '10+0', T0)).toEqual({ ok: false, why: 'already-playing' });
+    expect(live.challengeBot(createLocalUser(db, 'B'), 'khong-co', '10+0', T0)).toEqual({ ok: false, why: 'no-such-bot' });
+  });
+
+  it('bậc thang đánh dấu bot đã thắng (đọc từ ván đã lưu)', async () => {
+    const { botLadder } = await import('../server/profile.ts');
+    const db = openDb(':memory:');
+    const a = createLocalUser(db, 'An');
+    const live = new Live(db, { botMoves: false });
+    // Giờ thật: bot xin thua theo giờ thật, phòng tạo ở giờ giả thì đồng hồ đã "hết giờ"
+    live.challengeBot(a, 'rookie', '5+0', Date.now());
+    // Bot đầu hàng: người chơi thắng
+    const room = live.roomOf(a.id)!;
+    const bot = room.white.bot ? room.white : room.black;
+    // Đi đúng đường bot thật xin thua (lưu ván, tính Elo)
+    (live as unknown as { botAct: (r: unknown, id: number, w: string, a: object) => void }).botAct(room, bot.userId, 'resign', {});
+    const ladder = botLadder(db, a.id);
+    expect(ladder.find((s) => s.id === 'rookie')!.beaten).toBe(true);
+    expect(ladder.find((s) => s.id === 'master')!.beaten).toBe(false);
+    expect(botLadder(db, null).every((s) => !s.beaten)).toBe(true);
+  });
+});

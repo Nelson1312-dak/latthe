@@ -2192,3 +2192,91 @@ button.top-link {
     font-size: 20px;
   }
 }
+
+/* Bài tập của ngày chưa giải: vạch nhấn bên trái cho nổi giữa danh sách */
+.quick.is-due {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* ---- Thử thách AI (bậc thang) ---- */
+.setup-label-note {
+  font-weight: 400;
+  color: var(--text-3);
+}
+.ladder {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-1);
+}
+.ladder-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  min-height: 48px;
+  padding: var(--s-1);
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font: inherit;
+  cursor: pointer;
+}
+.ladder-step:hover {
+  background: var(--bg-3);
+}
+.ladder-step b {
+  font-size: var(--fs-sm);
+}
+.ladder-step span {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+.ladder-step.is-beaten {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.ladder-step .icon {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  color: var(--accent-text);
+}
+/* Bậc thang trong Hồ sơ: sáu bậc một hàng */
+.ladder-wide {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+@media (max-width: 767px) {
+  .ladder-wide {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* Biểu đồ Elo trong Hồ sơ */
+.elo-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+@media (max-width: 767px) {
+  .elo-charts {
+    grid-template-columns: 1fr;
+  }
+}
+.chart-line {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.chart-dot {
+  fill: var(--chart-1);
+  stroke: var(--bg-1);
+  stroke-width: 2;
+}
+.chart-empty {
+  margin: 0;
+  padding: var(--s-4) 0;
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}

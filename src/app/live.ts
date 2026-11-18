@@ -238,3 +238,24 @@ export function clockNow(state: LiveState, side: 'w' | 'b'): number {
   if (state.over || side !== state.turn) return p.clockMs;
   return Math.max(0, p.clockMs - (Date.now() - state.at));
 }
+
+export interface LadderStep {
+  id: string;
+  name: string;
+  elo: number;
+  blurb: string;
+  beaten: boolean;
+}
+
+/** Sáu AI và những AI mình đã thắng (bậc thang). */
+export async function loadLadder(): Promise<LadderStep[]> {
+  try {
+    const r = await fetch('/api/bots', { credentials: 'same-origin' });
+    if (!r.ok) return [];
+    return ((await r.json()) as { bots: LadderStep[] }).bots;
+  } catch {
+    return [];
+  }
+}
+
+export const challengeBot = (bot: string, control: string) => post<{ ok: boolean }>('/api/live/bot', { bot, control });
