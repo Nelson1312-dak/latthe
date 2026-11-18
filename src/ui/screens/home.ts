@@ -4,7 +4,8 @@
 // — việc hôm nay và sổ ván đã chơi — gắn xuống dưới cột phải. Trước đây Sảnh là
 // một trang chữ riêng: muốn đánh phải bấm thêm một nhịp nữa mới thấy bàn cờ.
 
-import { button, classBadge, notice, rule, sheet, sideGlyph, stats } from '../components/index.ts';
+import { classBadge, notice, rule, sheet, sideGlyph, stats } from '../components/index.ts';
+import { icon, type IconName } from '../icons.ts';
 import { auth } from '../../app/session.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
 import { progress, type Progress } from '../../app/training.ts';
@@ -56,31 +57,36 @@ const gameRow = (g: GameRow) => {
 };
 
 /** Phần riêng của Sảnh, gắn xuống dưới cột phải của bàn cờ. */
+/**
+ * Một dòng "việc nên làm": cả dòng bấm được, icon bên trái, mũi tên bên phải.
+ *
+ * Bản trước là hộp lồng trong hộp, câu chữ bị nút bấm ép xuống hai dòng, hai
+ * bên còn thừa hai dải nền khác màu — trông như dựng dở.
+ */
+function quickRow(go: string, name: IconName, title: string, note: string): string {
+  return (
+    `<button class="quick" data-go="${go}">` +
+    `<span class="quick-icon">${icon(name, 20)}</span>` +
+    `<span class="quick-text"><b>${title}</b><span>${note}</span></span>` +
+    `${icon('next', 16)}</button>`
+  );
+}
+
 export function homeSide(): string {
   const due = tienDo?.the.due ?? 0;
   const u = auth.user;
 
   return `
     ${rule('Hôm nay')}
-    <div class="task-list">
-      <div class="task">
-        <span class="task-text">
-          <b>${due ? `${due} thẻ ôn tập đến hạn` : 'Chưa có thẻ nào đến hạn'}</b>
-          <span>${
-            due
-              ? 'Thẻ sinh ra từ chính những nước bạn đã đi sai'
-              : 'Chơi một ván rồi xem lại, những nước sai sẽ thành thẻ ôn tập'
-          }</span>
-        </span>
-        <span class="task-go" data-go="on-tap">${button({ label: due ? 'Ôn tập' : 'Luyện bài tập', kind: due ? 'primary' : 'secondary' })}</span>
-      </div>
-      <div class="task">
-        <span class="task-text">
-          <b>Đấu với người</b>
-          <span>Ghép ngẫu nhiên với người cùng trình độ</span>
-        </span>
-        <span class="task-go" data-go="ban">${button({ label: 'Tìm trận' })}</span>
-      </div>
+    <div class="quick-list">
+      ${quickRow(
+        'on-tap',
+        'cards',
+        due ? `Ôn ${due} thẻ lỗi` : 'Luyện bài tập',
+        due ? 'Từ chính những nước bạn đi sai' : 'Chưa có thẻ nào đến hạn',
+      )}
+      ${quickRow('ban', 'friends', 'Đấu với người', 'Ghép với người cùng trình độ')}
+      ${quickRow('hoc', 'learn', 'Học chiến thuật', 'Bài ngắn, có bài tập kèm theo')}
     </div>
 
     ${

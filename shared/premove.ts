@@ -92,3 +92,23 @@ export function premoveDests(fen: string, from: Square): Square[] {
 export function ownsSquare(fen: string, sq: Square, side: 'w' | 'b'): boolean {
   return piecesFromFen(fen).get(sq)?.[0] === side;
 }
+
+/**
+ * Những ô được vẽ mũi tên tới, tính từ ô `from`.
+ *
+ * Mũi tên là để chỉ một nước đi, nên nó phải đi đúng đường quân đó đi được:
+ * Tốt chỉ lên một/hai ô hoặc chéo một ô, Mã hình chữ L, Tượng chéo... Vẽ từ
+ * Tốt h2 thẳng tới f7 là một nước không quân nào đi được — vô nghĩa.
+ *
+ * Ô trống thì không có quân nào để theo, nên cho mọi đường của Hậu và của Mã
+ * (đủ để chỉ "quân nào đó sẽ tới đây").
+ */
+export function arrowDests(fen: string, from: Square): Square[] {
+  if (piecesFromFen(fen).has(from)) return premoveDests(fen, from);
+  const f = FILES.indexOf(from[0] as (typeof FILES)[number]);
+  const r = Number(from[1]) - 1;
+  const out: Square[] = [];
+  for (const [df, dr] of [...DIAG, ...LINE]) out.push(...ray(f, r, df, dr));
+  for (const [df, dr] of KNIGHT) if (inside(f + df, r + dr)) out.push(squareOf(f + df, r + dr));
+  return out;
+}

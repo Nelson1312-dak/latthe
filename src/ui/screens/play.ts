@@ -3,6 +3,7 @@
 // trong lúc máy nghĩ.
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
+import { endBadgesFor } from '../../board/Board.ts';
 import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
 import { Game, outcomeText, type Outcome, type Side, type Square } from '../../../shared/chess.ts';
 import { material } from '../../../shared/fen.ts';
@@ -449,6 +450,7 @@ function drawBoard(): void {
   // Chưa bắt đầu: bàn cờ lật theo bên vừa chọn, để thấy ngay mình ngồi phía nào
   if (!started) orientation = setup.mode === 'bot' ? setup.side : 'w';
   const checked = game.checkedKing;
+  const res = outcome();
   const last = game.lastMove;
   // Chỉ trượt quân khi vừa tiến thêm đúng một nước và bàn không bị lật giữa
   // chừng — lật bàn thì mọi quân đều đổi chỗ, trượt sẽ thành loạn.
@@ -460,8 +462,10 @@ function drawBoard(): void {
       fen: game.fen,
       orientation,
       lastMove: last ? [last.from, last.to] : undefined,
-      check: checked ?? undefined,
+      check: res && game.atLive ? undefined : (checked ?? undefined),
       premove: premove ?? undefined,
+      // Hết ván và đang xem thế cờ cuối: huy hiệu trên hai ô Vua như chess.com
+      endBadges: res && game.atLive ? endBadgesFor(game.fen, res) : undefined,
       label: `Bàn cờ, lượt ${sideName(game.turn)}`,
     },
     stepped ? [last.from, last.to] : undefined,

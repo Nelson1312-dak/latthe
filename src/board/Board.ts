@@ -9,10 +9,18 @@ const SIZE = SQ * 8;
 const PIECE_SCALE = SQ / 40; // sprite cburnett vẽ trong khung 40x40
 
 /**
- * Màu bút vẽ của người chơi, theo quy ước của Lichess: chuột phải là xanh lá,
- * giữ Shift là đỏ, giữ Alt là xanh dương, giữ cả hai là vàng.
+ * Màu bút vẽ của người chơi, theo chess.com: mũi tên mặc định màu cam ('y'),
+ * tô ô mặc định màu đỏ; giữ Shift là xanh lá, Ctrl là đỏ, Alt là xanh dương.
  */
 export type Brush = 'g' | 'r' | 'b' | 'y';
+
+/** Huy hiệu trên ô Vua khi ván kết thúc, như chess.com. */
+export type EndBadgeKind = 'win' | 'mate' | 'resign' | 'timeout' | 'draw';
+
+export interface EndBadge {
+  square: Square;
+  kind: EndBadgeKind;
+}
 
 export interface Arrow {
   from: Square;
@@ -54,6 +62,8 @@ export interface BoardOptions {
   /** Ô đang ở dưới quân bị kéo. */
   hover?: Square;
   badge?: ClassBadge;
+  /** Ván đã xong: huy hiệu trên hai ô Vua (thắng, bị chiếu hết, hòa...). */
+  endBadges?: EndBadge[];
   /** Ô đang được bàn phím trỏ tới (chỉ hiện khi người chơi dùng bàn phím). */
   focus?: Square;
   coordinates?: boolean;
@@ -184,6 +194,21 @@ export function boardSvg(o: BoardOptions): string {
     const [x, y] = xy(o.selected, or);
     parts.push(`<rect x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--mark-select)"/>`);
   }
+  // Ô người chơi tô bằng chuột phải: tô kín cả ô như chess.com, nằm dưới quân
+  for (const c of o.circles ?? []) {
+    const [x, y] = xy(c.square, or);
+    parts.push(
+      `<rect class="mark-sq" x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--brush-${c.brush})" opacity=".8" shape-rendering="crispEdges"/>`,
+    );
+  }
+  // Vua bị chiếu hết: cả ô đỏ lên, rõ hơn quầng đỏ lúc bị chiếu thường
+  for (const b of o.endBadges ?? []) {
+    if (b.kind !== 'mate') continue;
+    const [x, y] = xy(b.square, or);
+    parts.push(
+      `<rect class="mate-sq" x="${x}" y="${y}" width="${SQ}" height="${SQ}" fill="var(--mark-check)" opacity=".75" shape-rendering="crispEdges"/>`,
+    );
+  }
   if (o.check) {
     const [cx, cy] = centre(o.check, or);
     parts.push(
@@ -251,15 +276,6 @@ export function boardSvg(o: BoardOptions): string {
     parts.push(`<circle class="legal" cx="${cx}" cy="${cy}" r="${SQ * 0.42}" fill="none" stroke="var(--mark-legal)" stroke-width="${SQ * 0.1}"/>`);
   }
 
-  // Ô khoanh tròn
-  for (const c of o.circles ?? []) {
-    const [cx, cy] = centre(c.square, or);
-    parts.push(
-      `<circle cx="${cx}" cy="${cy}" r="${SQ * 0.45}" fill="none" stroke="var(--brush-${c.brush})" ` +
-        `stroke-width="${SQ * 0.07}" opacity=".85"/>`,
-    );
-  }
-
   // Mũi tên
   (o.arrows ?? []).forEach((a, i) => {
     const colour = a.brush
@@ -268,10 +284,11 @@ export function boardSvg(o: BoardOptions): string {
         ? 'var(--arrow-user)'
         : 'var(--arrow-coach)';
     const id = `${uid}-arrow-${i}`;
-    // Tỉ lệ theo Lichess: thân mảnh, đầu rộng gấp đôi thân, hơi trong suốt để
-    // còn nhìn thấy quân cờ nằm dưới.
-    const w = SQ * (a.brush ? 0.13 : 0.1);
-    const head = SQ * 0.26;
+    // Mũi tên người chơi vẽ theo kiểu chess.com: thân to, đầu to, hơi trong
+    // suốt để còn thấy quân bên dưới. Bản mảnh kiểu Lichess trước đây nhìn như
+    // một nét bút chì, trên bàn xanh lá gần như không thấy.
+    const w = SQ * (a.brush ? 0.2 : 0.1);
+    const head = a.brush ? SQ * 0.12 : SQ * 0.26;
     const pts = arrowPath(a.from, a.to, or, head);
     if (!pts) return;
     parts.push(
@@ -279,7 +296,7 @@ export function boardSvg(o: BoardOptions): string {
       `<marker id="${id}" markerWidth="3" markerHeight="3" refX="2.8" refY="1.5" orient="auto">` +
         `<path d="M0 0 L2.8 1.5 L0 3 Z" fill="${colour}"/></marker>`,
       `<polyline points="${pts}" fill="none" stroke="${colour}" stroke-width="${w}" ` +
-        `stroke-linecap="butt" stroke-linejoin="round" opacity="${a.brush ? '.65' : '.85'}" marker-end="url(#${id})"/>`,
+        `stroke-linecap="butt" stroke-linejoin="round" opacity="${a.brush ? '.8' : '.85'}" marker-end="url(#${id})"/>`,
     );
   });
 
@@ -293,7 +310,70 @@ export function boardSvg(o: BoardOptions): string {
     );
   }
 
+  // Huy hiệu kết thúc ván, góc trên phải ô Vua. "Nảy" ra một nhịp (CSS .end-badge).
+  for (const b of o.endBadges ?? []) {
+    const [x, y] = xy(b.square, or);
+    const r = SQ * 0.2;
+    const cx = x + SQ - r * 0.9;
+    const cy = y + r * 0.9;
+    parts.push(
+      `<g class="end-badge end-${b.kind}" style="transform-origin:${cx}px ${cy}px">` +
+        `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--end-${b.kind})" stroke="var(--bg-0)" stroke-width="1.5"/>` +
+        endGlyph(b.kind, cx, cy, r) +
+        `</g>`,
+    );
+  }
+
   // Không vẽ mép bàn: chess.com để ô cờ chạy thẳng ra rìa, không khung.
   const label = o.label ?? 'Bàn cờ';
   return `<svg class="board" viewBox="0 0 ${SIZE} ${SIZE}" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">${parts.join('')}</svg>`;
+}
+
+/** Hình nhỏ bên trong huy hiệu kết thúc ván. Vẽ bằng nét, không dùng font. */
+function endGlyph(kind: EndBadgeKind, cx: number, cy: number, r: number): string {
+  const k = r / 10; // vẽ trong khung 20x20 quanh tâm
+  const p = (pts: [number, number][]) => pts.map(([a, b]) => `${(cx + a * k).toFixed(2)},${(cy + b * k).toFixed(2)}`).join(' ');
+  const line = `fill="none" stroke="#fff" stroke-width="${1.6 * k}" stroke-linejoin="round" stroke-linecap="round"`;
+  switch (kind) {
+    case 'win': // vương miện
+      return `<polygon points="${p([[-6, 4], [-6, -3], [-3, 0], [0, -5], [3, 0], [6, -3], [6, 4]])}" fill="#fff"/>`;
+    case 'mate': // dấu thăng — ký hiệu chiếu hết
+      return (
+        `<path d="M${cx - 2 * k} ${cy - 6 * k}L${cx - 3 * k} ${cy + 6 * k}M${cx + 3 * k} ${cy - 6 * k}L${cx + 2 * k} ${cy + 6 * k}` +
+        `M${cx - 6 * k} ${cy - 2 * k}H${cx + 6 * k}M${cx - 6 * k} ${cy + 2.5 * k}H${cx + 6 * k}" ${line}/>`
+      );
+    case 'resign': // lá cờ trắng
+      return `<path d="M${cx - 4 * k} ${cy + 6 * k}V${cy - 6 * k}H${cx + 5 * k}L${cx + 3 * k} ${cy - 3 * k}L${cx + 5 * k} ${cy}H${cx - 4 * k}" ${line}/>`;
+    case 'timeout': // đồng hồ
+      return `<circle cx="${cx}" cy="${cy}" r="${6 * k}" ${line}/><path d="M${cx} ${cy - 3.5 * k}V${cy}L${cx + 2.5 * k} ${cy + 2 * k}" ${line}/>`;
+    case 'draw': // dấu bằng: hai bên như nhau
+      return `<path d="M${cx - 5 * k} ${cy - 2 * k}H${cx + 5 * k}M${cx - 5 * k} ${cy + 2 * k}H${cx + 5 * k}" ${line}/>`;
+  }
+}
+
+/**
+ * Huy hiệu hai ô Vua cho một ván đã xong.
+ * Chiếu hết: bên thua mang dấu #, ô đỏ. Đầu hàng / hết giờ: bên thua mang lá
+ * cờ / đồng hồ. Bên thắng mang vương miện. Hòa: cả hai mang dấu bằng.
+ */
+export function endBadgesFor(fen: string, outcome: { winner: 'w' | 'b' | 'draw'; reason: string }): EndBadge[] {
+  const kings = new Map<'w' | 'b', Square>();
+  for (const [sq, code] of piecesFromFen(fen)) {
+    if (code === 'wk') kings.set('w', sq);
+    if (code === 'bk') kings.set('b', sq);
+  }
+  const out: EndBadge[] = [];
+  const add = (side: 'w' | 'b', kind: EndBadgeKind) => {
+    const sq = kings.get(side);
+    if (sq) out.push({ square: sq, kind });
+  };
+  if (outcome.winner === 'draw') {
+    add('w', 'draw');
+    add('b', 'draw');
+    return out;
+  }
+  const loser = outcome.winner === 'w' ? 'b' : 'w';
+  add(outcome.winner, 'win');
+  add(loser, outcome.reason === 'checkmate' ? 'mate' : outcome.reason === 'timeout' ? 'timeout' : 'resign');
+  return out;
 }

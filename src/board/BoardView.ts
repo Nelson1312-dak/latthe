@@ -12,6 +12,7 @@
 import { boardSvg, squareXY, type Arrow, type BoardOptions, type Brush, type Circle } from './Board.ts';
 import { PIECE_SLIDE_MS } from './timing.ts';
 import { FILES, piecesFromFen, squareOf, type PieceCode, type Square } from '../../shared/fen.ts';
+import { arrowDests } from '../../shared/premove.ts';
 
 export { PIECE_SLIDE_MS };
 
@@ -62,7 +63,10 @@ interface Drawing {
   viewId: string;
   from: Square;
   to: Square | null;
-  brush: Brush;
+  /** Màu theo phím đang giữ; null là màu mặc định (cam cho mũi tên, đỏ cho ô). */
+  brush: Brush | null;
+  /** Các ô mũi tên được phép chỉ tới, tính một lần lúc bắt đầu vẽ. */
+  allowed: Set<Square>;
   pointerId: number;
 }
 
@@ -84,18 +88,30 @@ const notes = new Map<string, Notes>();
  * tiếp theo đừng cho nó trượt từ ô gốc tới nữa — trông như đi hai lần.
  */
 let dropped: string | null = null;
+/**
+ * Huy hiệu kết thúc ván đã "nảy" ra lần nào chưa, theo từng bàn cờ. Bàn cờ bị
+ * vẽ lại mỗi lần bấm, không nhớ thì huy hiệu nảy lại mãi.
+ */
+const badgeShown = new Map<string, string>();
 
 /** Đang kéo quân dở — màn hình có thể hoãn những lần vẽ lại không gấp. */
 export function isDragging(): boolean {
   return Boolean(drag?.started);
 }
 
-function brushOf(e: PointerEvent): Brush {
-  if (e.shiftKey && e.altKey) return 'y';
-  if (e.shiftKey) return 'r';
+/**
+ * Màu bút theo phím đang giữ, như chess.com: Shift xanh lá, Ctrl đỏ, Alt xanh
+ * dương. Không giữ gì thì null — mũi tên màu cam, tô ô màu đỏ.
+ */
+function brushOf(e: PointerEvent): Brush | null {
+  if (e.shiftKey) return 'g';
+  if (e.ctrlKey || e.metaKey) return 'r';
   if (e.altKey) return 'b';
-  return 'g';
+  return null;
 }
+
+const ARROW_BRUSH: Brush = 'y';
+const SQUARE_BRUSH: Brush = 'r';
 
 function ghostFor(code: PieceCode): HTMLElement {
   const el = document.createElement('div');
@@ -123,7 +139,7 @@ function wire(): void {
   window.addEventListener('pointermove', (e) => {
     if (drawing && e.pointerId === drawing.pointerId) {
       const v = views.get(drawing.viewId);
-      const sq = v?.squareAt(e.clientX, e.clientY) ?? null;
+      const sq = v?.arrowTarget(drawing, e.clientX, e.clientY) ?? null;
       if (v && sq !== drawing.to) {
         drawing.to = sq;
         v.draw();
@@ -153,8 +169,10 @@ function wire(): void {
       drawing = null;
       const v = views.get(d.viewId);
       if (!v) return;
-      const to = v.squareAt(e.clientX, e.clientY);
-      if (to) v.toggleNote(d.from, to, d.brush);
+      // Đích đã được bắt vào ô hợp lệ trong lúc rê chuột; null là thả ra chỗ
+      // không quân nào đi tới được, nên không vẽ gì.
+      const to = d.to;
+      if (to) v.toggleNote(d.from, to, d.brush ?? (to === d.from ? SQUARE_BRUSH : ARROW_BRUSH));
       v.draw();
       return;
     }
@@ -367,7 +385,7 @@ export class BoardView {
     const n = notes.get(id);
     const preview: Arrow[] =
       drawing && drawing.viewId === id && drawing.to && drawing.to !== drawing.from
-        ? [{ from: drawing.from, to: drawing.to, brush: drawing.brush }]
+        ? [{ from: drawing.from, to: drawing.to, brush: drawing.brush ?? ARROW_BRUSH }]
         : [];
     const kéo = drag && drag.viewId === id && drag.started ? drag : null;
     this.host.innerHTML = boardSvg({
@@ -381,6 +399,9 @@ export class BoardView {
       arrows: [...(this.state.arrows ?? []), ...(n?.arrows ?? []), ...preview],
       circles: [...(this.state.circles ?? []), ...(n?.circles ?? [])],
     });
+    const badges = this.state.endBadges?.length ? this.state.fen + JSON.stringify(this.state.endBadges) : '';
+    if (badges && badgeShown.get(id) === badges) this.host.querySelector('svg')?.classList.add('settled');
+    badgeShown.set(id, badges);
   }
 
   /** Đặt quân đang kéo vào giữa con trỏ, to bằng một ô. */
@@ -390,6 +411,39 @@ export class BoardView {
     ghost.style.width = `${size}px`;
     ghost.style.height = `${size}px`;
     ghost.style.transform = `translate(${x - size / 2}px, ${y - size / 2}px)`;
+  }
+
+  /**
+   * Ô mà mũi tên đang vẽ sẽ chỉ tới khi con trỏ ở (clientX, clientY).
+   *
+   * Con trỏ ở đúng ô hợp lệ thì lấy ô đó. Lệch ra ngoài đường đi của quân thì
+   * bắt vào ô hợp lệ gần nhất (trong vòng một ô), để tay không cần chính xác
+   * tuyệt đối. Xa quá thì không có mũi tên nào.
+   */
+  arrowTarget(d: Drawing, clientX: number, clientY: number): Square | null {
+    const sq = this.squareAt(clientX, clientY);
+    if (sq === d.from || (sq && d.allowed.has(sq))) return sq;
+    const svg = this.host.querySelector('svg');
+    if (!svg) return null;
+    const r = svg.getBoundingClientRect();
+    const size = r.width / 8;
+    const px = (clientX - r.left) / size;
+    const py = (clientY - r.top) / size;
+    const flipped = this.state.orientation === 'b';
+    let best: Square | null = null;
+    let bestD = 1.0;
+    for (const a of d.allowed) {
+      const f = FILES.indexOf(a[0] as (typeof FILES)[number]);
+      const rank = Number(a[1]) - 1;
+      const cx = (flipped ? 7 - f : f) + 0.5;
+      const cy = (flipped ? rank : 7 - rank) + 0.5;
+      const dist = Math.hypot(cx - px, cy - py);
+      if (dist < bestD) {
+        bestD = dist;
+        best = a;
+      }
+    }
+    return best;
   }
 
   /** Ô cờ dưới một điểm trên màn hình. */
@@ -424,7 +478,14 @@ export class BoardView {
       if (drag) endDrag();
       this.cancelPremove();
       this.select(null);
-      drawing = { viewId: id, from: sq, to: sq, brush: brushOf(e), pointerId: e.pointerId };
+      drawing = {
+        viewId: id,
+        from: sq,
+        to: sq,
+        brush: brushOf(e),
+        allowed: new Set(arrowDests(this.state.fen, sq)),
+        pointerId: e.pointerId,
+      };
       this.draw();
       return;
     }

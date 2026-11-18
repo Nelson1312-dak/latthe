@@ -712,3 +712,44 @@ html.is-dragging-piece,
 html.is-dragging-piece * {
   cursor: grabbing !important;
 }
+
+/* Hết ván: huy hiệu trên ô Vua nảy ra, ô Vua bị chiếu hết đỏ lên — như chess.com.
+   Chỉ chạy một lần; vẽ lại bàn cờ (bấm nút...) thì đứng yên (.settled). */
+.end-badge {
+  animation: end-pop 480ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.end-badge.end-win {
+  animation-delay: 160ms;
+}
+.mate-sq {
+  animation: mate-flash 700ms ease-out both;
+}
+.board.settled .end-badge,
+.board.settled .mate-sq {
+  animation: none;
+}
+@keyframes end-pop {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes mate-flash {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.75;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .end-badge,
+  .mate-sq {
+    animation: none;
+  }
+}

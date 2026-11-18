@@ -51,19 +51,27 @@
   /* ---- Bàn cờ: 3 chủ đề ---- */
   --sq-light: #ead8b6;
   --sq-dark: #b08a62;
-  --mark-move: rgb(232 196 80 / 0.42);
-  --mark-select: rgb(232 196 80 / 0.55);
+  /* Vàng chanh của chess.com: nổi trên cả bàn xanh lá lẫn bàn gỗ */
+  --mark-move: rgb(255 255 51 / 0.42);
+  --mark-select: rgb(255 255 51 / 0.55);
   --mark-legal: rgb(0 0 0 / 0.2);
   --mark-check: #cf4034;
   --arrow-coach: #5fa36a;
   --arrow-user: #e2873a;
   --mark-premove: rgb(64 86 150 / 0.5);
   --mark-hover: rgb(255 255 255 / 0.7);
-  /* Bút vẽ của người chơi (chuột phải), cùng bộ màu với Lichess cho quen tay */
-  --brush-g: #15781b;
-  --brush-r: #882020;
-  --brush-b: #003088;
-  --brush-y: #e68f00;
+  /* Bút vẽ của người chơi (chuột phải), bộ màu của chess.com:
+     cam (mũi tên mặc định), đỏ (tô ô mặc định), xanh lá, xanh dương */
+  --brush-g: #9fcf3f;
+  --brush-r: #eb6150;
+  --brush-b: #52b0dc;
+  --brush-y: #ffaa00;
+  /* Huy hiệu kết thúc ván trên ô Vua */
+  --end-win: #5d9948;
+  --end-mate: #cf4034;
+  --end-resign: #cf4034;
+  --end-timeout: #cf4034;
+  --end-draw: #7a7874;
   --board-edge: rgb(0 0 0 / 0.35);
   /* Quầng quanh hình quân nhỏ để quân cùng tông với nền vẫn đọc được */
   --piece-halo: rgb(236 232 225 / 0.85);

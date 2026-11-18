@@ -1400,11 +1400,6 @@ button.top-link {
   display: none;
 }
 
-/* Việc hôm nay ở Sảnh, khi nằm trong cột hẹp cạnh bàn cờ: chỉ một dòng chữ và
-   một nút. Câu giải thích dài làm cột phải thành một bức tường chữ. */
-.game-side .task-text > span {
-  display: none;
-}
 /* Cuộn tới bàn cờ thì chừa chỗ cho thanh tiêu đề dính trên điện thoại */
 .game-board {
   scroll-margin-top: calc(var(--head-h, 0px) + var(--s-2));
@@ -1429,4 +1424,51 @@ button.top-link {
   .play-head {
     display: none;
   }
+}
+
+/* Việc nên làm ở Sảnh: danh sách phẳng, cả dòng bấm được */
+.quick-list {
+  display: grid;
+  gap: 2px;
+}
+.quick {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.quick:hover {
+  background: var(--bg-3);
+}
+.quick-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+  color: var(--accent-text);
+}
+.quick-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.quick-text span {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.quick > .icon:last-child {
+  flex: none;
+  color: var(--text-3);
 }

@@ -8,6 +8,7 @@
 // đó gọi thẳng API trong lúc đang có ván.
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
+import { endBadgesFor } from '../../board/Board.ts';
 import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
 import { Game, outcomeText, type Side } from '../../../shared/chess.ts';
 import { material, type Square } from '../../../shared/fen.ts';
@@ -532,8 +533,10 @@ export function mountOnline(rerender: () => void): void {
       fen: s.fen,
       orientation: s.youAre,
       lastMove: s.lastMove ?? undefined,
-      check: board?.checkedKing ?? undefined,
+      check: s.over ? undefined : (board?.checkedKing ?? undefined),
       premove: premove ?? undefined,
+      // Hết ván: vương miện cho bên thắng, dấu # / lá cờ / đồng hồ cho bên thua
+      endBadges: s.over ? endBadgesFor(s.fen, s.over) : undefined,
       label: `Bàn cờ, lượt ${sideName(s.turn)}`,
     },
     thêmMộtNước ? s.lastMove! : undefined,

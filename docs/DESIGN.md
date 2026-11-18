@@ -320,19 +320,38 @@ Theo đúng thói quen của người đã chơi chess.com/Lichess, không bắt
 
 - **Kéo thả** hoặc **bấm quân rồi bấm ô** đều được. Quân đang kéo bám theo con trỏ, ô gốc
   để lại bóng mờ (30%), ô dưới con trỏ có viền. Thả ra ngoài thì quân về chỗ, vẫn giữ chọn.
-- **Chuột phải kéo** vẽ mũi tên, **chuột phải bấm** khoanh ô. Màu theo Lichess: thường là
-  xanh lá, Shift đỏ, Alt xanh dương, Shift+Alt vàng. Vẽ lại đúng nét đó thì xoá. Chuột trái
-  hoặc đi một nước thì xoá hết.
-- **Mũi tên đi theo đúng cách quân cờ đi.** Nước của Mã là hình chữ L nên mũi tên
-  cũng gấp khúc: đi hai ô theo trục dài trước rồi mới rẽ, đúng như chess.com và
-  Lichess. Nối thẳng thì mũi tên cắt chéo qua giữa bàn, chỉ đúng với Xe/Tượng/Hậu.
-  `arrowPath()` trong `src/board/Board.ts`, có test cho cả tám nước của Mã.
-- Tỉ lệ mũi tên theo Lichess: thân 0,13 ô, đầu rộng gấp đôi thân, độ mờ 0,65 để
-  còn nhìn thấy quân nằm dưới.
+- **Chuột phải kéo** vẽ mũi tên, **chuột phải bấm** tô kín cả ô (nằm dưới quân), như
+  chess.com. Màu theo chess.com: mũi tên mặc định **cam** `#FFAA00`, tô ô mặc định **đỏ**
+  `#EB6150`; giữ **Shift** xanh lá `#9FCF3F`, **Ctrl** đỏ, **Alt** xanh dương `#52B0DC`.
+  Vẽ lại đúng nét đó thì xoá. Chuột trái hoặc đi một nước thì xoá hết.
+- **Mũi tên chỉ đi được những đường quân ở ô xuất phát đi được** (`arrowDests()` trong
+  `shared/premove.ts`): Tốt lên một/hai ô hoặc chéo một ô, Mã chữ L, Tượng chéo...
+  Ô xuất phát trống thì cho mọi đường của Hậu và Mã. Kéo từ Tốt h2 tới f7 là không vẽ gì.
+  Con trỏ lệch khỏi đường thì mũi tên bắt vào ô hợp lệ gần nhất (trong vòng một ô).
+- Nước của Mã là hình chữ L nên mũi tên cũng gấp khúc: đi hai ô theo trục dài trước rồi
+  mới rẽ. `arrowPath()` trong `src/board/Board.ts`.
+- Mũi tên người chơi kiểu chess.com: thân 0,2 ô, đầu to, độ mờ 0,8. Bản mảnh kiểu Lichess
+  (0,13 ô, màu tối) trên bàn xanh lá gần như không thấy.
 - **Đi trước (premove)** khi chưa tới lượt: chọn được mọi ô quân đó *về hình học* tới được
   trên bàn trống (kể cả ô quân mình đang đứng, để ăn lại). Tới lượt mới kiểm tra luật thật,
   không hợp lệ thì bỏ. Ô đi trước tô xanh xám. Chuột phải, bấm ra ngoài, hoặc Esc là huỷ.
 - Bàn phím: mũi tên di chuyển, Enter chọn/đi, Esc huỷ.
+
+### 4.6c Màu trạng thái trên bàn cờ
+
+| Trạng thái | Cách vẽ |
+|---|---|
+| Nước vừa đi, ô đang chọn | Vàng chanh của chess.com, 42% / 55% |
+| Ô đi được / ăn được | Chấm tròn / vòng tròn đen 20% (tắt được trong Cài đặt) |
+| Đang bị chiếu | Quầng đỏ toả ra từ ô Vua |
+| Đi trước | Hai ô tô xanh xám |
+| Ô người chơi tô | Tô kín cả ô, đỏ/xanh lá/xanh dương, 80% |
+| **Chiếu hết** | Ô Vua thua đỏ hẳn lên (nháy một nhịp), góc ô có huy hiệu đỏ dấu **#**; Vua thắng có huy hiệu xanh hình **vương miện** |
+| Đầu hàng / hết giờ | Vua thua mang huy hiệu đỏ hình lá cờ / đồng hồ; Vua thắng mang vương miện |
+| Hòa | Cả hai Vua mang huy hiệu xám dấu **=** |
+
+Huy hiệu hết ván "nảy" ra một lần (CSS `.end-badge`); vẽ lại bàn cờ thì đứng yên.
+Lùi về xem nước cũ thì huy hiệu ẩn đi, quay lại nước cuối thì hiện.
 
 ### 4.7 Âm thanh
 

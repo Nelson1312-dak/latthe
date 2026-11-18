@@ -159,6 +159,9 @@ function settingsDialog(): string {
     toggleRow('autoQueen', 'Tự phong Hậu', 'Tốt tới hàng cuối thì thành Hậu luôn, không hỏi', p.autoQueen) +
     `</div>` +
     `<p class="pref-keys">Phím tắt: <kbd>←</kbd> <kbd>→</kbd> lùi/tiến một nước, <kbd>Home</kbd> <kbd>End</kbd> về đầu/cuối ván, <kbd>F</kbd> lật bàn cờ.</p>` +
+    `<p class="pref-keys">Vẽ trên bàn cờ: giữ chuột phải kéo để vẽ mũi tên (đi đúng đường quân đi được), ` +
+    `bấm chuột phải để tô ô. Giữ thêm <kbd>Shift</kbd> xanh lá, <kbd>Ctrl</kbd> đỏ, <kbd>Alt</kbd> xanh dương. ` +
+    `Bấm chuột trái là xoá hết.</p>` +
     `</div><div class="dialog-actions">` +
     `<button class="btn btn-primary" data-close-settings>Xong</button>` +
     `</div></div></div>`
