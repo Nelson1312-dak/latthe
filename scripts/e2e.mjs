@@ -157,8 +157,10 @@ if (A.đăngNhập) {
   await A.p.goto(`${GỐC}/#/choi`, { waitUntil: 'load' });
   await A.p.reload({ waitUntil: 'load' });
   await A.p.waitForTimeout(1500);
+  // Ván trước vừa xong: hộp thoại hết ván đang mở; đóng đi rồi về sảnh
+  if (await A.p.locator('[data-end-close]').count()) await A.p.locator('[data-end-close]').click();
   const vềSảnh = A.p.getByRole('button', { name: 'Về sảnh' });
-  if (await vềSảnh.count()) await vềSảnh.click();
+  if (await vềSảnh.count()) await vềSảnh.first().click();
   await A.p.getByRole('button', { name: 'Tìm trận', exact: true }).click();
   const aiVào = await A.p
     .waitForSelector('.ai-alert', { timeout: 20000 })

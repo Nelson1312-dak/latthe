@@ -550,6 +550,22 @@ hơn giữa bề ngang và chiều cao đó (không nhỏ hơn 220px), nghe cả
 Bàn cờ phải nhỏ lại thì cả cột (hai thanh người chơi, và cột dưới ở bố cục một cột) thu
 theo bằng `--board-fit` để thẳng mép. CSS ở bố cục một cột chỉ còn giới hạn bề ngang.
 
+### 4.6j Thanh điều khiển ván và hộp thoại hết ván (theo mẫu chess.com)
+
+- **Thanh điều khiển ván (điện thoại, chỉ lúc đang đánh):** thay chỗ thanh điều hướng dưới
+  đáy (`nav.nav.game-bar`, nên `snap.ts` tự trừ chiều cao của nó). Hàng trên: việc có chữ + icon
+  (với máy: Gợi ý · Đi lại · Trợ lý · Đầu hàng; hai người một máy: Lật bàn · Đi lại · Đầu hàng;
+  online: Đề nghị hòa · Đầu hàng, đối thủ mời hòa thì Đồng ý hòa · Từ chối). Hàng dưới: bốn
+  nút tua nước to (không có ở online). Gợi ý vừa mở / lời mời hòa hiện một dòng ngay trên hàng
+  nút. Hết ván thì trả lại thanh điều hướng. Màn thấp hơn 500px (điện thoại xoay ngang): ẩn
+  thanh, nút về cột bên. Máy tính bảng, máy tính: không có thanh, nút ở cột bên.
+- **Hộp thoại hết ván (mọi chế độ):** nổi trên bàn cờ sau khi nước cuối đi xong (~350ms).
+  Kết quả to, lý do · đối thủ, Elo (online), một dòng số (độ chính xác · nước tốt nhất · nước
+  hỏng) và một câu chỉ nước đáng xem nhất — đang chấm thì chỉ báo phần trăm. Nút chính
+  **Xem lại ván** (nhảy tới nước đáng xem nhất); hai nút phụ Chơi lại · Ván mới (online: Tìm
+  trận mới · Đấu lại với AI / Về sảnh). Đóng bằng X, Esc, bấm ra ngoài; kết quả vẫn nằm ở cột
+  bên. Không bật lại cho ván đã đóng/đã rời (nhớ qua lần tải lại trang).
+
 ## 5. Bàn cờ
 
 | Phần | Quy định |

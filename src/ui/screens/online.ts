@@ -9,7 +9,7 @@
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
 import { boardSvg, endBadgesFor } from '../../board/Board.ts';
-import { boardMarks, createReporter, pgnFromSans, reviewPanel, reviewProgress } from '../report.ts';
+import { boardMarks, createReporter, endClickable, endDialog, endSummary, pgnFromSans, reviewPanel, reviewProgress } from '../report.ts';
 import { preAnalyse } from '../../analysis/precompute.ts';
 import { invalidateCoach } from '../../app/coach.ts';
 import { saveReview } from '../../app/reviews.ts';
@@ -331,6 +331,85 @@ function đangChờ(): string {
 
 /* ---------------- Cảnh 3: đang đánh ---------------- */
 
+/**
+ * Hộp thoại hết ván đã đóng (hoặc người chơi đã rời ván) cho ván nào. Nhớ qua lần
+ * tải lại trang: server còn giữ phòng đã xong 2 phút và gửi lại kết quả khi luồng
+ * nối lại, không nhớ thì hộp thoại cứ bật lại cho một ván đã rời.
+ */
+let endClosedFor: string | null = (() => {
+  try {
+    return sessionStorage.getItem('end-closed');
+  } catch {
+    return null;
+  }
+})();
+let endShownFor: string | null = null;
+let endShownAt = 0;
+
+/** Đánh dấu đã xong với hộp thoại hết ván của ván này. */
+function closeEnd(id: string): void {
+  endClosedFor = id;
+  try {
+    sessionStorage.setItem('end-closed', id);
+  } catch {
+    /* chế độ riêng tư: chỉ nhớ trong phiên */
+  }
+}
+
+/** Ván online xong lúc đang chơi ở bàn cờ nổi: kết quả đã xem ở đó, về trang chính không bật lại. */
+export function markOnlineEndSeen(): void {
+  if (live.state?.over) closeEnd(live.state.id);
+}
+
+/** Hộp thoại hết ván online: kết quả, Elo đổi bao nhiêu, vài con số, việc làm tiếp. */
+function endModal(): string {
+  const s = live.state!;
+  const o = s.over!;
+  const tôi = s.youAre;
+  const đổi = tôi === 'w' ? o.whiteChange : o.blackChange;
+  const mới = tôi === 'w' ? o.whiteRating : o.blackRating;
+  const họ = tôi === 'w' ? s.black : s.white;
+  const sum = endSummary(reporter.current, pgnFromSans(s.history), tôi);
+  if (endShownFor !== s.id) {
+    endShownFor = s.id;
+    endShownAt = performance.now();
+  }
+  const lýDo = outcomeText({ winner: o.winner, reason: o.reason }).split(' · ')[1];
+  return endDialog({
+    title: o.winner === 'draw' ? 'Hòa' : o.winner === tôi ? 'Bạn thắng' : 'Bạn thua',
+    tone: o.winner === 'draw' ? 'draw' : o.winner === tôi ? 'win' : 'loss',
+    why: `${lýDo} · ${họ.name}${họ.bot ? ' (AI)' : ''}`,
+    body:
+      `<p class="end-elo">Elo <b class="mono">${mới}</b> <span class="${đổi > 0 ? 'is-up' : đổi < 0 ? 'is-down' : ''}">${đổi > 0 ? `+${đổi}` : đổi}</span></p>` +
+      sum.html,
+    actions:
+      `<button class="btn btn-primary btn-full" data-end-review="${sum.ply}">Xem lại ván</button>` +
+      `<div class="end-row">${button({ label: 'Tìm trận mới' })}${
+        họ.bot ? `<button class="btn btn-secondary" data-end-rematch="${họ.bot.id}">Đấu lại</button>` : button({ label: 'Về sảnh' })
+      }</div>`,
+    shownMs: performance.now() - endShownAt,
+  });
+}
+
+/** Thanh điều khiển ván ở đáy màn điện thoại lúc đang đánh online (Đề nghị hòa, Đầu hàng). */
+export function onlineBar(): string {
+  const s = live.state;
+  if (!auth.user || !s || s.over) return '';
+  const họMời = s.drawOfferFrom !== null && s.drawOfferFrom !== s.youAre;
+  return `<nav class="nav game-bar" aria-label="Điều khiển ván">
+    ${họMời ? '<p class="gb-hint" role="status">Đối thủ đề nghị hòa.</p>' : ''}
+    <div class="gb-acts">
+      ${
+        họMời
+          ? `<button class="gb-act">${icon('check', 22)}<span>Đồng ý hòa</span></button>` +
+            `<button class="gb-act">${icon('close', 22)}<span>Từ chối</span></button>`
+          : `<button class="gb-act"${s.drawOfferFrom ? ' disabled' : ''}>${icon('draw', 22)}<span>Đề nghị hòa</span></button>`
+      }
+      <button class="gb-act">${icon('resign', 22)}<span>Đầu hàng</span></button>
+    </div>
+  </nav>`;
+}
+
 function vánCờ(): string {
   const s = live.state!;
   const tôi = s.youAre;
@@ -465,6 +544,7 @@ function vánCờ(): string {
           )
         : ''
     }
+    ${xong && endClosedFor !== s.id ? endModal() : ''}
   </div>`;
 }
 
@@ -681,6 +761,41 @@ export function mountOnline(rerender: () => void): void {
 /* ---------------- Bấm nút ---------------- */
 
 export function handleOnlineClick(target: HTMLElement, rerender: () => void): boolean {
+  // Hộp thoại hết ván
+  const sx = live.state;
+  if (sx?.over) {
+    if (target.closest('.end-backdrop') && !endClickable(performance.now() - endShownAt)) return true;
+    if (target.closest('[data-end-close]') || target.classList.contains('end-backdrop')) {
+      closeEnd(sx.id);
+      rerender();
+      return true;
+    }
+    const xemLại = target.closest<HTMLElement>('[data-end-review]');
+    if (xemLại) {
+      closeEnd(sx.id);
+      const p = Number(xemLại.dataset.endReview);
+      if (p > 0) xemPly = p;
+      rerender();
+      return true;
+    }
+    // Đấu lại với đúng con AI vừa rồi, cùng nhịp thời gian
+    const lại = target.closest<HTMLElement>('[data-end-rematch]');
+    if (lại) {
+      if (đangVàoHàng) return true;
+      đangVàoHàng = true;
+      const nhịp = sx.control.label;
+      closeEnd(sx.id);
+      live.state = null;
+      resetOnline();
+      rerender();
+      void challengeBot(lại.dataset.endRematch!, nhịp).then(async () => {
+        await loadStatus();
+        đangVàoHàng = false;
+        rerender();
+      });
+      return true;
+    }
+  }
   // Chia sẻ ván
   if (target.closest('[data-share-create], [data-share-image]')) {
     const s = live.state;
@@ -782,6 +897,7 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
       });
     },
     'Tìm trận mới': () => {
+      if (live.state?.over) closeEnd(live.state.id);
       live.state = null;
       resetOnline();
       void joinQueue(control);
@@ -794,6 +910,7 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
     },
     // Ván xong: về sảnh online của tab Chơi (bàn cờ trống, chọn thời gian lại)
     'Về sảnh': () => {
+      if (live.state?.over) closeEnd(live.state.id);
       live.state = null;
       resetOnline();
     },

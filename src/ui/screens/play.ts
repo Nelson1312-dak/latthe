@@ -24,7 +24,7 @@ import { leaveOnlineMode, onlinePanel } from './online.ts';
 import { icon, type IconName } from '../icons.ts';
 import type { ReviewResult } from '../../analysis/review.ts';
 import { saveReview } from '../../app/reviews.ts';
-import { boardMarks, createReporter, reviewPanel, reviewProgress } from '../report.ts';
+import { boardMarks, createReporter, endClickable, endDialog, endSummary, reviewPanel, reviewProgress } from '../report.ts';
 import { dropBackground, preAnalyse } from '../../analysis/precompute.ts';
 import { bestGain, HOLD_ON, judgeMove, lineText, type AssistVerdict } from '../../analysis/assist.ts';
 import { sanVi } from '../../analysis/words.ts';
@@ -267,7 +267,14 @@ const botSide = (): Side => (setup.side === 'w' ? 'b' : 'w');
 // mỗi lần vẽ lại màn hình, mountPlay lại gọi máy nghĩ — lặp mãi.
 const isBotTurn = () => setup.mode === 'bot' && game.turn === botSide() && !ended && game.atLive && !assist.held;
 
+/** Hộp thoại hết ván: đã đóng chưa, bắt đầu hiện lúc nào (để hiệu ứng chạy đúng một lần). */
+let endClosed = false;
+let endShownAt: number | null = null;
+const endShownMs = () => (endShownAt === null ? 0 : performance.now() - endShownAt);
+
 function newGame(): void {
+  endClosed = false;
+  endShownAt = null;
   void engine().cancel();
   dropBackground();
   resetAssist();
@@ -533,7 +540,64 @@ function gameScreen(extraSide = ''): string {
     </div>
 
     ${promoDialog()}
+    ${result && !IS_MINI ? resultModal(result) : ''}
   </div>`;
+}
+
+/** Hộp thoại hết ván (với máy, hai người một máy). */
+function resultModal(result: Outcome): string {
+  if (endClosed) return '';
+  const bot = setup.mode === 'bot';
+  const mine = bot && result.winner !== 'draw';
+  const won = mine && result.winner === setup.side;
+  const [who, why] = outcomeText(result).split(' · ');
+  const sum = endSummary(reporter.current, game.pgn(), bot ? setup.side : null);
+  endShownAt ??= performance.now();
+  return endDialog({
+    title: !mine ? who : won ? 'Bạn thắng' : 'Bạn thua',
+    tone: !mine ? 'draw' : won ? 'win' : 'loss',
+    why: bot ? `${why} · Máy ${levelById(setup.level).name.toLowerCase()}` : why,
+    body: sum.html,
+    actions:
+      `<button class="btn btn-primary btn-full" data-end-review="${sum.ply}">Xem lại ván</button>` +
+      `<div class="end-row">${button({ label: 'Chơi lại' })}${button({ label: 'Ván mới' })}</div>`,
+    shownMs: endShownMs(),
+  });
+}
+
+/**
+ * Thanh điều khiển ván ở đáy màn điện thoại, thay thanh điều hướng trong lúc
+ * đang đánh (như chess.com): hàng việc (Gợi ý, Đi lại, Trợ lý, Đầu hàng) và hàng
+ * tua nước to. Hết ván thì trả lại thanh điều hướng. Trên máy tính CSS ẩn đi.
+ */
+export function playBar(): string {
+  if (!started || outcome() || IS_MINI) return '';
+  const bot = setup.mode === 'bot';
+  const act = (id: string, name: IconName, label: string, o: { disabled?: boolean; danger?: boolean } = {}) =>
+    `<button class="gb-act${o.danger ? ' is-danger' : ''}" data-act="${id}"${o.disabled ? ' disabled' : ''}>` +
+    `${icon(name, 22)}<span>${label}</span></button>`;
+  const gợiÝ = bot && hints && hintLevel > 0 && game.atLive ? hints[hintLevel - 1] : '';
+  return `<nav class="nav game-bar" aria-label="Điều khiển ván">
+    ${gợiÝ ? `<p class="gb-hint" role="status">${gợiÝ}</p>` : ''}
+    <div class="gb-acts">
+      ${
+        bot
+          ? act('hint', 'hint', hintLoading ? 'Đang xem…' : hintLabel(hintLevel), {
+              disabled: hintLevel === 3 || hintLoading || !game.atLive,
+            })
+          : act('flip', 'flip', 'Lật bàn')
+      }
+      ${act('undo', 'undo', 'Đi lại', { disabled: game.length === 0 || thinking })}
+      ${bot ? `<button class="gb-act" title="Trợ lý" aria-pressed="${prefs().assist}">${icon('coach', 22)}<span>Trợ lý</span></button>` : ''}
+      ${act('resign', 'resign', resignArmed ? 'Chắc chưa?' : 'Đầu hàng', { danger: resignArmed, disabled: game.length === 0 })}
+    </div>
+    <div class="gb-nav">
+      ${iconButton('first', 'Về đầu ván', { disabled: game.ply === 0 })}
+      ${iconButton('prev', 'Lùi một nước', { disabled: game.ply === 0 })}
+      ${iconButton('next', 'Tiến một nước', { disabled: game.atLive })}
+      ${iconButton('last', 'Tới nước mới nhất', { disabled: game.atLive })}
+    </div>
+  </nav>`;
 }
 
 export function play(extraSide = ''): string {
@@ -849,6 +913,21 @@ async function storeGame(rerender: () => void): Promise<void> {
 /* ---------------- Nút bấm ---------------- */
 
 export function handlePlayClick(target: HTMLElement, rerender: () => void): boolean {
+  // Hộp thoại hết ván: đóng (X, bấm ra ngoài) hoặc Xem lại ván (nhảy tới nước đáng xem nhất)
+  if (target.closest('.end-backdrop') && !endClickable(endShownMs())) return true;
+  if (target.closest('[data-end-close]') || target.classList.contains('end-backdrop')) {
+    endClosed = true;
+    rerender();
+    return true;
+  }
+  const xemLại = target.closest<HTMLElement>('[data-end-review]');
+  if (xemLại) {
+    endClosed = true;
+    const p = Number(xemLại.dataset.endReview);
+    if (p > 0) game.goTo(p);
+    rerender();
+    return true;
+  }
   const level = target.closest<HTMLElement>('[data-level]');
   if (level) {
     setup.level = Number(level.dataset.level);
@@ -1057,6 +1136,8 @@ function runAct(id: string, rerender: () => void): void {
     game.undo();
     if (setup.mode === 'bot' && game.length && game.turn !== setup.side) game.undo();
     ended = false;
+    endClosed = false;
+    endShownAt = null;
     saved = false;
     hints = null;
     hintLevel = 0;
@@ -1178,6 +1259,8 @@ export function importPlayState(h: PlayHandoff): void {
   resigned = h.resigned;
   saved = h.saved;
   ended = outcome() !== null;
+  // Ván chuyển về từ bàn cờ nổi mà đã xong thì không bật hộp thoại lần nữa
+  endClosed = ended;
   started = true;
 }
 

@@ -31,12 +31,12 @@ import { mountShared, sharedIdFromPath, sharedView } from './ui/screens/shared.t
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
 import { applyPrefs, BOARD_THEMES, prefs, setPref, type BoardTheme, type Prefs } from './app/prefs.ts';
 import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
-import { handlePlayClick, mountPlay, play, setBotLevel } from './ui/screens/play.ts';
+import { handlePlayClick, mountPlay, play, playBar, setBotLevel } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
 import { handleTrainClick, mountTrain, startDaily, startLesson, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
-import { handleOnlineClick, hasLiveGame, leaveOnline, miniOnline, mountOnline, online } from './ui/screens/online.ts';
+import { handleOnlineClick, hasLiveGame, leaveOnline, markOnlineEndSeen, miniOnline, mountOnline, online, onlineBar } from './ui/screens/online.ts';
 import { playMode, setPlayMode } from './app/playmode.ts';
 import { live } from './app/live.ts';
 import { routeName, routeQuery } from './app/route.ts';
@@ -303,6 +303,13 @@ function onlineView(): boolean {
 }
 const PLAY_ROUTES = ['', 'choi'];
 
+/** Đang đánh trên tab Chơi: thanh điều khiển ván thay thanh điều hướng (điện thoại). */
+function gameBarFor(r: string, away: boolean): string {
+  if (away || !PLAY_ROUTES.includes(r)) return '';
+  if (onlineView()) return onlineBar();
+  return playMode() === 'online' ? '' : playBar();
+}
+
 /* ---------------- Bàn cờ nổi ---------------- */
 
 /** Trong bàn cờ nổi: đang che bàn cờ bằng tấm trơn (Esc). */
@@ -348,6 +355,7 @@ function miniAway(): string {
 function onMiniClosed(): void {
   const h = takeHandoff<PlayHandoff>();
   if (h) importPlayState(h);
+  markOnlineEndSeen();
   render();
 }
 
@@ -403,7 +411,7 @@ function render(): void {
   app.innerHTML =
     siteHeader(r) +
     `<main>${away ? miniAway() : screen.render()}${siteFooter()}</main>` +
-    bottomNav(r) +
+    (gameBarFor(r, away) || bottomNav(r)) +
     (settingsOpen ? settingsDialog() : '') +
     (currentGate() && !auth.user ? gateDialog(currentGate()!) : '') +
     (welcomeOpen && auth.user ? welcomeDialog() : '');
@@ -682,6 +690,14 @@ document.addEventListener('keydown', (e) => {
     settingsOpen = false;
     render();
     return;
+  }
+  // Esc đóng hộp thoại hết ván
+  if (e.key === 'Escape') {
+    const x = document.querySelector<HTMLElement>('[data-end-close]');
+    if (x) {
+      x.click();
+      return;
+    }
   }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target as HTMLElement;

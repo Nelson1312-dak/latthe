@@ -296,3 +296,74 @@ export function pgnFromSans(sans: readonly string[]): string {
   sans.forEach((san, i) => out.push(i % 2 === 0 ? `${i / 2 + 1}. ${san}` : san));
   return out.join(' ');
 }
+
+/* ---------------- Hộp thoại hết ván ---------------- */
+
+/**
+ * Phần số của hộp thoại hết ván: độ chính xác, số nước tốt nhất, số nước hỏng,
+ * và một câu chỉ ra nước đáng xem nhất. `ply` là nước đó (0 nếu không có), để nút
+ * "Xem lại ván" nhảy thẳng tới. Đang chấm thì chỉ báo phần trăm; ván quá ngắn
+ * hoặc chấm lỗi thì không có gì — hộp thoại vẫn dùng được không cần số.
+ */
+export function endSummary(cur: Report | null, pgn: string, me: Side | null): { html: string; ply: number } {
+  if (!cur || cur.pgn !== pgn || cur.phase === 'error') return { html: '', ply: 0 };
+  if (cur.phase !== 'done' || !cur.result) {
+    const pct = cur.total ? Math.round((cur.done / cur.total) * 100) : 0;
+    return { html: `<p class="end-wait">Đang chấm ván <b class="mono">${pct}%</b></p>`, ply: 0 };
+  }
+  const r = cur.result;
+  const của = r.moves.filter((m) => !me || m.side === me);
+  const tốtNhất = của.filter((m) => m.cls === 'best').length;
+  const hỏngHẳn = của.filter((m) => m.cls === 'mistake' || m.cls === 'blunder' || m.cls === 'miss');
+  const tệNhất = [...hỏngHẳn].sort((a, b) => SEVERITY[b.cls] - SEVERITY[a.cls] || a.accuracy - b.accuracy)[0];
+  const ô = (v: string, nhãn: string) => `<span><b class="mono">${v}</b> ${nhãn}</span>`;
+  const số = me
+    ? ô(r.accuracy[me].toFixed(1), 'chính xác') + ô(String(tốtNhất), 'nước tốt nhất') + ô(String(hỏngHẳn.length), 'nước hỏng')
+    : ô(r.accuracy.w.toFixed(1), 'Trắng') + ô(r.accuracy.b.toFixed(1), 'Đen') + ô(String(hỏngHẳn.length), 'nước hỏng');
+  const lời = tệNhất
+    ? `Đáng xem nhất: ${moveNo(tệNhất)} ${figurine(tệNhất.san, tệNhất.side)} · ${CLASS_LABEL[tệNhất.cls].toLowerCase()}`
+    : của.length >= 6
+      ? 'Không có nước hỏng nào.'
+      : '';
+  return { html: `<p class="end-nums">${số}</p>${lời ? `<p class="end-coach">${lời}</p>` : ''}`, ply: tệNhất?.ply ?? 0 };
+}
+
+export interface EndView {
+  title: string;
+  tone: 'win' | 'loss' | 'draw';
+  /** Lý do và đối thủ, một dòng. */
+  why: string;
+  body: string;
+  actions: string;
+  /**
+   * Bao lâu (ms) kể từ lúc hộp thoại bắt đầu hiện. Màn vẽ lại liên tục (đang chấm
+   * ván…), nên hiệu ứng tính theo thời gian: vẽ lại giữa chừng thì chạy tiếp đúng
+   * chỗ (animation-delay âm), không bắt đầu lại, cũng không mất hẳn.
+   */
+  shownMs: number;
+}
+
+/** Hộp thoại đợi nước cuối đi xong rồi mới hiện (ms); hiện ra trong END_FADE_MS. */
+export const END_DELAY_MS = 350;
+const END_FADE_MS = 260;
+/** Bấm trong lúc hộp thoại chưa hiện hẳn thì bỏ qua (tránh bấm nhầm khi đang đi quân). */
+export const endClickable = (shownMs: number) => shownMs >= END_DELAY_MS + 120;
+
+/**
+ * Hộp thoại hết ván, nổi trên bàn cờ như chess.com: kết quả to, lý do, vài con
+ * số, nút chính "Xem lại ván", hai nút phụ. Đóng bằng X, Esc hoặc bấm ra ngoài;
+ * kết quả vẫn nằm ở cột bên.
+ */
+export function endDialog(v: EndView): string {
+  const anim = v.shownMs < END_DELAY_MS + END_FADE_MS;
+  const delay = ` style="animation-delay:${Math.round(END_DELAY_MS - v.shownMs)}ms"`;
+  return `<div class="dialog-backdrop end-backdrop${anim ? ' is-enter' : ''}"${anim ? delay : ''}>
+    <div class="dialog end-dialog" role="dialog" aria-modal="true" aria-labelledby="end-title"${anim ? delay : ''}>
+      <button class="btn btn-icon end-close" data-end-close aria-label="Đóng">${icon('close', 18)}</button>
+      <h2 id="end-title" class="end-title is-${v.tone}">${v.title}</h2>
+      <p class="end-why">${v.why}</p>
+      ${v.body}
+      <div class="end-actions">${v.actions}</div>
+    </div>
+  </div>`;
+}
