@@ -16,6 +16,7 @@ import { loadOpenings, openingAt } from '../../analysis/openings.ts';
 import { saveFinishedGame } from '../../app/games.ts';
 import { auth } from '../../app/session.ts';
 import { prefs } from '../../app/prefs.ts';
+import { openGate, shouldAskLogin } from '../../app/gate.ts';
 import { icon, type IconName } from '../icons.ts';
 import { offerReview } from './review.ts';
 import { buildFacts } from '../../../shared/advisor/facts.ts';
@@ -684,8 +685,21 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
 
   const actions: Record<string, () => void> = {
     Chơi: () => {
-      newGame();
-      started = true;
+      const start = () => {
+        newGame();
+        started = true;
+      };
+      // Chưa đăng nhập: mời đăng nhập để ván này được lưu. Luôn có lối chơi luôn.
+      if (shouldAskLogin()) {
+        openGate({
+          title: 'Đăng nhập để lưu ván',
+          text: 'Mất vài giây với tài khoản Google. Hồ sơ của bạn được tạo tự động.',
+          guest: 'Chơi luôn, không lưu',
+          then: start,
+        });
+        return;
+      }
+      start();
     },
     // Ván xong, đánh lại ngay với đúng đối thủ đó
     'Chơi lại': () => {
@@ -785,4 +799,9 @@ function runAct(id: string, rerender: () => void): void {
     return;
   }
   rerender();
+}
+
+/** Cấp máy gợi ý sau màn chào mừng (theo trình độ người chơi tự chọn). */
+export function setBotLevel(level: number): void {
+  if (level >= 1 && level <= 8) setup = { ...setup, mode: 'bot', level };
 }

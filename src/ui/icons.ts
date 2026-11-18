@@ -31,6 +31,7 @@ const PATHS = {
   copy: '<path d="M8.5 8.5h11v11h-11Z"/><path d="M15.5 5.5h-11v11"/>',
   settings: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   random: '<path d="M4 7h3.5l9 10H20"/><path d="M4 17h3.5l2.5-2.8"/><path d="M14 9.8 16.5 7H20"/><path d="M17.5 4.5 20 7l-2.5 2.5"/><path d="M17.5 14.5 20 17l-2.5 2.5"/>',
+  edit: '<path d="M5 19h4L19 9l-4-4L5 15Z"/><path d="M13 7l4 4"/>',
   undo: '<path d="M9 5.5 5.5 9 9 12.5"/><path d="M5.5 9H14a4.5 4.5 0 0 1 0 9h-4"/>',
   check: '<path d="M5 12.5 10 17 19 7.5"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',

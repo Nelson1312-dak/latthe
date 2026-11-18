@@ -190,9 +190,9 @@ Nền ngả ấm (xám nâu) chứ không phải xám xanh lạnh kiểu dashboa
 
 | Token | Giá trị | Dùng cho |
 |---|---|---|
-| `--accent` | `#6A9F3E` tối / `#4B7A26` sáng (xanh lá) | Nút hành động chính ("Bắt đầu ván"), trạng thái đang chọn. Chữ trên nền nhấn màu trắng, đậm |
-| `--accent-edge` | `#4B7A26` | Gờ dưới 3px của nút chính — nút "dày" như chess.com chứ không phẳng lì |
-| `--accent-text` | `#95C862` | Chữ màu nhấn trên nền tối (chip đang bật…) |
+| `--accent` | `#1F8F80` tối / `#1A7A6C` sáng (xanh ngọc — cố ý khác xanh lá của chess.com) | Nút hành động chính ("Bắt đầu ván"), trạng thái đang chọn. Chữ trên nền nhấn màu trắng, đậm |
+| `--accent-edge` | `#156358` | Gờ dưới 3px của nút chính — nút "dày" như chess.com chứ không phẳng lì |
+| `--accent-text` | `#56CDBB` | Chữ màu nhấn trên nền tối (chip đang bật…) |
 | `--danger` | `#F07A6D` tối / `#B5352B` sáng | Đầu hàng, xóa, hết giờ. Bản tối sáng lên vì nền mới xám hơn: đỏ cũ chỉ đạt 4,15:1 |
 | `--ok` | `#6FA35A` | Kết nối tốt, giải đúng |
 | `--clock-active` | `--text-1` trên `--bg-3` | Đồng hồ bên đang đi |

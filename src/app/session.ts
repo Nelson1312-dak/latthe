@@ -13,7 +13,13 @@ export interface Me {
   gameCount: number;
   /** Tài khoản thử lúc phát triển, không gắn với Google. */
   local: boolean;
+  /** Đã qua màn chào mừng (đặt tên gọi, chọn trình độ) chưa. */
+  onboarded: boolean;
+  createdAt: string;
 }
+
+/** Tuỳ chọn hiển thị đã lưu theo tài khoản (null là chưa lưu lần nào). */
+export let serverPrefs: Record<string, unknown> | null = null;
 
 export interface AuthState {
   user: Me | null;
@@ -42,14 +48,69 @@ async function callApi<T>(path: string, init?: RequestInit): Promise<T> {
 /** Hỏi server xem đang là ai. Gọi một lần lúc mở app. */
 export async function loadMe(): Promise<void> {
   try {
-    const r = await callApi<{ user: Me | null; googleClientId: string | null; devAuth: boolean }>('/api/me');
+    const r = await callApi<{
+      user: Me | null;
+      prefs: Record<string, unknown> | null;
+      googleClientId: string | null;
+      devAuth: boolean;
+    }>('/api/me');
     auth.user = r.user;
+    serverPrefs = r.prefs ?? null;
     auth.googleClientId = r.googleClientId;
     auth.devAuth = r.devAuth;
     auth.offline = false;
   } catch {
     auth.offline = true;
   }
+  announce();
+}
+
+/** Đổi tên gọi và/hoặc chọn trình độ lần đầu (màn chào mừng, màn Hồ sơ). */
+export async function updateProfile(patch: { name?: string; level?: string }): Promise<void> {
+  const r = await callApi<{ user: Me }>('/api/me', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  auth.user = r.user;
+  announce();
+}
+
+/** Lưu tuỳ chọn hiển thị lên tài khoản. Lỗi thì thôi: tuỳ chọn vẫn còn trong trình duyệt. */
+export function savePrefsRemote(prefs: Record<string, unknown>): void {
+  if (!auth.user) return;
+  serverPrefs = prefs;
+  void callApi('/api/me/prefs', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ prefs }),
+  }).catch(() => {});
+}
+
+export interface ProfileStats {
+  memberSince: string;
+  games: { total: number; online: number; bot: number; wins: number; draws: number; losses: number };
+  puzzles: { tried: number; solved: number };
+  lessonsDone: number;
+}
+
+export async function loadProfileStats(): Promise<ProfileStats | null> {
+  try {
+    return (await callApi<{ stats: ProfileStats }>('/api/profile')).stats;
+  } catch {
+    return null;
+  }
+}
+
+/** Xoá hẳn tài khoản và mọi dữ liệu đi kèm. */
+export async function deleteAccount(): Promise<void> {
+  await callApi('/api/me', {
+    method: 'DELETE',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ confirm: true }),
+  });
+  auth.user = null;
+  serverPrefs = null;
   announce();
 }
 
@@ -116,7 +177,8 @@ export async function renderGoogleButton(el: HTMLElement, onError: (msg: string)
             body: JSON.stringify({ credential: r.credential }),
           });
           auth.user = out.user;
-          announce();
+          // Hỏi lại /api/me để lấy cả tuỳ chọn đã lưu theo tài khoản
+          await loadMe();
         } catch (err) {
           onError((err as Error).message);
         }

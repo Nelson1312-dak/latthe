@@ -20,15 +20,16 @@
   --text-3: #a7a5a3;
 
   /* ---- Màu nhấn và trạng thái ----
-     Xanh lá cho hành động chính, như nút "Chơi" của chess.com. Màu hổ phách cũ
-     trùng tông với ô cờ nâu và vệt nước vừa đi, nên nút chính không nổi lên. */
-  --accent: #6a9f3e;
-  --accent-hover: #76ad48;
+     Xanh ngọc cho hành động chính. Cùng độ "mát" với nút Chơi của chess.com
+     nhưng ngả lam, để không bị nhìn ra là chép màu của họ (xanh lá #6a9f3e cũ
+     bị chê đúng chỗ đó). Hổ phách thì trùng tông ô cờ nâu và vệt nước vừa đi. */
+  --accent: #1f8f80;
+  --accent-hover: #23a090;
   /* Mép dưới đậm hơn của nút chính, cho nút có khối như phím bấm */
-  --accent-edge: #4b7a26;
-  --accent-dim: #34452a;
+  --accent-edge: #156358;
+  --accent-dim: #1d3a36;
   /* Màu nhấn khi dùng làm MÀU CHỮ: sáng hơn nền nút để đủ tương phản trên nền tối */
-  --accent-text: #95c862;
+  --accent-text: #56cdbb;
   --on-accent: #ffffff;
   /* Sáng hơn bản cũ (#e4685c): nền mới xám hơn nên đỏ cũ chỉ đạt 4,15:1 */
   --danger: #f07a6d;
@@ -67,7 +68,7 @@
   --brush-b: #52b0dc;
   --brush-y: #ffaa00;
   /* Huy hiệu kết thúc ván trên ô Vua */
-  --end-win: #5d9948;
+  --end-win: #1f8f80;
   --end-mate: #cf4034;
   --end-resign: #cf4034;
   --end-timeout: #cf4034;
@@ -135,11 +136,11 @@
   --text-2: #57524a;
   --text-3: #6b6558;
 
-  --accent: #4b7a26;
-  --accent-hover: #426d21;
-  --accent-edge: #345a17;
-  --accent-dim: #e1edd5;
-  --accent-text: #3b6420;
+  --accent: #1a7a6c;
+  --accent-hover: #166a5e;
+  --accent-edge: #10524a;
+  --accent-dim: #d4ebe6;
+  --accent-text: #17695c;
   --on-accent: #ffffff;
   --danger: #b5352b;
   --danger-dim: #f6dedb;

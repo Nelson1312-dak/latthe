@@ -753,3 +753,8 @@ html.is-dragging-piece * {
     animation: none;
   }
 }
+
+/* .notice là flex nên đè mất thuộc tính hidden — dòng báo lỗi ẩn vẫn chiếm chỗ */
+.notice[hidden] {
+  display: none;
+}

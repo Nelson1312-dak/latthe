@@ -75,6 +75,12 @@ export interface User {
   game_rating: number;
   /** Đã chơi bao nhiêu ván online — để tính hệ số K. */
   game_count: number;
+  /** Đã qua màn chào mừng chưa (0/1). */
+  onboarded: number;
+  /** Đã tự đặt tên gọi (0/1): có thì không lấy tên Google đè lên. */
+  custom_name: number;
+  /** Tuỳ chọn hiển thị dạng JSON. */
+  prefs: string | null;
   created_at: string;
   last_seen_at: string;
 }
@@ -84,13 +90,15 @@ export function upsertGoogleUser(db: Db, sub: string, name: string, picture?: st
   const now = new Date().toISOString();
   const found = one<User>(db, 'SELECT * FROM users WHERE google_sub = ?', sub);
   if (found) {
+    // Tên Google chỉ cập nhật khi người chơi chưa tự đặt tên gọi riêng
+    const tên = found.custom_name ? found.display_name : name;
     db.prepare('UPDATE users SET display_name = ?, avatar_url = ?, last_seen_at = ? WHERE id = ?').run(
-      name,
+      tên,
       picture ?? null,
       now,
       found.id,
     );
-    return { ...found, display_name: name, avatar_url: picture ?? null, last_seen_at: now };
+    return { ...found, display_name: tên, avatar_url: picture ?? null, last_seen_at: now };
   }
   const info = db
     .prepare(

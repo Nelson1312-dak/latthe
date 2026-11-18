@@ -1479,3 +1479,235 @@ button.top-link {
 .google-btn iframe {
   color-scheme: light;
 }
+
+/* ================= Đăng nhập, chào mừng, hồ sơ ================= */
+
+/* Hộp mời đăng nhập khi bấm Chơi */
+.dialog.gate {
+  max-width: 400px;
+}
+.gate .dialog-body {
+  display: grid;
+  gap: var(--s-3);
+  font-family: inherit;
+}
+.gate .dialog-body > p {
+  margin: 0;
+}
+.gate-perks {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gate-perks li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--text-1);
+}
+.gate-perks .icon {
+  flex: none;
+  color: var(--accent-text);
+}
+.gate .google-btn {
+  min-height: 44px;
+}
+.gate .dialog-actions {
+  justify-content: space-between;
+}
+
+/* Màn chào mừng */
+.welcome {
+  display: grid;
+  gap: var(--s-6);
+  max-width: 560px;
+}
+.welcome-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+.welcome-head h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+}
+.welcome-sub {
+  margin: var(--s-1) 0 0;
+  color: var(--text-2);
+}
+.welcome-avatar,
+.profile-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-3);
+}
+.welcome-avatar {
+  width: 72px;
+  height: 72px;
+}
+.welcome-avatar img,
+.profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.welcome-field {
+  display: grid;
+  gap: var(--s-2);
+}
+.welcome-field .field {
+  max-width: 360px;
+  min-height: 44px;
+  font-size: var(--fs-lg);
+}
+.welcome-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.start-levels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.start-level {
+  display: grid;
+  gap: 2px;
+  min-height: 64px;
+  padding: var(--s-3);
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.start-level:hover {
+  background: var(--bg-3);
+}
+.start-level.is-active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.start-level b {
+  font-size: var(--fs-lg);
+}
+.start-level span {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+@media (max-width: 767px) {
+  .start-levels {
+    grid-template-columns: 1fr;
+  }
+  .welcome-actions .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Màn Hồ sơ */
+.profile {
+  display: grid;
+  gap: var(--s-4);
+}
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.profile-avatar {
+  width: 88px;
+  height: 88px;
+}
+.profile-id {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+.profile-name {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.profile-meta {
+  margin: 0;
+  color: var(--text-2);
+}
+.profile-rename {
+  justify-self: start;
+  padding: 0;
+}
+.name-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.name-edit .field {
+  min-height: 44px;
+  font-size: var(--fs-lg);
+  flex: 1 1 200px;
+}
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.stat-tile {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.stat-tile b {
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--text-1);
+}
+.stat-tile span {
+  font-weight: 600;
+  color: var(--text-2);
+}
+.stat-tile small {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+@media (max-width: 767px) {
+  .stat-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .profile-card {
+    align-items: flex-start;
+  }
+  .profile-avatar {
+    width: 64px;
+    height: 64px;
+  }
+  .profile-name {
+    font-size: 22px;
+  }
+}
+/* Link trong đoạn văn: màu nhấn, không thành tím "đã xem" mặc định của trình duyệt */
+.prose a,
+.prose a:visited {
+  color: var(--accent-text);
+}

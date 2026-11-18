@@ -8,18 +8,21 @@ import { installApiHeader } from './app/api-header.ts';
 import { loadPieces } from './board/sprite.ts';
 import { snapBoards } from './board/snap.ts';
 import { icon, type IconName } from './ui/icons.ts';
-import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton } from './app/session.ts';
+import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton, savePrefsRemote, serverPrefs } from './app/session.ts';
+import { chooseGuest, closeGate, currentGate, type Gate } from './app/gate.ts';
+import { esc } from './ui/components/index.ts';
+import { handleWelcomeClick, welcome } from './ui/screens/welcome.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
 import { applyPrefs, BOARD_THEMES, prefs, setPref, type BoardTheme, type Prefs } from './app/prefs.ts';
 import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
-import { handlePlayClick, mountPlay, play } from './ui/screens/play.ts';
+import { handlePlayClick, mountPlay, play, setBotLevel } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
 import { handleTrainClick, mountTrain, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
 import { handleOnlineClick, leaveOnline, mountOnline, online } from './ui/screens/online.ts';
 import { routeName } from './app/route.ts';
-import { account, mountAccount, resetAccount } from './ui/screens/account.ts';
+import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
 /** Tên app, đặt theo bộ với latbai.vn. Đổi ở đây là đổi cả header lẫn tiêu đề tab. */
@@ -36,7 +39,8 @@ const SCREENS: Record<string, Screen> = {
   'on-tap': { title: 'Ôn tập', render: train },
   hoc: { title: 'Học', render: learn },
   ban: { title: 'Chơi với người', render: online },
-  'tai-khoan': { title: 'Tài khoản', render: account },
+  'tai-khoan': { title: 'Hồ sơ', render: account },
+  'chao-mung': { title: 'Chào mừng', render: welcome },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
 };
 
@@ -59,7 +63,10 @@ function route(): string {
 function shortName(): string {
   if (auth.offline) return 'Ngoại tuyến';
   if (!auth.user) return 'Đăng nhập';
-  return auth.user.name.trim().split(/\s+/).pop() ?? 'Tôi';
+  // Tên ngắn (thường là tên gọi tự đặt) thì hiện đủ; tên dài kiểu họ tên đầy
+  // đủ của Google thì lấy chữ cuối. Tự đặt "Hiên Cờ" mà hiện mỗi "Cờ" là sai.
+  const name = auth.user.name.trim();
+  return name.length <= 14 ? name : (name.split(/\s+/).pop() ?? 'Tôi');
 }
 
 function topLink(route: string, label: string, name: IconName, current: string): string {
@@ -116,6 +123,87 @@ function bottomNav(current: string): string {
     item('tai-khoan', shortName(), 'user') +
     `</nav>`
   );
+}
+
+/* ---------------- Mời đăng nhập ---------------- */
+
+/** Hộp mời đăng nhập, bật lên khi người chưa đăng nhập bấm Chơi. */
+function gateDialog(g: Gate): string {
+  const perk = (name: IconName, text: string) => `<li>${icon(name, 18)}<span>${text}</span></li>`;
+  return (
+    `<div class="dialog-backdrop gate-backdrop"><div class="dialog gate" role="dialog" aria-modal="true" aria-label="${esc(g.title)}">` +
+    `<h2>${esc(g.title)}</h2><div class="dialog-body">` +
+    `<p>${esc(g.text)}</p>` +
+    `<ul class="gate-perks">` +
+    perk('review', 'Mọi ván được lưu, xem lại và chấm từng nước') +
+    perk('cards', 'Nước đi sai thành thẻ ôn tập riêng của bạn') +
+    perk('friends', 'Đấu online, có Elo, ghép người cùng trình độ') +
+    `</ul>` +
+    `<div id="gate-google" class="google-btn google-slot"></div>` +
+    `<p id="login-error" class="notice notice-danger" hidden></p>` +
+    `</div><div class="dialog-actions">` +
+    (g.guest ? `<button class="link-btn" data-gate-guest>${esc(g.guest)}</button>` : '') +
+    `<button class="link-btn" data-gate-close>Đóng</button>` +
+    `</div></div></div>`
+  );
+}
+
+/* ---------------- Hồ sơ đi theo tài khoản ---------------- */
+
+/** Việc làm tiếp sau màn chào mừng (ví dụ: vào ván vừa định chơi). */
+let afterWelcome: (() => void) | null = null;
+/** Đã đưa tới màn chào mừng trong phiên này chưa — chỉ đưa một lần. */
+let welcomeShown = false;
+const needsWelcome = () => Boolean(auth.user && !auth.user.onboarded && !auth.user.local);
+
+/** Đẩy cài đặt hiện tại lên tài khoản. */
+function pushPrefs(): void {
+  savePrefsRemote({
+    ...prefs(),
+    theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
+    sound: soundEnabled(),
+  });
+}
+
+/** Người dùng của lần đồng bộ cài đặt gần nhất, để mỗi lần đăng nhập chỉ làm một lần. */
+let prefsUser: number | null = null;
+
+/**
+ * Vừa đăng nhập: tài khoản đã có cài đặt thì dùng cài đặt đó (sang máy khác vẫn
+ * y như cũ); chưa có thì lưu cài đặt đang dùng lên tài khoản.
+ */
+function syncPrefsOnLogin(): void {
+  const u = auth.user;
+  if (!u) {
+    prefsUser = null;
+    return;
+  }
+  if (prefsUser === u.id) return;
+  prefsUser = u.id;
+  const p = serverPrefs;
+  if (!p) return pushPrefs();
+  if (typeof p.board === 'string' && BOARD_THEMES.some((t) => t.id === p.board)) setPref('board', p.board as BoardTheme);
+  for (const k of ['coords', 'legal', 'autoQueen'] as const) if (typeof p[k] === 'boolean') setPref(k, p[k]);
+  if (p.theme === 'dark' || p.theme === 'light') applyTheme(p.theme);
+  if (typeof p.sound === 'boolean') setSoundEnabled(p.sound);
+}
+
+function onAuth(): void {
+  syncPrefsOnLogin();
+  const g = currentGate();
+  if (g && auth.user) {
+    // Đăng nhập xong từ hộp mời: lần đầu thì qua màn chào mừng rồi mới vào ván
+    closeGate();
+    if (needsWelcome()) {
+      welcomeShown = true;
+      afterWelcome = g.then;
+      location.hash = '#/chao-mung';
+    } else g.then();
+  } else if (needsWelcome() && !welcomeShown && route() !== 'chao-mung') {
+    welcomeShown = true;
+    location.hash = '#/chao-mung';
+  }
+  render();
 }
 
 /* ---------------- Cài đặt ---------------- */
@@ -185,7 +273,8 @@ function render(): void {
     siteHeader(r) +
     `<main>${screen.render()}${siteFooter()}</main>` +
     bottomNav(r) +
-    (settingsOpen ? settingsDialog() : '');
+    (settingsOpen ? settingsDialog() : '') +
+    (currentGate() && !auth.user ? gateDialog(currentGate()!) : '');
   if (r === 'choi') mountPlay(render);
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
@@ -197,9 +286,11 @@ function render(): void {
     mountPlay(render);
   }
   snapBoards(app);
-  if (r === 'tai-khoan' && !auth.user && !auth.offline) {
-    const slot = document.querySelector<HTMLElement>('#google-btn');
-    if (slot) void renderGoogleButton(slot, showLoginError);
+  // Nút Google ở bất cứ chỗ nào có chỗ cho nó: trang Đăng nhập, hộp mời đăng nhập
+  if (!auth.user && !auth.offline) {
+    for (const slot of document.querySelectorAll<HTMLElement>('.google-slot')) {
+      void renderGoogleButton(slot, showLoginError);
+    }
   }
 }
 
@@ -237,6 +328,47 @@ function initTheme(): void {
 document.addEventListener('click', (e) => {
   const el = e.target as HTMLElement;
 
+  // Hộp mời đăng nhập: chơi luôn không lưu, hoặc đóng
+  const g = currentGate();
+  if (g && el.closest('[data-gate-guest]')) {
+    chooseGuest();
+    closeGate();
+    g.then();
+    render();
+    return;
+  }
+  if (g && (el.closest('[data-gate-close]') || el.classList.contains('gate-backdrop'))) {
+    closeGate();
+    render();
+    return;
+  }
+
+  // Màn chào mừng: lưu xong thì vào ván (nếu đang định chơi) với cấp máy hợp trình độ
+  if (
+    route() === 'chao-mung' &&
+    handleWelcomeClick(el, render, (bot) => {
+      if (bot) setBotLevel(bot);
+      const after = afterWelcome;
+      afterWelcome = null;
+      after?.();
+      location.hash = '#/choi';
+      render();
+    })
+  )
+    return;
+
+  // Màn Hồ sơ: đổi tên, xoá tài khoản
+  if (
+    route() === 'tai-khoan' &&
+    handleAccountClick(el, render, () => {
+      resetHome();
+      resetLearn();
+      location.hash = '#/';
+      render();
+    })
+  )
+    return;
+
   // Cài đặt: mở, đóng (nút Xong hoặc bấm ra ngoài), và từng tuỳ chọn
   if (el.closest('button[title="Cài đặt"]')) {
     settingsOpen = true;
@@ -253,6 +385,7 @@ document.addEventListener('click', (e) => {
     const key = pref.dataset.pref as keyof Prefs | 'sound';
     if (key === 'sound') setSoundEnabled(!soundEnabled());
     else if (key === 'coords' || key === 'legal' || key === 'autoQueen') setPref(key, !prefs()[key]);
+    pushPrefs();
     render();
     return;
   }
@@ -265,6 +398,7 @@ document.addEventListener('click', (e) => {
       if (BOARD_THEMES.some((t) => t.id === themed.dataset.setBoard)) setPref('board', themed.dataset.setBoard as BoardTheme);
       else document.documentElement.dataset.board = themed.dataset.setBoard;
     }
+    pushPrefs();
     render();
     return;
   }
@@ -288,6 +422,7 @@ document.addEventListener('click', (e) => {
   const label = btn.textContent?.trim();
   if (btn.title === 'Âm thanh') {
     setSoundEnabled(!soundEnabled());
+    pushPrefs();
     render();
   } else if (label === 'Đăng xuất') {
     void logout().then(() => {
@@ -347,7 +482,7 @@ document.addEventListener('keydown', (e) => {
 installApiHeader();
 initTheme();
 applyPrefs();
-onAuthChange(render);
+onAuthChange(onAuth);
 window.addEventListener('hashchange', render);
 render();
 void loadPieces().catch((err) => console.error(err));

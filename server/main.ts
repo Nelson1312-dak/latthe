@@ -2,6 +2,7 @@
 // Chạy: npm run server   (hoặc npm run dev để chạy cùng Vite)
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { applyProfile, deleteUser, parsePrefs, parseProfilePatch, profileStats, readPrefs, savePrefs } from './profile.ts';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
@@ -107,6 +108,8 @@ const publicUser = (u: User) => ({
   gameRating: u.game_rating,
   gameCount: u.game_count,
   local: u.google_sub === null,
+  onboarded: Boolean(u.onboarded),
+  createdAt: u.created_at,
 });
 
 const currentUser = (req: IncomingMessage) =>
@@ -126,6 +129,8 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     const user = currentUser(req);
     return json(res, 200, {
       user: user ? publicUser(user) : null,
+      // Tuỳ chọn hiển thị đi theo tài khoản, sang máy khác vẫn y như cũ
+      prefs: user ? readPrefs(user) : null,
       googleClientId: GOOGLE_CLIENT_ID || null,
       devAuth: devAuthFor(req),
     });
@@ -503,6 +508,49 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
         user.id,
       ),
     });
+  }
+
+  /* ---- Hồ sơ ---- */
+
+  // Màn chào mừng và màn Hồ sơ: đổi tên gọi, chọn trình độ lần đầu
+  if (path === '/api/me' && method === 'PATCH') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => null);
+    if (!body) return json(res, 400, { error: 'Nội dung không hợp lệ' });
+    const patch = parseProfilePatch(body);
+    if (typeof patch === 'string') return json(res, 400, { error: patch });
+    return json(res, 200, { user: publicUser(applyProfile(db, user, patch)) });
+  }
+
+  if (path === '/api/me/prefs' && method === 'PUT') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req, 2048).catch(() => null);
+    if (!body) return json(res, 400, { error: 'Nội dung không hợp lệ' });
+    const prefs = parsePrefs(body);
+    if (typeof prefs === 'string') return json(res, 400, { error: prefs });
+    savePrefs(db, user.id, prefs);
+    return json(res, 200, { ok: true });
+  }
+
+  if (path === '/api/profile' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    return json(res, 200, { user: publicUser(user), stats: profileStats(db, user) });
+  }
+
+  // Tự xoá tài khoản. Phải gửi kèm confirm: true, để một lời gọi nhầm không xoá được.
+  if (path === '/api/me' && method === 'DELETE') {
+    const user = currentUser(req);
+    if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
+    const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+    if (body.confirm !== true) return json(res, 400, { error: 'Thiếu xác nhận' });
+    if (live.isPlaying(user.id)) return json(res, 409, { error: 'Đang có ván online. Chơi xong hoặc đầu hàng trước đã.' });
+    live.leaveQueue(user.id);
+    deleteUser(db, user.id);
+    console.log(`[profile] người dùng #${user.id} đã tự xoá tài khoản`);
+    return json(res, 200, { ok: true }, { 'set-cookie': clearCookie(isSecure(req)) });
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {

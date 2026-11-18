@@ -1,6 +1,6 @@
 // Màn đăng nhập / tài khoản. Vào thẳng được qua #/tai-khoan.
-import { button, classBadge, notice, rule, stats } from '../components/index.ts';
-import { auth } from '../../app/session.ts';
+import { button, classBadge, dialog, esc, notice, rule } from '../components/index.ts';
+import { auth, deleteAccount, loadProfileStats, updateProfile, type ProfileStats } from '../../app/session.ts';
 import { progress, type Progress } from '../../app/training.ts';
 import { icon } from '../icons.ts';
 import { CLASS_LABEL } from '../../board/Board.ts';
@@ -8,13 +8,21 @@ import type { MoveClass } from '../../../shared/winrate.ts';
 
 /** Tiến độ học, nạp riêng vì cần gọi server. */
 let tienDo: Progress | null = null;
+let thốngKê: ProfileStats | null = null;
 let daHoi = false;
+/** Đang sửa tên gọi. */
+let sửaTên = false;
+let lỗiTên: string | null = null;
+/** Hộp hỏi lại trước khi xoá tài khoản. */
+let hỏiXoá = false;
+let lỗiXoá: string | null = null;
 
 export function mountAccount(rerender: () => void): void {
   if (daHoi || !auth.user) return;
   daHoi = true;
-  void progress().then((p) => {
+  void Promise.all([progress(), loadProfileStats()]).then(([p, s]) => {
     tienDo = p;
+    thốngKê = s;
     rerender();
   });
 }
@@ -22,7 +30,10 @@ export function mountAccount(rerender: () => void): void {
 /** Quên tiến độ khi đăng xuất, để người sau không thấy số của người trước. */
 export function resetAccount(): void {
   tienDo = null;
+  thốngKê = null;
   daHoi = false;
+  sửaTên = false;
+  hỏiXoá = false;
 }
 
 const BOX_DAYS = [1, 3, 7, 16, 35];
@@ -34,11 +45,11 @@ function progressBlock(): string {
   const tyLe = tienDo.attempts ? Math.round((tienDo.correct / tienDo.attempts) * 100) : 0;
 
   return `
-    ${rule('Tiến độ học', `<span class="rule-note">chuỗi ${tienDo.streak} ngày</span>`)}
-    ${stats([
-      ['Bài đã làm', `${tienDo.correct} đúng / ${tienDo.attempts}${tienDo.attempts ? ` (${tyLe}%)` : ''}`],
-      ['Thẻ lỗi', `${tienDo.the.due} đến hạn / ${tienDo.the.total}`],
-    ])}
+    ${
+      // Số bài đúng, thẻ đến hạn, chuỗi ngày đã có trong các ô ở trên; ở đây
+      // chỉ còn những thứ không có chỗ khác: thẻ nằm ở hộp nào, hay sai kiểu gì.
+      tienDo.the.total || tienDo.chuDeHaySai.length ? rule('Tiến độ học', tienDo.attempts ? `<span class="rule-note">${tyLe}% bài đúng</span>` : '') : ''
+    }
 
     ${
       tienDo.the.total
@@ -95,43 +106,7 @@ export function account(): string {
     </div>`;
   }
 
-  if (auth.user) {
-    const u = auth.user;
-    return `<div class="screen screen-narrow">
-      <div class="screen-head">
-        <h1>Tài khoản</h1>
-        <span class="head-meta">${u.local ? 'tài khoản thử' : 'đăng nhập bằng Google'}</span>
-      </div>
-      <div class="account-cols">
-        <div>
-          ${rule('Bạn')}
-          <div class="account-id">
-            <span class="account-avatar">${u.avatar ? `<img src="${u.avatar}" alt="" width="44" height="44">` : icon('user', 24)}</span>
-            <span class="account-name">
-              <b>${u.name}</b>
-              <span class="head-meta">Tiến độ học được lưu trên máy chủ này</span>
-            </span>
-          </div>
-          ${stats([
-            ['Elo đấu với người', String(u.gameRating)],
-            ['Ván online đã chơi', String(u.gameCount)],
-            ['Elo bài tập', String(tienDo?.rating ?? u.puzzleRating)],
-          ])}
-          <div class="account-actions">
-            ${button({ label: 'Đăng xuất', kind: 'danger', icon: 'close' })}
-          </div>
-        </div>
-        <div>
-          ${progressBlock()}
-          ${rule('Lưu ở đâu')}
-          <p class="prose">
-            Ván cờ, thẻ ôn tập và tiến độ nằm trong một file SQLite trên máy chủ, không gửi đi đâu khác.
-            Đăng xuất chỉ xoá phiên trên máy này, dữ liệu vẫn còn.
-          </p>
-        </div>
-      </div>
-    </div>`;
-  }
+  if (auth.user) return profile();
 
   const canGoogle = Boolean(auth.googleClientId);
   const onThisMachine = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
@@ -145,7 +120,7 @@ export function account(): string {
           App không bao giờ thấy mật khẩu của bạn: Google lo phần đó.
           <a href="/chinh-sach-rieng-tu/">App lưu những gì</a>.
         </p>
-        <div id="google-btn" class="google-btn"></div>
+        <div id="google-btn" class="google-btn google-slot"></div>
         ${
           canGoogle
             ? ''
@@ -175,4 +150,131 @@ export function account(): string {
       }
     </div>
   </div>`;
+}
+
+/* ---------------- Hồ sơ (đã đăng nhập) ---------------- */
+
+const ngày = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+};
+
+/** Một ô số liệu: con số to, nhãn nhỏ bên dưới. */
+const tile = (value: string, label: string, note = '') =>
+  `<div class="stat-tile"><b class="mono">${value}</b><span>${label}</span>${note ? `<small>${note}</small>` : ''}</div>`;
+
+function profile(): string {
+  const u = auth.user!;
+  const g = thốngKê?.games;
+  const pz = thốngKê?.puzzles;
+  const tênKhối = sửaTên
+    ? `<div class="name-edit">
+         <input id="profile-name" class="field" type="text" maxlength="30" value="${esc(u.name)}" aria-label="Tên gọi">
+         ${button({ label: 'Lưu tên', kind: 'primary' })}
+         ${button({ label: 'Hủy', kind: 'text' })}
+       </div>
+       ${lỗiTên ? notice(lỗiTên, 'danger') : ''}`
+    : `<h1 class="profile-name">${esc(u.name)}</h1>`;
+
+  return `<div class="screen screen-narrow profile">
+    <div class="profile-card">
+      <span class="profile-avatar">${
+        u.avatar ? `<img src="${esc(u.avatar)}" alt="" width="88" height="88" referrerpolicy="no-referrer">` : icon('user', 40)
+      }</span>
+      <div class="profile-id">
+        ${tênKhối}
+        <p class="profile-meta">${u.local ? 'Tài khoản thử' : 'Đăng nhập bằng Google'} · thành viên từ ${ngày(u.createdAt)}</p>
+        ${sửaTên ? '' : `<button class="link-btn profile-rename" data-rename>${icon('edit', 16)}<span>Đổi tên gọi</span></button>`}
+      </div>
+    </div>
+
+    <div class="stat-tiles">
+      ${tile(String(u.gameRating), 'Elo đấu với người', `${u.gameCount} ván online`)}
+      ${tile(String(tienDo?.rating ?? u.puzzleRating), 'Elo bài tập', pz ? `${pz.solved}/${pz.tried} bài đúng` : '')}
+      ${tile(g ? String(g.total) : '–', 'Ván đã chơi', g ? `${g.bot} với máy · ${g.online} online` : '')}
+      ${tile(g ? `${g.wins}/${g.draws}/${g.losses}` : '–', 'Thắng / Hòa / Thua')}
+      ${tile(thốngKê ? String(thốngKê.lessonsDone) : '–', 'Bài học đã xong')}
+      ${tile(`${tienDo?.streak ?? 0}`, 'Chuỗi luyện', 'ngày liên tiếp')}
+    </div>
+
+    <div class="quick-list profile-links">
+      <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b><span>Xem lại, chấm từng nước</span></span>${icon('next', 16)}</button>
+      <button class="quick" data-go="on-tap"><span class="quick-icon">${icon('cards', 20)}</span><span class="quick-text"><b>Thẻ ôn tập</b><span>${tienDo ? `${tienDo.the.due} thẻ đến hạn / ${tienDo.the.total}` : 'Từ những nước bạn đi sai'}</span></span>${icon('next', 16)}</button>
+    </div>
+
+    ${progressBlock()}
+
+    ${rule('Tài khoản')}
+    <p class="prose">Ván cờ, thẻ ôn tập, tiến độ và cả cài đặt (màu bàn cờ, âm thanh…) được lưu theo tài khoản —
+      đăng nhập ở máy khác vẫn y như cũ. <a href="/chinh-sach-rieng-tu/">App lưu những gì</a>.</p>
+    <div class="account-actions">
+      <button class="btn btn-secondary" title="Cài đặt">${icon('settings', 17)}<span>Cài đặt</span></button>
+      ${button({ label: 'Đăng xuất', icon: 'close' })}
+      ${button({ label: 'Xoá tài khoản', kind: 'danger', icon: 'resign' })}
+    </div>
+
+    ${
+      hỏiXoá
+        ? dialog(
+            'Xoá tài khoản?',
+            `<p>Xoá vĩnh viễn hồ sơ, toàn bộ ván cờ, thẻ ôn tập và tiến độ của <b>${esc(u.name)}</b>. Không lấy lại được.</p>` +
+              (lỗiXoá ? notice(lỗiXoá, 'danger') : ''),
+            button({ label: 'Hủy', kind: 'text' }) + button({ label: 'Xoá vĩnh viễn', kind: 'danger' }),
+          )
+        : ''
+    }
+  </div>`;
+}
+
+/** Nút trên màn Hồ sơ. Đăng xuất do main.ts lo (cần dọn cả các màn khác). */
+export function handleAccountClick(target: HTMLElement, rerender: () => void, afterDelete: () => void): boolean {
+  if (target.closest('[data-rename]')) {
+    sửaTên = true;
+    lỗiTên = null;
+    rerender();
+    document.querySelector<HTMLInputElement>('#profile-name')?.select();
+    return true;
+  }
+  const btn = target.closest<HTMLButtonElement>('button');
+  const label = btn?.textContent?.trim();
+  if (label === 'Lưu tên') {
+    const name = document.querySelector<HTMLInputElement>('#profile-name')?.value ?? '';
+    btn!.disabled = true;
+    updateProfile({ name })
+      .then(() => {
+        sửaTên = false;
+        rerender();
+      })
+      .catch((err: Error) => {
+        lỗiTên = err.message;
+        rerender();
+      });
+    return true;
+  }
+  if (label === 'Hủy') {
+    sửaTên = false;
+    hỏiXoá = false;
+    rerender();
+    return true;
+  }
+  if (label === 'Xoá tài khoản') {
+    hỏiXoá = true;
+    lỗiXoá = null;
+    rerender();
+    return true;
+  }
+  if (label === 'Xoá vĩnh viễn') {
+    btn!.disabled = true;
+    deleteAccount()
+      .then(() => {
+        resetAccount();
+        afterDelete();
+      })
+      .catch((err: Error) => {
+        lỗiXoá = err.message;
+        rerender();
+      });
+    return true;
+  }
+  return false;
 }
