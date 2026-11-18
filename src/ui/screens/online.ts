@@ -32,6 +32,8 @@ import {
   toolbar,
 } from '../components/index.ts';
 import { auth } from '../../app/session.ts';
+import { icon } from '../icons.ts';
+import { setPlayMode } from '../../app/playmode.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
 import { playSound } from '../../app/sound.ts';
 import {
@@ -477,6 +479,7 @@ function kếtQuả(): string {
         o.gameId && !reporter.current ? button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' }) : ''
       }
       ${button({ label: 'Tìm trận mới', icon: 'play' })}
+      ${button({ label: 'Về sảnh', kind: 'text' })}
     </div>
   </div>
   ${(() => {
@@ -608,6 +611,14 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
     return true;
   }
 
+  if (target.closest('[data-invite]')) {
+    void createInvite(control).then((r) => {
+      if (r) inviteCode = r.code;
+      rerender();
+    });
+    return true;
+  }
+
   const chip = target.closest<HTMLElement>('[data-control]');
   if (chip) {
     control = chip.dataset.control!;
@@ -639,7 +650,13 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
     'Hủy tìm': () => void leaveQueue(),
     'Chơi với máy': () => {
       void leaveQueue();
+      setPlayMode('machine');
       location.hash = '#/choi';
+    },
+    // Ván xong: về sảnh online của tab Chơi (bàn cờ trống, chọn thời gian lại)
+    'Về sảnh': () => {
+      live.state = null;
+      resetOnline();
     },
     'Mời người quen': () =>
       void createInvite(control).then((r) => {
@@ -690,4 +707,105 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
   chạy();
   rerender();
   return true;
+}
+
+/* ---------------- Trong tab Chơi (chế độ "Với người") ---------------- */
+
+/** Tên gọi nhịp ván, hiện dưới con số thời gian (phút + giây cộng mỗi nước). */
+const TC_NAME: Record<string, string> = { '3+2': 'Chớp', '5+0': 'Nhanh', '10+0': 'Vừa', '15+10': 'Thong thả' };
+
+/** Đang có ván online (đang đánh, hoặc vừa xong mà chưa rời) — tab Chơi hiện ván đó. */
+export function hasLiveGame(): boolean {
+  return Boolean(auth.user && live.state);
+}
+
+/**
+ * Cột phải của tab Chơi khi chọn "Với người", lúc chưa vào ván: sảnh gọn
+ * (thời gian, tìm trận, mã mời) hoặc đang chờ ghép. Bàn cờ bên trái vẫn là
+ * bàn cờ của tab Chơi, nên chuyển qua lại hai chế độ không bị nhảy trang.
+ */
+export function onlinePanel(modeTabs: string): string {
+  if (!auth.user) {
+    return `<div class="setup">
+      ${modeTabs}
+      <div class="bot-card">
+        <span class="bot-face">${icon('friends', 30)}</span>
+        <span class="bot-text"><b>Đấu với người</b><span>Ghép với người cùng trình độ, có Elo</span></span>
+      </div>
+      <p class="prose">Đăng nhập để được ghép trận — server cần biết ai đang đánh với ai.</p>
+      <div class="google-btn google-slot"></div>
+      <p id="login-error" class="notice notice-danger" hidden></p>
+    </div>`;
+  }
+
+  if (live.queue) {
+    const q = live.queue;
+    const mộtMình = q.waiting <= 1;
+    return `<div class="setup">
+      ${modeTabs}
+      <div class="searching">
+        <span class="searching-dot" aria-hidden="true"></span>
+        <b>Đang tìm trận ${CONTROLS[q.control]?.label ?? q.control}</b>
+        <span class="mono">${giây(q.waitedMs)}s</span>
+      </div>
+      ${stats([
+        ['Đang chờ cùng thể thức', `${q.waiting} người`],
+        ['Chấp nhận lệch Elo', `±${q.band}`],
+      ])}
+      ${
+        mộtMình
+          ? notice('Hiện chỉ có mình bạn đang chờ. Cứ để đó, hoặc chơi với máy trong lúc chờ.', 'info', 'clock')
+          : `<p class="muted">Càng chờ khoảng Elo càng nới, sớm muộn cũng ghép được.</p>`
+      }
+      ${button({ label: 'Hủy tìm', kind: 'danger', full: true })}
+    </div>`;
+  }
+
+  const r = auth.user.gameRating;
+  const chọn = Object.keys(CONTROLS)
+    .map(
+      (k) =>
+        `<button class="lv tc${k === control ? ' is-active' : ''}" data-control="${k}" aria-pressed="${k === control}">` +
+        `<b>${k}</b><span>${TC_NAME[k] ?? ''}</span></button>`,
+    )
+    .join('');
+  return `<div class="setup">
+    ${modeTabs}
+    <div class="bot-card">
+      <span class="bot-face">${
+        auth.user.avatar
+          ? `<img src="${auth.user.avatar}" alt="" width="52" height="52" referrerpolicy="no-referrer">`
+          : icon('friends', 30)
+      }</span>
+      <span class="bot-text"><b>Elo ${r}</b><span>${auth.user.gameCount} ván online · ghép người cùng trình độ</span></span>
+    </div>
+    <div class="setup-block">
+      <p class="setup-label">Thời gian mỗi bên</p>
+      <div class="tc-row" role="group" aria-label="Thời gian">${chọn}</div>
+    </div>
+    ${button({ label: 'Tìm trận', kind: 'primary', icon: 'play', full: true })}
+    ${
+      inviteCode
+        ? `<div class="invite-box">
+             <p class="setup-label">Gửi mã này cho bạn của bạn</p>
+             <div class="invite"><code class="mono">${inviteCode}</code>${button({ label: 'Sao chép', icon: 'copy' })}</div>
+           </div>`
+        : `<button class="link-btn" data-invite>Mời người quen bằng mã</button>`
+    }
+    <div class="setup-block">
+      <p class="setup-label">Có mã mời?</p>
+      <div class="invite">
+        <input class="code-input mono" id="join-code" maxlength="8" placeholder="VD: K7M2QP" aria-label="Mã mời" />
+        ${button({ label: 'Vào ván', icon: 'play' })}
+      </div>
+    </div>
+    ${live.error ? notice(live.error, 'danger') : ''}
+    ${!live.connected ? notice('Đang nối tới server…', 'info', 'clock') : ''}
+  </div>`;
+}
+
+/** Rời sảnh online (chuyển sang chế độ Với máy): bỏ hàng chờ nếu đang chờ. */
+export function leaveOnlineMode(): void {
+  if (live.queue) void leaveQueue();
+  leaveOnline();
 }

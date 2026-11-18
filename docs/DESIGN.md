@@ -127,6 +127,17 @@ chess.com. Header ngang cũ ăn mất 56px chiều cao — đúng phần bàn c�
 
 Máy tính bảng (768–1100px): như desktop nhưng các mục trên header chỉ còn icon, bảng bên phải 320px.
 
+### Ba tab: Chơi · Ôn tập · Học
+
+- **Chơi** gộp cả đánh với máy lẫn đấu với người. Đầu cột phải là hai nút chế độ
+  **Với máy / Với người**; bàn cờ giữ nguyên, chỉ cột phải đổi. Với người: chọn
+  thời gian (3+2 Chớp, 5+0 Nhanh, 10+0 Vừa, 15+10 Thong thả), Tìm trận, mã mời;
+  chưa đăng nhập thì nút Google nằm ngay đó. Ghép được là bàn cờ thành ván online.
+  Đang dở ván online thì tab Chơi luôn hiện ván đó.
+- **Xem lại** không còn là tab: chấm ván hiện ngay khi hết ván; danh sách ván cũ ở
+  Hồ sơ → Ván đã chơi. Màn `#/xem-lai` vẫn còn, vào từ "Xem lại chi tiết" hoặc Hồ sơ.
+- **Đấu** không còn là tab; link cũ `#/ban` tự chuyển về Chơi, chế độ Với người.
+
 ### Bảng bên khi chơi với máy
 
 Trước khi vào ván (như "Play Bots" của chess.com):

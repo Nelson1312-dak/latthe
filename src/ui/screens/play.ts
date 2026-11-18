@@ -17,6 +17,8 @@ import { saveFinishedGame } from '../../app/games.ts';
 import { auth } from '../../app/session.ts';
 import { prefs } from '../../app/prefs.ts';
 import { openGate, shouldAskLogin } from '../../app/gate.ts';
+import { playMode, setPlayMode } from '../../app/playmode.ts';
+import { leaveOnlineMode, onlinePanel } from './online.ts';
 import { icon, type IconName } from '../icons.ts';
 import { offerReview, openReviewResult } from './review.ts';
 import type { ReviewResult } from '../../analysis/review.ts';
@@ -166,9 +168,24 @@ function newGame(): void {
  * thanh chọn bên, nhìn như một tờ khai. Giờ chỉ còn: ai là đối thủ (một thẻ
  * to), một hàng số 1–8, ba ô chọn bên, và một nút Chơi.
  */
+/**
+ * Hai chế độ của tab Chơi, ở ngay đầu cột phải: đánh với máy hay đấu với người.
+ * Trước đây là hai tab riêng (Chơi / Đấu) — cùng là "vào chơi một ván", tách ra
+ * chỉ bắt người chơi đi tìm.
+ */
+function modeTabs(): string {
+  const m = playMode();
+  const tab = (id: 'machine' | 'online', label: string, ic: 'engine' | 'friends') =>
+    `<button class="mode-tab${m === id ? ' is-active' : ''}" data-play-mode="${id}" aria-pressed="${m === id}">` +
+    `${icon(ic, 18)}<span>${label}</span></button>`;
+  return `<div class="mode-tabs" role="group" aria-label="Chế độ chơi">${tab('machine', 'Với máy', 'engine')}${tab('online', 'Với người', 'friends')}</div>`;
+}
+
 function setupPanel(): string {
+  if (playMode() === 'online') return onlinePanel(modeTabs());
   if (setup.mode === 'human') {
     return `<div class="setup">
+      ${modeTabs()}
       <div class="bot-card">
         <span class="bot-face">${pieceGlyph('wn', 'bot-piece')}</span>
         <span class="bot-text"><b>Hai người một máy</b><span>Thay nhau đi trên cùng bàn cờ này</span></span>
@@ -199,6 +216,7 @@ function setupPanel(): string {
     .join('');
 
   return `<div class="setup">
+      ${modeTabs()}
       <div class="bot-card">
         <span class="bot-face">${pieceGlyph('bn', 'bot-piece')}</span>
         <span class="bot-text"><b>Máy ${l.name.toLowerCase()}</b><span>${l.hint}</span></span>
@@ -285,15 +303,21 @@ function gameScreen(extraSide = ''): string {
   const result = outcome();
   const topSide: Side = orientation === 'w' ? 'b' : 'w';
 
+  // Chế độ "Với người" mà chưa vào ván: bàn cờ trống, phía trên là đối thủ chưa biết
+  const chờNgười = playMode() === 'online' && !started;
   const strip = (side: Side, tools?: string) => {
-    const isBot = setup.mode === 'bot' && side === botSide();
+    const isBot = !chờNgười && setup.mode === 'bot' && side === botSide();
     return playerStrip({
       // Đấu với máy thì bên mình mang tên mình, không phải chữ "Trắng"
-      name: isBot
-        ? levelById(setup.level).name
-        : setup.mode === 'bot' && side === setup.side && auth.user
-          ? auth.user.name
-          : sideName(side),
+      name: chờNgười
+        ? side === orientation
+          ? (auth.user?.name ?? 'Bạn')
+          : 'Đối thủ'
+        : isBot
+          ? levelById(setup.level).name
+          : setup.mode === 'bot' && side === setup.side && auth.user
+            ? auth.user.name
+            : sideName(side),
       side,
       avatar: !isBot && setup.mode === 'bot' && side === setup.side ? auth.user?.avatar : null,
       bot: isBot,
@@ -316,11 +340,13 @@ function gameScreen(extraSide = ''): string {
     <div class="screen-head play-head">
       <h1>Chơi</h1>
       <span class="head-meta">${
-        setup.mode === 'human'
-          ? 'Hai người một máy'
-          : started
-            ? `Máy ${levelById(setup.level).name.toLowerCase()}`
-            : 'Chơi với máy'
+        // Chưa vào ván: chỉ ghi "Chơi" — hai nút Với máy / Với người ngay bên
+        // dưới đã nói rõ chế độ, ghi lại ở đây là thừa
+        !started
+          ? 'Chơi'
+          : setup.mode === 'human'
+            ? 'Hai người một máy'
+            : `Máy ${levelById(setup.level).name.toLowerCase()}`
       }</span>
       ${toolbar([
         iconButton('flip', 'Lật bàn cờ'),
@@ -694,6 +720,18 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     rerender();
     return true;
   }
+  // Đổi chế độ: Với máy / Với người
+  const pm = target.closest<HTMLElement>('[data-play-mode]');
+  if (pm) {
+    const m = pm.dataset.playMode as 'machine' | 'online';
+    if (m !== playMode()) {
+      if (m === 'machine') leaveOnlineMode();
+      setPlayMode(m);
+    }
+    rerender();
+    return true;
+  }
+
   const pick = target.closest<HTMLElement>('[data-pick]');
   if (pick) {
     setup.pick = pick.dataset.pick as Pick;

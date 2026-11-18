@@ -30,7 +30,9 @@ import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
 import { handleTrainClick, mountTrain, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
-import { handleOnlineClick, leaveOnline, mountOnline, online } from './ui/screens/online.ts';
+import { handleOnlineClick, hasLiveGame, leaveOnline, mountOnline, online } from './ui/screens/online.ts';
+import { playMode, setPlayMode } from './app/playmode.ts';
+import { live } from './app/live.ts';
 import { routeName } from './app/route.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
@@ -42,23 +44,22 @@ type Screen = { title: string; render: () => string };
 
 const SCREENS: Record<string, Screen> = {
   // Sảnh dùng chung bàn cờ của màn Chơi, gắn thêm phần riêng vào cột phải
-  '': { title: 'Sảnh', render: () => play(homeSide()) },
-  choi: { title: 'Chơi', render: play },
+  '': { title: 'Sảnh', render: () => (onlineView() ? online() : play(homeSide())) },
+  choi: { title: 'Chơi', render: () => (onlineView() ? online() : play()) },
   'choi-may': { title: 'Chơi với máy', render: playBot },
   'xem-lai': { title: 'Xem lại ván', render: review },
   'on-tap': { title: 'Ôn tập', render: train },
   hoc: { title: 'Học', render: learn },
-  ban: { title: 'Chơi với người', render: online },
   'tai-khoan': { title: 'Hồ sơ', render: account },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
 };
 
 const NAV: { route: string; label: string; icon: IconName }[] = [
+  // Xem lại và Đấu không còn là tab riêng: chấm ván hiện ngay khi hết ván, danh
+  // sách ván cũ nằm trong Hồ sơ; đấu với người là một chế độ của tab Chơi.
   { route: 'choi', label: 'Chơi', icon: 'play' },
-  { route: 'xem-lai', label: 'Xem lại', icon: 'review' },
   { route: 'on-tap', label: 'Ôn tập', icon: 'cards' },
   { route: 'hoc', label: 'Học', icon: 'learn' },
-  { route: 'ban', label: 'Đấu', icon: 'friends' },
 ];
 
 function route(): string {
@@ -273,9 +274,23 @@ function settingsDialog(): string {
 /** Màn hình đang hiện, để biết lúc nào người dùng rời khỏi một màn. */
 let mànTrước: string | null = null;
 
+/** Tab Chơi đang hiện ván online (đang đánh, hoặc vừa xong mà chưa rời). */
+function onlineView(): boolean {
+  return playMode() === 'online' && hasLiveGame();
+}
+const PLAY_ROUTES = ['', 'choi'];
+
 function render(): void {
+  // Link cũ #/ban (tab Đấu đã gộp vào tab Chơi): về Chơi, chế độ Với người
+  if (routeName() === 'ban') {
+    setPlayMode('online');
+    location.replace('#/choi');
+    return;
+  }
+  // Đang dở một ván online thì tab Chơi luôn hiện ván đó
+  if (live.state && !live.state.over) setPlayMode('online');
   const r = route();
-  if (mànTrước === 'ban' && r !== 'ban') leaveOnline();
+  if (mànTrước !== null && PLAY_ROUTES.includes(mànTrước) && !PLAY_ROUTES.includes(r)) leaveOnline();
   mànTrước = r;
   const screen = SCREENS[r];
   document.title = r ? `${screen.title} · ${APP_NAME}` : APP_NAME;
@@ -288,16 +303,19 @@ function render(): void {
     (settingsOpen ? settingsDialog() : '') +
     (currentGate() && !auth.user ? gateDialog(currentGate()!) : '') +
     (welcomeOpen && auth.user ? welcomeDialog() : '');
-  if (r === 'choi') mountPlay(render);
+  if (r === 'choi' || r === '') {
+    if (onlineView()) mountOnline(render);
+    else {
+      mountPlay(render);
+      // Chế độ Với người: mở luồng tới server để tìm trận / nhận lời mời
+      if (playMode() === 'online') mountOnline(render);
+    }
+  }
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
   if (r === 'tai-khoan') mountAccount(render);
   if (r === 'hoc') mountLearn(render);
-  if (r === 'ban') mountOnline(render);
-  if (r === '') {
-    mountHome(render);
-    mountPlay(render);
-  }
+  if (r === '') mountHome(render);
   snapBoards(app);
   // Nút Google ở bất cứ chỗ nào có chỗ cho nó: trang Đăng nhập, hộp mời đăng nhập
   if (!auth.user && !auth.offline) {
@@ -417,11 +435,17 @@ document.addEventListener('click', (e) => {
   }
 
   // Màn chơi và màn xem lại tự lo các nút của chúng
-  if ((route() === 'choi' || route() === '') && handlePlayClick(el, render)) return;
+  if (route() === 'choi' || route() === '') {
+    if (onlineView()) {
+      if (handleOnlineClick(el, render)) return;
+    } else {
+      if (handlePlayClick(el, render)) return;
+      if (playMode() === 'online' && handleOnlineClick(el, render)) return;
+    }
+  }
   if (route() === 'xem-lai' && handleReviewClick(el, render)) return;
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
   if (route() === 'hoc' && handleLearnClick(el)) return;
-  if (route() === 'ban' && handleOnlineClick(el, render)) return;
 
   // Ô có data-go thì chuyển màn
   const go = el.closest<HTMLElement>('[data-go]');
