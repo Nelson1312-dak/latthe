@@ -6,7 +6,6 @@ import type { MoveClass } from '../../shared/winrate.ts';
 
 const SQ = 50; // cạnh một ô trong hệ toạ độ SVG
 const SIZE = SQ * 8;
-const PIECE_SCALE = SQ / 40; // sprite cburnett vẽ trong khung 40x40
 
 /**
  * Màu bút vẽ của người chơi, theo chess.com: mũi tên mặc định màu cam ('y'),
@@ -289,8 +288,8 @@ export function boardSvg(o: BoardOptions): string {
       const fileLight = (i + (or === 'w' ? 0 : 7)) % 2 === 1;
       const rankLight = ((or === 'w' ? 0 : 7) + i) % 2 === 1;
       parts.push(
-        `<text class="coord" x="${fx + SQ - 3}" y="${fy + SQ - 3}" text-anchor="end" font-size="9" font-weight="600" fill="var(--sq-${fileLight ? 'dark' : 'light'})">${FILES[i]}</text>`,
-        `<text class="coord" x="${rx + 3}" y="${ry + 11}" font-size="9" font-weight="600" fill="var(--sq-${rankLight ? 'dark' : 'light'})">${i + 1}</text>`,
+        `<text class="coord" x="${fx + SQ - 3}" y="${fy + SQ - 3}" text-anchor="end" font-size="9" font-weight="600" fill="var(--coord-${fileLight ? 'dark' : 'light'})">${FILES[i]}</text>`,
+        `<text class="coord" x="${rx + 3}" y="${ry + 11}" font-size="9" font-weight="600" fill="var(--coord-${rankLight ? 'dark' : 'light'})">${i + 1}</text>`,
       );
     }
   }
@@ -303,7 +302,7 @@ export function boardSvg(o: BoardOptions): string {
     const fade = sq === o.dragging ? ' opacity=".3"' : '';
     parts.push(
       `<g class="sq" data-sq="${sq}" transform="translate(${x} ${y})">` +
-        `<g class="pc"${fade}><use href="#${code satisfies PieceCode}" transform="scale(${PIECE_SCALE})"/></g>` +
+        `<g class="pc"${fade}><use href="#${code satisfies PieceCode}" width="${SQ}" height="${SQ}"/></g>` +
         `</g>`,
     );
   }

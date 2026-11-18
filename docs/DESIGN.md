@@ -570,9 +570,9 @@ theo bằng `--board-fit` để thẳng mép. CSS ở bố cục một cột ch�
 
 | Phần | Quy định |
 |---|---|
-| Màu ô | 10 chủ đề (`src/app/prefs.ts` BOARD_THEMES, màu ở `tokens.css`): Xanh lá (mặc định), Gỗ, Xanh dương, Đá, và 6 chủ đề tự phối thêm 18/11/2026 — Óc chó `#E6CFA8/#8E6141`, Ô liu `#E9E6CC/#8C8C55`, Cát `#F1E4C6/#C49D6E`, Ngọc `#DFEAE5/#5E8F84`, Tím `#E7E1EF/#8A77AB`, San hô `#F2E2D6/#C4826A`. Ô tối đủ sáng cho quân đen, ô sáng đủ tối cho quân trắng. Thêm chủ đề: sửa cả danh sách `BOARDS` ở `server/profile.ts` (đồng bộ theo tài khoản) |
-| Quân | Bộ **cburnett** (CC BY-SA 3.0, xem `public/pieces/LICENSE.txt`). Hình quân nhỏ trong chữ có quầng mảnh (`--piece-halo`) để quân cùng tông với nền vẫn đọc được |
-| Tọa độ | Chữ `--fs-xs` nằm trong góc ô biên, màu là màu ô đối diện |
+| Màu ô | 15 chủ đề (`src/app/prefs.ts` BOARD_THEMES, màu ở `tokens.css`). **5 bàn có vân** (18/11/2026): Gỗ thật (phong + óc chó), Hồng mộc (hoàng dương + hồng mộc), Cẩm thạch (trắng + xanh rêu), Đá xám, Sách cờ (giấy ngà, ô tối gạch chéo như sơ đồ in). Vân tự sinh bằng thuật toán (`scripts/build-boards.mjs`, ảnh WebP 3–90KB ở `public/board/`), một tấm cho cả bàn nên vân chạy liền qua các ô; `prefs.ts` chỉ nạp ảnh của chủ đề đang dùng. **10 bàn màu đặc**: Xanh lá (mặc định), Gỗ sáng, Óc chó, Xanh dương, Đá, Ô liu, Cát, Ngọc, Tím, San hô (Ô liu/Ngọc/Tím/San hô chỉnh lại cho bớt gắt). Ô tối đủ sáng cho quân đen, ô sáng đủ tối cho quân trắng. Thêm chủ đề: sửa cả danh sách `BOARDS` ở `server/profile.ts` |
+| Quân | 8 bộ do hoạ sĩ vẽ, giấy phép mở, lấy từ kho Lichess, dựng thành sprite `<symbol>` bằng `scripts/build-pieces.mjs` (`public/pieces/sets/`): **Merida** (mặc định, kiểu sách cờ cổ điển), Celtic, Papercut, Fantasy, Spatial, Chessnut, MPChess, Cburnett. Không dùng bộ kiểu hoạt hình. Nguồn và giấy phép: `public/pieces/sets/LICENSES.txt`; chân trang ghi tên tác giả bộ đang dùng. Logo (con Mã) giữ cố định `#brand-n` dù đổi bộ. Hình quân nhỏ trong chữ có quầng mảnh (`--piece-halo`) |
+| Tọa độ | Chữ `--fs-xs` nằm trong góc ô biên, màu là màu ô đối diện (`--coord-light`/`--coord-dark`; bàn có vân dùng màu đặc gần với vân) |
 | Nước vừa đi | Phủ `rgb(232 196 80 / .42)` lên ô đi và ô đến |
 | Ô đang chọn | Phủ `rgb(232 196 80 / .55)` |
 | Nước hợp lệ | Chấm tròn đường kính 28% ô, `rgb(0 0 0 / .2)`; ô có quân đối phương: vòng tròn viền dày |

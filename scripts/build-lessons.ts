@@ -63,16 +63,17 @@ function example(db: DatabaseSync, l: Lesson): Example | null {
   return { fen, side, lastMove: [m0.from, m0.to], solution: sans };
 }
 
-// Bỏ <title>/<?xml> của file sprite: trang chỉ được có một <title>
-const sprite = readFileSync('public/pieces/cburnett.svg', 'utf8')
-  .replace(/<\?xml[^>]*>/, '')
-  .replace(/<title>[\s\S]*?<\/title>/g, '');
+// Bộ quân mặc định (scripts/build-pieces.mjs). Sprite đã ẩn sẵn bằng cỡ 0 — không
+// được bọc display:none, vì gradient bên trong sẽ không vẽ được.
+const sprite = readFileSync('public/pieces/sets/merida.svg', 'utf8');
 
 const STYLE = `
   :root { color-scheme: dark; --bg: #302e2b; --card: #262421; --card2: #3c3a37; --text: #fff; --text2: #c9c8c6; --text3: #a7a5a3; --line: #3f3d39; --accent: #1f8f80; --accent-text: #56cdbb;
-    --sq-light: #ebecd0; --sq-dark: #739552; --mark-move: rgb(255 255 51 / 0.42); }
+    --sq-light: #ebecd0; --sq-dark: #739552; --coord-light: #ebecd0; --coord-dark: #739552; --mark-move: rgb(255 255 51 / 0.42); }
   @media (prefers-color-scheme: light) { :root { color-scheme: light; --bg: #f3f1ec; --card: #fff; --card2: #ece9e2; --text: #1d1b18; --text2: #57524a; --text3: #7d776d; --line: #d9d4c9; --accent: #1a7a6c; --accent-text: #17695c; } }
   * { box-sizing: border-box; }
+  .credit { max-width: 720px; margin: 0 auto; padding: 24px 16px 32px; font-size: 13px; color: var(--text3); }
+  .credit a { color: var(--text2); }
   body { margin: 0; background: var(--bg); color: var(--text2); font: 17px/1.65 'IBM Plex Sans', system-ui, sans-serif; }
   main { max-width: 760px; margin: 0 auto; padding: 32px 16px 72px; }
   a { color: var(--accent-text); }
@@ -119,10 +120,15 @@ function page(o: { title: string; desc: string; path: string; body: string; with
 <script>try{fetch('/api/ping',{method:'POST',headers:{'content-type':'application/json','ngrok-skip-browser-warning':'1'},body:'{"e":"lesson_page"}',keepalive:true}).catch(function(){})}catch(e){}</script>
 </head>
 <body>
-${o.withSprite ? `<div style="display:none" aria-hidden="true">${sprite}</div>` : ''}
+${o.withSprite ? `<div aria-hidden="true">${sprite}</div>` : ''}
 <main>
 ${o.body}
 </main>
+${
+  o.withSprite
+    ? `<footer class="credit">Quân cờ Merida của Armando Hernandez Marroquin (GPLv2+), logo từ bộ cburnett (CC BY-SA 3.0) · <a href="/pieces/sets/LICENSES.txt">giấy phép</a> · Lật Cờ là phần mềm tự do theo <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3</a>, <a href="https://github.com/Nelson1312-dak/latthe">mã nguồn</a></footer>`
+    : ''
+}
 </body>
 </html>
 `;

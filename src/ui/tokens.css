@@ -52,6 +52,8 @@
   /* ---- Bàn cờ: 3 chủ đề ---- */
   --sq-light: #ead8b6;
   --sq-dark: #b08a62;
+  --coord-light: #ead8b6;
+  --coord-dark: #b08a62;
   /* Vàng chanh của chess.com: nổi trên cả bàn xanh lá lẫn bàn gỗ */
   --mark-move: rgb(255 255 51 / 0.42);
   --mark-select: rgb(255 255 51 / 0.55);
@@ -164,6 +166,11 @@
 }
 
 /* ---- Chủ đề bàn cờ ---- */
+/* Toạ độ mặc định: màu của ô bên kia. Đặt trước các chủ đề có vân để chúng đè được. */
+[data-board] {
+  --coord-light: var(--sq-light);
+  --coord-dark: var(--sq-dark);
+}
 [data-board='wood'] {
   --sq-light: #ead8b6;
   --sq-dark: #b08a62;
@@ -187,25 +194,58 @@
   --sq-dark: #8e6141;
 }
 [data-board='olive'] {
-  --sq-light: #e9e6cc;
-  --sq-dark: #8c8c55;
+  --sq-light: #e6e3c8;
+  --sq-dark: #878752;
 }
 [data-board='sand'] {
   --sq-light: #f1e4c6;
   --sq-dark: #c49d6e;
 }
 [data-board='teal'] {
-  --sq-light: #dfeae5;
-  --sq-dark: #5e8f84;
+  --sq-light: #dce8e3;
+  --sq-dark: #5a8a7f;
 }
 [data-board='purple'] {
-  --sq-light: #e7e1ef;
-  --sq-dark: #8a77ab;
+  --sq-light: #e5e0ec;
+  --sq-dark: #81719f;
 }
 [data-board='coral'] {
-  --sq-light: #f2e2d6;
-  --sq-dark: #c4826a;
+  --sq-light: #f0dfd2;
+  --sq-dark: #b97a63;
 }
+/* Bàn có vân (18/11/2026): ô tô bằng ảnh vân tự sinh (scripts/build-boards.mjs),
+   <pattern> đặt vào trang bởi src/app/prefs.ts. Toạ độ dùng màu đặc gần với vân. */
+[data-board='tex-wood'] {
+  --sq-light: url(#tex-light) #e3c796;
+  --sq-dark: url(#tex-dark) #7b4f2f;
+  --coord-light: #e3c796;
+  --coord-dark: #7b4f2f;
+}
+[data-board='tex-rosewood'] {
+  --sq-light: url(#tex-light) #ead6ad;
+  --sq-dark: url(#tex-dark) #6b3121;
+  --coord-light: #ead6ad;
+  --coord-dark: #6b3121;
+}
+[data-board='tex-marble'] {
+  --sq-light: url(#tex-light) #e9e7e1;
+  --sq-dark: url(#tex-dark) #4f7564;
+  --coord-light: #e9e7e1;
+  --coord-dark: #4f7564;
+}
+[data-board='tex-slate'] {
+  --sq-light: url(#tex-light) #e9e7e1;
+  --sq-dark: url(#tex-dark) #6e6f73;
+  --coord-light: #e9e7e1;
+  --coord-dark: #5e5f63;
+}
+[data-board='tex-book'] {
+  --sq-light: url(#tex-light) #f1ead9;
+  --sq-dark: url(#tex-dark) #b7ae9c;
+  --coord-light: #f1ead9;
+  --coord-dark: #5a5244;
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   :root {

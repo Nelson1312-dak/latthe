@@ -11,7 +11,7 @@
 //
 // Đổi cách lưu thì tăng PHIÊN_BẢN để xoá bộ nhớ cũ.
 
-const PHIÊN_BẢN = 'v1';
+const PHIÊN_BẢN = 'v2';
 const TRANG = `latco-trang-${PHIÊN_BẢN}`;
 const TĨNH = `latco-tinh-${PHIÊN_BẢN}`;
 const CHỜ_MẠNG_MS = 4000;
@@ -45,9 +45,11 @@ self.addEventListener('fetch', (e) => {
 
   if (req.mode === 'navigate') {
     e.respondWith(trang(req, url));
-  } else if (/^\/(assets|engine|fonts|pieces)\//.test(url.pathname)) {
+  } else if (/^\/(assets|engine|fonts)\//.test(url.pathname)) {
     e.respondWith(lưuTrước(req));
-  } else if (/^\/(data|icons|board)\//.test(url.pathname) || url.pathname === '/manifest.webmanifest') {
+  } else if (/^\/(data|icons|board|pieces)\//.test(url.pathname) || url.pathname === '/manifest.webmanifest') {
+    // Bộ quân và vân bàn cờ dựng lại bằng scripts/build-*.mjs mà tên file giữ nguyên:
+    // dùng bản đã lưu cho nhanh, đồng thời tải bản mới về cho lần sau.
     e.respondWith(dùngLưuRồiCậpNhật(req, e));
   }
 });

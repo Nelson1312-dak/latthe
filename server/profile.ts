@@ -57,7 +57,11 @@ export function applyProfile(db: Db, user: User, patch: ProfilePatch): User {
   return one<User>(db, 'SELECT * FROM users WHERE id = ?', user.id)!;
 }
 
-const BOARDS = new Set(['green', 'wood', 'blue', 'stone', 'walnut', 'olive', 'sand', 'teal', 'purple', 'coral']);
+const BOARDS = new Set([
+  'green', 'wood', 'blue', 'stone', 'walnut', 'olive', 'sand', 'teal', 'purple', 'coral',
+  'tex-wood', 'tex-rosewood', 'tex-marble', 'tex-slate', 'tex-book',
+]);
+const PIECE_SETS = new Set(['merida', 'celtic', 'papercut', 'fantasy', 'spatial', 'chessnut', 'mpchess', 'cburnett']);
 
 /** Tuỳ chọn hiển thị: chỉ nhận đúng các khoá đã biết, bỏ hết phần lạ. */
 export function parsePrefs(body: Record<string, unknown>): Record<string, string | boolean> | string {
@@ -66,6 +70,7 @@ export function parsePrefs(body: Record<string, unknown>): Record<string, string
   const src = p as Record<string, unknown>;
   const out: Record<string, string | boolean> = {};
   if (typeof src.board === 'string' && BOARDS.has(src.board)) out.board = src.board;
+  if (typeof src.pieces === 'string' && PIECE_SETS.has(src.pieces)) out.pieces = src.pieces;
   if (src.theme === 'dark' || src.theme === 'light') out.theme = src.theme;
   for (const k of ['coords', 'legal', 'autoQueen', 'assist', 'sound']) {
     if (typeof src[k] === 'boolean') out[k] = src[k] as boolean;

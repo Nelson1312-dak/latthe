@@ -9,7 +9,6 @@ import './ui/refine.css';
 import { installApiHeader } from './app/api-header.ts';
 import { ping, pingVisit, startPresence } from './app/ping.ts';
 import { currentDaily } from './app/daily.ts';
-import { loadPieces } from './board/sprite.ts';
 import { snapBoards } from './board/snap.ts';
 import { icon, type IconName } from './ui/icons.ts';
 import {
@@ -29,7 +28,7 @@ import { handleWelcomeClick, welcomeDialog } from './ui/screens/welcome.ts';
 import { handleStatsClick, mountStats, refreshStats, stats } from './ui/screens/stats.ts';
 import { mountShared, sharedIdFromPath, sharedView } from './ui/screens/shared.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
-import { applyPrefs, BOARD_THEMES, prefs, setPref, type BoardTheme, type Prefs } from './app/prefs.ts';
+import { applyPrefs, BOARD_THEMES, PIECE_SETS, prefs, setPref, type BoardTheme, type PieceSet, type Prefs } from './app/prefs.ts';
 import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play, playBar, setBotLevel } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
@@ -107,7 +106,7 @@ function siteHeader(current: string): string {
   return (
     `<header class="site-head">` +
     `<a class="brand" href="/#/" aria-label="${APP_NAME} — về sảnh">` +
-    `<svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><use href="#wn"/></svg>` +
+    `<svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><use href="#brand-n"/></svg>` +
     `<span>${APP_NAME}</span></a>` +
     `<nav class="top-nav" aria-label="Chính">` +
     NAV.map((n) => topLink(n.route, n.label, n.icon, current === '' ? 'choi' : current)).join('') +
@@ -123,6 +122,8 @@ function siteHeader(current: string): string {
   );
 }
 
+const bộQuân = () => PIECE_SETS.find((s) => s.id === prefs().pieces) ?? PIECE_SETS[0];
+
 /**
  * Dòng chân trang. GPL-3 yêu cầu người nhận bản chạy phải được mời xem mã nguồn,
  * nên link tới kho mã là bắt buộc chứ không phải cho đẹp.
@@ -133,7 +134,8 @@ function siteFooter(): string {
     `<span>${APP_NAME} — phần mềm tự do theo ` +
     `<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3</a>.</span> ` +
     `<span>Engine <a href="https://stockfishchess.org/" target="_blank" rel="noopener">Stockfish</a>, ` +
-    `bộ quân cburnett (CC BY-SA 3.0).</span> ` +
+    `bộ quân ${bộQuân().name} của ${bộQuân().author} (${bộQuân().license}), ` +
+    `<a href="/pieces/sets/LICENSES.txt" target="_blank" rel="noopener">giấy phép</a>.</span> ` +
     `<a href="https://github.com/Nelson1312-dak/latthe" target="_blank" rel="noopener">Mã nguồn</a> ` +
     `<a href="/chinh-sach-rieng-tu/">Quyền riêng tư</a>` +
     `</footer>`
@@ -211,6 +213,7 @@ function syncPrefsOnLogin(): void {
   const p = serverPrefs;
   if (!p) return pushPrefs();
   if (typeof p.board === 'string' && BOARD_THEMES.some((t) => t.id === p.board)) setPref('board', p.board as BoardTheme);
+  if (typeof p.pieces === 'string' && PIECE_SETS.some((s) => s.id === p.pieces)) setPref('pieces', p.pieces as PieceSet);
   for (const k of ['coords', 'legal', 'autoQueen', 'assist'] as const) if (typeof p[k] === 'boolean') setPref(k, p[k]);
   if (p.theme === 'dark' || p.theme === 'light') applyTheme(p.theme);
   if (typeof p.sound === 'boolean') setSoundEnabled(p.sound);
@@ -257,17 +260,28 @@ function toggleRow(key: string, label: string, note: string, on: boolean): strin
 function settingsDialog(): string {
   const p = prefs();
   const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  // Ô mẫu: 2x2 ô cờ. Bàn có vân thì lấy đúng ảnh vân thu nhỏ.
+  const ô = (x: number, y: number, light: boolean, t: (typeof BOARD_THEMES)[number]) =>
+    t.tex
+      ? `<image href="/board/${t.tex[light ? 0 : 1]}.webp" x="${x}" y="${y}" width="1" height="1" preserveAspectRatio="none"/>`
+      : `<rect x="${x}" y="${y}" width="1" height="1" fill="${light ? t.light : t.dark}"/>`;
   const swatch = BOARD_THEMES.map(
     (t) =>
       `<button class="swatch${p.board === t.id ? ' is-active' : ''}" data-set-board="${t.id}" aria-pressed="${p.board === t.id}">` +
       `<svg class="swatch-board" viewBox="0 0 2 2" width="44" height="44" aria-hidden="true" shape-rendering="crispEdges">` +
-      `<rect width="2" height="2" fill="${t.dark}"/><rect width="1" height="1" fill="${t.light}"/><rect x="1" y="1" width="1" height="1" fill="${t.light}"/></svg>` +
-      `<span>${t.name}</span></button>`,
+      ô(0, 0, true, t) + ô(1, 0, false, t) + ô(0, 1, false, t) + ô(1, 1, true, t) +
+      `</svg><span>${t.name}</span></button>`,
+  ).join('');
+  const quân = PIECE_SETS.map(
+    (s) =>
+      `<button class="piece-opt${p.pieces === s.id ? ' is-active' : ''}" data-set-pieces="${s.id}" aria-pressed="${p.pieces === s.id}">` +
+      `<img src="/pieces/sets/${s.id}.preview.svg" alt="" width="64" height="32" loading="lazy"><span>${s.name}</span></button>`,
   ).join('');
   return (
     `<div class="dialog-backdrop settings-backdrop"><div class="dialog settings" role="dialog" aria-modal="true" aria-label="Cài đặt">` +
     `<h2>Cài đặt</h2><div class="dialog-body">` +
-    `<p class="setup-label">Màu bàn cờ</p><div class="swatches">${swatch}</div>` +
+    `<p class="setup-label">Bộ quân</p><div class="piece-opts">${quân}</div>` +
+    `<p class="setup-label">Bàn cờ</p><div class="swatches">${swatch}</div>` +
     `<p class="setup-label">Giao diện</p>` +
     `<div class="seg seg-fill" role="group" aria-label="Giao diện">` +
     `<button class="seg-item${theme === 'dark' ? ' is-active' : ''}" data-set-theme="dark">${icon('moon', 17)} Tối</button>` +
@@ -546,6 +560,13 @@ document.addEventListener('click', (e) => {
     return;
   }
 
+  const bộ = el.closest<HTMLElement>('[data-set-pieces]');
+  if (bộ) {
+    if (PIECE_SETS.some((s) => s.id === bộ.dataset.setPieces)) setPref('pieces', bộ.dataset.setPieces as PieceSet);
+    pushPrefs();
+    render();
+    return;
+  }
   const themed = el.closest<HTMLElement>('[data-set-theme], [data-set-board]');
   if (themed) {
     if (themed.dataset.setTheme) applyTheme(themed.dataset.setTheme as 'dark' | 'light');
@@ -732,7 +753,6 @@ if (IS_MINI) {
   });
 }
 render();
-void loadPieces().catch((err) => console.error(err));
 void loadMe();
 if (!IS_MINI) {
   pingVisit();

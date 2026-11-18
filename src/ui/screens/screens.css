@@ -3140,3 +3140,38 @@ a.quick {
     display: flex;
   }
 }
+
+/* Cài đặt: chọn bộ quân. Mỗi ô một ảnh Mã trắng + Vua đen của bộ đó. */
+.piece-opts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+}
+.piece-opt {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: var(--s-1) 0;
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.piece-opt img {
+  display: block;
+  width: 64px;
+  height: 32px;
+}
+.piece-opt:hover {
+  background: var(--bg-3);
+}
+.piece-opt.is-active {
+  border-color: var(--accent);
+  color: var(--text-1);
+}
