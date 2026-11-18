@@ -112,14 +112,18 @@ ghi('ôn tập: lấy được bài tập', cóBài);
 /* 4. Đấu online hai người (cần đăng nhập giả) */
 if (A.đăngNhập) {
   const B = await mở('E2E-B');
+  // Đấu với người giờ là một chế độ của tab Chơi (link cũ #/ban tự chuyển về đó).
+  // Chế độ này luôn giữ một luồng mở tới server, nên không chờ "mạng rảnh" được.
   for (const x of [A, B]) {
-    await x.p.goto(`${GỐC}/#/ban`, { waitUntil: 'networkidle' });
-    await x.p.reload({ waitUntil: 'networkidle' });
+    await x.p.goto(`${GỐC}/#/ban`, { waitUntil: 'load' });
+    await x.p.reload({ waitUntil: 'load' });
+    await x.p.getByRole('button', { name: 'Tìm trận', exact: true }).waitFor({ timeout: 20000 });
   }
+  ghi('link cũ #/ban mở đúng chế độ Với người', (await A.p.locator('.mode-tab.is-active').textContent())?.includes('Với người') ?? false);
   await A.p.getByRole('button', { name: 'Tìm trận', exact: true }).click();
   await B.p.getByRole('button', { name: 'Tìm trận', exact: true }).click();
   const ghép = await A.p
-    .waitForSelector('#board svg', { timeout: 30000 })
+    .waitForSelector('.clock', { timeout: 30000 })
     .then(() => true)
     .catch(() => false);
   ghi('đấu online: ghép được hai người', ghép);
@@ -142,8 +146,62 @@ if (A.đăngNhập) {
       return r.status;
     });
     ghi('đang trong ván online thì server chặn lời bình', chặn === 403, `HTTP ${chặn}`);
+    const aiVàoNhầm = await A.p.locator('.ai-alert').count();
+    ghi('hai người cùng chờ thì ghép với nhau, không ghép AI', aiVàoNhầm === 0);
+    // Kết thúc ván cho gọn: B đầu hàng qua API
+    await B.p.evaluate(() => fetch('/api/live/act', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{"what":"resign"}' }));
   }
   await B.ctx.close();
+
+  /* 5. Một mình tìm trận: sau 5 giây AI vào thay, báo rõ là AI */
+  await A.p.goto(`${GỐC}/#/choi`, { waitUntil: 'load' });
+  await A.p.reload({ waitUntil: 'load' });
+  await A.p.waitForTimeout(1500);
+  const vềSảnh = A.p.getByRole('button', { name: 'Về sảnh' });
+  if (await vềSảnh.count()) await vềSảnh.click();
+  await A.p.getByRole('button', { name: 'Tìm trận', exact: true }).click();
+  const aiVào = await A.p
+    .waitForSelector('.ai-alert', { timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  ghi('một mình tìm trận: AI vào thay sau 5 giây, có báo "đang đấu với AI"', aiVào);
+  if (aiVào) await A.p.evaluate(() => fetch('/api/live/act', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{"what":"resign"}' }));
+}
+
+/* 6. Chia sẻ ván: tạo link, người khác mở được */
+{
+  const share = await A.p.evaluate(async () => {
+    const r = await fetch('/api/share', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        pgn: '1. e4 e5',
+        review: {
+          moves: [
+            ['e4', 'e2e4', 'w'],
+            ['e5', 'e7e5', 'b'],
+          ].map(([san, uci, side], i) => ({
+            ply: i + 1, san, uci, side, fenBefore: '', fenAfter: '',
+            scoreBefore: { cp: 20 }, scoreAfter: { cp: 20 }, best: [{ uci, san, score: { cp: 20 } }], cls: 'book', accuracy: 100,
+          })),
+          accuracy: { w: 100, b: 100 },
+          opening: null,
+        },
+        meta: { white: 'A', black: 'B', result: '1-0', label: 'Thử', side: 'w' },
+      }),
+    });
+    return r.ok ? (await r.json()).id : null;
+  });
+  if (!share) ghi('chia sẻ ván: tạo được link', false);
+  else {
+    const C = await b.newContext();
+    const c = await C.newPage();
+    c.on('pageerror', (e) => lỗiJS.push(`xem link: ${e.message.slice(0, 140)}`));
+    await c.goto(`${GỐC}/van/${share}`, { waitUntil: 'load' });
+    const thấy = await c.waitForSelector('.share-banner', { timeout: 20000 }).then(() => true).catch(() => false);
+    ghi('chia sẻ ván: người khác mở link xem được', thấy);
+    await C.close();
+  }
 }
 
 ghi('không có lỗi JS nào', lỗiJS.length === 0, lỗiJS.join(' | '));

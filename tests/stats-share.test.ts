@@ -52,7 +52,21 @@ describe('statsFor', () => {
 });
 
 describe('ván chia sẻ', () => {
-  const review = { moves: [{ ply: 1 }, { ply: 2 }], accuracy: { w: 90, b: 80 }, opening: null };
+  /** Kết quả chấm thật (đúng cấu trúc app gửi lên) cho ván 1. e4 e5. */
+  const move = (ply: number, san: string, uci: string, side: 'w' | 'b') => ({
+    ply,
+    san,
+    uci,
+    side,
+    fenBefore: 'x',
+    fenAfter: 'y',
+    scoreBefore: { cp: 20 },
+    scoreAfter: { cp: 30 },
+    best: [{ uci, san, score: { cp: 30 } }],
+    cls: 'book',
+    accuracy: 100,
+  });
+  const review = { moves: [move(1, 'e4', 'e2e4', 'w'), move(2, 'e5', 'e7e5', 'b')], accuracy: { w: 90, b: 80 }, opening: null };
 
   it('nhận ván hợp lệ, làm sạch tên người chơi', () => {
     const s = parseShare({ pgn: '1. e4 e5', review, meta: { white: '<b>Hiên</b>', black: 'Steady (AI)', result: '1-0', side: 'w' } });
@@ -66,6 +80,19 @@ describe('ván chia sẻ', () => {
     expect(parseShare({ pgn: '1. e4 e9', review })).toBe('Ván cờ không hợp lệ');
     expect(parseShare({ pgn: '1. e4', review: { moves: [{}] } })).toBe('Ván quá ngắn để chia sẻ');
     expect(parseShare({ pgn: '1. e4 e5 2. Nf3', review })).toBe('Kết quả chấm không khớp với ván');
+  });
+
+  it('từ chối kết quả chấm méo mó (để link chia sẻ không làm hỏng trang người xem)', () => {
+    const méo = (f: (m: Record<string, unknown>) => void) => {
+      const r = structuredClone(review) as { moves: Record<string, unknown>[] };
+      f(r.moves[1]);
+      return parseShare({ pgn: '1. e4 e5', review: r });
+    };
+    expect(parseShare({ pgn: '1. e4 e5', review: { moves: [{}, {}], accuracy: { w: 1, b: 1 } } })).toBe('Kết quả chấm không hợp lệ');
+    expect(méo((m) => (m.san = 'd5'))).toBe('Kết quả chấm không hợp lệ'); // không khớp ván
+    expect(méo((m) => (m.cls = 'hack'))).toBe('Kết quả chấm không hợp lệ');
+    expect(méo((m) => delete m.scoreAfter)).toBe('Kết quả chấm không hợp lệ');
+    expect(méo((m) => (m.uci = '<script>'))).toBe('Kết quả chấm không hợp lệ');
   });
 
   it('tạo rồi mở lại được; mỗi lần mở tăng lượt xem; id lạ thì không có', () => {
