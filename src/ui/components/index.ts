@@ -115,6 +115,8 @@ export interface PlayerOptions {
   you?: boolean;
   /** Độ chính xác cả ván, chỉ có ở màn xem lại. */
   accuracy?: number;
+  /** Nút gắn ở cuối thanh (ví dụ Lật bàn cờ trên điện thoại). */
+  tools?: string;
 }
 
 /**
@@ -150,6 +152,7 @@ export function playerStrip(o: PlayerOptions): string {
       ? `<span class="player-acc"><b class="mono">${o.accuracy}%</b> chính xác</span>`
       : '') +
     (o.clockMs !== undefined ? clock(o.clockMs, o.clockState, o.clockId) : '') +
+    (o.tools ? `<span class="strip-tools">${o.tools}</span>` : '') +
     `</div>`
   );
 }

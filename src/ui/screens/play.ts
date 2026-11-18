@@ -244,7 +244,7 @@ function gameScreen(extraSide = ''): string {
   const result = outcome();
   const topSide: Side = orientation === 'w' ? 'b' : 'w';
 
-  const strip = (side: Side) => {
+  const strip = (side: Side, tools?: string) => {
     const isBot = setup.mode === 'bot' && side === botSide();
     return playerStrip({
       // Đấu với máy thì bên mình mang tên mình, không phải chữ "Trắng"
@@ -267,11 +267,12 @@ function gameScreen(extraSide = ''): string {
       clockState: started && !result && game.turn === side ? 'running' : 'idle',
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
       diff: side === 'w' ? mat.diff : -mat.diff,
+      tools,
     });
   };
 
   return `<div class="screen">
-    <div class="screen-head">
+    <div class="screen-head play-head">
       <h1>Chơi</h1>
       <span class="head-meta">${
         setup.mode === 'human'
@@ -294,7 +295,12 @@ function gameScreen(extraSide = ''): string {
           ${showEval ? `<div class="evalbar-wrap only-desktop">${evalBar(currentEval ?? { cp: 0 })}</div>` : ''}
           <div id="board" class="board-host"></div>
         </div>
-        ${strip(orientation)}
+        ${strip(
+          orientation,
+          // Điện thoại và máy tính bảng không có dòng tiêu đề màn (xem .play-head):
+          // nút Lật bàn chuyển xuống ngay cạnh tên mình, Cài đặt đã có trên thanh trên cùng.
+          `<span class="only-narrow">${iconButton('flip', 'Lật bàn cờ')}</span>`,
+        )}
       </div>
 
       <div class="game-side">

@@ -1409,3 +1409,24 @@ button.top-link {
 .game-board {
   scroll-margin-top: calc(var(--head-h, 0px) + var(--s-2));
 }
+
+/* Màn Chơi trên điện thoại/máy tính bảng: bỏ hẳn dòng tiêu đề "Chơi với máy"
+   và hàng nút của nó. Nó chiếm ~130px ngay trên bàn cờ mà chỉ nhắc lại điều
+   đã thấy (đối thủ ghi ở thanh trên bàn cờ), làm thanh người chơi phía dưới
+   bị đẩy khuất sau thanh điều hướng. Cài đặt đã có trên thanh trên cùng; Lật
+   bàn nằm ở cuối thanh người chơi phía dưới. */
+.strip-tools {
+  flex: none;
+  display: flex;
+  margin-left: auto;
+}
+@media (min-width: 1101px) {
+  .only-narrow {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .play-head {
+    display: none;
+  }
+}
