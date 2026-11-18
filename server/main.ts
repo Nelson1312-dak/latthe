@@ -3,6 +3,8 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { applyProfile, deleteUser, parsePrefs, parseProfilePatch, profileStats, readPrefs, savePrefs } from './profile.ts';
+import { bump, CLIENT_EVENTS, statsFor, type StatEvent } from './stats.ts';
+import { createShare, getShare, parseShare } from './shares.ts';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
@@ -100,6 +102,36 @@ async function readJson(req: IncomingMessage, limit = 16_384): Promise<Record<st
 const isSecure = (req: IncomingMessage) =>
   (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0].trim() === 'https';
 
+/**
+ * Ai được xem bảng thống kê: id người dùng trong ADMIN_USER_IDS (.env.chess),
+ * cách nhau bằng dấu phẩy. Để trống là không ai xem được.
+ */
+const ADMIN_IDS = new Set(
+  (process.env.ADMIN_USER_IDS ?? '')
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0),
+);
+
+/**
+ * Giới hạn số lần gọi theo địa chỉ, chỉ để chặn spam (đếm lượt, tạo link chia
+ * sẻ). Địa chỉ chỉ nằm trong bộ nhớ vài phút, không ghi xuống đâu cả.
+ */
+const hạnMức = new Map<string, { n: number; hết: number }>();
+function quáGiới(req: IncomingMessage, loại: string, max: number, windowMs: number): boolean {
+  const ip = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '?';
+  const khoá = `${loại}:${ip}`;
+  const now = Date.now();
+  const h = hạnMức.get(khoá);
+  if (!h || h.hết <= now) {
+    hạnMức.set(khoá, { n: 1, hết: now + windowMs });
+    if (hạnMức.size > 5_000) for (const [k, v] of hạnMức) if (v.hết <= now) hạnMức.delete(k);
+    return false;
+  }
+  h.n++;
+  return h.n > max;
+}
+
 const publicUser = (u: User) => ({
   id: u.id,
   name: u.display_name,
@@ -110,6 +142,7 @@ const publicUser = (u: User) => ({
   local: u.google_sub === null,
   onboarded: Boolean(u.onboarded),
   createdAt: u.created_at,
+  admin: ADMIN_IDS.has(u.id),
 });
 
 const currentUser = (req: IncomingMessage) =>
@@ -148,6 +181,9 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     if (!credential) return json(res, 400, { error: 'Thiếu credential' });
     try {
       const { user, session } = await loginWithGoogle(db, credential, GOOGLE_CLIENT_ID);
+      bump(db, 'login');
+      // Tài khoản vừa tạo trong lần đăng nhập này
+      if (Date.now() - Date.parse(user.created_at) < 10_000) bump(db, 'signup');
       return json(
         res,
         200,
@@ -509,6 +545,49 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
         user.id,
       ),
     });
+  }
+
+  /* ---- Thống kê ẩn danh ---- */
+
+  // Trình duyệt báo "vừa có một lượt X". Chỉ nhận đúng các loại đã định; không lưu ai gửi.
+  if (path === '/api/ping' && method === 'POST') {
+    const body = await readJson(req, 256).catch(() => ({}) as Record<string, unknown>);
+    const e = body.e as StatEvent;
+    // Lượt từ chính máy này (lúc phát triển, lúc chạy kiểm tra giao diện) không tính:
+    // người dùng thật luôn đi qua tunnel, mang theo x-forwarded-*
+    const thật = !fromThisMachine(req);
+    if (thật && (CLIENT_EVENTS as readonly string[]).includes(e) && !quáGiới(req, 'ping', 60, 60_000)) bump(db, e);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // Bảng thống kê: chỉ chủ trang
+  if (path === '/api/admin/stats' && method === 'GET') {
+    const user = currentUser(req);
+    if (!user || !ADMIN_IDS.has(user.id)) return json(res, 403, { error: 'Không có quyền' });
+    const n = Math.min(90, Math.max(7, Number(new URL(req.url ?? '/', 'http://x').searchParams.get('days')) || 30));
+    return json(res, 200, statsFor(db, n));
+  }
+
+  /* ---- Ván chia sẻ ---- */
+
+  if (path === '/api/share' && method === 'POST') {
+    if (quáGiới(req, 'share', 20, 3600_000)) return json(res, 429, { error: 'Chia sẻ nhiều quá, thử lại sau ít phút.' });
+    const body = await readJson(req, 500_000).catch(() => null);
+    if (!body) return json(res, 400, { error: 'Nội dung không hợp lệ' });
+    const s = parseShare(body);
+    if (typeof s === 'string') return json(res, 400, { error: s });
+    const id = createShare(db, s);
+    if (!fromThisMachine(req)) bump(db, 'share_create');
+    return json(res, 201, { id });
+  }
+
+  const chiaSẻ = /^\/api\/share\/([A-Za-z0-9_-]+)$/.exec(path);
+  if (chiaSẻ && method === 'GET') {
+    const s = getShare(db, chiaSẻ[1]);
+    if (!s) return json(res, 404, { error: 'Không tìm thấy ván này' });
+    return json(res, 200, s);
   }
 
   /* ---- Hồ sơ ---- */

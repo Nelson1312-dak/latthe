@@ -5,6 +5,7 @@ import './ui/app.css';
 import './ui/screens/screens.css';
 
 import { installApiHeader } from './app/api-header.ts';
+import { pingVisit } from './app/ping.ts';
 import { loadPieces } from './board/sprite.ts';
 import { snapBoards } from './board/snap.ts';
 import { icon, type IconName } from './ui/icons.ts';
@@ -22,6 +23,8 @@ import {
 import { chooseGuest, closeGate, currentGate, type Gate } from './app/gate.ts';
 import { esc } from './ui/components/index.ts';
 import { handleWelcomeClick, welcomeDialog } from './ui/screens/welcome.ts';
+import { mountStats, refreshStats, stats } from './ui/screens/stats.ts';
+import { mountShared, sharedIdFromPath, sharedView } from './ui/screens/shared.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
 import { applyPrefs, BOARD_THEMES, prefs, setPref, type BoardTheme, type Prefs } from './app/prefs.ts';
 import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
@@ -51,6 +54,7 @@ const SCREENS: Record<string, Screen> = {
   'on-tap': { title: 'Ôn tập', render: train },
   hoc: { title: 'Học', render: learn },
   'tai-khoan': { title: 'Hồ sơ', render: account },
+  'thong-ke': { title: 'Thống kê', render: stats },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
 };
 
@@ -90,7 +94,7 @@ function topLink(route: string, label: string, name: IconName, current: string):
 function siteHeader(current: string): string {
   return (
     `<header class="site-head">` +
-    `<a class="brand" href="#/" aria-label="${APP_NAME} — về sảnh">` +
+    `<a class="brand" href="/#/" aria-label="${APP_NAME} — về sảnh">` +
     `<svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><use href="#wn"/></svg>` +
     `<span>${APP_NAME}</span></a>` +
     `<nav class="top-nav" aria-label="Chính">` +
@@ -287,6 +291,24 @@ function render(): void {
     location.replace('#/choi');
     return;
   }
+  // Trang ván được chia sẻ: latbai.vn/van/<id>. Bấm sang mục khác (#/...) thì
+  // quay về trang gốc, vì phần còn lại của app chạy theo #.
+  const vanId = sharedIdFromPath();
+  if (vanId && routeName() !== '') {
+    location.replace('/' + location.hash);
+    return;
+  }
+  if (vanId) {
+    document.title = `Ván được chia sẻ · ${APP_NAME}`;
+    const app = document.querySelector<HTMLDivElement>('#app')!;
+    app.className = 'app';
+    app.innerHTML = siteHeader('xem-lai') + `<main>${sharedView(vanId)}${siteFooter()}</main>` + bottomNav('xem-lai') +
+      (settingsOpen ? settingsDialog() : '');
+    mountShared(vanId, render);
+    mànTrước = 'xem-lai';
+    return;
+  }
+
   // Đang dở một ván online thì tab Chơi luôn hiện ván đó
   if (live.state && !live.state.over) setPlayMode('online');
   const r = route();
@@ -314,6 +336,7 @@ function render(): void {
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
   if (r === 'tai-khoan') mountAccount(render);
+  if (r === 'thong-ke') mountStats(render);
   if (r === 'hoc') mountLearn(render);
   if (r === '') mountHome(render);
   snapBoards(app);
@@ -388,6 +411,12 @@ document.addEventListener('click', (e) => {
   )
     return;
 
+  if (route() === 'thong-ke' && el.closest('[data-stats-refresh]')) {
+    refreshStats(render);
+    render();
+    return;
+  }
+
   // Màn Hồ sơ: đổi tên, xoá tài khoản
   if (
     route() === 'tai-khoan' &&
@@ -443,7 +472,7 @@ document.addEventListener('click', (e) => {
       if (playMode() === 'online' && handleOnlineClick(el, render)) return;
     }
   }
-  if (route() === 'xem-lai' && handleReviewClick(el, render)) return;
+  if ((route() === 'xem-lai' || sharedIdFromPath()) && handleReviewClick(el, render)) return;
   if (route() === 'on-tap' && handleTrainClick(el, render)) return;
   if (route() === 'hoc' && handleLearnClick(el)) return;
 
@@ -524,3 +553,4 @@ window.addEventListener('hashchange', render);
 render();
 void loadPieces().catch((err) => console.error(err));
 void loadMe();
+pingVisit();

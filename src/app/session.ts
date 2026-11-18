@@ -16,6 +16,8 @@ export interface Me {
   /** Đã qua màn chào mừng (đặt tên gọi, chọn trình độ) chưa. */
   onboarded: boolean;
   createdAt: string;
+  /** Chủ trang: xem được bảng thống kê. */
+  admin: boolean;
 }
 
 /** Tuỳ chọn hiển thị đã lưu theo tài khoản (null là chưa lưu lần nào). */

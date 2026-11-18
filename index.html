@@ -3,11 +3,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Lật Cờ</title>
-    <meta name="description" content="Lật Cờ — học cờ vua: chơi, xem lại từng nước và luyện tập theo lỗi của chính mình." />
+    <title>Lật Cờ — Chơi cờ vua, chấm ván miễn phí</title>
+    <meta
+      name="description"
+      content="Chơi cờ vua với máy, với người hoặc với AI. Hết ván là engine chấm từng nước ngay, chỉ ra nước hay, nước dở (?!, ?, ??) — miễn phí, không cần đăng nhập."
+    />
+    <link rel="canonical" href="https://latbai.vn/" />
+    <meta name="theme-color" content="#262421" />
+
+    <!-- Ảnh và chữ hiện ra khi dán link vào Facebook, Zalo, Messenger -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lật Cờ" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:url" content="https://latbai.vn/" />
+    <meta property="og:title" content="Lật Cờ — Chơi cờ vua, chấm ván miễn phí" />
+    <meta
+      property="og:description"
+      content="Engine chấm từng nước ngay khi hết ván. Đấu với máy, với người, hoặc với AI. Miễn phí."
+    />
+    <meta property="og:image" content="https://latbai.vn/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="app"></div>
+    <!-- Hiện trong lúc app đang tải, và cho máy tìm kiếm đọc được trang này nói về gì -->
+    <div id="app">
+      <main style="max-width: 640px; margin: 48px auto; padding: 0 16px; font-family: system-ui, sans-serif; color: #c9c8c6">
+        <h1 style="color: #fff">Lật Cờ — chơi cờ vua, chấm ván miễn phí</h1>
+        <p>
+          Chơi với máy (8 cấp), đấu online với người có Elo, hoặc với AI khi chưa có ai chờ. Hết ván, engine chấm từng
+          nước ngay trong trình duyệt: độ chính xác, nước hay, nước dở, và nước nên đi.
+        </p>
+        <p><a href="/cham-van-co-vua/" style="color: #56cdbb">Chấm ván cờ vua miễn phí hoạt động thế nào</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

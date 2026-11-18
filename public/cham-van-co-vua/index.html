@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chấm ván cờ vua miễn phí — phân tích từng nước · Lật Cờ</title>
+<meta name="description" content="Chấm ván cờ vua online miễn phí: engine Stockfish chấm từng nước ngay khi hết ván, chỉ ra nước hay, nước thiếu chính xác (?!), sai (?), sai nghiêm trọng (??) và nước nên đi. Không cần đăng nhập.">
+<link rel="canonical" href="https://latbai.vn/cham-van-co-vua/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Chấm ván cờ vua miễn phí — Lật Cờ">
+<meta property="og:description" content="Hết ván là engine chấm từng nước ngay, miễn phí, không cần đăng nhập.">
+<meta property="og:image" content="https://latbai.vn/og.png">
+<meta property="og:url" content="https://latbai.vn/cham-van-co-vua/">
+<meta name="theme-color" content="#262421">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Chấm ván cờ vua trên Lật Cờ có mất tiền không?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Không. Việc chấm chạy ngay trong trình duyệt của bạn bằng engine Stockfish, nên Lật Cờ không tốn gì để chấm và không thu phí, không giới hạn số ván."}},
+    {"@type": "Question", "name": "Có cần đăng nhập để chấm ván không?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Không cần. Chơi với máy xong là có bảng chấm ngay. Đăng nhập chỉ để lưu ván, xem lại sau và đấu online có Elo."}},
+    {"@type": "Question", "name": "Ký hiệu ?!, ?, ?? nghĩa là gì?",
+     "acceptedAnswer": {"@type": "Answer", "text": "?! là nước thiếu chính xác, ? là nước sai, ?? là nước sai nghiêm trọng — đo bằng việc cơ hội thắng của bạn giảm bao nhiêu sau nước đó. Ngược lại có Tốt nhất, Tốt và Sách (nước khai cuộc quen thuộc)."}},
+    {"@type": "Question", "name": "Độ chính xác được tính thế nào?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Mỗi nước được chấm từ 0 tới 100 theo việc nó làm mất bao nhiêu phần trăm cơ hội thắng so với nước tốt nhất; độ chính xác cả ván là trung bình các nước của bạn."}}
+  ]
+}
+</script>
+<style>
+  :root { color-scheme: dark; --bg: #302e2b; --card: #262421; --card2: #3c3a37; --text: #fff; --text2: #c9c8c6; --text3: #a7a5a3; --line: #3f3d39; --accent: #1f8f80; --accent-text: #56cdbb; }
+  @media (prefers-color-scheme: light) { :root { color-scheme: light; --bg: #f3f1ec; --card: #fff; --card2: #ece9e2; --text: #1d1b18; --text2: #57524a; --text3: #7d776d; --line: #d9d4c9; --accent: #1a7a6c; --accent-text: #17695c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text2); font: 17px/1.65 'IBM Plex Sans', system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 72px; }
+  a { color: var(--accent-text); }
+  h1, h2, h3 { color: var(--text); line-height: 1.25; }
+  h1 { font-size: 34px; margin: 8px 0 12px; }
+  h2 { font-size: 22px; margin: 40px 0 12px; }
+  h3 { font-size: 18px; margin: 20px 0 6px; }
+  .home { font-weight: 700; text-decoration: none; }
+  .lead { font-size: 19px; color: var(--text); }
+  .cta { display: inline-flex; align-items: center; min-height: 52px; padding: 0 24px; border-radius: 6px; border-bottom: 3px solid rgb(0 0 0 / .3); background: var(--accent); color: #fff; font-weight: 700; font-size: 19px; text-decoration: none; margin: 8px 12px 8px 0; }
+  .cta.alt { background: var(--card2); color: var(--text); }
+  .steps { display: grid; gap: 12px; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { background: var(--card); border-radius: 6px; padding: 14px 16px 14px 56px; position: relative; }
+  .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 16px; top: 14px; width: 28px; height: 28px; border-radius: 4px; background: var(--card2); color: var(--text); font-weight: 700; text-align: center; line-height: 28px; }
+  .steps b { color: var(--text); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--text); }
+  .tag { display: inline-block; min-width: 34px; padding: 0 6px; border-radius: 3px; font-weight: 800; color: #1a1917; text-align: center; }
+  .note { font-size: 15px; color: var(--text3); }
+</style>
+</head>
+<body>
+<main>
+  <a class="home" href="/">♞ Lật Cờ</a>
+  <h1>Chấm ván cờ vua miễn phí</h1>
+  <p class="lead">Hết ván là có bảng chấm ngay: độ chính xác của bạn, nước nào hay, nước nào hỏng, và lẽ ra nên đi nước gì. Không mất tiền, không giới hạn số ván, không cần đăng nhập.</p>
+  <p><a class="cta" href="/#/choi">Chơi một ván ngay</a><a class="cta alt" href="/">Về trang chủ</a></p>
+
+  <h2>Vì sao miễn phí được?</h2>
+  <p>Ở nhiều trang cờ, xem lại ván với phân tích từng nước là tính năng trả phí, vì máy chủ của họ phải chạy engine cho mỗi ván. Lật Cờ chạy engine <b>Stockfish ngay trong trình duyệt của bạn</b> — máy của bạn tự chấm, nên chúng tôi không tốn gì và cũng không thu gì.</p>
+
+  <h2>Chấm ván hoạt động thế nào</h2>
+  <ol class="steps">
+    <li><b>Chơi một ván</b> — với máy (8 cấp, từ người mới tập tới cao thủ), với người qua mạng, hoặc với AI khi chưa có ai đang chờ.</li>
+    <li><b>Hết ván là engine chấm luôn</b> — từng thế cờ được phân tích; ván 40 nước mất chừng 20 giây, có thanh tiến độ.</li>
+    <li><b>Đọc bảng chấm</b> — độ chính xác hai bên, "nhịp ván" (mỗi ô một nước, nước càng hỏng ô càng cao) và tối đa ba khoảnh khắc đáng xem lại kèm nước nên đi.</li>
+    <li><b>Bấm vào từng nước</b> — bàn cờ hiện nhãn xếp loại ngay trên ô vừa đi, và mũi tên chỉ nước tốt hơn khi bạn đi hỏng.</li>
+    <li><b>Chia sẻ</b> — tạo link để bạn bè xem lại ván, hoặc tải ảnh tóm tắt để đăng lên Facebook, Zalo.</li>
+  </ol>
+
+  <h2>Các nhãn xếp loại nước đi</h2>
+  <table>
+    <tr><th>Nhãn</th><th>Nghĩa</th></tr>
+    <tr><td><span class="tag" style="background:#67ad72">★</span> Tốt nhất</td><td>Đúng nước engine chọn.</td></tr>
+    <tr><td><span class="tag" style="background:#8fb07a">✓</span> Tốt</td><td>Không phải nước tốt nhất nhưng gần như không mất gì.</td></tr>
+    <tr><td><span class="tag" style="background:#a38b6d">S</span> Sách</td><td>Nước khai cuộc quen thuộc.</td></tr>
+    <tr><td><span class="tag" style="background:#e3b53b">?!</span> Thiếu chính xác</td><td>Mất một ít cơ hội thắng.</td></tr>
+    <tr><td><span class="tag" style="background:#e2873a">?</span> Sai</td><td>Mất đáng kể — thế cờ xấu đi rõ.</td></tr>
+    <tr><td><span class="tag" style="background:#dd5a4e">??</span> Sai nghiêm trọng</td><td>Mất nặng — thường là để mất quân hoặc bỏ lỡ chiếu hết.</td></tr>
+  </table>
+  <p class="note">Cách tính dựa trên việc cơ hội thắng của bạn thay đổi bao nhiêu sau mỗi nước, giống cách Lichess công bố công khai.</p>
+
+  <h2>Hỏi nhanh</h2>
+  <h3>Có cần đăng nhập không?</h3>
+  <p>Không. Chơi với máy xong là có bảng chấm. Đăng nhập (bằng Google) chỉ để lưu ván, xem lại bất cứ lúc nào, ôn lại đúng những nước mình hay sai, và đấu online có Elo.</p>
+  <h3>Chấm có chính xác không?</h3>
+  <p>Engine là Stockfish — mạnh hơn mọi kỳ thủ con người. Để kịp trả kết quả ngay khi hết ván, mỗi thế cờ được nghĩ một phần tư giây, đủ để bắt các nước hỏng rõ ràng; muốn kỹ hơn thì mở "Xem lại chi tiết".</p>
+  <h3>Lật Cờ có lưu gì về tôi?</h3>
+  <p>Xem <a href="/chinh-sach-rieng-tu/">chính sách quyền riêng tư</a>. Ngắn gọn: không lưu email, không quảng cáo, không bán dữ liệu.</p>
+
+  <p><a class="cta" href="/#/choi">Chơi một ván ngay</a></p>
+</main>
+</body>
+</html>

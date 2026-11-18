@@ -16,6 +16,7 @@ import { rateGame, scoreFor } from './rating.ts';
 import { remaining } from './clock.ts';
 import { BOT_AFTER_MS, BOTS, chooseMove, lineFor, pickBot, thinkMs, type BotEvent, type BotPersona } from './bots.ts';
 import { botEngine } from './bot-engine.ts';
+import { bump } from '../stats.ts';
 
 /** Những gì bot nhớ trong một ván, để nói đúng lúc và biết lúc nào nên xin thua. */
 interface BotMemo {
@@ -288,6 +289,7 @@ export class Live {
     this.rooms.set(id, room);
     this.playing.set(trắng.id, id);
     this.playing.set(đen.id, id);
+    bump(this.db, 'match_human', now);
     this.pushState(room, now);
     return room;
   }
@@ -476,6 +478,7 @@ export class Live {
     this.rooms.set(id, room);
     // Chỉ người mới vào sổ "đang chơi": một bot đánh được nhiều ván cùng lúc
     this.playing.set(u.id, id);
+    bump(this.db, 'match_ai', now);
     this.botMemo.set(id, { lastCp: null, saidWinning: false, saidLosing: false, hopeless: 0, lastSaidPly: -10 });
     this.pushState(room, now);
     this.botSay(room, bot, 'greet', 900);

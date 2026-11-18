@@ -34,6 +34,8 @@ import {
 import { auth } from '../../app/session.ts';
 import { icon } from '../icons.ts';
 import { setPlayMode } from '../../app/playmode.ts';
+import { ping } from '../../app/ping.ts';
+import { copyShareLink, createShareLink, downloadShareImage, shareStateFor, type ShareMeta } from '../../app/share.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
 import { playSound } from '../../app/sound.ts';
 import {
@@ -476,8 +478,23 @@ function mởXemLại(ply?: number): boolean {
     result: r,
     ply,
   });
+  ping('report_detail');
   location.hash = '#/xem-lai';
   return true;
+}
+
+/** Thông tin ván online để chia sẻ. Đối thủ là AI thì ghi rõ "(AI)". */
+function shareMetaOnline(): ShareMeta | null {
+  const s = live.state;
+  if (!s?.over) return null;
+  const tên = (p: { name: string; bot?: unknown }) => (p.bot ? `${p.name} (AI)` : p.name);
+  return {
+    white: tên(s.white),
+    black: tên(s.black),
+    result: s.over.winner === 'draw' ? '½-½' : s.over.winner === 'w' ? '1-0' : '0-1',
+    label: outcomeText({ winner: s.over.winner, reason: s.over.reason }),
+    side: s.youAre,
+  };
 }
 
 function kếtQuả(): string {
@@ -504,7 +521,7 @@ function kếtQuả(): string {
   ${(() => {
     const cur = reporter.current;
     return cur && cur.pgn === pgnFromSans(s.history)
-      ? reportCard(cur, { me: tôi, opponent: đốiThủ(), currentPly: s.history.length })
+      ? reportCard(cur, { me: tôi, opponent: đốiThủ(), currentPly: s.history.length, share: shareStateFor(cur.pgn) })
       : '';
   })()}`;
 }
@@ -622,6 +639,23 @@ export function mountOnline(rerender: () => void): void {
 /* ---------------- Bấm nút ---------------- */
 
 export function handleOnlineClick(target: HTMLElement, rerender: () => void): boolean {
+  // Chia sẻ ván
+  if (target.closest('[data-share-create], [data-share-image]')) {
+    const s = live.state;
+    const pgn = s ? pgnFromSans(s.history) : '';
+    const r = reporter.resultFor(pgn);
+    const meta = shareMetaOnline();
+    if (r && meta) {
+      if (target.closest('[data-share-create]')) void createShareLink(pgn, r, meta, rerender);
+      else void downloadShareImage(r, meta);
+    }
+    return true;
+  }
+  if (target.closest('[data-share-copy]')) {
+    void copyShareLink(rerender);
+    return true;
+  }
+
   // Bảng chấm ván: bấm ô nhịp ván / khoảnh khắc -> sang Xem lại đúng nước đó
   const rp = target.closest<HTMLElement>('[data-report-ply]');
   if (rp) {
@@ -660,7 +694,10 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
   const nhãn = (btn.textContent ?? '').trim();
 
   const việc: Record<string, () => void> = {
-    'Tìm trận': () => void joinQueue(control),
+    'Tìm trận': () => {
+      ping('online_queue');
+      void joinQueue(control);
+    },
     'Tìm trận mới': () => {
       live.state = null;
       resetOnline();

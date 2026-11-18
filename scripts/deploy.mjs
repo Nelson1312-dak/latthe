@@ -37,11 +37,15 @@ const cấu = { ...NỀN };
 // Trang tĩnh viết tay (không phải app): Vercel không tự trả index.html cho
 // đường dẫn thư mục, nên chỉ đường cho nó. Google đòi đúng địa chỉ này cho
 // trang chính sách quyền riêng tư.
-const TRANG_TĨNH = ['/chinh-sach-rieng-tu'];
-cấu.rewrites = TRANG_TĨNH.flatMap((t) => [
-  { source: t, destination: `${t}/index.html` },
-  { source: `${t}/`, destination: `${t}/index.html` },
-]);
+const TRANG_TĨNH = ['/chinh-sach-rieng-tu', '/cham-van-co-vua'];
+cấu.rewrites = [
+  ...TRANG_TĨNH.flatMap((t) => [
+    { source: t, destination: `${t}/index.html` },
+    { source: `${t}/`, destination: `${t}/index.html` },
+  ]),
+  // Ván được chia sẻ: latbai.vn/van/<id> là chính app, app tự đọc id trong đường dẫn
+  { source: '/van/:id', destination: '/index.html' },
+];
 
 if (lên) {
   if (!/^https:\/\//.test(lên)) {

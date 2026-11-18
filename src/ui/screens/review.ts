@@ -56,6 +56,10 @@ interface State {
   coachLoading: boolean;
   /** Ollama có chạy không — để nói rõ nguồn lời bình. */
   ollama: boolean | null;
+  /** Tên hai bên ghi sẵn (ván được chia sẻ): dùng thay cho tên người đang xem. */
+  names: { w: string; b: string } | null;
+  /** Đang xem ván người khác chia sẻ qua link. */
+  shared: boolean;
 }
 
 const state: State = {
@@ -75,6 +79,8 @@ const state: State = {
   coach: null,
   coachLoading: false,
   ollama: null,
+  names: null,
+  shared: false,
 };
 
 let cancelRequested = false;
@@ -255,15 +261,16 @@ function resultScreen(r: ReviewResult): string {
   const strip = (side: Side) =>
     playerStrip({
       // Ván của mình thì ghi tên mình và tên đối thủ, không phải chữ Trắng/Đen
-      name:
-        mySide && side === mySide && auth.user
+      name: state.names
+        ? state.names[side]
+        : mySide && side === mySide && auth.user
           ? auth.user.name
           : mySide && side !== mySide && state.opponent
             ? state.opponent
             : sideName(side),
-      bot: Boolean(mySide && side !== mySide && state.opponent?.startsWith('Máy')),
+      bot: !state.names && Boolean(mySide && side !== mySide && state.opponent?.startsWith('Máy')),
       side,
-      you: side === mySide,
+      you: !state.shared && side === mySide,
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
       diff: side === 'w' ? mat.diff : -mat.diff,
       accuracy: side === 'w' ? r.accuracy.w : r.accuracy.b,
@@ -273,8 +280,9 @@ function resultScreen(r: ReviewResult): string {
     <div class="screen-head">
       <h1>Xem lại ván</h1>
       <span class="head-meta">${state.label}${r.opening ? ` · ${r.opening.eco} ${r.opening.name}` : ''}</span>
-      ${toolbar([iconButton('flip', 'Lật bàn cờ')], [button({ label: 'Chọn ván khác', icon: 'review' })])}
+      ${toolbar([iconButton('flip', 'Lật bàn cờ')], state.shared ? [] : [button({ label: 'Chọn ván khác', icon: 'review' })])}
     </div>
+
 
     <div class="game">
       <div class="game-board">
@@ -297,6 +305,13 @@ function resultScreen(r: ReviewResult): string {
       </div>
 
       <div class="game-side">
+        ${
+          // Ván người khác chia sẻ: mời tự chơi, ở ngay đầu cột phải
+          state.shared
+            ? `<div class="share-banner"><p><b>Ván được chia sẻ trên Lật Cờ</b> — engine chấm từng nước, miễn phí.</p>
+               <a class="btn btn-primary" href="/#/choi">Tự chơi một ván</a></div>`
+            : ''
+        }
         ${sheet(
           move
             ? `<div class="verdict">
@@ -441,6 +456,8 @@ export function mountReview(rerender: () => void): void {
 export function openGame(id: number, rerender: () => void): void {
   {
     state.phase = 'loading';
+    state.names = null;
+    state.shared = false;
     state.gameId = id;
     state.newCards = 0;
     rerender();
@@ -566,7 +583,11 @@ export function openReviewResult(o: {
   gameId: number | null;
   result: ReviewResult;
   ply?: number;
+  names?: { w: string; b: string } | null;
+  shared?: boolean;
 }): void {
+  state.names = o.names ?? null;
+  state.shared = o.shared ?? false;
   state.phase = 'done';
   state.gameId = o.gameId;
   state.pgn = o.pgn;

@@ -12,6 +12,7 @@ import { Game, type Side } from '../../shared/chess.ts';
 import type { MoveClass } from '../../shared/winrate.ts';
 import { button, classBadge, figurine, notice } from './components/index.ts';
 import { icon } from './icons.ts';
+import type { ShareState } from '../app/share.ts';
 
 export interface Report {
   phase: 'running' | 'done' | 'error';
@@ -103,6 +104,8 @@ export interface ReportView {
   opponent: string;
   /** Nước đang xem trên bàn cờ, để tô ô / khoảnh khắc tương ứng. */
   currentPly: number;
+  /** Tình trạng chia sẻ ván này (null là chưa bấm chia sẻ). */
+  share?: ShareState | null;
 }
 
 /**
@@ -187,7 +190,29 @@ export function reportCard(report: Report | null, v: ReportView): string {
         ? `<p class="report-label">Đáng xem lại</p><div class="moments">${moments}</div>`
         : `<p class="report-note">Không có nước hỏng nào đáng kể. Ván đẹp!</p>`
     }
-    ${button({ label: 'Xem lại chi tiết', icon: 'review', full: true })}
+    <div class="report-actions">
+      ${button({ label: 'Xem lại chi tiết', icon: 'review' })}
+      ${v.share ? '' : `<button class="btn btn-secondary" data-share-create>${icon('friends', 17)}<span>Chia sẻ ván</span></button>`}
+    </div>
+    ${shareBox(v.share ?? null)}
+  </div>`;
+}
+
+/** Ô chia sẻ: link để gửi, chép link, tải ảnh tóm tắt. */
+function shareBox(s: ShareState | null): string {
+  if (!s) return '';
+  if (s.busy) return `<p class="report-note">Đang tạo link chia sẻ…</p>`;
+  if (s.error || !s.url) {
+    return `<div class="share-box">${notice(`Không tạo được link: ${s.error ?? 'lỗi lạ'}`, 'danger')}
+      <button class="link-btn" data-share-create>Thử lại</button></div>`;
+  }
+  return `<div class="share-box">
+    <p class="report-label">Link ván này <span>· ai mở cũng xem được bàn cờ và bảng chấm</span></p>
+    <div class="share-link">
+      <input class="field mono" readonly value="${s.url}" aria-label="Link chia sẻ" onclick="this.select()">
+      <button class="btn btn-primary" data-share-copy>${icon(s.copied ? 'check' : 'copy', 17)}<span>${s.copied ? 'Đã chép' : 'Chép link'}</span></button>
+    </div>
+    <button class="link-btn" data-share-image>${icon('review', 16)}<span>Tải ảnh tóm tắt để đăng Facebook, Zalo</span></button>
   </div>`;
 }
 

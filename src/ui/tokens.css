@@ -188,3 +188,14 @@
     --t-ui: 0ms;
   }
 }
+
+/* Màu cột biểu đồ (màn Thống kê). Đậm màu hơn màu nhấn một chút: màu nhấn
+   #1f8f80 hơi xám khi làm mảng cột (qua kiểm tra độ đậm màu của bộ dataviz). */
+:root {
+  --chart-1: #00a38c;
+  --chart-grid: #3a3835;
+}
+[data-theme='light'] {
+  --chart-1: #008a76;
+  --chart-grid: #e2ded5;
+}

@@ -18,6 +18,8 @@ import { auth } from '../../app/session.ts';
 import { prefs } from '../../app/prefs.ts';
 import { openGate, shouldAskLogin } from '../../app/gate.ts';
 import { playMode, setPlayMode } from '../../app/playmode.ts';
+import { ping } from '../../app/ping.ts';
+import { copyShareLink, createShareLink, downloadShareImage, shareStateFor, type ShareMeta } from '../../app/share.ts';
 import { leaveOnlineMode, onlinePanel } from './online.ts';
 import { icon, type IconName } from '../icons.ts';
 import { offerReview, openReviewResult } from './review.ts';
@@ -692,6 +694,7 @@ async function storeGame(rerender: () => void): Promise<void> {
   if (!result) return;
   const who = setup.mode === 'bot' ? levelById(setup.level).name : 'Hai người một máy';
   offerReview(game.pgn(), setup.mode === 'bot' ? setup.side : null, `${who} · ${outcomeText(result)}`);
+  ping('play_end');
   // Chấm ván ngay, song song với việc lưu
   startReport(rerender);
   savedGameId = await saveFinishedGame({
@@ -748,6 +751,24 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     return true;
   }
 
+  // Chia sẻ ván: tạo link, chép link, tải ảnh tóm tắt
+  if (target.closest('[data-share-create]')) {
+    const r = reviewed();
+    const meta = shareMeta();
+    if (r && meta) void createShareLink(game.pgn(), r, meta, rerender);
+    return true;
+  }
+  if (target.closest('[data-share-copy]')) {
+    void copyShareLink(rerender);
+    return true;
+  }
+  if (target.closest('[data-share-image]')) {
+    const r = reviewed();
+    const meta = shareMeta();
+    if (r && meta) void downloadShareImage(r, meta);
+    return true;
+  }
+
   // Bảng chấm ván: ô nhịp ván, khoảnh khắc đáng xem -> bàn cờ nhảy tới nước đó
   const rp = target.closest<HTMLElement>('[data-report-ply]');
   if (rp) {
@@ -780,6 +801,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
       const start = () => {
         newGame();
         started = true;
+        ping('play_start');
       };
       // Chưa đăng nhập: mời đăng nhập để ván này được lưu. Luôn có lối chơi luôn.
       if (shouldAskLogin()) {
@@ -797,6 +819,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     'Chơi lại': () => {
       newGame();
       started = true;
+      ping('play_start');
     },
     'Lật bàn cờ': () => {
       // Chưa vào ván thì lật bàn nghĩa là đổi bên mình cầm, chứ không phải
@@ -930,7 +953,25 @@ function reportCard(): string {
     me: setup.mode === 'bot' ? setup.side : null,
     opponent: `Máy ${levelById(setup.level).name.toLowerCase()}`,
     currentPly: game.ply,
+    share: shareStateFor(game.pgn()),
   });
+}
+
+/** Thông tin ván để chia sẻ: tên hai bên, kết quả. */
+function shareMeta(): ShareMeta | null {
+  const res = outcome();
+  if (!res) return null;
+  const máy = `Máy ${levelById(setup.level).name.toLowerCase()}`;
+  const tôi = auth.user?.name ?? 'Người chơi';
+  const [white, black] =
+    setup.mode === 'bot' ? (setup.side === 'w' ? [tôi, máy] : [máy, tôi]) : ['Trắng', 'Đen'];
+  return {
+    white,
+    black,
+    result: res.winner === 'draw' ? '½-½' : res.winner === 'w' ? '1-0' : '0-1',
+    label: outcomeText(res),
+    side: setup.mode === 'bot' ? setup.side : null,
+  };
 }
 
 /** Mở màn Xem lại với kết quả vừa chấm, không chấm lại. */
@@ -948,6 +989,7 @@ function openFullReview(): boolean {
     result: r,
     ply: game.ply && game.ply < r.moves.length ? game.ply : undefined,
   });
+  ping('report_detail');
   location.hash = '#/xem-lai';
   return true;
 }

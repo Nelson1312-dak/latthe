@@ -199,6 +199,7 @@ function profile(): string {
 
     <div class="quick-list profile-links">
       <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b><span>Xem lại, chấm từng nước</span></span>${icon('next', 16)}</button>
+      ${u.admin ? `<button class="quick" data-go="thong-ke"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Thống kê trang</b><span>Lượt vào, ván chơi, đăng ký — chỉ bạn thấy</span></span>${icon('next', 16)}</button>` : ''}
       <button class="quick" data-go="on-tap"><span class="quick-icon">${icon('cards', 20)}</span><span class="quick-text"><b>Thẻ ôn tập</b><span>${tienDo ? `${tienDo.the.due} thẻ đến hạn / ${tienDo.the.total}` : 'Từ những nước bạn đi sai'}</span></span>${icon('next', 16)}</button>
     </div>
 

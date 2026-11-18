@@ -2027,3 +2027,168 @@ button.top-link {
 .bot-line:last-child {
   color: var(--text-1);
 }
+
+/* ================= Thống kê (chủ trang) ================= */
+/* Không đặt tên .stats: trùng ô số liệu của components.css (.stats > div là flex) */
+.stats-screen {
+  display: grid;
+  gap: var(--s-4);
+}
+.chart {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+.chart figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+.chart figcaption > b {
+  color: var(--text-1);
+  font-size: var(--fs-md);
+}
+.chart figcaption span b {
+  color: var(--text-1);
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.chart-grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+.chart-tick {
+  fill: var(--text-3);
+  font-size: 11px;
+}
+.chart-mark {
+  fill: var(--chart-1);
+}
+.chart-bar:hover .chart-mark {
+  filter: brightness(1.2);
+}
+.funnel {
+  display: grid;
+  gap: var(--s-2);
+}
+.funnel-row {
+  display: grid;
+  grid-template-columns: minmax(0, 11em) 1fr 4em 3em;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.funnel-row b {
+  text-align: right;
+  color: var(--text-1);
+}
+.funnel-row small {
+  text-align: right;
+  color: var(--text-3);
+}
+.funnel-bar {
+  height: 10px;
+  border-radius: 2px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.funnel-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--chart-1);
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.stats-table th,
+.stats-table td {
+  padding: var(--s-1) var(--s-2);
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.stats-table th:first-child,
+.stats-table td:first-child {
+  text-align: left;
+}
+.stats-table th {
+  color: var(--text-2);
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .funnel-row {
+    grid-template-columns: minmax(0, 8em) 1fr 3em;
+  }
+  .funnel-row small {
+    display: none;
+  }
+}
+
+/* ---- Chia sẻ ván ---- */
+.report-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+.report-actions .btn {
+  justify-content: center;
+}
+.report-actions .btn:only-child {
+  grid-column: 1 / -1;
+}
+.share-box {
+  display: grid;
+  gap: var(--s-2);
+}
+.share-link {
+  display: flex;
+  gap: var(--s-2);
+}
+.share-link .field {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  font-size: var(--fs-sm);
+}
+.share-link .btn {
+  flex: none;
+}
+.share-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--accent-dim);
+  color: var(--text-1);
+}
+.share-banner p {
+  margin: 0;
+}
+.share-banner .btn {
+  text-decoration: none;
+}
+@media (max-width: 767px) {
+  /* Biểu đồ co lại theo bề ngang: chữ trục (đơn vị SVG) phải to lên cho đọc được */
+  .chart-tick {
+    font-size: 20px;
+  }
+}
