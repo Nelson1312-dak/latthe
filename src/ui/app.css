@@ -618,3 +618,24 @@
 .board-row[style*='--board-px'] {
   justify-content: flex-start;
 }
+
+/* Màn Chơi: tiêu đề và hai nút (lật bàn, cài đặt) chung MỘT hàng. Để hai tầng
+   thì cả một dải cao chỉ chứa hai nút nhỏ, đẩy phần chọn đối thủ xuống thấp. */
+@media (min-width: 1101px) {
+  .screen:has(> .game) > .screen-head.play-head {
+    flex-wrap: nowrap;
+    padding-top: var(--s-3);
+    padding-bottom: var(--s-3);
+  }
+  .screen:has(> .game) > .screen-head.play-head .head-meta {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
+  /* components.css cho thanh công cụ ở đầu cột phải rộng hết dòng (width: 100%);
+     ở đây phải co về đúng cỡ hai nút thì mới nằm chung hàng với tiêu đề */
+  .screen:has(> .game) .screen-head.play-head .toolbar {
+    flex: none;
+    width: auto;
+  }
+}

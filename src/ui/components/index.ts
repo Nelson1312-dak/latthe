@@ -303,3 +303,15 @@ export function dialog(title: string, body: string, actions: string): string {
 }
 
 export { esc };
+
+/**
+ * Hàng số trình độ: vài ô ngang hàng, con số to ở trên, nhãn nhỏ ở dưới.
+ * Thay cho kiểu "nhãn ……… số" xếp dọc hay một thẻ to có ảnh — gọn và đọc lướt được.
+ */
+export function levelRow(items: [string, string][]): string {
+  return (
+    `<div class="level-row">` +
+    items.map(([label, value]) => `<div><b class="mono">${esc(value)}</b><span>${esc(label)}</span></div>`).join('') +
+    `</div>`
+  );
+}

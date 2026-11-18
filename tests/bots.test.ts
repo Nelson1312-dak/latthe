@@ -146,3 +146,27 @@ describe('ghép bot khi hàng chờ trống', () => {
     expect(ván[0].opponentName).toMatch(/\(AI\)$/);
   });
 });
+
+describe('tìm trận ngay sau khi ván trước vừa xong', () => {
+  it('ván đã xong không chặn Tìm trận (trước đây bị chặn thêm 2 phút)', () => {
+    const db = openDb(':memory:');
+    const a = createLocalUser(db, 'An');
+    const live = new Live(db, { botMoves: false });
+    live.joinQueue(a, '5+0', T0);
+    live.tick(T0 + BOT_AFTER_MS);
+    live.act(a.id, 'resign', {}, T0 + 6_000);
+    expect(live.isPlaying(a.id)).toBe(false);
+    // Vẫn trong 2 phút giữ phòng đã xong
+    expect(live.joinQueue(a, '5+0', T0 + 10_000)).toEqual({ ok: true });
+    expect(live.isQueued(a.id)).toBe(true);
+  });
+
+  it('ván CHƯA xong thì vẫn chặn', () => {
+    const db = openDb(':memory:');
+    const a = createLocalUser(db, 'An');
+    const live = new Live(db, { botMoves: false });
+    live.joinQueue(a, '5+0', T0);
+    live.tick(T0 + BOT_AFTER_MS);
+    expect(live.joinQueue(a, '5+0', T0 + 10_000)).toEqual({ ok: false, why: 'already-playing' });
+  });
+});

@@ -193,7 +193,7 @@ export class Live {
   }
 
   joinQueue(user: User, control: string, now = Date.now()): { ok: boolean; why?: string } {
-    if (this.playing.has(user.id)) return { ok: false, why: 'already-playing' };
+    if (this.busy(user.id)) return { ok: false, why: 'already-playing' };
     const key = control in CONTROLS ? control : DEFAULT_CONTROL;
     this.queue.join({
       userId: user.id,
@@ -242,8 +242,8 @@ export class Live {
     const inv = this.invites.get(c.trim().toUpperCase());
     if (!inv) return { ok: false, why: 'no-such-invite' };
     if (inv.userId === user.id) return { ok: false, why: 'own-invite' };
-    if (this.playing.has(user.id)) return { ok: false, why: 'already-playing' };
-    if (this.playing.has(inv.userId)) return { ok: false, why: 'already-playing' };
+    if (this.busy(user.id)) return { ok: false, why: 'already-playing' };
+    if (this.busy(inv.userId)) return { ok: false, why: 'already-playing' };
     const chủ = one<User>(this.db, 'SELECT * FROM users WHERE id = ?', inv.userId);
     if (!chủ) return { ok: false, why: 'no-such-invite' };
     this.invites.delete(inv.code);
@@ -262,6 +262,22 @@ export class Live {
 
   room(id: string): Room | null {
     return this.rooms.get(id) ?? null;
+  }
+
+  /**
+   * Đang dở một ván (chưa xong). Ván đã xong thì không tính, và được "nhả" ra
+   * luôn: phòng xong còn giữ 2 phút cho hai bên đọc kết quả, nhưng người chơi
+   * phải tìm trận mới được ngay. Trước đây trong 2 phút đó bấm Tìm trận là bị
+   * từ chối "Bạn đang có một ván chưa xong" — mà ván đã xong rồi.
+   */
+  private busy(userId: number): boolean {
+    const r = this.roomOf(userId);
+    if (!r) return false;
+    if (r.isOver) {
+      this.playing.delete(userId);
+      return false;
+    }
+    return true;
   }
 
   /** Đang có ván chưa xong — dùng để chặn engine và HLV. */
@@ -306,7 +322,7 @@ export class Live {
     // Chờ đủ lâu mà không ai ghép được: cho bot vào thay
     for (const w of this.queue.takeWaitedOver(now, BOT_AFTER_MS)) {
       const u = one<User>(this.db, 'SELECT * FROM users WHERE id = ?', w.userId);
-      if (u && !this.playing.has(u.id)) this.openWithBot(u, w.control, now);
+      if (u && !this.busy(u.id)) this.openWithBot(u, w.control, now);
     }
 
     // Rơi cờ và hết hạn vào lại

@@ -4,7 +4,7 @@
 // — việc hôm nay và sổ ván đã chơi — gắn xuống dưới cột phải. Trước đây Sảnh là
 // một trang chữ riêng: muốn đánh phải bấm thêm một nhịp nữa mới thấy bàn cờ.
 
-import { classBadge, notice, rule, sheet, sideGlyph, stats } from '../components/index.ts';
+import { classBadge, notice, rule, sheet, sideGlyph, levelRow } from '../components/index.ts';
 import { icon, type IconName } from '../icons.ts';
 import { auth } from '../../app/session.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
@@ -92,8 +92,8 @@ export function homeSide(): string {
     ${
       u
         ? `${rule('Trình độ của bạn')}
-           ${stats([
-             ['Elo đấu với người', String(u.gameRating)],
+           ${levelRow([
+             ['Elo online', String(u.gameRating)],
              ['Elo bài tập', String(tienDo?.rating ?? u.puzzleRating)],
              ['Chuỗi luyện', `${tienDo?.streak ?? 0} ngày`],
            ])}`

@@ -33,6 +33,7 @@ import {
 } from '../components/index.ts';
 import { auth } from '../../app/session.ts';
 import { icon } from '../icons.ts';
+import { levelRow } from '../components/index.ts';
 import { setPlayMode } from '../../app/playmode.ts';
 import { ping } from '../../app/ping.ts';
 import { copyShareLink, createShareLink, downloadShareImage, shareStateFor, type ShareMeta } from '../../app/share.ts';
@@ -77,6 +78,8 @@ let started = false;
 /** Nước đi trước, chờ đối thủ đi xong là gửi luôn. */
 let premove: [Square, Square] | null = null;
 let premoveTimer: number | null = null;
+/** Vừa bấm Tìm trận, đang chờ server nhận vào hàng chờ. */
+let đangVàoHàng = false;
 
 /**
  * Rời khỏi màn Đấu.
@@ -695,8 +698,17 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
 
   const việc: Record<string, () => void> = {
     'Tìm trận': () => {
+      if (đangVàoHàng) return;
       ping('online_queue');
-      void joinQueue(control);
+      đangVàoHàng = true;
+      live.error = null;
+      void joinQueue(control).then(async () => {
+        // Hỏi ngay tình trạng (không đợi luồng sự kiện): đã vào hàng chờ thì hiện
+        // màn chờ; server bảo đang dở một ván thì mở luôn ván đó
+        await loadStatus();
+        đangVàoHàng = false;
+        rerender();
+      });
     },
     'Tìm trận mới': () => {
       live.state = null;
@@ -829,19 +841,20 @@ export function onlinePanel(modeTabs: string): string {
     .join('');
   return `<div class="setup">
     ${modeTabs}
-    <div class="bot-card">
-      <span class="bot-face">${
-        auth.user.avatar
-          ? `<img src="${auth.user.avatar}" alt="" width="52" height="52" referrerpolicy="no-referrer">`
-          : icon('friends', 30)
-      }</span>
-      <span class="bot-text"><b>Elo ${r}</b><span>${auth.user.gameCount} ván online · ghép người cùng trình độ</span></span>
-    </div>
+    ${levelRow([
+      ['Elo online', String(r)],
+      ['Ván online', String(auth.user.gameCount)],
+    ])}
     <div class="setup-block">
       <p class="setup-label">Thời gian mỗi bên</p>
       <div class="tc-row" role="group" aria-label="Thời gian">${chọn}</div>
     </div>
-    ${button({ label: 'Tìm trận', kind: 'primary', icon: 'play', full: true })}
+    ${
+      đangVàoHàng
+        ? button({ label: 'Đang vào hàng chờ…', kind: 'primary', full: true, loading: true, disabled: true })
+        : button({ label: 'Tìm trận', kind: 'primary', icon: 'play', full: true })
+    }
+    ${live.error ? notice(live.error, 'danger') : ''}
     ${
       inviteCode
         ? `<div class="invite-box">
@@ -857,7 +870,6 @@ export function onlinePanel(modeTabs: string): string {
         ${button({ label: 'Vào ván', icon: 'play' })}
       </div>
     </div>
-    ${live.error ? notice(live.error, 'danger') : ''}
     ${!live.connected ? notice('Đang nối tới server…', 'info', 'clock') : ''}
   </div>`;
 }
