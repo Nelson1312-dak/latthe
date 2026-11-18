@@ -45,6 +45,11 @@ cấu.rewrites = [
   ]),
   // Ván được chia sẻ: latbai.vn/van/<id> là chính app, app tự đọc id trong đường dẫn
   { source: '/van/:id', destination: '/index.html' },
+  // Trang bài học công khai (scripts/build-lessons.ts sinh ra trong public/hoc/)
+  { source: '/hoc', destination: '/hoc/index.html' },
+  { source: '/hoc/', destination: '/hoc/index.html' },
+  { source: '/hoc/:slug', destination: '/hoc/:slug/index.html' },
+  { source: '/hoc/:slug/', destination: '/hoc/:slug/index.html' },
 ];
 
 if (lên) {

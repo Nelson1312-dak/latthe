@@ -32,12 +32,13 @@ import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play, setBotLevel } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
-import { handleTrainClick, mountTrain, startDaily, train } from './ui/screens/train.ts';
+import { handleTrainClick, mountTrain, startDaily, startLesson, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
 import { handleOnlineClick, hasLiveGame, leaveOnline, mountOnline, online } from './ui/screens/online.ts';
 import { playMode, setPlayMode } from './app/playmode.ts';
 import { live } from './app/live.ts';
-import { routeName } from './app/route.ts';
+import { routeName, routeQuery } from './app/route.ts';
+import { LESSONS } from './training/lessons.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
 
@@ -308,6 +309,16 @@ function render(): void {
     mountShared(vanId, render);
     mànTrước = 'xem-lai';
     return;
+  }
+
+  // Mở thẳng một bài học từ trang công khai: #/hoc?bai=<id>
+  if (routeName() === 'hoc') {
+    const bài = LESSONS.find((l) => l.id === routeQuery().get('bai'));
+    if (bài) {
+      startLesson(bài);
+      location.replace('#/on-tap');
+      return;
+    }
   }
 
   // Đang dở một ván online thì tab Chơi luôn hiện ván đó

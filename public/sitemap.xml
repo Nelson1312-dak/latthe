@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://latbai.vn/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://latbai.vn/cham-van-co-vua/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://latbai.vn/chinh-sach-rieng-tu/</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://latbai.vn/</loc></url>
+  <url><loc>https://latbai.vn/cham-van-co-vua/</loc></url>
+  <url><loc>https://latbai.vn/hoc/</loc></url>
+  <url><loc>https://latbai.vn/hoc/quan-khong-ai-bao-ve/</loc></url>
+  <url><loc>https://latbai.vn/hoc/an-quan-dang-do/</loc></url>
+  <url><loc>https://latbai.vn/hoc/don-doi/</loc></url>
+  <url><loc>https://latbai.vn/hoc/ghim-quan/</loc></url>
+  <url><loc>https://latbai.vn/hoc/don-xien/</loc></url>
+  <url><loc>https://latbai.vn/hoc/don-mo/</loc></url>
+  <url><loc>https://latbai.vn/hoc/danh-lac-huong/</loc></url>
+  <url><loc>https://latbai.vn/hoc/quan-bi-ket/</loc></url>
+  <url><loc>https://latbai.vn/hoc/chieu-het-mot-nuoc/</loc></url>
+  <url><loc>https://latbai.vn/hoc/chieu-het-hang-cuoi/</loc></url>
+  <url><loc>https://latbai.vn/hoc/chieu-het-hai-nuoc/</loc></url>
+  <url><loc>https://latbai.vn/hoc/chieu-het-nghet-tho/</loc></url>
+  <url><loc>https://latbai.vn/hoc/tot-sap-phong-cap/</loc></url>
+  <url><loc>https://latbai.vn/hoc/tan-cuoc-tot/</loc></url>
+  <url><loc>https://latbai.vn/hoc/tan-cuoc-xe/</loc></url>
+  <url><loc>https://latbai.vn/chinh-sach-rieng-tu/</loc></url>
 </urlset>
