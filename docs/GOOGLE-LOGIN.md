@@ -74,3 +74,14 @@ Server **không lưu email**. Chỉ lưu:
 - tên hiển thị và đường dẫn ảnh đại diện, để hiện trong app.
 
 Mã phiên đăng nhập cũng không lưu dạng thô, chỉ lưu bản băm SHA-256. Xem `server/auth.ts`.
+
+## 5. Xác minh tên miền latbai.vn (để Google duyệt thương hiệu)
+
+Đã xác minh trong Google Search Console (property `https://latbai.vn`, cách HTML
+file) bằng tài khoản sở hữu project `latco`, ngày 18/11/2026.
+
+**Không được xoá `public/google101f32caa56fc651.html`.** Google kiểm định kỳ;
+file mất là mất xác minh, và Google lại báo "home page is not registered to you".
+
+File `public/googlef94974eaa4fe4176.html` là mã cũ (khớp với một bản ghi TXT đặt
+nhầm trên DNS Mắt Bão), không dùng tới — giữ cũng không sao.
