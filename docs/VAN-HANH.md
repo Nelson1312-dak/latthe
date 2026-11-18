@@ -1,7 +1,7 @@
 # Vận hành latbai.vn
 
 Trang web (file tĩnh) nằm trên Vercel, luôn sống. Phần `/api` (đăng nhập, lưu
-ván, ôn tập, đấu online, bot AI) chạy trên **máy ở nhà**, đi ra internet qua
+ván, ôn tập, đấu online, bot AI) chạy trên **máy chủ ở nhà** (máy riêng, bật thường trực), đi ra internet qua
 tunnel ngrok. Máy tắt / ngủ / mất mạng là phần `/api` chết; trang vẫn mở và
 vẫn chơi với máy được.
 
@@ -53,7 +53,8 @@ LatCo-Server`. Sửa phần web thì chỉ cần `npm run deploy`.
 3. URL: `https://latbai.vn/api/health` · Keyword: `"ok":true` · kiểm mỗi 5 phút.
 4. Alert contact: email (hoặc app UptimeRobot trên điện thoại).
 
-## Về lâu dài
+## Không thuê VPS
 
-Thuê một VPS nhỏ (~100–150 nghìn/tháng) để `/api` không phụ thuộc máy ở nhà và
-trang cảnh báo của ngrok miễn phí. Nên làm trước khi bắt đầu kéo người dùng về.
+Máy ở nhà là máy chủ riêng, bật thường trực cho việc này (quyết định 18/11/2026).
+Việc làm cho ổn định đi vào chính máy này: người canh, Task Scheduler, sao lưu,
+báo động — không chuyển đi đâu.
