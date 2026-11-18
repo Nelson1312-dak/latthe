@@ -9,6 +9,9 @@
 
 import { BoardView, PIECE_SLIDE_MS } from '../../board/BoardView.ts';
 import { endBadgesFor } from '../../board/Board.ts';
+import { createReporter, pgnFromSans, reportCard } from '../report.ts';
+import { openReviewResult } from './review.ts';
+import { saveReview } from '../../app/reviews.ts';
 import { ownsSquare, premoveDests } from '../../../shared/premove.ts';
 import { Game, outcomeText, type Side } from '../../../shared/chess.ts';
 import { material, type Square } from '../../../shared/fen.ts';
@@ -423,6 +426,39 @@ function vánCờ(): string {
   </div>`;
 }
 
+/** Bảng chấm ván online, hiện ngay khi hết ván (xem src/ui/report.ts). */
+const reporter = createReporter();
+
+/** Tên đối thủ của mình trong ván đang xem. */
+function đốiThủ(): string {
+  const s = live.state!;
+  return (s.youAre === 'w' ? s.black : s.white).name;
+}
+
+/**
+ * Mở màn Xem lại với kết quả vừa chấm (không chấm lại). Ván online không có
+ * nút tua trên bàn cờ đang đánh, nên bấm vào khoảnh khắc là sang thẳng màn
+ * Xem lại, đúng nước đó.
+ */
+function mởXemLại(ply?: number): boolean {
+  const s = live.state;
+  if (!s?.over) return false;
+  const pgn = pgnFromSans(s.history);
+  const r = reporter.resultFor(pgn);
+  if (!r) return false;
+  openReviewResult({
+    pgn,
+    playerSide: s.youAre,
+    label: `Đấu với ${đốiThủ()} · ${outcomeText({ winner: s.over.winner, reason: s.over.reason })}`,
+    opponent: đốiThủ(),
+    gameId: s.over.gameId,
+    result: r,
+    ply,
+  });
+  location.hash = '#/xem-lai';
+  return true;
+}
+
 function kếtQuả(): string {
   const s = live.state!;
   const o = s.over!;
@@ -436,10 +472,19 @@ function kếtQuả(): string {
     <span class="muted">${outcomeText({ winner: o.winner, reason: o.reason })}</span>
     ${stats([['Elo mới', `${mới} (${đổi > 0 ? `+${đổi}` : đổi})`]])}
     <div class="row-actions">
-      ${o.gameId ? button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' }) : ''}
+      ${
+        // Có bảng chấm ngay bên dưới thì nút xem lại nằm trong bảng, khỏi lặp
+        o.gameId && !reporter.current ? button({ label: 'Xem lại ván', kind: 'primary', icon: 'review' }) : ''
+      }
       ${button({ label: 'Tìm trận mới', icon: 'play' })}
     </div>
-  </div>`;
+  </div>
+  ${(() => {
+    const cur = reporter.current;
+    return cur && cur.pgn === pgnFromSans(s.history)
+      ? reportCard(cur, { me: tôi, opponent: đốiThủ(), currentPly: s.history.length })
+      : '';
+  })()}`;
 }
 
 /* ---------------- Gắn vào DOM ---------------- */
@@ -467,6 +512,15 @@ export function mountOnline(rerender: () => void): void {
     view = null;
     board = null;
     return;
+  }
+
+  // Hết ván: chấm luôn, ngay tại chỗ. start() tự bỏ qua nếu ván này đã/đang chấm.
+  if (s.over) {
+    const gameId = s.over.gameId;
+    reporter.start(pgnFromSans(s.history), rerender, (r) => {
+      // Lưu kết quả cùng ván (sinh thẻ ôn tập từ nước sai), lần sau mở ra là có ngay
+      if (gameId) void saveReview(gameId, r);
+    });
   }
 
   // Ván cục bộ chỉ dùng để tô ô đi được. Dựng lại mỗi khi thế cờ đổi.
@@ -546,6 +600,14 @@ export function mountOnline(rerender: () => void): void {
 /* ---------------- Bấm nút ---------------- */
 
 export function handleOnlineClick(target: HTMLElement, rerender: () => void): boolean {
+  // Bảng chấm ván: bấm ô nhịp ván / khoảnh khắc -> sang Xem lại đúng nước đó
+  const rp = target.closest<HTMLElement>('[data-report-ply]');
+  if (rp) {
+    mởXemLại(Number(rp.dataset.reportPly));
+    rerender();
+    return true;
+  }
+
   const chip = target.closest<HTMLElement>('[data-control]');
   if (chip) {
     control = chip.dataset.control!;
@@ -609,6 +671,12 @@ export function handleOnlineClick(target: HTMLElement, rerender: () => void): bo
       pendingPromotion = null;
     },
     'Xem lại ván': () => {
+      if (mởXemLại()) return;
+      const id = live.state?.over?.gameId;
+      if (id) location.hash = `#/xem-lai?game=${id}`;
+    },
+    'Xem lại chi tiết': () => {
+      if (mởXemLại()) return;
       const id = live.state?.over?.gameId;
       if (id) location.hash = `#/xem-lai?game=${id}`;
     },
