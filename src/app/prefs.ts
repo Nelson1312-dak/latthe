@@ -14,6 +14,8 @@ export interface Prefs {
   legal: boolean;
   /** Tốt đi tới hàng cuối thì thành Hậu luôn, không hỏi. */
   autoQueen: boolean;
+  /** Trợ lý khi chơi với máy: đi hỏng thì máy dừng lại, chỉ nước tốt hơn trên bàn cờ. */
+  assist: boolean;
 }
 
 export const BOARD_THEMES: { id: BoardTheme; name: string; light: string; dark: string }[] = [
@@ -24,7 +26,7 @@ export const BOARD_THEMES: { id: BoardTheme; name: string; light: string; dark: 
 ];
 
 // Mặc định giống chess.com: bàn xanh lá, có toạ độ, có chấm, hỏi khi phong cấp.
-const DEFAULT: Prefs = { board: 'green', coords: true, legal: true, autoQueen: false };
+const DEFAULT: Prefs = { board: 'green', coords: true, legal: true, autoQueen: false, assist: true };
 
 let current: Prefs = load();
 
@@ -37,6 +39,7 @@ function load(): Prefs {
       coords: typeof raw.coords === 'boolean' ? raw.coords : DEFAULT.coords,
       legal: typeof raw.legal === 'boolean' ? raw.legal : DEFAULT.legal,
       autoQueen: typeof raw.autoQueen === 'boolean' ? raw.autoQueen : DEFAULT.autoQueen,
+      assist: typeof raw.assist === 'boolean' ? raw.assist : DEFAULT.assist,
     };
   } catch {
     return { ...DEFAULT };

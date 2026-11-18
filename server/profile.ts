@@ -67,7 +67,7 @@ export function parsePrefs(body: Record<string, unknown>): Record<string, string
   const out: Record<string, string | boolean> = {};
   if (typeof src.board === 'string' && BOARDS.has(src.board)) out.board = src.board;
   if (src.theme === 'dark' || src.theme === 'light') out.theme = src.theme;
-  for (const k of ['coords', 'legal', 'autoQueen', 'sound']) {
+  for (const k of ['coords', 'legal', 'autoQueen', 'assist', 'sound']) {
     if (typeof src[k] === 'boolean') out[k] = src[k] as boolean;
   }
   return out;

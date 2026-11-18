@@ -16,7 +16,8 @@ export const REVIEW_PV = 2;
 /** Nhớ tối đa ngần này thế cờ (một ván dài ~150), bỏ cái cũ nhất. */
 const MAX_CACHE = 600;
 
-type Lines = { uci: string; score: Score }[];
+/** pv: đường đi engine thấy tốt nhất từ nước này (Trợ lý dùng để vẽ các nước tiếp theo). */
+type Lines = { uci: string; score: Score; pv?: string[] }[];
 
 interface Job {
   done: Promise<Lines>;
@@ -71,7 +72,7 @@ async function pump(): Promise<void> {
       try {
         eng ??= new Engine();
         const a = await eng.analyse(fen, { movetimeMs: REVIEW_MS, multipv: REVIEW_PV });
-        const lines = a.lines.map((l) => ({ uci: l.uci, score: l.score }));
+        const lines = a.lines.map((l) => ({ uci: l.uci, score: l.score, pv: l.pv.slice(0, 6) }));
         remember(fen, lines);
         jobs.delete(fen);
         j.resolve(lines);

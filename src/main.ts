@@ -207,7 +207,7 @@ function syncPrefsOnLogin(): void {
   const p = serverPrefs;
   if (!p) return pushPrefs();
   if (typeof p.board === 'string' && BOARD_THEMES.some((t) => t.id === p.board)) setPref('board', p.board as BoardTheme);
-  for (const k of ['coords', 'legal', 'autoQueen'] as const) if (typeof p[k] === 'boolean') setPref(k, p[k]);
+  for (const k of ['coords', 'legal', 'autoQueen', 'assist'] as const) if (typeof p[k] === 'boolean') setPref(k, p[k]);
   if (p.theme === 'dark' || p.theme === 'light') applyTheme(p.theme);
   if (typeof p.sound === 'boolean') setSoundEnabled(p.sound);
 }
@@ -523,7 +523,7 @@ document.addEventListener('click', (e) => {
   if (pref) {
     const key = pref.dataset.pref as keyof Prefs | 'sound';
     if (key === 'sound') setSoundEnabled(!soundEnabled());
-    else if (key === 'coords' || key === 'legal' || key === 'autoQueen') setPref(key, !prefs()[key]);
+    else if (key === 'coords' || key === 'legal' || key === 'autoQueen' || key === 'assist') setPref(key, !prefs()[key]);
     pushPrefs();
     render();
     return;

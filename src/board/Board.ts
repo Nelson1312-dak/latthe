@@ -28,6 +28,8 @@ export interface Arrow {
   kind?: 'coach' | 'user';
   /** Mũi tên người chơi tự vẽ. Có `brush` thì bỏ qua `kind`. */
   brush?: Brush;
+  /** Số thứ tự nước (Trợ lý vẽ các nước tiếp theo): một đĩa nhỏ ở đầu mũi tên. */
+  label?: string;
 }
 
 export interface Circle {
@@ -350,6 +352,19 @@ export function boardSvg(o: BoardOptions): string {
         `stroke-linecap="butt" stroke-linejoin="miter"/>` +
         `<polygon points="${shape.head}" fill="${colour}"/>` +
         `</g>`,
+    );
+  }
+  // Số thứ tự trên mũi tên: đĩa nhỏ ở góc trên trái ô đến, không che quân
+  for (const a of o.arrows ?? []) {
+    if (!a.label) continue;
+    const [x, y] = xy(a.to, or);
+    const r = SQ * 0.17;
+    const colour = a.brush ? `var(--brush-${a.brush})` : 'var(--arrow-coach)';
+    parts.push(
+      `<g class="arrow-label">` +
+        `<circle cx="${x + r + 2}" cy="${y + r + 2}" r="${r}" fill="${colour}" stroke="rgb(0 0 0 / .35)" stroke-width="1"/>` +
+        `<text x="${x + r + 2}" y="${y + r + 2.5}" text-anchor="middle" dominant-baseline="central" ` +
+        `font-size="${(r * 1.25).toFixed(1)}" font-weight="800" fill="#fff">${a.label}</text></g>`,
     );
   }
 

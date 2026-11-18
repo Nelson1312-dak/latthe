@@ -467,6 +467,25 @@ dùng lại lời đã viết.
 ngày, không tên, không ván cụ thể; AI nhận xét người chơi đang vướng gì và gợi ý nên
 làm gì với từng bài học cần nhất.
 
+### 4.6i Trợ lý trong ván (chỉ chơi với máy)
+
+Bật/tắt ở bảng chọn đối thủ (mặc định bật) và nút Trợ lý trên thanh công cụ trong ván;
+đồng bộ theo tài khoản. Không có ở ván online (là gian lận) và ở bàn cờ nổi (không đủ chỗ).
+
+- Mỗi nước của người chơi được chấm trong lúc máy nghĩ (`src/analysis/assist.ts`), dùng kết
+  quả chấm ngầm nên thường xong trước khi máy định đáp (~1,4 giây kể cả lúc máy "ngẫm").
+- Sai / Sai nghiêm trọng / Bỏ lỡ: máy **không đáp**, dừng lại. Thanh tên máy ghi "đang đợi
+  bạn", quân vừa đi mang nhãn ??, cột phải hiện "Có nước tốt hơn" + vì sao. Ba lựa chọn:
+  Xem hướng dẫn · Tự đi lại · Bỏ qua.
+- Hướng dẫn trên bàn cờ (thế cờ TRƯỚC nước hỏng), từng bước ‹ ›:
+  1. Vấn đề — mũi tên đỏ nước vừa đi, tô đỏ ô có vấn đề (quân bị hở, ô đòn đôi...), thế cờ đổi ra sao.
+  2. Nước tốt hơn — mũi tên xanh, "chiếu hết sau N nước" / "thế cờ đang hơn".
+  3. Rồi sao — 4 nước tiếp theo engine thấy, đánh số trên mũi tên (xanh: mình, đỏ: đối thủ).
+  Lúc này có thêm "Đi nước gợi ý" (rút nước hỏng, đi nước tốt hơn, máy đáp tiếp).
+- Thiếu chính xác: không dừng, chỉ một dòng nhỏ "?! Mã f3: Thiếu chính xác · hay hơn là …".
+- Đã thua rõ thì đi hỏng thêm ít khi làm thế cờ tệ hơn đáng kể nên Trợ lý ít dừng — cùng
+  cách chấm với bảng xem lại (Lichess).
+
 ### 4.7 Âm thanh
 
 Bốn âm ngắn: đi quân, ăn quân, chiếu, kết thúc ván; thêm tiếng tích khi đồng hồ dưới 10 giây. Mặc định bật, có nút tắt. Nguồn âm thanh phải có giấy phép rõ ràng (CC0 hoặc tự thu).
