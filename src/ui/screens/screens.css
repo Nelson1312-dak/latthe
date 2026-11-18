@@ -2424,14 +2424,26 @@ button.ta-item:hover {
   width: 22px;
   height: 22px;
 }
-/* Tấm che (Esc): trơn như một cửa sổ trống. Bấm vào là mở lại. */
+/* Tấm che (Esc): trơn như một cửa sổ trống, chừa thanh trên cùng để nút mắt
+   luôn ở đó. Bấm vào là mở lại; chỉ khi rê chuột vào mới hiện một dòng mờ. */
 .mini-cover {
   position: absolute;
-  inset: 0;
+  inset: 36px 0 0;
   z-index: 50;
+  display: grid;
+  place-items: center;
   border: 0;
   background: var(--bg-1);
-  cursor: default;
+  cursor: pointer;
+}
+.mini-cover span {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity var(--t-ui);
+}
+.mini-cover:hover span {
+  opacity: 1;
 }
 
 /* Trang chính trong lúc bàn cờ ở cửa sổ nổi */

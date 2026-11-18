@@ -790,11 +790,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
 
   const actions: Record<string, () => void> = {
     Chơi: () => {
-      const start = () => {
-        newGame();
-        started = true;
-        ping('play_start');
-      };
+      const start = startBotGame;
       // Chưa đăng nhập: mời đăng nhập để ván này được lưu. Luôn có lối chơi luôn.
       if (shouldAskLogin()) {
         openGate({
@@ -1025,6 +1021,18 @@ export function importPlayState(h: PlayHandoff): void {
   started = true;
 }
 
+/** Đã vào ván chưa (bàn cờ nổi: bấm vào bàn cờ lúc chưa vào ván là bắt đầu luôn). */
+export function playStarted(): boolean {
+  return started;
+}
+
+/** Vào ván với máy theo cấp và bên đang chọn. */
+export function startBotGame(): void {
+  newGame();
+  started = true;
+  ping('play_start');
+}
+
 /** Bỏ ván đang hiện ở đây (ván đã chuyển sang bàn cờ nổi). */
 export function resetPlay(): void {
   newGame();
@@ -1095,10 +1103,13 @@ export function miniPlay(covered: boolean): string {
       ` title="${resignArmed ? 'Bấm lần nữa để đầu hàng' : 'Đầu hàng'}" aria-label="Đầu hàng"${game.length === 0 ? ' disabled' : ''}>${icon('resign', 17)}</button>`;
 
   return `<div class="mini">
-    <div class="mini-bar">${trên}<span class="mini-gap"></span>${nút('hide', 'Che bàn cờ (Esc)', ' data-mini-hide')}</div>
+    <div class="mini-bar">${covered ? '' : trên}<span class="mini-gap"></span>${
+      // Nút mắt luôn ở đúng chỗ này, kể cả lúc đang che: bấm lại là hiện
+      covered ? nút('show', 'Hiện bàn cờ (Esc)', ' data-mini-hide') : nút('hide', 'Che bàn cờ (Esc)', ' data-mini-hide')
+    }</div>
     <div class="board-row mini-board"><div id="board" class="board-host"></div></div>
     <div class="mini-bar">${dưới}</div>
-    ${covered ? '<button class="mini-cover" data-mini-cover aria-label="Mở lại bàn cờ"></button>' : ''}
+    ${covered ? '<button class="mini-cover" data-mini-cover aria-label="Hiện bàn cờ"><span>Bấm để hiện bàn cờ</span></button>' : ''}
     ${promoDialog()}
   </div>`;
 }

@@ -41,7 +41,7 @@ import { routeName, routeQuery } from './app/route.ts';
 import { LESSONS } from './training/lessons.ts';
 import { canInstall, initPwa, installApp, iosHint } from './app/pwa.ts';
 import { IS_MINI, closeMini, miniOpen, openMini, saveHandoff, takeHandoff } from './app/mini.ts';
-import { exportPlayState, importPlayState, miniPlay, resetPlay, type PlayHandoff } from './ui/screens/play.ts';
+import { exportPlayState, importPlayState, miniPlay, playStarted, resetPlay, startBotGame, type PlayHandoff } from './ui/screens/play.ts';
 import { muteHere } from './app/sound.ts';
 import { account, handleAccountClick, mountAccount, resetAccount } from './ui/screens/account.ts';
 import { specimen } from './ui/screens/specimen.ts';
@@ -301,6 +301,8 @@ const PLAY_ROUTES = ['', 'choi'];
 
 /** Trong bàn cờ nổi: đang che bàn cờ bằng tấm trơn (Esc). */
 let miniCovered = false;
+/** Lúc vừa bỏ tấm che: cú click đi kèm cú nhấn đó không được tính là bấm vào bàn cờ. */
+let miniUncoveredAt = 0;
 
 /** Bàn cờ nổi chỉ có một màn: bàn cờ chơi với máy. */
 function renderMini(): void {
@@ -529,8 +531,8 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Bàn cờ nổi: che / mở lại bàn cờ
-  if (IS_MINI && (el.closest('[data-mini-hide]') || el.closest('[data-mini-cover]'))) {
+  // Bàn cờ nổi: che / hiện bàn cờ (tấm che tự mở khi vừa chạm, xem pointerdown bên dưới)
+  if (IS_MINI && el.closest('[data-mini-hide]')) {
     miniCovered = !miniCovered;
     render();
     return;
@@ -608,6 +610,29 @@ document.addEventListener('click', (e) => {
       });
   }
 });
+
+// Tấm che của bàn cờ nổi: mở ngay lúc vừa nhấn chuột, không chờ đủ một cú click
+// (click hỏng nếu giữa lúc nhấn và nhả màn hình bị vẽ lại, hoặc cửa sổ nổi chưa
+// được chọn — bấm mãi không mở là đúng lỗi người chơi đã gặp).
+// Cùng lý do, bấm vào bàn cờ lúc chưa vào ván là bắt đầu ván ngay khi nhấn: bàn
+// cờ tự vẽ lại lúc nhấn chuột nên cú click không bao giờ tới được đây. Bắt ở pha
+// capture (trước bàn cờ), vì sau đó ô vừa bấm đã bị gỡ khỏi trang.
+document.addEventListener('pointerdown', (e) => {
+  if (!IS_MINI || e.button !== 0) return;
+  const t = e.target as HTMLElement;
+  if (miniCovered && t.closest('[data-mini-cover]')) {
+    e.preventDefault();
+    miniCovered = false;
+    miniUncoveredAt = performance.now();
+    render();
+    return;
+  }
+  // Bàn cờ nổi chưa vào ván: bấm vào bàn cờ là vào ván luôn, khỏi tìm nút Chơi
+  if (!miniCovered && !playStarted() && t.closest('#board') && performance.now() - miniUncoveredAt > 500) {
+    startBotGame();
+    render();
+  }
+}, true);
 
 /* ---------------- Phím tắt ---------------- */
 
