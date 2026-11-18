@@ -970,6 +970,18 @@ export function hasLiveGame(): boolean {
  * (thời gian, tìm trận, mã mời) hoặc đang chờ ghép. Bàn cờ bên trái vẫn là
  * bàn cờ của tab Chơi, nên chuyển qua lại hai chế độ không bị nhảy trang.
  */
+/** Việc chính của sảnh online lúc này, cho hàng chơi nhanh dưới bàn cờ (điện thoại). */
+export function onlineQuick(): { label: string; sum: string } | null {
+  if (!auth.user) return null;
+  if (live.queue) {
+    return { label: 'Hủy tìm', sum: `Đang tìm trận ${CONTROLS[live.queue.control]?.label ?? live.queue.control}…` };
+  }
+  return {
+    label: 'Tìm trận',
+    sum: `${CONTROLS[control]?.label ?? control}${TC_NAME[control] ? ` · ${TC_NAME[control]}` : ''} · Elo ${auth.user.gameRating}`,
+  };
+}
+
 export function onlinePanel(modeTabs: string): string {
   if (!auth.user) {
     return `<div class="setup">

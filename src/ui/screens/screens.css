@@ -3175,3 +3175,32 @@ a.quick {
   border-color: var(--accent);
   color: var(--text-1);
 }
+
+/* Hàng chơi nhanh ngay dưới bàn cờ (điện thoại, máy tính bảng; chưa vào ván) */
+.quick-start {
+  display: grid;
+  gap: var(--s-1);
+  width: 100%;
+  align-self: stretch;
+  justify-self: stretch;
+  padding-top: var(--s-2);
+}
+.quick-start .btn-full {
+  justify-content: center;
+  height: 52px;
+  font-size: var(--fs-lg);
+}
+.qs-sum {
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.qs-acts .gb-act {
+  text-decoration: none;
+}
+@media (min-width: 1101px) {
+  .quick-start {
+    display: none;
+  }
+}

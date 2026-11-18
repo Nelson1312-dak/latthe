@@ -565,6 +565,10 @@ theo bằng `--board-fit` để thẳng mép. CSS ở bố cục một cột ch�
   **Xem lại ván** (nhảy tới nước đáng xem nhất); hai nút phụ Chơi lại · Ván mới (online: Tìm
   trận mới · Đấu lại với AI / Về sảnh). Đóng bằng X, Esc, bấm ra ngoài; kết quả vẫn nằm ở cột
   bên. Không bật lại cho ván đã đóng/đã rời (nhớ qua lần tải lại trang).
+- **Hàng chơi nhanh (điện thoại, máy tính bảng; chưa vào ván):** ngay dưới bàn cờ, trong màn đầu, không
+  phải cuộn: nút **Chơi** to (online: Tìm trận / Hủy tìm), một dòng tóm tắt đang chọn gì (Máy cấp 3 · cầm
+  Trắng · có Trợ lý), rồi bốn lối tắt Tuỳ chọn (cuộn xuống bảng đầy đủ) · Với người/Với máy · Bài tập ·
+  Ván đã chơi. Luật: nút việc chính và lối tắt quan trọng luôn nằm trước mọi bảng tuỳ chọn.
 
 ## 5. Bàn cờ
 

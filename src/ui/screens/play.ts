@@ -20,7 +20,7 @@ import { openGate, shouldAskLogin } from '../../app/gate.ts';
 import { playMode, setPlayMode } from '../../app/playmode.ts';
 import { ping } from '../../app/ping.ts';
 import { copyShareLink, createShareLink, downloadShareImage, shareStateFor, type ShareMeta } from '../../app/share.ts';
-import { leaveOnlineMode, onlinePanel } from './online.ts';
+import { leaveOnlineMode, onlinePanel, onlineQuick } from './online.ts';
 import { icon, type IconName } from '../icons.ts';
 import type { ReviewResult } from '../../analysis/review.ts';
 import { saveReview } from '../../app/reviews.ts';
@@ -503,6 +503,7 @@ function gameScreen(extraSide = ''): string {
           // nút Lật bàn chuyển xuống ngay cạnh tên mình, Cài đặt đã có trên thanh trên cùng.
           `<span class="only-narrow">${iconButton('float', 'Bàn cờ nổi').replace('class="btn btn-icon"', 'class="btn btn-icon only-mouse"')}${iconButton('flip', 'Lật bàn cờ')}</span>`,
         )}
+        ${started ? '' : quickStart()}
       </div>
 
       <div class="game-side">
@@ -541,6 +542,42 @@ function gameScreen(extraSide = ''): string {
 
     ${promoDialog()}
     ${result && !IS_MINI ? resultModal(result) : ''}
+  </div>`;
+}
+
+const PICK_NAME: Record<Pick, string> = { w: 'cầm Trắng', b: 'cầm Đen', r: 'bên ngẫu nhiên' };
+
+/**
+ * Điện thoại và máy tính bảng: nút Chơi và các lối tắt nằm NGAY DƯỚI bàn cờ (như
+ * chess.com), không bắt cuộn qua cả bảng tuỳ chọn mới thấy chỗ bấm chơi. Một dòng
+ * tóm tắt đang chọn gì; muốn đổi thì "Tuỳ chọn" cuộn xuống bảng đầy đủ. Nằm trong
+ * .game-board nên src/board/snap.ts tính luôn chiều cao của nó khi chia chỗ cho bàn cờ.
+ * Máy tính: ẩn (bảng tuỳ chọn và nút Chơi đã nằm sẵn ở cột phải, ngang tầm mắt).
+ */
+function quickStart(): string {
+  const online = playMode() === 'online';
+  const q = online ? onlineQuick() : null;
+  const tómTắt = online
+    ? (q?.sum ?? 'Đăng nhập để ghép trận với người')
+    : setup.mode === 'human'
+      ? 'Hai người một máy'
+      : `Máy ${levelById(setup.level).name.toLowerCase()} · ${PICK_NAME[setup.pick]}${prefs().assist ? ' · có Trợ lý' : ''}`;
+  const nút = online
+    ? q
+      ? button({ label: q.label, kind: q.label === 'Hủy tìm' ? 'danger' : 'primary', full: true })
+      : ''
+    : button({ label: 'Chơi', kind: 'primary', full: true });
+  const tắt = (attrs: string, name: IconName, label: string) =>
+    `<${attrs.startsWith('href') ? 'a' : 'button'} class="gb-act" ${attrs}>${icon(name, 22)}<span>${label}</span></${attrs.startsWith('href') ? 'a' : 'button'}>`;
+  return `<div class="quick-start only-narrow">
+    ${nút}
+    <p class="qs-sum">${tómTắt}</p>
+    <div class="gb-acts qs-acts">
+      ${tắt('data-qs-options', 'settings', 'Tuỳ chọn')}
+      ${online ? tắt('data-play-mode="machine"', 'engine', 'Với máy') : tắt('data-play-mode="online"', 'friends', 'Với người')}
+      ${tắt('href="#/on-tap"', 'cards', 'Bài tập')}
+      ${tắt('href="#/xem-lai"', 'review', 'Ván đã chơi')}
+    </div>
   </div>`;
 }
 
@@ -913,6 +950,11 @@ async function storeGame(rerender: () => void): Promise<void> {
 /* ---------------- Nút bấm ---------------- */
 
 export function handlePlayClick(target: HTMLElement, rerender: () => void): boolean {
+  // "Tuỳ chọn" ở hàng chơi nhanh: cuộn xuống bảng tuỳ chọn đầy đủ
+  if (target.closest('[data-qs-options]')) {
+    document.querySelector('.game-side')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return true;
+  }
   // Hộp thoại hết ván: đóng (X, bấm ra ngoài) hoặc Xem lại ván (nhảy tới nước đáng xem nhất)
   if (target.closest('.end-backdrop') && !endClickable(endShownMs())) return true;
   if (target.closest('[data-end-close]') || target.classList.contains('end-backdrop')) {
