@@ -543,12 +543,12 @@
   gap: var(--s-2);
   margin-top: var(--s-4);
 }
+/* Đoạn chữ dài: cùng font với phần còn lại (font có chân lẫn vào trông lệch tông) */
 .prose {
   max-width: 62ch;
   margin-bottom: var(--s-3);
-  font-family: var(--font-serif);
-  font-size: 15px;
-  line-height: 23px;
+  font-size: var(--fs-md);
+  line-height: 1.55;
   color: var(--text-2);
 }
 .field {
@@ -2773,5 +2773,79 @@ a.quick {
   }
   .live-main {
     grid-column: 1 / -1;
+  }
+}
+
+/* ================= Gọn lại (đợt rà soát giao diện) ================= */
+/* Bài tập: dòng thông tin ngay trên bàn cờ, căn trái như thanh người chơi */
+.puzzle-head {
+  justify-content: flex-start;
+  gap: var(--s-2);
+}
+.puzzle-head .to-move {
+  font-weight: 700;
+  color: var(--text-1);
+}
+.puzzle-rating {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.puzzle-rating b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+/* Ba ô số đứng một hàng cả trên điện thoại */
+@media (max-width: 767px) {
+  .stat-tiles.stat-tiles-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .stat-tiles-3 .stat-tile {
+    padding: var(--s-2);
+  }
+  .stat-tiles-3 .stat-tile b {
+    font-size: 20px;
+  }
+}
+/* Trang đăng nhập */
+.login-note {
+  margin-top: var(--s-3);
+  font-size: var(--fs-sm);
+}
+/* Cài đặt: 10 theme bàn cờ, 5 ô một hàng */
+.settings .swatches {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.settings .swatch {
+  padding: var(--s-2) 2px;
+  line-height: 1.2;
+  text-align: center;
+}
+.settings .swatch-board {
+  width: 36px;
+  height: 36px;
+}
+/* .swatch span của trang mẫu thiết kế (in mã màu, font mã) lan sang đây: trả lại chữ thường */
+.settings .swatch span {
+  padding-top: 0;
+  font-family: var(--font-sans);
+  color: inherit;
+}
+/* Tối / Sáng luôn nằm cạnh nhau, kể cả trên điện thoại */
+.settings .seg-fill {
+  flex-direction: row;
+}
+.game-board > .puzzle-head {
+  width: 100%;
+}
+.prose a,
+.muted a,
+.login-note a {
+  color: var(--accent-text);
+}
+@media (max-width: 767px) {
+  .login-note a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 }

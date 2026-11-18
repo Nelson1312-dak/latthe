@@ -11,7 +11,6 @@ import { invalidateCoach, loadAdvice, loadCoach, type AdviceData, type CoachData
 import { MOTIF_NAME } from '../../../shared/coach.ts';
 import { esc, notice, rule } from '../components/index.ts';
 import { icon } from '../icons.ts';
-import { LESSONS } from '../../training/lessons.ts';
 
 let data: CoachData | null = null;
 let advice: AdviceData | null = null;
@@ -60,35 +59,33 @@ export function handleCoachClick(target: HTMLElement, rerender: () => void): boo
 const tile = (value: string, label: string, note = '') =>
   `<div class="stat-tile"><b class="mono">${value}</b><span>${label}</span>${note ? `<small>${note}</small>` : ''}</div>`;
 
-function head(meta: string): string {
+function head(meta = ''): string {
   return `<div class="screen-head"><h1>Huấn luyện viên</h1><span class="head-meta">${meta}</span></div>`;
 }
 
 export function coachScreen(): string {
   if (!auth.user) {
-    return `<div class="screen screen-narrow">${head('Đọc các ván bạn đã chơi để chỉ ra lỗi hay lặp lại')}
+    return `<div class="screen screen-narrow">${head()}
       <div class="coach-empty">
         <span class="coach-empty-icon">${icon('coach', 32)}</span>
-        <p><b>Đăng nhập để có Huấn luyện viên riêng.</b> Mỗi ván bạn chơi được engine chấm và lưu lại; Huấn
-          luyện viên đọc các ván đó để nói bạn hay sai kiểu gì và nên học bài nào trước.</p>
+        <p><b>Đăng nhập để có Huấn luyện viên riêng.</b> Đọc các ván của bạn, chỉ ra lỗi hay lặp lại và bài nên học.</p>
         <button class="btn btn-primary" data-go="tai-khoan">${icon('user', 17)}<span>Đăng nhập</span></button>
       </div></div>`;
   }
   if (loading || !data) {
-    return `<div class="screen screen-narrow">${head('Đang đọc các ván của bạn…')}${notice('Đang đọc các ván của bạn…', 'info', 'clock')}</div>`;
+    return `<div class="screen screen-narrow">${head()}${notice('Đang đọc các ván của bạn…', 'info', 'clock')}</div>`;
   }
   const d = data;
   const đangChấm = d.pending
-    ? `<p class="coach-pending">${icon('engine', 16)}<span>Máy chủ đang chấm thêm <b>${d.pending}</b> ván cũ của bạn — xong là nhận xét đầy đủ hơn.</span>
+    ? `<p class="coach-pending">${icon('engine', 16)}<span>Đang chấm thêm <b>${d.pending}</b> ván cũ.</span>
         <button class="link-btn" data-coach-refresh>Cập nhật</button></p>`
     : '';
 
   if (!d.facts) {
-    return `<div class="screen screen-narrow">${head('Đọc các ván bạn đã chơi để chỉ ra lỗi hay lặp lại')}
+    return `<div class="screen screen-narrow">${head()}
       <div class="coach-empty">
         <span class="coach-empty-icon">${icon('coach', 32)}</span>
-        <p><b>Chơi thêm ${d.need} ván nữa</b> để Huấn luyện viên đủ dữ liệu nhận xét. Ván nào xong cũng được chấm và lưu tự động —
-          với máy hay với người đều được.</p>
+        <p><b>Chơi thêm ${d.need} ván</b> để Huấn luyện viên có đủ dữ liệu.</p>
         <button class="btn btn-primary" data-go="choi">${icon('play', 17)}<span>Chơi một ván</span></button>
       </div>
       ${đangChấm}</div>`;
@@ -100,7 +97,7 @@ export function coachScreen(): string {
   const tốiĐa = Math.max(1, ...f.motifs.map((m) => m.count));
 
   return `<div class="screen screen-narrow coach-screen">
-    ${head(`Từ ${f.games} ván gần nhất của bạn`)}
+    ${head(`${f.games} ván gần nhất`)}
 
     <section class="coach-say">
       <p class="coach-text${a ? '' : ' is-typing'}">${
@@ -109,17 +106,17 @@ export function coachScreen(): string {
       <p class="coach-src">${
         a
           ? từAI
-            ? 'AI viết từ số liệu engine chấm các ván của bạn'
-            : 'Viết sẵn từ số liệu engine chấm các ván của bạn'
+            ? 'AI viết từ số liệu engine'
+            : 'Viết sẵn từ số liệu engine'
           : ''
       }</p>
     </section>
     ${đangChấm}
 
-    <div class="stat-tiles">
-      ${tile(`${f.accuracy}%`, 'Độ chính xác', 'trung bình mỗi nước')}
-      ${tile(`${f.wins}/${f.draws}/${f.losses}`, 'Thắng / Hòa / Thua')}
-      ${tile(String(f.perGame.blunder), 'Sai nghiêm trọng', 'trung bình mỗi ván')}
+    <div class="stat-tiles stat-tiles-3">
+      ${tile(`${f.accuracy}%`, 'Chính xác', 'trung bình')}
+      ${tile(`${f.wins}/${f.draws}/${f.losses}`, 'Kết quả', 'thắng/hòa/thua')}
+      ${tile(String(f.perGame.blunder), 'Nước ??', 'mỗi ván')}
     </div>
 
     ${
@@ -154,8 +151,7 @@ export function coachScreen(): string {
               );
             })
             .join('')}</div>`
-        : `<p class="muted">Chưa thấy kiểu lỗi nào lặp lại — các nước hỏng của bạn mỗi lần một kiểu. Cứ giữ thói quen nhìn
-            quân bị tấn công trước mỗi nước.</p>`
+        : `<p class="muted">Chưa có lỗi nào lặp lại.</p>`
     }
 
     ${rule('Lộ trình gợi ý')}
@@ -168,6 +164,6 @@ export function coachScreen(): string {
         );
       })
       .join('')}</div>
-    <p class="muted coach-foot">Lộ trình đổi theo các ván mới của bạn. Đã có ${LESSONS.length} bài ở tab Học.</p>
+
   </div>`;
 }

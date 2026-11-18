@@ -57,7 +57,7 @@ export function applyProfile(db: Db, user: User, patch: ProfilePatch): User {
   return one<User>(db, 'SELECT * FROM users WHERE id = ?', user.id)!;
 }
 
-const BOARDS = new Set(['green', 'wood', 'blue', 'stone', 'teal']);
+const BOARDS = new Set(['green', 'wood', 'blue', 'stone', 'walnut', 'olive', 'sand', 'teal', 'purple', 'coral']);
 
 /** Tuỳ chọn hiển thị: chỉ nhận đúng các khoá đã biết, bỏ hết phần lạ. */
 export function parsePrefs(body: Record<string, unknown>): Record<string, string | boolean> | string {

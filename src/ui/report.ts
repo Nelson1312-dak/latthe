@@ -260,7 +260,7 @@ export function reviewPanel(r: ReviewResult, v: PanelView): string {
     </div>
     ${
       v.coach
-        ? `<a class="rv-coach" href="#/huan-luyen">${icon('coach', 18)}<span><b>Huấn luyện viên</b> đã tính ván này vào nhận xét — xem lỗi bạn hay lặp lại qua các ván</span>${icon('next', 14)}</a>`
+        ? `<a class="rv-coach" href="#/huan-luyen">${icon('coach', 18)}<span><b>Huấn luyện viên</b> · lỗi bạn hay lặp lại</span>${icon('next', 14)}</a>`
         : ''
     }
     ${

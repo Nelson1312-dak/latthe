@@ -53,7 +53,7 @@ export function learn(): string {
     return `<button class="lesson-row${đãXong ? ' is-done' : ''}" data-lesson="${l.id}">
       <span class="lesson-mark">${đãXong ? icon('check', 18) : icon('learn', 18)}</span>
       <span class="lesson-text">
-        <b>${l.title}${gợiÝ.has(l.id) ? ' <span class="tag tag-coach">Huấn luyện viên gợi ý</span>' : ''}</b>
+        <b>${l.title}${gợiÝ.has(l.id) ? ' <span class="tag tag-coach">gợi ý</span>' : ''}</b>
         <span>${l.keyPoint}</span>
       </span>
       <span class="lesson-count mono">${l.count} bài</span>
@@ -73,8 +73,8 @@ export function learn(): string {
       coach?.lessons.length
         ? `<a class="coach-banner" href="#/huan-luyen">
             <span class="quick-icon">${icon('coach', 20)}</span>
-            <span class="quick-text"><b>Huấn luyện viên gợi ý học trước: ${coach.lessons.map((l) => l.title).join(', ')}</b>
-              <span>${lỗi ? `Vì bạn hay ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần trong các ván gần đây).` : 'Theo các ván gần đây của bạn.'} Xem nhận xét đầy đủ</span></span>
+            <span class="quick-text"><b>Nên học trước: ${coach.lessons.map((l) => l.title).join(' · ')}</b>
+              <span>${lỗi ? `Bạn hay ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần)` : 'Theo các ván gần đây'}</span></span>
             ${icon('next', 16)}
           </a>`
         : ''

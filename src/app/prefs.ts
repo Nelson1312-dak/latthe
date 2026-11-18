@@ -4,7 +4,7 @@
 // Phần hiển thị (màu bàn, toạ độ, chấm) đặt thành thuộc tính trên <html> để CSS
 // tự lo — không phải truyền tuỳ chọn qua từng màn hình có bàn cờ.
 
-export type BoardTheme = 'green' | 'wood' | 'blue' | 'stone';
+export type BoardTheme = 'green' | 'wood' | 'blue' | 'stone' | 'walnut' | 'olive' | 'sand' | 'teal' | 'purple' | 'coral';
 
 export interface Prefs {
   board: BoardTheme;
@@ -23,6 +23,12 @@ export const BOARD_THEMES: { id: BoardTheme; name: string; light: string; dark: 
   { id: 'wood', name: 'Gỗ', light: '#ead8b6', dark: '#b08a62' },
   { id: 'blue', name: 'Xanh dương', light: '#dee3e6', dark: '#8ca2ad' },
   { id: 'stone', name: 'Đá', light: '#dadfe3', dark: '#8697a6' },
+  { id: 'walnut', name: 'Óc chó', light: '#e6cfa8', dark: '#8e6141' },
+  { id: 'olive', name: 'Ô liu', light: '#e9e6cc', dark: '#8c8c55' },
+  { id: 'sand', name: 'Cát', light: '#f1e4c6', dark: '#c49d6e' },
+  { id: 'teal', name: 'Ngọc', light: '#dfeae5', dark: '#5e8f84' },
+  { id: 'purple', name: 'Tím', light: '#e7e1ef', dark: '#8a77ab' },
+  { id: 'coral', name: 'San hô', light: '#f2e2d6', dark: '#c4826a' },
 ];
 
 // Mặc định giống chess.com: bàn xanh lá, có toạ độ, có chấm, hỏi khi phong cấp.

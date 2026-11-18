@@ -171,7 +171,7 @@ function liveBlock(): string {
       ${ô(t.live.queue, 'đang chờ ghép')}
       ${ô(học, 'đang học / ôn tập')}
     </div>
-    <p class="muted live-note">Trực tiếp · tự cập nhật mỗi 15 giây · lúc ${new Date(t.at).toLocaleTimeString('vi-VN')}. Tính cả chính bạn nếu đang mở latbai.vn.</p>`;
+    <p class="muted live-note">Cập nhật mỗi 15 giây · ${new Date(t.at).toLocaleTimeString('vi-VN')} · tính cả bạn</p>`;
 }
 
 /** Các tính năng mới: có ai dùng không (7 ngày). */
@@ -377,6 +377,6 @@ export function stats(): string {
       <tbody>${rowsHtml || '<tr><td colspan="11">Chưa có hoạt động nào trong 30 ngày.</td></tr>'}</tbody>
     </table></div>
     ${cóViệc.length < d.length ? `<p class="muted">Ẩn ${d.length - cóViệc.length} ngày không có hoạt động.</p>` : ''}
-    <p class="muted">Chỉ đếm số lượt theo ngày — không lưu IP, không cookie, không biết ai là ai. Tài khoản thử lúc phát triển không được tính.</p>
+    <p class="muted">Ẩn danh: không IP, không cookie. Không tính lượt từ máy chủ.</p>
   </div>`;
 }

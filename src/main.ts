@@ -272,22 +272,20 @@ function settingsDialog(): string {
     `<button class="seg-item${theme === 'light' ? ' is-active' : ''}" data-set-theme="light">${icon('sun', 17)} Sáng</button>` +
     `</div>` +
     `<div class="pref-list">` +
-    toggleRow('sound', 'Âm thanh', 'Tiếng đi quân, ăn quân, chiếu', soundEnabled()) +
-    toggleRow('coords', 'Toạ độ', 'Chữ a–h và số 1–8 ở mép bàn cờ', p.coords) +
-    toggleRow('legal', 'Chấm nước đi được', 'Hiện các ô đi tới được khi cầm quân', p.legal) +
-    toggleRow('autoQueen', 'Tự phong Hậu', 'Tốt tới hàng cuối thì thành Hậu luôn, không hỏi', p.autoQueen) +
+    toggleRow('sound', 'Âm thanh', 'Đi quân, ăn quân, chiếu', soundEnabled()) +
+    toggleRow('coords', 'Toạ độ', 'a–h, 1–8 ở mép bàn', p.coords) +
+    toggleRow('legal', 'Chấm nước đi được', 'Khi cầm quân', p.legal) +
+    toggleRow('autoQueen', 'Tự phong Hậu', 'Không hỏi khi phong cấp', p.autoQueen) +
     (canInstall()
-      ? `<button class="pref-row" data-install-app><span class="pref-text"><b>Cài Lật Cờ lên máy</b>` +
-        `<span>Mở như một app từ màn hình chính, không cần trình duyệt</span></span>${icon('next', 16)}</button>`
+      ? `<button class="pref-row" data-install-app><span class="pref-text"><b>Cài lên máy</b>` +
+        `<span>Mở như app từ màn hình chính</span></span>${icon('next', 16)}</button>`
       : '') +
     `</div>` +
     (iosHint()
-      ? `<p class="pref-keys">Cài như app trên iPhone/iPad: trong Safari bấm nút Chia sẻ rồi chọn <b>Thêm vào MH chính</b>.</p>`
+      ? `<p class="pref-keys">iPhone: Safari → Chia sẻ → <b>Thêm vào MH chính</b>.</p>`
       : '') +
-    `<p class="pref-keys">Phím tắt: <kbd>←</kbd> <kbd>→</kbd> lùi/tiến một nước, <kbd>Home</kbd> <kbd>End</kbd> về đầu/cuối ván, <kbd>F</kbd> lật bàn cờ.</p>` +
-    `<p class="pref-keys">Vẽ trên bàn cờ: giữ chuột phải kéo để vẽ mũi tên (đi đúng đường quân đi được), ` +
-    `bấm chuột phải để tô ô. Giữ thêm <kbd>Shift</kbd> xanh lá, <kbd>Ctrl</kbd> đỏ, <kbd>Alt</kbd> xanh dương. ` +
-    `Bấm chuột trái là xoá hết.</p>` +
+    `<p class="pref-keys only-mouse"><kbd>←</kbd> <kbd>→</kbd> lùi/tiến · <kbd>F</kbd> lật bàn · chuột phải kéo: mũi tên, bấm: tô ô ` +
+    `(<kbd>Shift</kbd> xanh, <kbd>Ctrl</kbd> đỏ, <kbd>Alt</kbd> lam) · chuột trái: xoá.</p>` +
     `</div><div class="dialog-actions">` +
     `<button class="btn btn-primary" data-close-settings>Xong</button>` +
     `</div></div></div>`
@@ -333,7 +331,7 @@ function miniAway(): string {
   return `<div class="screen"><div class="mini-away">
     <span class="mini-away-icon">${icon('float', 28)}</span>
     <h1>Bàn cờ đang ở cửa sổ nổi</h1>
-    <p>Ván cờ tiếp tục ở cửa sổ nhỏ. Thu nhỏ trang này lại cũng được — đóng cửa sổ nổi thì ván quay về đây.</p>
+    <p>Đóng cửa sổ nổi là ván quay về đây.</p>
     <button class="btn btn-primary" data-mini-back>Đưa bàn cờ về đây</button>
   </div></div>`;
 }

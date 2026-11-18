@@ -206,7 +206,7 @@ function khung(body: string, meta: string, tools = ''): string {
 function chưaĐăngNhập(): string {
   return khung(
     sheet(
-      notice('Cần đăng nhập để chơi với người khác — server phải biết ai đang đánh với ai.', 'locked', 'user'),
+      notice('Đăng nhập để đấu với người.', 'locked', 'user'),
       `<div class="row-actions">${button({ label: 'Tới trang đăng nhập', kind: 'primary', icon: 'user' })}</div>`,
     ),
     'ghép trận theo trình độ',
@@ -242,7 +242,7 @@ function sảnh(): string {
     ${
       inviteCode
         ? sheet(
-            `<p class="muted">Gửi mã này cho người bạn muốn đánh cùng. Họ mở mục Chơi với người rồi nhập vào ô dưới.</p>
+            `<p class="muted">Gửi mã này cho bạn, họ nhập ở Chơi → Với người.</p>
              <div class="invite"><code class="mono">${inviteCode}</code>${button({ label: 'Sao chép', icon: 'copy' })}</div>`,
           )
         : ''
@@ -262,14 +262,13 @@ function sảnh(): string {
         ['Elo ván đấu', String(r)],
         ['Đã chơi', `${auth.user?.gameCount ?? 0} ván`],
       ]),
-      `<p class="muted">Elo này tách khỏi điểm bài tập: giải bài tập và đánh cả ván là hai việc khác nhau.</p>`,
     )}
 
     ${rule('5 ván online gần nhất')}
     ${
       vánCũ.length
         ? sheet(`<div class="log">${vánCũ.slice(0, 5).map(dòngVán).join('')}</div>`)
-        : sheet(`<p class="muted">Chưa có ván nào. Bấm “Tìm trận” để bắt đầu.</p>`)
+        : sheet(`<p class="muted">Chưa có ván nào.</p>`)
     }`,
     `Elo ${r} · ${CONTROLS[control]?.label ?? control}`,
   );
@@ -316,12 +315,11 @@ function đangChờ(): string {
       ]),
       mộtMình
         ? notice(
-            'Hiện chỉ có mình bạn trong hàng chờ. App này chạy trên một máy nên nhiều lúc sẽ không có ai — ' +
-              'cứ để đó rồi làm việc khác, hoặc chơi với máy trong lúc chờ.',
+            'Chỉ có bạn đang chờ. Sau 5 giây, AI cùng trình độ sẽ vào.',
             'info',
             'clock',
           )
-        : `<p class="muted">Càng chờ thì khoảng Elo càng nới, nên sớm muộn cũng ghép được với người đang chờ.</p>`,
+        : `<p class="muted">Chờ càng lâu, khoảng Elo càng nới.</p>`,
       `<div class="row-actions">
         ${button({ label: 'Hủy tìm', kind: 'danger' })}
         ${button({ label: 'Chơi với máy', icon: 'play' })}
@@ -378,7 +376,7 @@ function vánCờ(): string {
     ? `<div class="ai-alert" role="status">
         <p class="ai-alert-head">${icon('engine', 18)}<b>Bạn đang đấu với AI</b></p>
         <p>${đối.name} · Elo ${đối.rating} — ${đối.bot.blurb}</p>
-        <p class="ai-alert-note">Chưa có người chơi khác đang chờ nên AI vào thay. Ván vẫn tính Elo cho bạn.</p>
+        <p class="ai-alert-note">Không có ai chờ nên AI vào thay. Vẫn tính Elo.</p>
       </div>`
     : '';
   const lờiThoại = live.chat.length
@@ -861,9 +859,9 @@ export function onlinePanel(modeTabs: string): string {
       ${modeTabs}
       <div class="bot-card">
         <span class="bot-face">${icon('friends', 30)}</span>
-        <span class="bot-text"><b>Đấu với người</b><span>Ghép với người cùng trình độ, có Elo</span></span>
+        <span class="bot-text"><b>Đấu với người</b><span>Cùng trình độ, có Elo</span></span>
       </div>
-      <p class="prose">Đăng nhập để được ghép trận — server cần biết ai đang đánh với ai.</p>
+      <p class="prose">Đăng nhập để ghép trận.</p>
       <div class="google-btn google-slot"></div>
       <p id="login-error" class="notice notice-danger" hidden></p>
     </div>`;
@@ -880,13 +878,13 @@ export function onlinePanel(modeTabs: string): string {
         <span class="mono">${giây(q.waitedMs)}s</span>
       </div>
       ${stats([
-        ['Đang chờ cùng thể thức', `${q.waiting} người`],
-        ['Chấp nhận lệch Elo', `±${q.band}`],
+        ['Đang chờ', `${q.waiting} người`],
+        ['Lệch Elo', `±${q.band}`],
       ])}
       ${notice(
         mộtMình
-          ? 'Chưa có ai khác đang chờ. Sau 5 giây, một AI cùng trình độ sẽ vào đấu với bạn.'
-          : 'Không ghép được người trong 5 giây thì một AI cùng trình độ sẽ vào thay.',
+          ? 'Chưa có ai chờ. Sau 5 giây, AI cùng trình độ sẽ vào.'
+          : 'Sau 5 giây không ghép được người, AI sẽ vào thay.',
         'info',
         'engine',
       )}

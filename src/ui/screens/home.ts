@@ -89,11 +89,11 @@ function coachRow(): string {
     return quickRow(
       `hoc?bai=${bài.id}`,
       'coach',
-      `Huấn luyện viên gợi ý: ${bài.title}`,
-      lỗi ? `Vì bạn hay ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần gần đây)` : bài.keyPoint,
+      `Nên học: ${bài.title}`,
+      lỗi ? `Bạn hay ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần)` : bài.keyPoint,
     );
   }
-  if (auth.user) return quickRow('huan-luyen', 'coach', 'Huấn luyện viên', 'Đọc các ván của bạn, chỉ ra lỗi hay lặp lại');
+  if (auth.user) return quickRow('huan-luyen', 'coach', 'Huấn luyện viên', 'Lỗi bạn hay lặp lại');
   return quickRow('hoc', 'learn', 'Học chiến thuật', 'Bài ngắn, có bài tập kèm theo');
 }
 

@@ -160,7 +160,7 @@ function guideSteps(v: AssistVerdict): { title: string; text: string; arrows: Ar
     if (v.line.length > 1) {
       steps.push({
         title: 'Rồi sao',
-        text: `Sau ${sanVi(v.best.san)}: ${lineText(v)}. Mũi tên xanh là nước của bạn, đỏ là của đối thủ.`,
+        text: `Sau ${sanVi(v.best.san)}: ${lineText(v)}.`,
         arrows: v.line.map((x, i) => ({
           from: x.uci.slice(0, 2) as Square,
           to: x.uci.slice(2, 4) as Square,
@@ -184,7 +184,7 @@ function assistCard(): string {
     if (assist.step === null) {
       return `<div class="assist is-held" role="status">
         <p class="assist-head">${icon('coach', 18)}<b>Có nước tốt hơn</b>${classBadge(v.cls)}<span>${CLASS_LABEL[v.cls]}</span></p>
-        <p class="assist-text">Bạn đi ${sanVi(v.san)}. ${v.why} Máy đang đợi bạn.</p>
+        <p class="assist-text">${v.why}</p>
         <span class="assist-actions">${button({ label: 'Xem hướng dẫn', kind: 'primary', icon: 'coach' })}${button({ label: 'Tự đi lại' })}${button({ label: 'Bỏ qua', kind: 'text' })}</span>
       </div>`;
     }
@@ -200,7 +200,7 @@ function assistCard(): string {
   }
   // Không dừng: chỉ báo nhẹ nước vừa rồi
   if (assist.pending && !v && assist.ply === game.length) {
-    return `<p class="assist-line">${icon('coach', 16)}<span>Trợ lý đang xem nước của bạn…</span></p>`;
+    return `<p class="assist-line">${icon('coach', 16)}<span>Trợ lý đang xem…</span></p>`;
   }
   if (v && v.ply <= game.length) {
     const tốt = !HOLD_ON.includes(v.cls) && v.cls !== 'inaccuracy';
@@ -208,7 +208,7 @@ function assistCard(): string {
       !tốt && v.best ? ` · hay hơn là ${sanVi(v.best.san)}` : ''
     }</span></p>`;
   }
-  return `<p class="assist-line">${icon('coach', 16)}<span>Trợ lý đang bật: đi hỏng là máy dừng lại chỉ cho bạn.</span></p>`;
+  return `<p class="assist-line">${icon('coach', 16)}<span>Trợ lý đang bật</span></p>`;
 }
 
 /** Bàn cờ lúc đang xem hướng dẫn: thế cờ TRƯỚC nước hỏng, mũi tên và khoanh ô của bước đó. */
@@ -363,7 +363,7 @@ function setupPanel(): string {
         <div class="side-row" role="group" aria-label="Bên cầm quân">${sides}</div>
       </div>
       <button class="pref-row assist-toggle" data-pref="assist" role="switch" aria-checked="${prefs().assist}">
-        <span class="pref-text"><b>${icon('coach', 17)} Trợ lý</b><span>Đi hỏng là máy dừng lại, chỉ nước tốt hơn ngay trên bàn cờ</span></span>
+        <span class="pref-text"><b>${icon('coach', 17)} Trợ lý</b><span>Dừng lại chỉ khi bạn đi hỏng</span></span>
         <span class="switch${prefs().assist ? ' is-on' : ''}" aria-hidden="true"><i></i></span>
       </button>
       ${button({ label: 'Chơi', kind: 'primary', icon: 'play', full: true })}
@@ -521,7 +521,7 @@ function gameScreen(extraSide = ''): string {
                       game.history.map((m, i) => ({ san: m.san, cls: reviewed()?.moves[i]?.cls })),
                       game.ply,
                     )
-                  : '<p class="muted moves-empty">Chưa có nước nào. Kéo quân, hoặc bấm quân rồi bấm ô.</p>',
+                  : '<p class="muted moves-empty">Chưa có nước nào.</p>',
                 hintList(),
                 `<div class="move-bar">
                   ${iconButton('first', 'Về đầu ván', { disabled: game.ply === 0 })}
@@ -951,7 +951,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
       if (shouldAskLogin()) {
         openGate({
           title: 'Đăng nhập để lưu ván',
-          text: 'Mất vài giây với tài khoản Google. Hồ sơ của bạn được tạo tự động.',
+          text: 'Một chạm với Google, hồ sơ tạo tự động.',
           guest: 'Chơi luôn, không lưu',
           then: start,
         });

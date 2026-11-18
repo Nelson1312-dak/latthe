@@ -181,6 +181,31 @@
   --sq-light: #dadfe3;
   --sq-dark: #8697a6;
 }
+/* Theme thêm 18/11/2026 — màu tự phối, không lấy của trang nào */
+[data-board='walnut'] {
+  --sq-light: #e6cfa8;
+  --sq-dark: #8e6141;
+}
+[data-board='olive'] {
+  --sq-light: #e9e6cc;
+  --sq-dark: #8c8c55;
+}
+[data-board='sand'] {
+  --sq-light: #f1e4c6;
+  --sq-dark: #c49d6e;
+}
+[data-board='teal'] {
+  --sq-light: #dfeae5;
+  --sq-dark: #5e8f84;
+}
+[data-board='purple'] {
+  --sq-light: #e7e1ef;
+  --sq-dark: #8a77ab;
+}
+[data-board='coral'] {
+  --sq-light: #f2e2d6;
+  --sq-dark: #c4826a;
+}
 
 @media (prefers-reduced-motion: reduce) {
   :root {

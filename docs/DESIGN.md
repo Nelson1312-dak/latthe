@@ -518,7 +518,7 @@ theo bằng `--board-fit` để thẳng mép. CSS ở bố cục một cột ch�
 
 | Phần | Quy định |
 |---|---|
-| Màu ô | 3 chủ đề: **Gỗ** `#EAD8B6 / #B08A62` (mặc định), **Xanh** `#E8E9D0 / #7A9A5C`, **Đá** `#DADFE3 / #8697A6` |
+| Màu ô | 10 chủ đề (`src/app/prefs.ts` BOARD_THEMES, màu ở `tokens.css`): Xanh lá (mặc định), Gỗ, Xanh dương, Đá, và 6 chủ đề tự phối thêm 18/11/2026 — Óc chó `#E6CFA8/#8E6141`, Ô liu `#E9E6CC/#8C8C55`, Cát `#F1E4C6/#C49D6E`, Ngọc `#DFEAE5/#5E8F84`, Tím `#E7E1EF/#8A77AB`, San hô `#F2E2D6/#C4826A`. Ô tối đủ sáng cho quân đen, ô sáng đủ tối cho quân trắng. Thêm chủ đề: sửa cả danh sách `BOARDS` ở `server/profile.ts` (đồng bộ theo tài khoản) |
 | Quân | Bộ **cburnett** (CC BY-SA 3.0, xem `public/pieces/LICENSE.txt`). Hình quân nhỏ trong chữ có quầng mảnh (`--piece-halo`) để quân cùng tông với nền vẫn đọc được |
 | Tọa độ | Chữ `--fs-xs` nằm trong góc ô biên, màu là màu ô đối diện |
 | Nước vừa đi | Phủ `rgb(232 196 80 / .42)` lên ô đi và ô đến |

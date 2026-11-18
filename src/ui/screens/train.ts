@@ -248,7 +248,7 @@ async function finish(correct: boolean, rerender: () => void): Promise<void> {
 /* ---------------- Vẽ màn hình ---------------- */
 
 export function train(): string {
-  const head = `<div class="screen-head">
+  const head = `<div class="screen-head play-head">
     <h1>${lesson ? lesson.title : 'Ôn tập'}</h1>
     <span class="head-meta">${
       lesson
@@ -298,13 +298,13 @@ export function train(): string {
       ${
         auth.offline
           ? notice(
-              'Bản trên web chỉ có phần chơi và xem lại. Ôn tập cần máy chủ — chạy app trên máy bạn để dùng.',
+              'Máy chủ đang nghỉ, tạm chưa ôn tập được.',
               'locked',
               'engine',
             )
           : khoBai === 0
             ? notice('Kho bài tập chưa được nạp. Chạy `npm run puzzles` trên máy chủ.', 'locked', 'engine')
-            : notice('Hết bài phù hợp rồi. Chơi thêm vài ván để có thẻ lỗi mới nhé.', 'info', 'play')
+            : notice('Hết bài phù hợp. Chơi thêm để có thẻ mới.', 'info', 'play')
       }
       ${auth.user || auth.offline ? '' : notice('Đăng nhập để lưu tiến độ và ôn lại chính lỗi của bạn.', 'locked', 'user')}
     </div>`;
@@ -318,9 +318,9 @@ export function train(): string {
     <div class="game">
       <div class="game-board">
         <div class="puzzle-head">
-          <span class="theme-tag">${t.label}</span>
-          ${t.rating ? `<span class="head-meta mono">độ khó ${t.rating}</span>` : ''}
           <span class="to-move">${t.side === 'w' ? 'Trắng' : 'Đen'} đi</span>
+          <span class="theme-tag">${t.label}</span>
+          ${t.rating ? `<span class="puzzle-rating">độ khó <b class="mono">${t.rating}</b></span>` : ''}
         </div>
         <div class="board-row"><div id="board" class="board-host"></div></div>
       </div>
@@ -360,7 +360,6 @@ export function train(): string {
         ${stats([
           ['Thẻ lỗi còn lại', String(Math.max(0, cardCount.due - doneToday))],
           ['Đã làm', String(doneToday)],
-          ...(khoBai ? ([['Kho bài tập', khoBai.toLocaleString('vi')]] as [string, string][]) : []),
         ])}
       </div>
     </div>

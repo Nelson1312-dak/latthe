@@ -132,15 +132,12 @@ export function account(): string {
       ${
         đangTựChạy
           ? notice('Không gọi được server. Chạy `npm run dev` rồi tải lại trang.', 'danger', 'clock')
-          : notice('Bản web này chưa nối được với máy chủ nên chưa đăng nhập được.', 'info', 'clock')
+          : notice('Máy chủ đang nghỉ, tạm chưa đăng nhập được.', 'info', 'clock')
       }
       ${
         đangTựChạy
           ? ''
-          : `<p class="prose">Chơi với máy và giải bài tập thì vẫn dùng bình thường —
-             phần đó chạy ngay trong trình duyệt. Còn đăng nhập, lưu ván, ôn tập theo
-             lỗi của mình và đấu với người khác thì cần máy chủ, hiện chỉ bật khi máy
-             của chủ app đang mở.</p>
+          : `<p class="prose">Chơi với máy vẫn dùng bình thường.</p>
              <div class="row-actions">
                <span data-go="choi">${button({ label: 'Chơi với máy', kind: 'primary', icon: 'play' })}</span>
              </div>`
@@ -156,12 +153,7 @@ export function account(): string {
     <div class="screen-head"><h1>Đăng nhập</h1></div>
     <div class="account-cols">
       <div>
-        ${rule('Đăng nhập')}
-        <p class="prose">
-          Đăng nhập để lưu ván đã chơi, thẻ ôn tập và tiến độ, dùng được trên nhiều thiết bị.
-          App không bao giờ thấy mật khẩu của bạn: Google lo phần đó.
-          <a href="/chinh-sach-rieng-tu/">App lưu những gì</a>.
-        </p>
+        <p class="prose">Lưu ván, thẻ ôn tập và tiến độ trên mọi thiết bị.</p>
         <div id="google-btn" class="google-btn google-slot"></div>
         ${
           canGoogle
@@ -169,9 +161,10 @@ export function account(): string {
             : // Người ngoài không cần biết tên biến môi trường; chỉ người chạy máy chủ mới cần.
               onThisMachine
               ? notice('Server chưa đặt GOOGLE_CLIENT_ID — xem docs/GOOGLE-LOGIN.md', 'locked', 'engine')
-              : notice('Đăng nhập Google sắp mở. Trong lúc chờ, bạn vẫn chơi với máy và giải bài tập được — chỉ là chưa lưu lại.', 'info', 'clock')
+              : notice('Đăng nhập Google sắp mở.', 'info', 'clock')
         }
         <p id="login-error" class="notice notice-danger" hidden></p>
+        <p class="muted login-note">Không cần mật khẩu — Google xác nhận giúp. <a href="/chinh-sach-rieng-tu/">App lưu gì?</a></p>
       </div>
       ${
         // Trên web công khai không bao giờ có đăng nhập thử, nên khỏi hiện cột này.
@@ -180,12 +173,12 @@ export function account(): string {
         ${rule('Hoặc thử nhanh')}
         ${
           auth.devAuth
-            ? `<p class="prose">Tài khoản thử chỉ có khi chạy trên máy bạn, dùng để xem app khi chưa cấu hình Google. Phiên hết hạn sau một ngày.</p>
+            ? `<p class="prose">Chỉ có trên máy chạy server. Hết hạn sau một ngày.</p>
                <div class="account-actions">
                  <input id="dev-name" class="field" type="text" value="Nelson" maxlength="40" aria-label="Tên hiển thị">
                  ${button({ label: 'Vào thử', icon: 'user' })}
                </div>`
-            : notice('Đăng nhập thử đang tắt (chỉ bật khi chạy trên máy bạn với AUTH_DEV=1)', 'locked', 'engine')
+            : notice('Đăng nhập thử đang tắt (AUTH_DEV=1 để bật).', 'locked', 'engine')
         }
       </div>`
           : ''
@@ -257,13 +250,13 @@ function profile(): string {
                  `<span class="mono">${b.elo}</span>${b.beaten ? icon('check', 14) : ''}</div>`,
              )
              .join('')}</div>
-           <p class="muted">Thắng từng AI để leo bậc — vào Chơi → Với người → Thử thách AI.</p>`
+           <p class="muted">Chơi → Với người → Thử thách AI.</p>`
         : ''
     }
 
     <div class="quick-list profile-links">
-      <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b><span>Xem lại, chấm từng nước</span></span>${icon('next', 16)}</button>
-      ${u.admin ? `<button class="quick" data-go="thong-ke"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Thống kê trang</b><span>Lượt vào, ván chơi, đăng ký — chỉ bạn thấy</span></span>${icon('next', 16)}</button>` : ''}
+      <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b><span>Xem lại từng ván</span></span>${icon('next', 16)}</button>
+      ${u.admin ? `<button class="quick" data-go="thong-ke"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Thống kê trang</b><span>Chỉ bạn thấy</span></span>${icon('next', 16)}</button>` : ''}
       <button class="quick" data-go="on-tap"><span class="quick-icon">${icon('cards', 20)}</span><span class="quick-text"><b>Thẻ ôn tập</b><span>${tienDo ? `${tienDo.the.due} thẻ đến hạn / ${tienDo.the.total}` : 'Từ những nước bạn đi sai'}</span></span>${icon('next', 16)}</button>
     </div>
 

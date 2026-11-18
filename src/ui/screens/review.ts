@@ -107,7 +107,7 @@ function progressBlock(): string {
   const { done, total } = state.progress;
   const pct = total ? Math.round((done / total) * 100) : 0;
   return `<div class="analysing">
-    <p class="prose">Ván này chưa được chấm. Engine đang chấm từng nước ngay trên máy bạn.</p>
+    <p class="prose">Đang chấm ván này…</p>
     <div class="progress"><span style="width:${pct}%"></span></div>
     <p class="head-meta"><span class="mono">${done}/${total}</span> thế cờ · ${pct}%</p>
     <div class="setup-go">${button({ label: 'Dừng', kind: 'danger', icon: 'close' })}</div>
@@ -133,14 +133,14 @@ function pickScreen(): string {
   return `<div class="screen screen-narrow">
     <div class="screen-head">
       <h1>Ván đã chơi</h1>
-      <span class="head-meta">Bấm một ván để xem lại các khoảnh khắc đáng chú ý</span>
+      <span class="head-meta">${state.games.length ? `${state.games.length} ván` : ''}</span>
     </div>
     ${
       !auth.user
         ? notice('Đăng nhập để lưu ván và xem lại bất cứ lúc nào.', 'locked', 'user')
         : state.games.length
           ? sheet(`<div class="log">${state.games.map(row).join('')}</div>`)
-          : notice('Chưa có ván nào được lưu. Chơi xong một ván là nó tự lưu lại.', 'info', 'play')
+          : notice('Chưa có ván nào. Chơi xong là tự lưu.', 'info', 'play')
     }
   </div>`;
 }
@@ -214,7 +214,7 @@ function resultScreen(r: ReviewResult): string {
         ${
           // Ván người khác chia sẻ: mời tự chơi, ở ngay đầu cột phải
           state.shared
-            ? `<div class="share-banner"><p><b>Ván được chia sẻ trên Lật Cờ</b> — engine chấm từng nước, miễn phí.</p>
+            ? `<div class="share-banner"><p><b>Ván cờ trên Lật Cờ</b> · chấm ván miễn phí</p>
                <a class="btn btn-primary" href="/#/choi">Tự chơi một ván</a></div>`
             : ''
         }
