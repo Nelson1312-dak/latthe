@@ -8,10 +8,20 @@ import { installApiHeader } from './app/api-header.ts';
 import { loadPieces } from './board/sprite.ts';
 import { snapBoards } from './board/snap.ts';
 import { icon, type IconName } from './ui/icons.ts';
-import { auth, devLogin, loadMe, logout, onAuthChange, renderGoogleButton, savePrefsRemote, serverPrefs } from './app/session.ts';
+import {
+  auth,
+  consumeJustLoggedIn,
+  devLogin,
+  loadMe,
+  logout,
+  onAuthChange,
+  renderGoogleButton,
+  savePrefsRemote,
+  serverPrefs,
+} from './app/session.ts';
 import { chooseGuest, closeGate, currentGate, type Gate } from './app/gate.ts';
 import { esc } from './ui/components/index.ts';
-import { handleWelcomeClick, welcome } from './ui/screens/welcome.ts';
+import { handleWelcomeClick, welcomeDialog } from './ui/screens/welcome.ts';
 import { setSoundEnabled, soundEnabled } from './app/sound.ts';
 import { applyPrefs, BOARD_THEMES, prefs, setPref, type BoardTheme, type Prefs } from './app/prefs.ts';
 import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
@@ -40,7 +50,6 @@ const SCREENS: Record<string, Screen> = {
   hoc: { title: 'Học', render: learn },
   ban: { title: 'Chơi với người', render: online },
   'tai-khoan': { title: 'Hồ sơ', render: account },
-  'chao-mung': { title: 'Chào mừng', render: welcome },
   'thiet-ke': { title: 'Trang thiết kế', render: specimen },
 };
 
@@ -150,11 +159,11 @@ function gateDialog(g: Gate): string {
 
 /* ---------------- Hồ sơ đi theo tài khoản ---------------- */
 
-/** Việc làm tiếp sau màn chào mừng (ví dụ: vào ván vừa định chơi). */
+/** Việc làm tiếp sau hộp chào mừng (ví dụ: vào ván vừa định chơi). */
 let afterWelcome: (() => void) | null = null;
-/** Đã đưa tới màn chào mừng trong phiên này chưa — chỉ đưa một lần. */
-let welcomeShown = false;
-const needsWelcome = () => Boolean(auth.user && !auth.user.onboarded && !auth.user.local);
+/** Hộp chào mừng đang mở (nổi trên bàn cờ của tab Chơi). */
+let welcomeOpen = false;
+const needsWelcome = () => Boolean(auth.user && !auth.user.onboarded);
 
 /** Đẩy cài đặt hiện tại lên tài khoản. */
 function pushPrefs(): void {
@@ -188,21 +197,24 @@ function syncPrefsOnLogin(): void {
   if (typeof p.sound === 'boolean') setSoundEnabled(p.sound);
 }
 
+/**
+ * Đăng nhập / đăng xuất / nạp lại người dùng.
+ *
+ * Mở web ra thì luôn là tab có bàn cờ, không nhảy đi đâu. Chỉ ngay sau khi bấm
+ * nút Google, với người mới, mới hiện hộp chào mừng — nổi trên bàn cờ của tab
+ * Chơi. Đăng nhập từ hộp mời lúc bấm Chơi thì chào xong là vào ván luôn.
+ */
 function onAuth(): void {
   syncPrefsOnLogin();
+  const fresh = consumeJustLoggedIn();
   const g = currentGate();
-  if (g && auth.user) {
-    // Đăng nhập xong từ hộp mời: lần đầu thì qua màn chào mừng rồi mới vào ván
-    closeGate();
-    if (needsWelcome()) {
-      welcomeShown = true;
-      afterWelcome = g.then;
-      location.hash = '#/chao-mung';
-    } else g.then();
-  } else if (needsWelcome() && !welcomeShown && route() !== 'chao-mung') {
-    welcomeShown = true;
-    location.hash = '#/chao-mung';
-  }
+  if (g && auth.user) closeGate();
+  if (fresh && needsWelcome()) {
+    welcomeOpen = true;
+    afterWelcome = g?.then ?? null;
+    // Đăng nhập từ trang Hồ sơ hay chỗ khác: về tab Chơi, hộp chào nổi trên bàn cờ
+    if (route() !== 'choi' && route() !== '') location.hash = '#/choi';
+  } else if (g && auth.user) g.then();
   render();
 }
 
@@ -274,7 +286,8 @@ function render(): void {
     `<main>${screen.render()}${siteFooter()}</main>` +
     bottomNav(r) +
     (settingsOpen ? settingsDialog() : '') +
-    (currentGate() && !auth.user ? gateDialog(currentGate()!) : '');
+    (currentGate() && !auth.user ? gateDialog(currentGate()!) : '') +
+    (welcomeOpen && auth.user ? welcomeDialog() : '');
   if (r === 'choi') mountPlay(render);
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
@@ -343,15 +356,15 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Màn chào mừng: lưu xong thì vào ván (nếu đang định chơi) với cấp máy hợp trình độ
+  // Hộp chào mừng: lưu xong thì vào ván (nếu đang định chơi) với cấp máy hợp trình độ
   if (
-    route() === 'chao-mung' &&
+    welcomeOpen &&
     handleWelcomeClick(el, render, (bot) => {
       if (bot) setBotLevel(bot);
+      welcomeOpen = false;
       const after = afterWelcome;
       afterWelcome = null;
       after?.();
-      location.hash = '#/choi';
       render();
     })
   )

@@ -1518,24 +1518,25 @@ button.top-link {
   justify-content: space-between;
 }
 
-/* Màn chào mừng */
-.welcome {
+/* Hộp chào mừng (ngay sau lần đăng nhập Google đầu tiên), nổi trên bàn cờ */
+.dialog.welcome {
   display: grid;
-  gap: var(--s-6);
-  max-width: 560px;
+  gap: var(--s-4);
+  max-width: 420px;
+  padding: var(--s-6);
 }
 .welcome-head {
   display: flex;
   align-items: center;
-  gap: var(--s-4);
+  gap: var(--s-3);
 }
-.welcome-head h1 {
+.welcome-head h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: var(--fs-xl);
   line-height: 1.2;
 }
 .welcome-sub {
-  margin: var(--s-1) 0 0;
+  margin: 2px 0 0;
   color: var(--text-2);
 }
 .welcome-avatar,
@@ -1549,8 +1550,8 @@ button.top-link {
   color: var(--text-3);
 }
 .welcome-avatar {
-  width: 72px;
-  height: 72px;
+  width: 48px;
+  height: 48px;
 }
 .welcome-avatar img,
 .profile-avatar img {
@@ -1564,30 +1565,28 @@ button.top-link {
   gap: var(--s-2);
 }
 .welcome-field .field {
-  max-width: 360px;
+  width: 100%;
   min-height: 44px;
   font-size: var(--fs-lg);
 }
-.welcome-hint {
-  font-size: var(--fs-sm);
-  color: var(--text-3);
-}
+/* Bốn mức trình độ trên một hàng: chữ ngắn, bấm một cái là xong */
 .start-levels {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--s-2);
 }
 .start-level {
   display: grid;
+  justify-items: center;
   gap: 2px;
-  min-height: 64px;
-  padding: var(--s-3);
+  min-height: 56px;
+  padding: var(--s-2) var(--s-1);
   border: 2px solid transparent;
   border-radius: var(--r-md);
   background: var(--bg-2);
   color: var(--text-1);
   font: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 .start-level:hover {
@@ -1598,25 +1597,25 @@ button.top-link {
   background: var(--accent-dim);
 }
 .start-level b {
-  font-size: var(--fs-lg);
+  font-size: var(--fs-md);
 }
 .start-level span {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   color: var(--text-2);
 }
 .welcome-actions {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--s-3);
+  margin-top: var(--s-2);
 }
 @media (max-width: 767px) {
-  .start-levels {
-    grid-template-columns: 1fr;
+  .dialog.welcome {
+    padding: var(--s-4);
   }
-  .welcome-actions .btn-primary {
-    width: 100%;
-    justify-content: center;
+  .start-levels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

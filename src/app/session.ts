@@ -31,6 +31,17 @@ export interface AuthState {
 
 export const auth: AuthState = { user: null, googleClientId: null, devAuth: false, offline: false };
 
+/**
+ * Vừa bấm nút Google xong (khác với mở trang ra là đã đăng nhập sẵn). Hộp chào
+ * mừng chỉ hiện đúng lúc này, không nhảy ra mỗi lần mở web.
+ */
+let justLoggedIn = false;
+export function consumeJustLoggedIn(): boolean {
+  const v = justLoggedIn;
+  justLoggedIn = false;
+  return v;
+}
+
 type Listener = () => void;
 const listeners = new Set<Listener>();
 export function onAuthChange(fn: Listener): void {
@@ -127,6 +138,7 @@ export async function devLogin(name: string): Promise<void> {
     body: JSON.stringify({ name }),
   });
   auth.user = r.user;
+  justLoggedIn = true;
   announce();
 }
 
@@ -177,6 +189,7 @@ export async function renderGoogleButton(el: HTMLElement, onError: (msg: string)
             body: JSON.stringify({ credential: r.credential }),
           });
           auth.user = out.user;
+          justLoggedIn = true;
           // Hỏi lại /api/me để lấy cả tuỳ chọn đã lưu theo tài khoản
           await loadMe();
         } catch (err) {

@@ -1,25 +1,25 @@
-// Màn chào mừng: hiện MỘT lần, ngay sau lần đăng nhập Google đầu tiên.
+// Hộp chào mừng: hiện MỘT lần, ngay sau lần đăng nhập Google đầu tiên, nổi
+// trên bàn cờ của tab Chơi (không phải một trang riêng — mở web ra là bàn cờ).
 //
 // Hỏi đúng hai thứ: gọi bạn là gì (tên này đối thủ online sẽ thấy), và bạn chơi
-// cỡ nào (để máy và bài tập vừa sức ngay từ ván đầu, thay vì bắt người mới đấu
-// với điểm 1000 mặc định). Bấm "Để sau" cũng được, hồ sơ vẫn được tạo.
+// cỡ nào (để máy và bài tập vừa sức ngay từ ván đầu). Bấm "Để sau" cũng được,
+// hồ sơ vẫn được tạo.
 
 import { auth, updateProfile } from '../../app/session.ts';
-import { button, notice } from '../components/index.ts';
-import { esc } from '../components/index.ts';
+import { button, esc, notice } from '../components/index.ts';
 import { icon } from '../icons.ts';
 
 type StartLevel = 'new' | 'basic' | 'club' | 'strong';
 
 const LEVELS: { id: StartLevel; title: string; note: string; bot: number }[] = [
-  { id: 'new', title: 'Mới tập chơi', note: 'Biết cách đi quân, chưa chơi nhiều', bot: 1 },
-  { id: 'basic', title: 'Chơi cho vui', note: 'Chơi được cả ván, hay sơ hở', bot: 2 },
-  { id: 'club', title: 'Chơi khá', note: 'Có tính toán, biết vài khai cuộc', bot: 4 },
-  { id: 'strong', title: 'Chơi mạnh', note: 'Elo online khoảng 1500 trở lên', bot: 6 },
+  { id: 'new', title: 'Mới tập', note: 'Biết đi quân', bot: 1 },
+  { id: 'basic', title: 'Chơi vui', note: 'Hay sơ hở', bot: 2 },
+  { id: 'club', title: 'Khá', note: 'Có tính toán', bot: 4 },
+  { id: 'strong', title: 'Mạnh', note: 'Elo 1500+', bot: 6 },
 ];
 
 let level: StartLevel | null = null;
-/** Tên đang gõ dở: chọn trình độ là vẽ lại màn, không giữ thì mất chữ vừa gõ. */
+/** Tên đang gõ dở: chọn trình độ là vẽ lại, không giữ thì mất chữ vừa gõ. */
 let draftName: string | null = null;
 let saving = false;
 let error: string | null = null;
@@ -29,55 +29,53 @@ function firstName(full: string): string {
   return full.trim().split(/\s+/).pop() ?? full;
 }
 
-export function welcome(): string {
+export function welcomeDialog(): string {
   const u = auth.user;
-  if (!u) {
-    return `<div class="screen screen-narrow">
-      <div class="screen-head"><h1>Chào mừng</h1></div>
-      ${notice('Bạn chưa đăng nhập.', 'info', 'user')}
-      <span data-go="tai-khoan">${button({ label: 'Tới trang đăng nhập', kind: 'primary', icon: 'user' })}</span>
-    </div>`;
-  }
-  const cards = LEVELS.map(
+  if (!u) return '';
+  const levels = LEVELS.map(
     (l) =>
       `<button class="start-level${level === l.id ? ' is-active' : ''}" data-start-level="${l.id}" aria-pressed="${level === l.id}">` +
       `<b>${l.title}</b><span>${l.note}</span></button>`,
   ).join('');
 
-  return `<div class="screen screen-narrow welcome">
-    <div class="welcome-head">
-      <span class="welcome-avatar">${u.avatar ? `<img src="${esc(u.avatar)}" alt="" width="72" height="72" referrerpolicy="no-referrer">` : icon('user', 36)}</span>
-      <div>
-        <h1>Chào ${esc(firstName(u.name))}!</h1>
-        <p class="welcome-sub">Hồ sơ của bạn đã được tạo. Hai câu hỏi nhanh để Lật Cờ vừa sức bạn ngay từ ván đầu.</p>
+  return `<div class="dialog-backdrop welcome-backdrop">
+    <div class="dialog welcome" role="dialog" aria-modal="true" aria-label="Chào mừng">
+      <div class="welcome-head">
+        <span class="welcome-avatar">${
+          u.avatar ? `<img src="${esc(u.avatar)}" alt="" width="48" height="48" referrerpolicy="no-referrer">` : icon('user', 24)
+        }</span>
+        <div>
+          <h2>Chào ${esc(firstName(u.name))}!</h2>
+          <p class="welcome-sub">Hai câu hỏi để Lật Cờ vừa sức bạn.</p>
+        </div>
       </div>
-    </div>
 
-    <label class="welcome-field">
-      <span class="setup-label">Gọi bạn là gì?</span>
-      <input id="welcome-name" class="field" type="text" maxlength="30" value="${esc(draftName ?? u.name)}" autocomplete="nickname">
-      <span class="welcome-hint">Đối thủ online sẽ thấy tên này. Đổi lại được trong Hồ sơ.</span>
-    </label>
+      <label class="welcome-field">
+        <span class="setup-label">Tên hiển thị</span>
+        <input id="welcome-name" class="field" type="text" maxlength="30" value="${esc(draftName ?? u.name)}" autocomplete="nickname">
+      </label>
 
-    <div class="welcome-field">
-      <span class="setup-label">Bạn chơi cờ cỡ nào?</span>
-      <div class="start-levels">${cards}</div>
-    </div>
+      <div class="welcome-field">
+        <span class="setup-label">Trình độ</span>
+        <div class="start-levels" role="group" aria-label="Trình độ">${levels}</div>
+      </div>
 
-    ${error ? notice(error, 'danger') : ''}
+      ${error ? notice(error, 'danger') : ''}
 
-    <div class="welcome-actions">
-      ${button({ label: saving ? 'Đang lưu…' : 'Lưu và bắt đầu chơi', kind: 'primary', icon: 'play', disabled: saving })}
-      <button class="link-btn" data-welcome-skip>Để sau</button>
+      <div class="welcome-actions">
+        <button class="link-btn" data-welcome-skip>Để sau</button>
+        ${button({ label: saving ? 'Đang lưu…' : 'Bắt đầu chơi', kind: 'primary', icon: 'play', disabled: saving })}
+      </div>
     </div>
   </div>`;
 }
 
 /**
- * Bấm trên màn chào mừng. `done(bot)` chạy sau khi lưu xong, kèm cấp máy gợi
- * ý theo trình độ vừa chọn (null nếu bỏ qua).
+ * Bấm trong hộp chào mừng. `done(bot)` chạy sau khi lưu xong, kèm cấp máy gợi
+ * ý theo trình độ vừa chọn (null nếu không chọn hoặc bỏ qua).
  */
 export function handleWelcomeClick(target: HTMLElement, rerender: () => void, done: (bot: number | null) => void): boolean {
+  if (!target.closest('.dialog.welcome')) return false;
   const lv = target.closest<HTMLElement>('[data-start-level]');
   if (lv) {
     draftName = document.querySelector<HTMLInputElement>('#welcome-name')?.value ?? draftName;
@@ -85,15 +83,15 @@ export function handleWelcomeClick(target: HTMLElement, rerender: () => void, do
     rerender();
     return true;
   }
-  const skip = target.closest('[data-welcome-skip]');
-  const save = target.closest('button')?.textContent?.trim() === 'Lưu và bắt đầu chơi';
-  if (!skip && !save) return false;
+  const skip = Boolean(target.closest('[data-welcome-skip]'));
+  const save = target.closest('button')?.textContent?.trim() === 'Bắt đầu chơi';
+  if (!skip && !save) return true; // bấm vào chỗ trống trong hộp: không làm gì
   if (saving) return true;
 
-  const name = document.querySelector<HTMLInputElement>('#welcome-name')?.value ?? '';
+  const name = (document.querySelector<HTMLInputElement>('#welcome-name')?.value ?? '').trim();
   const patch: { name?: string; level?: string } = {};
   if (save) {
-    if (name.trim() && name.trim() !== auth.user?.name) patch.name = name;
+    if (name && name !== auth.user?.name) patch.name = name;
     if (level) patch.level = level;
   }
   saving = true;
