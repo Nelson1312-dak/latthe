@@ -1,6 +1,6 @@
 // Mũi tên phải đi theo đúng cách quân cờ đi.
 import { describe, expect, it } from 'vitest';
-import { arrowPath } from '../src/board/Board.ts';
+import { arrowPath, arrowShape } from '../src/board/Board.ts';
 
 /** Tách chuỗi polyline thành các điểm, làm tròn cho dễ so. */
 const pts = (s: string | null) =>
@@ -64,5 +64,38 @@ describe('đường mũi tên', () => {
     const cuối = p[p.length - 1];
     // Tâm a8 ở y = 25 trong hệ toạ độ bàn cờ; điểm cuối phải thấp hơn thế 20
     expect(cuối[1]).toBe(45);
+  });
+});
+
+describe('hình mũi tên', () => {
+  const dài = (s: string) => {
+    const p = s.split(' ').map((q) => q.split(',').map(Number));
+    let d = 0;
+    for (let i = 1; i < p.length; i++) d += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+    return d;
+  };
+
+  it('mũi tên một ô vẫn có thân rõ ràng, không chỉ còn cái đầu (lỗi "đèn bàn")', () => {
+    const s = arrowShape('d5', 'd4', 'w')!;
+    // Cạnh ô là 50: thân phải dài ít nhất 0,3 ô
+    expect(dài(s.shaft)).toBeGreaterThan(15);
+  });
+
+  it('đầu mũi tên có kích thước cố định, không to theo độ dài mũi tên', () => {
+    const ngắn = arrowShape('e2', 'e3', 'w')!;
+    const xa = arrowShape('e2', 'e8', 'w')!;
+    const rộng = (h: string) => {
+      const [a, , c] = h.split(' ').map((q) => q.split(',').map(Number));
+      return Math.hypot(a[0] - c[0], a[1] - c[1]);
+    };
+    expect(rộng(ngắn.head)).toBeCloseTo(rộng(xa.head), 5);
+  });
+
+  it('mũi tên Mã: đầu nhọn theo hướng đoạn cuối', () => {
+    const s = arrowShape('g1', 'f3', 'w')!;
+    const [, tip] = s.head.split(' ').map((q) => q.split(',').map(Number));
+    // f3 ở cột 5, hàng thứ 3 từ dưới: tâm (275, 275). Mũi nhọn dừng sát tâm, cùng hàng.
+    expect(tip[1]).toBeCloseTo(275, 0);
+    expect(tip[0]).toBeGreaterThan(275);
   });
 });

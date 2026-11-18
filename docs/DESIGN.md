@@ -330,8 +330,10 @@ Theo đúng thói quen của người đã chơi chess.com/Lichess, không bắt
   Con trỏ lệch khỏi đường thì mũi tên bắt vào ô hợp lệ gần nhất (trong vòng một ô).
 - Nước của Mã là hình chữ L nên mũi tên cũng gấp khúc: đi hai ô theo trục dài trước rồi
   mới rẽ. `arrowPath()` trong `src/board/Board.ts`.
-- Mũi tên người chơi kiểu chess.com: thân 0,2 ô, đầu to, độ mờ 0,8. Bản mảnh kiểu Lichess
-  (0,13 ô, màu tối) trên bàn xanh lá gần như không thấy.
+- Mũi tên người chơi: thân 0,17 ô, đầu nhọn dài 0,32 ô rộng 0,44 ô, độ mờ 0,8 (cả thân lẫn
+  đầu chung một lớp mờ). Đầu nhọn có kích thước **cố định theo ô**, không dùng `<marker>` của
+  SVG: marker phình theo độ dày nét, mũi tên một ô thành một mẩu thân dưới cái đầu to như
+  cái đèn bàn. `arrowShape()` trong `src/board/Board.ts`.
 - **Đi trước (premove)** khi chưa tới lượt: chọn được mọi ô quân đó *về hình học* tới được
   trên bàn trống (kể cả ô quân mình đang đứng, để ăn lại). Tới lượt mới kiểm tra luật thật,
   không hợp lệ thì bỏ. Ô đi trước tô xanh xám. Chuột phải, bấm ra ngoài, hoặc Esc là huỷ.

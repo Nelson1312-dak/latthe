@@ -123,6 +123,8 @@ export function arrowPath(
   to: Square,
   orientation: 'w' | 'b',
   headRoom: number,
+  /** Thân mũi tên bắt đầu cách tâm ô xuất phát bao xa. */
+  startGap = SQ * 0.3,
 ): string | null {
   const [x1, y1] = centre(from, orientation);
   const [x2, y2] = centre(to, orientation);
@@ -146,19 +148,75 @@ export function arrowPath(
     const [ex, ey] = pullBack(kx, ky, x2, y2);
     // Bắt đầu lùi khỏi tâm ô xuất phát một chút cho đỡ đè lên quân
     const len = Math.hypot(kx - x1, ky - y1) || 1;
-    const sx = x1 + ((kx - x1) / len) * (SQ * 0.3);
-    const sy = y1 + ((ky - y1) / len) * (SQ * 0.3);
+    const sx = x1 + ((kx - x1) / len) * startGap;
+    const sy = y1 + ((ky - y1) / len) * startGap;
     return `${sx},${sy} ${kx},${ky} ${ex},${ey}`;
   }
 
   const len = Math.hypot(x2 - x1, y2 - y1);
   const ux = (x2 - x1) / len;
   const uy = (y2 - y1) / len;
-  const sx = x1 + ux * SQ * 0.3;
-  const sy = y1 + uy * SQ * 0.3;
+  const sx = x1 + ux * startGap;
+  const sy = y1 + uy * startGap;
   const ex = x2 - ux * headRoom;
   const ey = y2 - uy * headRoom;
   return `${sx},${sy} ${ex},${ey}`;
+}
+
+/**
+ * Kích thước mũi tên, tính theo cạnh ô (SQ). Đầu mũi tên có kích thước CỐ ĐỊNH
+ * theo ô, không phình theo độ dày thân.
+ *
+ * Bản trước dùng <marker> của SVG: đầu mũi tên tự to theo độ dày nét (gấp 3
+ * lần), còn thân thì bị cắt bớt cả hai đầu. Mũi tên một ô (Tốt lên một bước)
+ * vì thế chỉ còn một mẩu thân bé tí dưới một cái đầu to — trông như cái đèn bàn.
+ */
+interface ArrowSize {
+  /** Độ dày thân. */
+  width: number;
+  /** Chiều dài và bề rộng phần đầu nhọn. */
+  headLen: number;
+  headWidth: number;
+  /** Thân bắt đầu cách tâm ô xuất phát. */
+  startGap: number;
+  /** Mũi nhọn dừng trước tâm ô đích. */
+  tipGap: number;
+}
+
+/** Mũi tên người chơi tự vẽ — to, rõ, như chess.com. */
+const USER_ARROW: ArrowSize = { width: SQ * 0.17, headLen: SQ * 0.32, headWidth: SQ * 0.44, startGap: SQ * 0.14, tipGap: SQ * 0.08 };
+/** Mũi tên của huấn luyện viên — mảnh hơn, để không lấn mũi tên người chơi. */
+const COACH_ARROW: ArrowSize = { width: SQ * 0.14, headLen: SQ * 0.32, headWidth: SQ * 0.4, startGap: SQ * 0.2, tipGap: SQ * 0.1 };
+
+/**
+ * Hình mũi tên: đường thân (tới chân đầu nhọn) và tam giác đầu nhọn.
+ * Mũi tên Mã gấp chữ L như arrowPath(); đầu nhọn theo hướng đoạn cuối.
+ */
+export function arrowShape(
+  from: Square,
+  to: Square,
+  orientation: 'w' | 'b',
+  size: ArrowSize = USER_ARROW,
+): { shaft: string; head: string; width: number } | null {
+  const shaft = arrowPath(from, to, orientation, size.tipGap + size.headLen, size.startGap);
+  if (!shaft) return null;
+  const pts = shaft.split(' ').map((p) => p.split(',').map(Number) as [number, number]);
+  const [nx, ny] = pts[pts.length - 1]; // chân đầu nhọn
+  const [px, py] = pts[pts.length - 2];
+  const len = Math.hypot(nx - px, ny - py) || 1;
+  const ux = (nx - px) / len;
+  const uy = (ny - py) / len;
+  // Vuông góc với hướng đi
+  const vx = -uy;
+  const vy = ux;
+  const hw = size.headWidth / 2;
+  const tip: [number, number] = [nx + ux * size.headLen, ny + uy * size.headLen];
+  const f = (x: number, y: number) => `${x.toFixed(2)},${y.toFixed(2)}`;
+  return {
+    shaft,
+    width: size.width,
+    head: [f(nx + vx * hw, ny + vy * hw), f(...tip), f(nx - vx * hw, ny - vy * hw)].join(' '),
+  };
 }
 
 let boardSeq = 0;
@@ -277,28 +335,23 @@ export function boardSvg(o: BoardOptions): string {
   }
 
   // Mũi tên
-  (o.arrows ?? []).forEach((a, i) => {
+  for (const a of o.arrows ?? []) {
     const colour = a.brush
       ? `var(--brush-${a.brush})`
       : a.kind === 'user'
         ? 'var(--arrow-user)'
         : 'var(--arrow-coach)';
-    const id = `${uid}-arrow-${i}`;
-    // Mũi tên người chơi vẽ theo kiểu chess.com: thân to, đầu to, hơi trong
-    // suốt để còn thấy quân bên dưới. Bản mảnh kiểu Lichess trước đây nhìn như
-    // một nét bút chì, trên bàn xanh lá gần như không thấy.
-    const w = SQ * (a.brush ? 0.2 : 0.1);
-    const head = a.brush ? SQ * 0.12 : SQ * 0.26;
-    const pts = arrowPath(a.from, a.to, or, head);
-    if (!pts) return;
+    const shape = arrowShape(a.from, a.to, or, a.brush ? USER_ARROW : COACH_ARROW);
+    if (!shape) continue;
+    // Thân và đầu chung một lớp mờ: chỗ hai phần chồng lên nhau không bị đậm hơn
     parts.push(
-      // refX đặt ở mũi nhọn để đầu mũi tên dừng đúng tâm ô đích
-      `<marker id="${id}" markerWidth="3" markerHeight="3" refX="2.8" refY="1.5" orient="auto">` +
-        `<path d="M0 0 L2.8 1.5 L0 3 Z" fill="${colour}"/></marker>`,
-      `<polyline points="${pts}" fill="none" stroke="${colour}" stroke-width="${w}" ` +
-        `stroke-linecap="butt" stroke-linejoin="round" opacity="${a.brush ? '.8' : '.85'}" marker-end="url(#${id})"/>`,
+      `<g class="arrow" opacity="${a.brush ? '.8' : '.85'}">` +
+        `<polyline points="${shape.shaft}" fill="none" stroke="${colour}" stroke-width="${shape.width}" ` +
+        `stroke-linecap="butt" stroke-linejoin="miter"/>` +
+        `<polygon points="${shape.head}" fill="${colour}"/>` +
+        `</g>`,
     );
-  });
+  }
 
   // Huy hiệu xếp loại ở góc trên phải ô đến
   if (o.badge && o.badge.cls !== 'book') {
