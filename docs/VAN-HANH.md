@@ -53,6 +53,20 @@ LatCo-Server`. Sửa phần web thì chỉ cần `npm run deploy`.
 3. URL: `https://latbai.vn/api/health` · Keyword: `"ok":true` · kiểm mỗi 5 phút.
 4. Alert contact: email (hoặc app UptimeRobot trên điện thoại).
 
+## Thống kê (#/thong-ke)
+
+Chỉ tài khoản có id trong `ADMIN_USER_IDS` (`.env.chess`, hiện là 218) xem được;
+vào từ Hồ sơ → "Thống kê trang". Đếm ẩn danh theo ngày: lượt vào, bắt đầu/xong
+ván, xem chi tiết, tìm trận, ghép người/AI, đăng ký, chia sẻ, mở link. Lượt từ
+chính máy chủ (lúc phát triển, lúc chạy `check:design` qua Vite) không được tính.
+
+## Ván chia sẻ (latbai.vn/van/<id>)
+
+Lưu trong bảng `shares` (không gắn tài khoản). Ảnh xem trước khi dán link lên
+Facebook/Zalo là ảnh chung `public/og.png`, không phải ảnh riêng từng ván: bot đọc
+link của mạng xã hội đi qua ngrok miễn phí sẽ gặp trang cảnh báo. Người chơi có
+nút tải ảnh tóm tắt riêng của ván để đăng kèm.
+
 ## Không thuê VPS
 
 Máy ở nhà là máy chủ riêng, bật thường trực cho việc này (quyết định 18/11/2026).
