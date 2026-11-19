@@ -262,7 +262,7 @@ ${crumb()}
 <p>Mẹo chỉ thành thói quen khi dùng nhiều lần. Bài tập theo chủ đề là cách luyện nhanh nhất, còn chấm ván cho bạn thấy chính lỗi của mình.</p>
 <p><a class="cta" href="/bai-tap-co-vua/">Giải bài tập</a><a class="cta alt" href="/#/choi">Chơi một ván</a></p>`;
   return page({
-    title: '10 mẹo chơi cờ vua cho người mới — thắng nhiều hơn ngay ván sau · Lật Cờ',
+    title: '10 mẹo chơi cờ vua cho người mới — tránh những lỗi hay mắc nhất · Lật Cờ',
     desc,
     path,
     body,
