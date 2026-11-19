@@ -70,11 +70,11 @@ const SCREENS: Record<string, Screen> = {
 const NAV: { route: string; label: string; icon: IconName }[] = [
   // Xem lại và Đấu không còn là tab riêng: chấm ván hiện ngay khi hết ván, danh
   // sách ván cũ nằm trong Hồ sơ; đấu với người là một chế độ của tab Chơi.
-  { route: 'choi', label: 'Chơi', icon: 'play' },
-  { route: 'on-tap', label: 'Ôn tập', icon: 'cards' },
-  { route: 'hoc', label: 'Học', icon: 'learn' },
+  { route: 'choi', label: 'Chơi', icon: 'nav-play' },
+  { route: 'on-tap', label: 'Ôn tập', icon: 'nav-puzzle' },
+  { route: 'hoc', label: 'Học', icon: 'nav-learn' },
   // AI đọc lịch sử ván của bạn: lỗi hay lặp lại + lộ trình học
-  { route: 'huan-luyen', label: 'Huấn luyện', icon: 'coach' },
+  { route: 'huan-luyen', label: 'Huấn luyện', icon: 'nav-coach' },
 ];
 
 function route(): string {
@@ -110,14 +110,14 @@ function siteHeader(current: string): string {
     `<span>${APP_NAME}</span></a>` +
     `<nav class="top-nav" aria-label="Chính">` +
     NAV.map((n) => topLink(n.route, n.label, n.icon, current === '' ? 'choi' : current)).join('') +
-    (auth.user?.admin ? topLink('thong-ke', 'Thống kê', 'review', current) : '') +
+    (auth.user?.admin ? topLink('thong-ke', 'Thống kê', 'nav-stats', current) : '') +
     `</nav>` +
     // "Thiết kế" (trang mẫu của design system) không còn trên thanh điều hướng:
     // người chơi không cần nó, và nó làm trang trông như công cụ của dev.
     // Vẫn vào được bằng #/thiet-ke.
     `<div class="site-right">` +
     `<button class="top-link" title="Cài đặt" aria-label="Cài đặt">${icon('settings', 18)}<span>Cài đặt</span></button>` +
-    topLink('tai-khoan', shortName(), 'user', current) +
+    topLink('tai-khoan', shortName(), 'nav-user', current) +
     `</div></header>`
   );
 }
@@ -149,8 +149,8 @@ function bottomNav(current: string): string {
   return (
     `<nav class="nav" aria-label="Chính (điện thoại)">` +
     NAV.map((n) => item(n.route, n.label, n.icon)).join('') +
-    (auth.user?.admin ? item('thong-ke', 'Thống kê', 'review') : '') +
-    item('tai-khoan', shortName(), 'user') +
+    (auth.user?.admin ? item('thong-ke', 'Thống kê', 'nav-stats') : '') +
+    item('tai-khoan', shortName(), 'nav-user') +
     `</nav>`
   );
 }
@@ -267,7 +267,7 @@ function settingsDialog(): string {
       : `<rect x="${x}" y="${y}" width="1" height="1" fill="${light ? t.light : t.dark}"/>`;
   const swatch = BOARD_THEMES.map(
     (t) =>
-      `<button class="swatch${p.board === t.id ? ' is-active' : ''}" data-set-board="${t.id}" aria-pressed="${p.board === t.id}">` +
+      `<button class="swatch${p.board === t.id ? ' is-active' : ''}" data-set-board="${t.id}" aria-pressed="${p.board === t.id}" title="${t.name}" aria-label="${t.name}">` +
       `<svg class="swatch-board" viewBox="0 0 2 2" width="44" height="44" aria-hidden="true" shape-rendering="crispEdges">` +
       ô(0, 0, true, t) + ô(1, 0, false, t) + ô(0, 1, false, t) + ô(1, 1, true, t) +
       `</svg><span>${t.name}</span></button>`,
@@ -279,7 +279,9 @@ function settingsDialog(): string {
   ).join('');
   return (
     `<div class="dialog-backdrop settings-backdrop"><div class="dialog settings" role="dialog" aria-modal="true" aria-label="Cài đặt">` +
-    `<h2>Cài đặt</h2><div class="dialog-body">` +
+    `<div class="settings-head"><h2>Cài đặt</h2>` +
+    `<button class="btn btn-icon" data-close-settings aria-label="Đóng">${icon('close', 18)}</button></div>` +
+    `<div class="dialog-body">` +
     `<p class="setup-label">Bộ quân</p><div class="piece-opts">${quân}</div>` +
     `<p class="setup-label">Bàn cờ</p><div class="swatches">${swatch}</div>` +
     `<p class="setup-label">Giao diện</p>` +

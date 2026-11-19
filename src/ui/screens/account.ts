@@ -78,38 +78,17 @@ export function resetAccount(): void {
   hỏiXoá = false;
 }
 
-const BOX_DAYS = [1, 3, 7, 16, 35];
-
 function progressBlock(): string {
   if (!tienDo) return '';
-  const boxes = Array.from({ length: 5 }, (_, i) => tienDo!.hopThe.find((h) => h.box === i + 1)?.c ?? 0);
-  const max = Math.max(1, ...boxes);
   const tyLe = tienDo.attempts ? Math.round((tienDo.correct / tienDo.attempts) * 100) : 0;
 
   return `
     ${
       // Số bài đúng, thẻ đến hạn, chuỗi ngày đã có trong các ô ở trên; ở đây
       // chỉ còn những thứ không có chỗ khác: thẻ nằm ở hộp nào, hay sai kiểu gì.
-      tienDo.the.total || tienDo.chuDeHaySai.length ? rule('Tiến độ học', tienDo.attempts ? `<span class="rule-note">${tyLe}% bài đúng</span>` : '') : ''
+      tienDo.chuDeHaySai.length ? rule('Tiến độ học', tienDo.attempts ? `<span class="rule-note">${tyLe}% bài đúng</span>` : '') : ''
     }
 
-    ${
-      tienDo.the.total
-        ? `<div class="boxes">
-            <p class="label">Thẻ theo hộp ôn tập</p>
-            <div class="box-bars">
-              ${boxes
-                .map(
-                  (n, i) =>
-                    `<span class="box-bar"><b class="mono">${n}</b>` +
-                    `<i style="height:${Math.round((n / max) * 46) + 2}px"></i><span>H${i + 1}</span></span>`,
-                )
-                .join('')}
-            </div>
-            <p class="box-note">Hộp 1 gặp lại sau ${BOX_DAYS[0]} ngày, hộp 5 sau ${BOX_DAYS[4]} ngày.</p>
-          </div>`
-        : ''
-    }
 
     ${
       tienDo.chuDeHaySai.length
@@ -254,9 +233,9 @@ function profile(): string {
     }
 
     <div class="quick-list profile-links">
-      <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b><span>Xem lại từng ván</span></span>${icon('next', 16)}</button>
-      ${u.admin ? `<button class="quick" data-go="thong-ke"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Thống kê trang</b><span>Chỉ bạn thấy</span></span>${icon('next', 16)}</button>` : ''}
-      <button class="quick" data-go="on-tap"><span class="quick-icon">${icon('cards', 20)}</span><span class="quick-text"><b>Thẻ ôn tập</b><span>${tienDo ? `${tienDo.the.due} thẻ đến hạn / ${tienDo.the.total}` : 'Từ những nước bạn đi sai'}</span></span>${icon('next', 16)}</button>
+      <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b></span>${icon('next', 16)}</button>
+      ${u.admin ? `<button class="quick" data-go="thong-ke"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Thống kê trang</b></span>${icon('next', 16)}</button>` : ''}
+      <button class="quick" data-go="on-tap"><span class="quick-icon">${icon('cards', 20)}</span><span class="quick-text"><b>Thẻ ôn tập</b>${tienDo ? `<span>${tienDo.the.due}/${tienDo.the.total} đến hạn</span>` : ''}</span>${icon('next', 16)}</button>
     </div>
 
     ${progressBlock()}

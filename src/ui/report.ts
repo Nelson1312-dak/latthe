@@ -18,7 +18,7 @@ import { loadOpenings } from '../analysis/openings.ts';
 import { CLASS_LABEL } from '../board/Board.ts';
 import { Game, type Side } from '../../shared/chess.ts';
 import type { Square } from '../../shared/fen.ts';
-import { scoreFor, type MoveClass } from '../../shared/winrate.ts';
+import { scoreFor, winningChances, type MoveClass } from '../../shared/winrate.ts';
 import { whyText } from '../../shared/advisor/templates.ts';
 import { factsForMove } from '../app/advisor.ts';
 import { sanVi, thếCờ } from '../analysis/words.ts';
@@ -206,16 +206,6 @@ export function reviewPanel(r: ReviewResult, v: PanelView): string {
   const accOpp = me === 'b' ? r.accuracy.w : r.accuracy.b;
   const tênOpp = (me ? v.opponent : 'Đen').replace(/[<>&"]/g, '');
 
-  const mine = r.moves.filter((m) => !me || m.side === me);
-  const beats = mine
-    .map(
-      (m) =>
-        `<button class="beat${m.ply === v.ply ? ' is-current' : ''}" data-report-ply="${m.ply}" ` +
-        `style="--c:var(--cls-${m.cls})" title="${moveNo(m)} ${m.san} — ${CLASS_LABEL[m.cls]}" ` +
-        `aria-label="${moveNo(m)} ${m.san}, ${CLASS_LABEL[m.cls]}"></button>`,
-    )
-    .join('');
-
   const moments = momentsOf(r, me);
   const idx = moments.findIndex((m) => m.ply === v.ply);
   const prev = [...moments].reverse().find((m) => m.ply < v.ply);
@@ -232,7 +222,7 @@ export function reviewPanel(r: ReviewResult, v: PanelView): string {
       }</span></div>
       <div class="rv-acc-opp"><b class="mono">${accOpp.toFixed(1)}</b><span>${tênOpp}</span></div>
     </div>
-    <div class="beats" aria-label="Nhịp ván${me ? ' của bạn' : ''}">${beats}</div>
+    ${evalGraph(r, v.ply, me)}
 
     <div class="rv-focus">
       <div class="rv-focus-head">
@@ -365,5 +355,52 @@ export function endDialog(v: EndView): string {
       ${v.body}
       <div class="end-actions">${v.actions}</div>
     </div>
+  </div>`;
+}
+
+/* ---------------- Biểu đồ đánh giá ---------------- */
+
+/**
+ * Biểu đồ đánh giá cả ván, như mọi trang cờ: phần sáng là lợi thế của Trắng, phần
+ * tối của Đen, vạch giữa là cân bằng. Chấm màu ở những nước hỏng đáng xem (của bạn),
+ * vạch dọc là nước đang xem. Bấm vào đâu thì bàn cờ nhảy tới nước đó.
+ * Thay cho dải ô màu cũ (mỗi nước một ô): kiểu "dòng thời gian" tự chế đó không trang
+ * cờ nào dùng, nhìn như đồ trang trí.
+ */
+function evalGraph(r: ReviewResult, ply: number, me: Side | null): string {
+  const n = r.moves.length;
+  if (!n) return '';
+  const W = 600;
+  const H = 72;
+  const x = (i: number) => (i / n) * W;
+  const y = (wc: number) => H / 2 - wc * (H / 2) * 0.92;
+  const pts = [`0,${H / 2}`, ...r.moves.map((m, i) => `${x(i + 1).toFixed(1)},${y(winningChances(m.scoreAfter)).toFixed(1)}`)];
+  const area = `M0,${H} L${pts.join(' L')} L${W},${H} Z`;
+  // Cột bấm được: mỗi nước một dải dọc trong suốt
+  const cols = r.moves
+    .map(
+      (m, i) =>
+        `<rect x="${x(i).toFixed(1)}" y="0" width="${(W / n).toFixed(2)}" height="${H}" fill="transparent" data-report-ply="${m.ply}"><title>${moveNo(m)} ${m.san}</title></rect>`,
+    )
+    .join('');
+  const cur = ply > 0 ? `<line class="eg-cur" x1="${x(ply)}" x2="${x(ply)}" y1="0" y2="${H}" vector-effect="non-scaling-stroke"/>` : '';
+  const dots = momentsOf(r, me)
+    .map((m) => {
+      const left = (x(m.ply) / W) * 100;
+      const top = (y(winningChances(m.scoreAfter)) / H) * 100;
+      return (
+        // Chấm chỉ để nhìn; bấm thì dải cột bên dưới nhận (chấm nhỏ hơn vùng chạm 44px)
+        `<span class="eg-dot" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;--c:var(--cls-${m.cls})" ` +
+        `title="${moveNo(m)} ${m.san} — ${CLASS_LABEL[m.cls]}"></span>`
+      );
+    })
+    .join('');
+  return `<div class="eval-graph" aria-label="Biểu đồ đánh giá cả ván">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="false">
+      <rect class="eg-black" width="${W}" height="${H}"/>
+      <path class="eg-white" d="${area}"/>
+      <line class="eg-mid" x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" vector-effect="non-scaling-stroke"/>
+      ${cur}${cols}
+    </svg>${dots}
   </div>`;
 }

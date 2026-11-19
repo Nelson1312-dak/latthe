@@ -480,3 +480,269 @@ a {
 .side-opt .side-piece {
   flex: none;
 }
+
+/* ======================================================================
+   Đợt 3 (19/11/2026): rà lại bằng ảnh chụp mọi màn. Màu nhấn chỉ cho nút chính,
+   một kiểu "đang chọn" duy nhất, nhóm lựa chọn liền khối, chữ bớt đậm.
+   ====================================================================== */
+
+/* ---- 23. Một kiểu "đang chọn" cho mọi ô lựa chọn: nền sáng hơn + vạch trắng ở đáy ---- */
+.lv.is-active,
+.side-opt.is-active,
+.tc.is-active,
+.start-level.is-active,
+.piece-opt.is-active,
+.swatch.is-active,
+.seg-item.is-active,
+.rv-chip.is-current,
+.ladder-step.is-beaten {
+  border-color: transparent;
+  border-bottom-color: var(--text-1);
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+.lv,
+.side-opt,
+.piece-opt,
+.swatch {
+  color: var(--text-2);
+}
+.promo:hover {
+  border-color: var(--line-strong);
+}
+/* Giao diện Tối / Sáng: chữ thường như mọi nhóm lựa chọn khác, không tô màu nhấn */
+.settings .seg-fill .seg-item .icon {
+  display: none;
+}
+
+/* ---- 24. Nhóm lựa chọn liền khối (độ khó 1–8, bên cầm quân) như radio của Lichess ---- */
+.lv-row,
+.side-row {
+  gap: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.lv-row .lv,
+.side-row .side-opt {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: var(--bg-2);
+}
+.lv-row .lv + .lv,
+.side-row .side-opt + .side-opt {
+  border-left: 1px solid var(--line-strong);
+}
+.lv-row .lv.is-active,
+.side-row .side-opt.is-active {
+  border-bottom-color: var(--text-1);
+  background: var(--bg-3);
+}
+
+/* ---- 25. Điều hướng: không tô màu nhấn; mục đang ở chỉ sáng hơn ---- */
+.top-link.is-active .icon {
+  color: inherit;
+}
+.nav-item.is-active {
+  background: none;
+  border-bottom-color: transparent;
+}
+.top-link {
+  font-weight: 500;
+}
+.top-link.is-active {
+  font-weight: 600;
+}
+@media (min-width: 1101px) {
+  .top-link {
+    font-size: var(--fs-md);
+    font-weight: 500;
+  }
+}
+
+/* ---- 26. Chữ: chỉ tiêu đề màn, nút chính và số to mới đậm ---- */
+.setup-label {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-2);
+}
+.lesson-text b,
+.quick-text b,
+.pref-text b {
+  font-weight: 500;
+}
+
+/* ---- 27. Link trong nội dung: chữ thường gạch chân, không tô màu ---- */
+.rule-link,
+.coach-example,
+.prose a {
+  color: var(--text-1);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+}
+.rule-link:hover,
+.coach-example:hover,
+.prose a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ---- 28. Màn có bàn cờ trên điện thoại / máy tính bảng: không chen chân trang vào giữa ---- */
+@media (max-width: 1100px) {
+  .app:has(.screen > .game) .site-foot {
+    display: none;
+  }
+}
+/* Điện thoại: tài khoản đã có ở thanh dưới, header không lặp lại */
+@media (max-width: 767px) {
+  .site-right .top-link[href='#/tai-khoan'] {
+    display: none;
+  }
+}
+
+/* ---- 29. Thanh người chơi: mặt máy là con Mã trên nền ô tối, mình là chữ cái đầu ---- */
+.player-face.is-bot {
+  background: var(--coord-dark);
+}
+.face-letter {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.player-rating {
+  color: var(--text-3);
+  font-weight: 400;
+}
+.player-id .took {
+  min-height: 0;
+  margin-left: var(--s-1);
+}
+
+/* ---- 30. Máy tính: cột phải trong ván như chess.com — sổ nước giãn hết chỗ, nút tua
+   và nút việc dồn xuống đáy. Trước đây nút nằm trên, dưới là một khoảng trống to. ---- */
+@media (min-width: 1101px) {
+  .screen:has(> .game) .game-side {
+    display: flex;
+    flex-direction: column;
+  }
+  .screen:has(> .game) .game-side > .sheet:has(> .move-bar) {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .game-side > .sheet:has(> .move-bar) > .move-list {
+    flex: 1 1 auto;
+    min-height: 120px;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .game-side > .sheet:has(> .move-bar) > .moves-empty {
+    flex: 1 1 auto;
+  }
+  .game-side > .sheet:has(> .move-bar) > .move-bar {
+    margin-top: auto;
+  }
+  /* Nút việc trong ván: icon cạnh chữ, cao 40px, không phải ô vuông icon-trên-chữ */
+  .game-actions .act {
+    min-height: 40px;
+    grid-auto-flow: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+  }
+  .game-actions .act .icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* ---- 31. Biểu đồ đánh giá ở màn xem lại (thay dải ô màu) ---- */
+.eval-graph {
+  position: relative;
+  height: 72px;
+  margin: var(--s-1) 0;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  cursor: pointer;
+}
+.eval-graph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.eg-black {
+  fill: #403d39;
+}
+.eg-white {
+  fill: #e9e7e2;
+}
+.eg-mid {
+  stroke: #8a857c;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.eg-cur {
+  stroke: #e2873a;
+  stroke-width: 2;
+}
+.eg-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  padding: 0;
+  border: 2px solid #262421;
+  border-radius: 50%;
+  background: var(--c);
+  cursor: pointer;
+}
+.eg-dot {
+  pointer-events: none;
+}
+
+/* ---- 32. Dòng danh sách một hàng: tên bên trái, trạng thái ngắn bên phải.
+   Hết kiểu "tiêu đề đậm + một câu giải thích xám" lặp lại ở mọi dòng. ---- */
+.quick {
+  min-height: 48px;
+}
+.quick-text {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-width: 0;
+  width: 100%;
+}
+.quick-text b {
+  min-width: 0;
+}
+.quick-text > span {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* ---- 33. Cài đặt: đầu hộp có nút đóng, ô bàn cờ không chú thích (tên ở tooltip) ---- */
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s-3);
+}
+.settings-head h2 {
+  margin: 0;
+}
+.settings .swatch span {
+  display: none;
+}
+.settings .swatches {
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+}
+.settings .swatch {
+  padding: var(--s-1);
+}

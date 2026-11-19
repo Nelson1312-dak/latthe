@@ -130,24 +130,33 @@ export interface PlayerOptions {
  */
 export function playerStrip(o: PlayerOptions): string {
   const taken = (o.took ?? []).map((p) => pieceGlyph(p, 'took-piece')).join('');
+  // Mặt: ảnh thật; không có thì máy là con Mã trên nền ô tối, mình là chữ cái đầu
+  // tên, ván hai người một máy là quân Vua của bên đó. Hai bên không còn cùng một ô
+  // xám y hệt nhau (trông như dữ liệu giả).
   const face = o.avatar
     ? `<img src="${esc(o.avatar)}" alt="" width="36" height="36">`
-    : pieceGlyph((o.side + 'k') as PieceCode, 'face-piece');
-  const hàngHai =
-    taken || o.diff
+    : o.bot || o.ai
+      ? pieceGlyph((o.side + 'n') as PieceCode, 'face-piece')
+      : o.you && o.name
+        ? `<span class="face-letter">${esc(o.name.trim()[0]?.toUpperCase() ?? '?')}</span>`
+        : pieceGlyph((o.side + 'k') as PieceCode, 'face-piece');
+  // Quân đã ăn nằm cùng hàng với tên như chess.com: một quân lẻ loi ở hàng thứ hai
+  // trông như lỗi vẽ
+  const quânĂn =
+    taken || (o.diff && o.diff > 0)
       ? `<span class="took">${taken}${o.diff && o.diff > 0 ? `<b class="mono">+${o.diff}</b>` : ''}</span>`
       : '';
   return (
     `<div class="player${o.clockState === 'running' ? ' is-turn' : ''}">` +
-    `<span class="player-face" data-side="${o.side}">${face}</span>` +
+    `<span class="player-face${o.bot || o.ai ? ' is-bot' : ''}" data-side="${o.side}">${face}</span>` +
     `<span class="player-text">` +
     `<span class="player-id">` +
     `<b class="player-name">${esc(o.name)}</b>` +
-    (o.rating !== undefined ? `<span class="player-rating mono">${esc(String(o.rating))}</span>` : '') +
+    (o.rating !== undefined ? `<span class="player-rating mono">(${esc(String(o.rating))})</span>` : '') +
     (o.ai ? '<span class="tag tag-ai">AI</span>' : '') +
-    (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
+    quânĂn +
     `</span>` +
-    hàngHai +
+    (o.status ? `<span class="player-status">${esc(o.status)}</span>` : '') +
     `</span>` +
     (o.accuracy !== undefined
       ? `<span class="player-acc"><b class="mono">${o.accuracy}%</b> chính xác</span>`

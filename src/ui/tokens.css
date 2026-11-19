@@ -27,9 +27,12 @@
   --accent-hover: #1a7a6c;
   /* Mép dưới đậm hơn của nút chính, cho nút có khối như phím bấm */
   --accent-edge: #156358;
-  --accent-dim: #1d3a36;
-  /* Màu nhấn khi dùng làm MÀU CHỮ: sáng hơn nền nút để đủ tương phản trên nền tối */
-  --accent-text: #56cdbb;
+  /* 19/11/2026: màu nhấn CHỈ còn cho nút chính và công tắc bật. Trước đây cùng một
+     màu xanh ngọc gánh mười việc (nút, viền ô đang chọn, link, thanh tiến độ, chấm
+     báo...) — đúng kiểu dashboard AI. "Nền nhấn nhạt" và "chữ nhấn" giờ là màu trung
+     tính: trạng thái đang chọn đọc bằng độ sáng và một vạch trắng, không bằng màu. */
+  --accent-dim: var(--bg-3);
+  --accent-text: var(--text-1);
   --on-accent: #ffffff;
   /* Sáng hơn bản cũ (#e4685c): nền mới xám hơn nên đỏ cũ chỉ đạt 4,15:1 */
   --danger: #f07a6d;
@@ -141,8 +144,8 @@
   --accent: #1a7a6c;
   --accent-hover: #166a5e;
   --accent-edge: #10524a;
-  --accent-dim: #d4ebe6;
-  --accent-text: #17695c;
+  --accent-dim: var(--bg-3);
+  --accent-text: var(--text-1);
   --on-accent: #ffffff;
   --danger: #b5352b;
   --danger-dim: #f6dedb;

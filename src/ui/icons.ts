@@ -40,6 +40,14 @@ const PATHS = {
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
   user: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/>',
   trophy: '<path d="M8 4.5h8v5a4 4 0 0 1-8 0Z"/><path d="M8 6H5.5v1.5A3 3 0 0 0 8 10.4"/><path d="M16 6h2.5v1.5A3 3 0 0 1 16 10.4"/><path d="M12 13.5V17"/><path d="M8.5 19.5h7"/>',
+  // Thanh điều hướng: icon ĐẶC, hình của cờ (như chess.com, Lichess), không phải
+  // nét mảnh kiểu bộ icon dựng sẵn. Màu vẫn theo currentColor.
+  'nav-play': '<path fill="currentColor" stroke="none" d="M12 2.5a3.2 3.2 0 0 0-2.1 5.6C8.6 8.8 7.8 9.9 7.8 11h2c-.2 2.6-1.4 4.6-3 6v1.5h10.4V17c-1.6-1.4-2.8-3.4-3-6h2c0-1.1-.8-2.2-2.1-2.9A3.2 3.2 0 0 0 12 2.5Z"/><path fill="currentColor" stroke="none" d="M5.5 19.5h13v2h-13Z"/>',
+  'nav-puzzle': '<path fill="currentColor" stroke="none" d="M4.5 6H8a2.2 2.2 0 1 1 4.4 0H18v4.5a2.2 2.2 0 1 1 0 4.4v4.6h-5.6a2.2 2.2 0 1 0-4.4 0H4.5V15a2.2 2.2 0 1 0 0-4.4Z"/>',
+  'nav-learn': '<path fill="currentColor" stroke="none" d="M12 4 1.5 9 12 14l8.5-4.05V15H22V9Z"/><path fill="currentColor" stroke="none" d="M6 12.6V16c0 1.9 2.7 3.5 6 3.5s6-1.6 6-3.5v-3.4l-6 2.9Z"/>',
+  'nav-coach': '<path fill="currentColor" stroke="none" d="M4 4.5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8.5L7 20.5v-4H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1Z"/>',
+  'nav-user': '<circle fill="currentColor" stroke="none" cx="12" cy="8" r="4"/><path fill="currentColor" stroke="none" d="M4 20.5c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5Z"/>',
+  'nav-stats': '<path fill="currentColor" stroke="none" d="M4 20v-9h4v9ZM10 20V4h4v16ZM16 20v-6h4v6Z"/>',
   flame: '<path d="M12 3.5s4.5 3.8 4.5 8a4.5 4.5 0 0 1-9 0c0-1.6.8-2.8 1.6-3.6 0 1.4.9 2.2 1.7 2.2.9 0 1.6-.8 1.6-2 0-2-.4-3.6-.4-4.6Z"/>',
 } as const;
 

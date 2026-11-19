@@ -450,6 +450,16 @@ function gameScreen(extraSide = ''): string {
             : sideName(side),
       side,
       avatar: !isBot && setup.mode === 'bot' && side === setup.side ? auth.user?.avatar : null,
+      // Elo cạnh tên như mọi trang cờ: máy theo cấp (cấp thấp ước chừng), mình theo Elo online
+      rating: chờNgười
+        ? side === orientation
+          ? auth.user?.gameRating
+          : undefined
+        : isBot
+          ? (levelById(setup.level).elo ?? `~${BOT_RATING[setup.level] ?? 1000}`)
+          : setup.mode === 'bot' && side === setup.side
+            ? auth.user?.gameRating
+            : undefined,
       bot: isBot,
       you: setup.mode === 'bot' && side === setup.side,
       status: !started
@@ -544,6 +554,9 @@ function gameScreen(extraSide = ''): string {
     ${result && !IS_MINI ? resultModal(result) : ''}
   </div>`;
 }
+
+/** Elo ước chừng của cấp 1–3 (không đặt Elo cho engine, nên chỉ để hiện cạnh tên). */
+const BOT_RATING: Record<number, number> = { 1: 400, 2: 700, 3: 1000 };
 
 const PICK_NAME: Record<Pick, string> = { w: 'cầm Trắng', b: 'cầm Đen', r: 'bên ngẫu nhiên' };
 

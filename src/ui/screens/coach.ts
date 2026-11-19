@@ -116,20 +116,8 @@ export function coachScreen(): string {
       ${tile(`${f.accuracy}%`, 'Độ chính xác trung bình')}
       ${tile(`${f.wins}/${f.draws}/${f.losses}`, 'Thắng / Hòa / Thua')}
       ${tile(String(f.perGame.blunder), 'Sai nghiêm trọng mỗi ván')}
+      ${f.phases.map((p) => tile(`${p.accuracy}%`, `Chính xác ở ${p.name}`)).join('')}
     </dl>
-
-    ${
-      f.phases.length
-        ? `${rule('Theo giai đoạn')}
-           <div class="coach-phases">${f.phases
-             .map(
-               (p) =>
-                 `<div class="coach-phase"><span>${p.name[0].toUpperCase() + p.name.slice(1)}</span>` +
-                 `<span class="acc-bar"><i style="width:${Math.max(2, p.accuracy)}%"></i></span><b class="mono">${p.accuracy}%</b></div>`,
-             )
-             .join('')}</div>`
-        : ''
-    }
 
     ${rule('Lỗi bạn hay lặp lại')}
     ${
@@ -157,8 +145,8 @@ export function coachScreen(): string {
       .map((l, i) => {
 
         return (
-          `<a class="quick" href="#/hoc?bai=${l.id}"><span class="quick-icon">${icon('learn', 20)}</span>` +
-          `<span class="quick-text"><b>${i + 1}. ${esc(l.title)}</b><span>${esc(a?.loTrinh[i] ?? l.keyPoint)}</span></span>${icon('next', 16)}</a>`
+          `<a class="quick" href="#/hoc?bai=${l.id}" title="${esc(a?.loTrinh[i] ?? l.keyPoint)}"><span class="quick-icon">${icon('learn', 20)}</span>` +
+          `<span class="quick-text"><b>${i + 1}. ${esc(l.title)}</b></span>${icon('next', 16)}</a>`
         );
       })
       .join('')}</div>

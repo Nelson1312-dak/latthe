@@ -63,6 +63,23 @@ Thêm sau đợt rà soát 18/11/2026 (`src/ui/refine.css`, nạp sau cùng), c�
 - Để trình duyệt tự vẽ phần của nó: màu bôi đen chữ, con trỏ nhập, thanh cuộn, ô tích phải theo
   màu app (`::selection`, `caret-color`, `scrollbar-color`, `accent-color`).
 
+Đợt 3 (19/11/2026), rà lại bằng ảnh chụp mọi màn (agent độc lập soi theo bảng chấm của impeccable). Cũng **cấm**:
+
+- Một màu nhấn gánh nhiều việc. Xanh ngọc (`--accent`) CHỈ cho nút chính và công tắc bật. `--accent-text` và
+  `--accent-dim` giờ là màu trung tính; link là chữ thường gạch chân.
+- Nhiều kiểu "đang chọn". Chỉ một kiểu: nền `--bg-3`, chữ `--text-1`, vạch 2px `--text-1` ở đáy. Nhóm lựa chọn
+  (độ khó 1–8, bên cầm quân) là một khối liền có viền chung, không phải các ô rời.
+- Icon nét mảnh kiểu bộ dựng sẵn ở thanh điều hướng. Điều hướng dùng icon đặc, hình của cờ (`nav-*` trong
+  `src/ui/icons.ts`: Tốt, mảnh ghép, mũ tốt nghiệp, bóng thoại); icon nét chỉ còn ở nút nhỏ trên thanh công cụ.
+- Thẻ người chơi giống dữ liệu giả: hai ô xám y hệt, không Elo. Có Elo cạnh tên, quân đã ăn cùng hàng; máy là
+  con Mã trên nền ô tối, mình là chữ cái đầu (khi không có ảnh).
+- Dải ô màu "nhịp ván" tự chế. Màn xem lại dùng biểu đồ đánh giá như mọi trang cờ.
+- Cột phải trống một khoảng to, nút nằm trên. Trong ván: sổ nước giãn hết chỗ, nút tua và nút việc dồn đáy.
+- Dòng danh sách "tiêu đề đậm + một câu giải thích xám". Một hàng: tên trái, trạng thái ngắn phải (số, đã/chưa).
+- Chữ đậm khắp nơi. 700 chỉ cho tiêu đề màn, nút chính, số to; nhãn nhóm và tên dòng 500.
+- Biểu đồ/thanh tiến độ chỉ để trang trí (thẻ theo hộp H1–H5, thanh % theo giai đoạn): viết thành dòng số.
+- Chân trang chen giữa màn có bàn cờ trên điện thoại/máy tính bảng.
+
 Giữ có chủ ý dù công cụ dò của impeccable báo: gờ dưới 3px của nút (kiểu phím bấm chess.com,
 mục 4.2) và chữ toạ độ trên ô cờ (tương phản ~3,4:1, đúng quy ước bàn cờ chess.com/Lichess).
 

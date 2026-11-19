@@ -90,18 +90,18 @@ function coachRow(): string {
       `hoc?bai=${bài.id}`,
       'coach',
       `Nên học: ${bài.title}`,
-      lỗi ? `Bạn hay ${MOTIF_NAME[lỗi.kind]} (${lỗi.count} lần)` : bài.keyPoint,
+      lỗi ? `${lỗi.count} lần ${MOTIF_NAME[lỗi.kind]}` : '',
     );
   }
-  if (auth.user) return quickRow('huan-luyen', 'coach', 'Huấn luyện viên', 'Lỗi bạn hay lặp lại');
-  return quickRow('hoc', 'learn', 'Học chiến thuật', 'Bài ngắn, có bài tập kèm theo');
+  if (auth.user) return quickRow('huan-luyen', 'coach', 'Huấn luyện viên', '');
+  return quickRow('hoc', 'learn', 'Học chiến thuật', '');
 }
 
 function quickRow(go: string, name: IconName, title: string, note: string): string {
   return (
     `<button class="quick" data-go="${go}">` +
     `<span class="quick-icon">${icon(name, 20)}</span>` +
-    `<span class="quick-text"><b>${title}</b><span>${note}</span></span>` +
+    `<span class="quick-text"><b>${title}</b>${note ? `<span>${note}</span>` : ''}</span>` +
     `${icon('next', 16)}</button>`
   );
 }
@@ -112,11 +112,7 @@ function dailyRow(): string {
   if (!d?.puzzle) return '';
   const me = d.me;
   const chuỗi = me?.streak ? ` · chuỗi ${me.streak} ngày` : '';
-  const ghi = !me?.done
-    ? `Chưa giải hôm nay${chuỗi}${d.count.solved ? ` · ${d.count.solved} người đã giải` : ''}`
-    : me.correct
-      ? `Đã giải hôm nay${chuỗi}`
-      : 'Hôm nay chưa đúng — mai có bài mới';
+  const ghi = !me?.done ? `chưa giải${chuỗi}` : me.correct ? `đã giải${chuỗi}` : 'chưa đúng, mai có bài mới';
   return (
     `<button class="quick${me?.done ? '' : ' is-due'}" data-daily>` +
     `<span class="quick-icon">${icon(me?.done && me.correct ? 'check' : 'flame', 20)}</span>` +
@@ -136,10 +132,10 @@ export function homeSide(): string {
       ${quickRow(
         'on-tap',
         'cards',
-        due ? `Ôn ${due} thẻ lỗi` : 'Luyện bài tập',
-        due ? 'Từ chính những nước bạn đi sai' : 'Chưa có thẻ nào đến hạn',
+        due ? 'Ôn thẻ lỗi' : 'Luyện bài tập',
+        due ? `${due} thẻ đến hạn` : '',
       )}
-      ${quickRow('ban', 'friends', 'Đấu với người', 'Ghép với người cùng trình độ')}
+      ${quickRow('ban', 'friends', 'Đấu với người', u ? `Elo ${u.gameRating}` : '')}
       ${coachRow()}
     </div>
 

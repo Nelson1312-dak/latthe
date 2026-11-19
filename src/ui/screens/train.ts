@@ -356,11 +356,14 @@ export function train(): string {
             : '',
         )}
 
-        ${rule('Hôm nay')}
-        ${stats([
-          ['Thẻ lỗi còn lại', String(Math.max(0, cardCount.due - doneToday))],
-          ['Đã làm', String(doneToday)],
-        ])}
+        ${
+          cardCount.due > 0 || doneToday > 0
+            ? `${rule('Hôm nay')}${stats([
+                ['Thẻ lỗi còn lại', String(Math.max(0, cardCount.due - doneToday))],
+                ['Đã làm', String(doneToday)],
+              ])}`
+            : ''
+        }
       </div>
     </div>
   </div>`;
