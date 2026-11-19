@@ -718,7 +718,8 @@ a {
   min-width: 0;
 }
 .quick-text > span {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
   max-width: 50%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -745,4 +746,8 @@ a {
 }
 .settings .swatch {
   padding: var(--s-1);
+}
+/* Dòng bài học một hàng: vẫn đủ vùng chạm 44px */
+.lesson-row {
+  min-height: 48px;
 }

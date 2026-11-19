@@ -73,7 +73,7 @@
   --brush-b: #52b0dc;
   --brush-y: #ffaa00;
   /* Huy hiệu kết thúc ván trên ô Vua */
-  --end-win: #1f8f80;
+  --end-win: var(--cls-best);
   --end-mate: #cf4034;
   --end-resign: #cf4034;
   --end-timeout: #cf4034;

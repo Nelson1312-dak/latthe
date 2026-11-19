@@ -50,11 +50,10 @@ export function learn(): string {
   const lỗi = coach?.facts?.motifs[0];
   const row = (l: Lesson) => {
     const đãXong = done.has(l.id);
-    return `<button class="lesson-row${đãXong ? ' is-done' : ''}" data-lesson="${l.id}">
+    return `<button class="lesson-row${đãXong ? ' is-done' : ''}" data-lesson="${l.id}" title="${l.keyPoint}">
       <span class="lesson-mark">${đãXong ? icon('check', 18) : ''}</span>
       <span class="lesson-text">
         <b>${l.title}${gợiÝ.has(l.id) ? ' <span class="tag tag-coach">gợi ý</span>' : ''}</b>
-        <span>${l.keyPoint}</span>
       </span>
       <span class="lesson-count mono">${l.count} bài</span>
     </button>`;

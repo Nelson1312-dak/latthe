@@ -500,7 +500,7 @@ function vánCờ(): string {
           lờiThoại,
           đợiVàoLại,
           hòaĐangChờ,
-          xong ? kếtQuả() : '',
+          xong ? (endClosedFor === s.id ? kếtQuả() : kếtQuảChấm()) : '',
           moveList(
             s.history.map((san, i) => ({ san, cls: đãChấm()?.moves[i]?.cls })),
             xong ? plyĐangXem() : s.history.length,
@@ -596,6 +596,15 @@ function shareMetaOnline(): ShareMeta | null {
     label: outcomeText({ winner: s.over.winner, reason: s.over.reason }),
     side: s.youAre,
   };
+}
+
+/** Bảng chấm ván riêng (lúc hộp thoại hết ván còn mở: kết quả đã ở trong hộp thoại). */
+function kếtQuảChấm(): string {
+  const s = live.state!;
+  const cur = reporter.current;
+  if (!cur || cur.pgn !== pgnFromSans(s.history)) return '';
+  if (cur.phase !== 'done' || !cur.result) return reviewProgress(cur);
+  return reviewPanel(cur.result, { me: s.youAre, opponent: đốiThủ(), ply: plyĐangXem(), share: shareStateFor(cur.pgn), coach: true });
 }
 
 function kếtQuả(): string {

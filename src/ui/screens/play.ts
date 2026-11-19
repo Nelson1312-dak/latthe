@@ -521,7 +521,7 @@ function gameScreen(extraSide = ''): string {
           !started
             ? sheet(setupPanel())
             : sheet(
-                ...(result ? [resultCard(result), reviewBlock()] : []),
+                ...(result ? [endClosed ? resultCard(result) : '', reviewBlock()] : []),
                 assistCard(),
                 khaiCuoc(),
                 game.length

@@ -47,6 +47,7 @@ const PATHS = {
   'nav-learn': '<path fill="currentColor" stroke="none" d="M12 4 1.5 9 12 14l8.5-4.05V15H22V9Z"/><path fill="currentColor" stroke="none" d="M6 12.6V16c0 1.9 2.7 3.5 6 3.5s6-1.6 6-3.5v-3.4l-6 2.9Z"/>',
   'nav-coach': '<path fill="currentColor" stroke="none" d="M4 4.5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8.5L7 20.5v-4H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1Z"/>',
   'nav-user': '<circle fill="currentColor" stroke="none" cx="12" cy="8" r="4"/><path fill="currentColor" stroke="none" d="M4 20.5c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5Z"/>',
+  'nav-settings': '<path fill="currentColor" stroke="none" d="M3 6h18v2H3ZM3 16h18v2H3Z"/><circle fill="currentColor" stroke="none" cx="15" cy="7" r="3"/><circle fill="currentColor" stroke="none" cx="9" cy="17" r="3"/>',
   'nav-stats': '<path fill="currentColor" stroke="none" d="M4 20v-9h4v9ZM10 20V4h4v16ZM16 20v-6h4v6Z"/>',
   flame: '<path d="M12 3.5s4.5 3.8 4.5 8a4.5 4.5 0 0 1-9 0c0-1.6.8-2.8 1.6-3.6 0 1.4.9 2.2 1.7 2.2.9 0 1.6-.8 1.6-2 0-2-.4-3.6-.4-4.6Z"/>',
 } as const;

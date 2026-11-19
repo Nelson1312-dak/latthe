@@ -13,7 +13,9 @@ Không dựa vào cảm nhận từng đợt; có hai lớp với một đích s
    - **màu nhấn ngoài nút chính** (`--accent` chỉ cho `.btn-primary` và công tắc bật);
    - icon thanh điều hướng là nét mảnh (phải là icon đặc `nav-*`);
    - chữ chức năng nhỏ hơn 11px; ô số to (`.stat-tile`) ngoài trang Thống kê;
-   - tương phản chữ dưới 4,5:1, vùng bấm dưới 44px trên điện thoại, tràn ngang, lỗi JS.
+   - tương phản chữ dưới 4,5:1, vùng bấm dưới 44px trên điện thoại, tràn ngang, lỗi JS;
+   - khi có API với đăng nhập giả (lúc phát triển): thêm một lượt **đã đăng nhập** trên điện
+     thoại giả lập (có sẵn một ván đã lưu) để bắt tràn ngang ở Hồ sơ, Huấn luyện viên, Xem lại…
 2. `scripts/visual-diff.mjs` — **chỉ báo**: so ảnh chụp 10 màn cố định (khách, điện thoại và
    máy tính) với ảnh chuẩn `design/baseline/`. Màn nào đổi thì ghi ảnh mới và ảnh tô đỏ vùng
    đổi vào `shots/diff/`. Đổi có thể là cố ý: duyệt xong thì

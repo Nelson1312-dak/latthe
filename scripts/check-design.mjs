@@ -166,7 +166,7 @@ for (const theme of ['dark', 'light']) {
       // Mẫu "số to + nhãn nhỏ" xếp ô chỉ được ở trang Thống kê
       if (route !== 'thong-ke' && route !== 'thiet-ke' && document.querySelector('.stat-tile')) out.push('ô số to (stat-tile) ngoài trang Thống kê');
       // Icon thanh điều hướng phải đặc
-      for (const svg of document.querySelectorAll('.nav-item svg, .top-nav .top-link svg')) {
+      for (const svg of document.querySelectorAll('.nav-item svg, .site-head .top-link svg')) {
         if (!vis(svg)) continue;
         const đặc = [...svg.querySelectorAll('*')].some((n) => getComputedStyle(n).fill !== 'none');
         if (!đặc) out.push('icon thanh điều hướng là nét mảnh');
@@ -193,6 +193,50 @@ for (const theme of ['dark', 'light']) {
     await page.setViewportSize({ width: 1440, height: 900 });
   }
   await page.close();
+}
+// Màn đã đăng nhập (hồ sơ, huấn luyện viên, ván đã chơi...) chỉ có khi có API với đăng
+// nhập giả (AUTH_DEV=1). Lượt khách ở trên không thấy chúng — Hồ sơ từng tràn ngang 27px
+// trên điện thoại mà cổng không bắt được. Bản build lúc deploy không có API thì bỏ qua.
+if (process.env.CHECK_NO_API !== '1') {
+  // Giả lập điện thoại thật (isMobile): trên điện thoại, nội dung rộng quá thì cả trang
+  // bị thu nhỏ lại cho vừa (innerWidth > 390) chứ không chỉ hiện thanh cuộn ngang
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' });
+  const vào = await page.evaluate(async () => {
+    const r = await fetch('/api/auth/dev', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"name":"Rà giao diện"}' }).catch(() => null);
+    if (!r?.ok) return false;
+    // Một ván đã lưu để các màn có dữ liệu thật (dòng Huấn luyện viên, Hồ sơ, Ván đã chơi)
+    await fetch('/api/games', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'bot', level: 3, playerSide: 'w', winner: 'b', reason: 'checkmate',
+        pgn: '1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5 Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3#',
+      }),
+    });
+    return true;
+  });
+  if (vào) {
+    // App đọc người dùng lúc mở trang: tải lại để vào đúng trạng thái đã đăng nhập
+    await page.reload({ waitUntil: 'networkidle' });
+    // Xem lại ván vừa lưu trước (trình duyệt chấm ván, sinh dữ liệu cho Huấn luyện viên)
+    const id = await page.evaluate(async () => (await (await fetch('/api/games', { credentials: 'same-origin' })).json()).games?.[0]?.id);
+    if (id) {
+      await page.goto(`${BASE}/#/xem-lai?game=${id}`, { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => /chính xác/i.test(document.body.innerText), null, { timeout: 120000 }).catch(() => {});
+    }
+    for (const route of ['', 'choi', 'on-tap', 'hoc', 'huan-luyen', 'tai-khoan', 'xem-lai', `xem-lai?game=${id}`]) {
+      await page.goto(`${BASE}/#/${route}`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(500);
+      const tràn = await page.evaluate(() => Math.max(document.documentElement.scrollWidth, window.innerWidth) - 390);
+      if (tràn > 1) fail(`đã đăng nhập /#/${route || 'sanh'}`, `tràn ngang ${tràn}px ở cỡ điện thoại`);
+    }
+  } else {
+    console.log('(Không đăng nhập giả được — bỏ qua lượt màn đã đăng nhập; cần server chạy với AUTH_DEV=1)');
+  }
+  await ctx.close();
 }
 await browser.close();
 

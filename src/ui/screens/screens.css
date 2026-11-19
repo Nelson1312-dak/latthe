@@ -1356,9 +1356,7 @@ button.top-link {
 @media (min-width: 1101px) {
   button.top-link {
     width: 100%;
-    border-left: 4px solid transparent;
-    font-size: var(--fs-lg);
-    font-weight: 600;
+    border-left: 0;
   }
 }
 
@@ -1590,6 +1588,8 @@ button.top-link {
 /* Màn Hồ sơ */
 .profile {
   display: grid;
+  /* minmax(0, …): dòng có chữ không xuống dòng không được nở cột ra quá màn hình */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s-4);
 }
 .profile-card {

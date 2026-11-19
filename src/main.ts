@@ -116,7 +116,7 @@ function siteHeader(current: string): string {
     // người chơi không cần nó, và nó làm trang trông như công cụ của dev.
     // Vẫn vào được bằng #/thiet-ke.
     `<div class="site-right">` +
-    `<button class="top-link" title="Cài đặt" aria-label="Cài đặt">${icon('settings', 18)}<span>Cài đặt</span></button>` +
+    `<button class="top-link" title="Cài đặt" aria-label="Cài đặt">${icon('nav-settings', 18)}<span>Cài đặt</span></button>` +
     topLink('tai-khoan', shortName(), 'nav-user', current) +
     `</div></header>`
   );
