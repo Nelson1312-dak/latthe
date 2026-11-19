@@ -43,6 +43,8 @@ export interface GameRow {
   opponentRating: number | null;
   ratingBefore: number | null;
   ratingAfter: number | null;
+  /** Độ chính xác của mình nếu ván đã chấm. */
+  accuracy?: number | null;
 }
 
 export async function recentGames(): Promise<GameRow[]> {

@@ -17,7 +17,8 @@ import {
   type Card,
   type Puzzle,
 } from '../../app/training.ts';
-import { button, figurine, notice, rule, sheet, stats, toolbar } from '../components/index.ts';
+import { button, figurine, notice, pieceGlyph, sheet, toolbar } from '../components/index.ts';
+import type { PieceCode } from '../../../shared/fen.ts';
 import { markLessonDone } from '../../app/training.ts';
 import { LESSONS, type Lesson } from '../../training/lessons.ts';
 
@@ -56,6 +57,10 @@ let hintShown = false;
 let khoBai = 0;
 let doneToday = 0;
 let lastResult: { correct: boolean; text: string } | null = null;
+/** Kết quả các bài vừa làm trong phiên (mới nhất cuối), hiện thành dãy ✓ ✕ như Lichess. */
+const gầnĐây: boolean[] = [];
+/** Elo bài tập vừa cập nhật sau bài gần nhất (null: lấy theo tài khoản). */
+let eloBàiTập: number | null = null;
 let loadedOnce = false;
 /** Đang học một bài: lấy bài tập theo chủ đề của bài đó. */
 let lesson: Lesson | null = null;
@@ -209,6 +214,8 @@ async function finish(correct: boolean, rerender: () => void): Promise<void> {
   // Dùng gợi ý thì không tính là giải đúng
   const tínhĐúng = correct && !hintShown;
   if (correct) doneToday++;
+  gầnĐây.push(correct);
+  if (gầnĐây.length > 12) gầnĐây.shift();
   if (lesson && correct) {
     lessonDone++;
     if (lessonDone >= lesson.count) void markLessonDone(lesson.id);
@@ -222,6 +229,7 @@ async function finish(correct: boolean, rerender: () => void): Promise<void> {
     };
   } else if (task.puzzle && auth.user) {
     const r = await answerPuzzle(task.puzzle.id, task.puzzle.rating, tínhĐúng);
+    eloBàiTập = r.rating;
     lastResult = {
       correct,
       text: correct ? `Đúng rồi. Độ khó của bạn: ${r.rating}.` : 'Chưa đúng. Xem lời giải rồi thử bài khác nhé.',
@@ -317,7 +325,7 @@ export function train(): string {
     ${head}
     <div class="game">
       <div class="game-board">
-        <div class="puzzle-head">
+        <div class="puzzle-head only-narrow">
           <span class="to-move">${t.side === 'w' ? 'Trắng' : 'Đen'} đi</span>
           <span class="theme-tag">${t.label}</span>
           ${t.rating ? `<span class="puzzle-rating">độ khó <b class="mono">${t.rating}</b></span>` : ''}
@@ -327,17 +335,32 @@ export function train(): string {
 
       <div class="game-side">
         ${sheet(
+          // Máy tính: ai đi, chủ đề, độ khó nằm ở đầu cột như Lichess (điện thoại: trên bàn cờ)
+          `<div class="pz-head">
+            <span class="pz-turn">${pieceGlyph((t.side + 'k') as PieceCode, 'pz-king')}<b>${t.side === 'w' ? 'Trắng' : 'Đen'} đi</b></span>
+            <span class="pz-meta">${t.label}${t.rating ? ` · độ khó <b class="mono">${t.rating}</b>` : ''}</span>
+          </div>`,
           done
             ? `<p class="task-done ${lastResult?.correct ? 'is-right' : 'is-wrong'}">
                  <b>${lastResult?.correct ? 'Đúng' : 'Chưa đúng'}</b> — ${lastResult?.text ?? ''}
                </p>`
-            : notice(
-                t.kind === 'card'
-                  ? 'Đây là thế cờ bạn từng đi sai. Tìm nước tốt hơn.'
-                  : 'Tìm nước mạnh nhất cho bên đang đi.',
-                'info',
-                'hint',
-              ),
+            : `<p class="pz-task">${
+                t.kind === 'card' ? 'Thế cờ bạn từng đi sai. Tìm nước tốt hơn.' : 'Tìm nước mạnh nhất.'
+              }</p>`,
+          // Số liệu thật của người chơi, không bày số 0: Elo bài tập, dãy kết quả vừa làm
+          auth.user || gầnĐây.length || cardCount.due > 0
+            ? `<dl class="facts facts-compact">
+                ${auth.user ? `<div class="fact"><dt>Elo bài tập</dt><dd><b class="mono">${eloBàiTập ?? auth.user.puzzleRating}</b></dd></div>` : ''}
+                ${cardCount.due - doneToday > 0 ? `<div class="fact"><dt>Thẻ lỗi đến hạn</dt><dd><b class="mono">${cardCount.due - doneToday}</b></dd></div>` : ''}
+                ${
+                  gầnĐây.length
+                    ? `<div class="fact"><dt>Vừa làm</dt><dd class="pz-recent">${gầnĐây
+                        .map((ok) => `<span class="${ok ? 'is-ok' : 'is-bad'}" title="${ok ? 'Đúng' : 'Sai'}">${ok ? '✓' : '✕'}</span>`)
+                        .join('')}</dd></div>`
+                    : ''
+                }
+              </dl>`
+            : '',
           `<div class="puzzle-bar">
             ${
               done
@@ -346,6 +369,7 @@ export function train(): string {
             }
             <span class="spacer"></span>
             ${done ? '' : button({ label: 'Xem lời giải', kind: 'text' })}
+            ${done || lesson ? '' : `<span class="only-narrow">${button({ label: 'Bài khác', kind: 'text' })}</span>`}
           </div>`,
           hintShown || done
             ? `<p class="prose">${
@@ -356,14 +380,6 @@ export function train(): string {
             : '',
         )}
 
-        ${
-          cardCount.due > 0 || doneToday > 0
-            ? `${rule('Hôm nay')}${stats([
-                ['Thẻ lỗi còn lại', String(Math.max(0, cardCount.due - doneToday))],
-                ['Đã làm', String(doneToday)],
-              ])}`
-            : ''
-        }
       </div>
     </div>
   </div>`;

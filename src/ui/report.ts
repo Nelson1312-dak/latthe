@@ -21,7 +21,7 @@ import type { Square } from '../../shared/fen.ts';
 import { scoreFor, winningChances, type MoveClass } from '../../shared/winrate.ts';
 import { whyText } from '../../shared/advisor/templates.ts';
 import { factsForMove } from '../app/advisor.ts';
-import { sanVi, thếCờ } from '../analysis/words.ts';
+import { thếCờ } from '../analysis/words.ts';
 import { classBadge, figurine, notice } from './components/index.ts';
 import { icon } from './icons.ts';
 import type { ShareState } from '../app/share.ts';
@@ -189,7 +189,6 @@ function focusCard(m: ReviewedMove | null, me: Side | null, meName?: string): st
   return `<p class="rv-move">
       <span class="mono">${moveNo(m)}</span>${figurine(m.san, m.side)}${classBadge(m.cls, 'md')}
       <b style="color:var(--cls-${m.cls})">${CLASS_LABEL[m.cls]}</b>
-      <span class="rv-who">${ai} đi ${sanVi(m.san)}</span>
     </p>
     <p class="rv-why">${bad ? whyText(factsForMove(m)) : (CLASS_NOTE[m.cls] ?? '')}</p>
     ${bad ? betterLine(m) : ''}

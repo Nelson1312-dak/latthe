@@ -56,7 +56,9 @@ type Screen = { title: string; render: () => string };
 const SCREENS: Record<string, Screen> = {
   // Sảnh dùng chung bàn cờ của màn Chơi, gắn thêm phần riêng vào cột phải
   '': { title: 'Sảnh', render: () => (onlineView() ? online() : play(homeSide())) },
-  choi: { title: 'Chơi', render: () => (onlineView() ? online() : play()) },
+  // Chơi và Sảnh cùng một màn: dưới bảng chọn đối thủ là việc hôm nay và ván gần đây
+  // (trước đây cột phải của Chơi trống một khoảng to dưới "Hai người một máy")
+  choi: { title: 'Chơi', render: () => (onlineView() ? online() : play(homeSide())) },
   'choi-may': { title: 'Chơi với máy', render: playBot },
   'xem-lai': { title: 'Xem lại ván', render: review },
   'on-tap': { title: 'Ôn tập', render: train },
@@ -445,7 +447,7 @@ function render(): void {
   if (r === 'thong-ke') mountStats(render);
   if (r === 'hoc') mountLearn(render);
   if (r === 'huan-luyen') mountCoach(render);
-  if (r === '') mountHome(render);
+  if (r === '' || r === 'choi') mountHome(render);
   snapBoards(app);
   // Nút Google ở bất cứ chỗ nào có chỗ cho nó: trang Đăng nhập, hộp mời đăng nhập
   if (!auth.user && !auth.offline) {

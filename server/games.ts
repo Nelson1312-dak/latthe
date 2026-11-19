@@ -20,6 +20,8 @@ export interface GameRow {
   opponent_rating: number | null;
   rating_before: number | null;
   rating_after: number | null;
+  /** Độ chính xác của người chơi, từ bảng chấm ván (null nếu chưa chấm). */
+  accuracy?: number | null;
 }
 
 export interface NewGame {
@@ -49,6 +51,7 @@ export const publicGame = (g: GameRow) => ({
   opponentRating: g.opponent_rating,
   ratingBefore: g.rating_before,
   ratingAfter: g.rating_after,
+  accuracy: g.accuracy ?? null,
 });
 
 /**
@@ -130,9 +133,11 @@ export function pruneGames(db: Db, userId: number, keep = KEEP_GAMES, keepOnline
 export function listGames(db: Db, userId: number, limit = KEEP_GAMES) {
   return all<GameRow>(
     db,
-    `SELECT id, mode, level, player_side, winner, reason, move_count, created_at,
-            opponent_name, opponent_rating, rating_before, rating_after
-       FROM games WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`,
+    `SELECT g.id, g.mode, g.level, g.player_side, g.winner, g.reason, g.move_count, g.created_at,
+            g.opponent_name, g.opponent_rating, g.rating_before, g.rating_after,
+            CASE g.player_side WHEN 'w' THEN r.accuracy_w ELSE r.accuracy_b END AS accuracy
+       FROM games g LEFT JOIN reviews r ON r.game_id = g.id
+      WHERE g.user_id = ? ORDER BY g.created_at DESC, g.id DESC LIMIT ?`,
     userId,
     limit,
   ).map(publicGame);

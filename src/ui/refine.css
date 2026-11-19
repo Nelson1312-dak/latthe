@@ -751,3 +751,193 @@ a {
 .lesson-row {
   min-height: 48px;
 }
+
+/* ======================================================================
+   Đợt 4 (19/11/2026): dọn theo báo cáo agent rà design.
+   ====================================================================== */
+
+/* ---- 34. Ôn tập: đầu cột như Lichess (ai đi, chủ đề, độ khó), nút dồn đáy ---- */
+.pz-head {
+  display: none;
+}
+@media (min-width: 1101px) {
+  .pz-head {
+    display: grid;
+    gap: 2px;
+  }
+  .game-side > .sheet:has(> .puzzle-bar) {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .game-side > .sheet:has(> .puzzle-bar) > .puzzle-bar {
+    margin-top: auto;
+  }
+}
+.pz-turn {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-xl);
+}
+.pz-king {
+  width: 32px;
+  height: 32px;
+}
+.pz-meta {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.pz-task {
+  margin: 0;
+  color: var(--text-2);
+}
+.pz-recent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.pz-recent span {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.pz-recent .is-ok {
+  background: var(--cls-best);
+  color: #1a1917;
+}
+.pz-recent .is-bad {
+  background: var(--danger);
+  color: #1a1917;
+}
+@media (max-width: 767px) {
+  /* Bàn cờ liền mép: dòng "Trắng đi" phía trên vẫn giữ lề như thanh người chơi */
+  .screen:has(> .game) .game-board > .puzzle-head {
+    padding-left: var(--s-3);
+    padding-right: var(--s-3);
+  }
+}
+
+/* ---- 35. Thanh điều khiển ván (điện thoại): một tầng như chess.com ---- */
+.nav.game-bar {
+  padding-top: var(--s-1);
+}
+.gb-act.is-arrow {
+  flex: 0 0 52px;
+  color: var(--text-1);
+}
+.gb-act.is-arrow:disabled {
+  opacity: 0.3;
+}
+
+/* ---- 36. Huấn luyện viên lúc chưa có dữ liệu: một câu và một nút, không đóng khung ---- */
+.coach-empty {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* ---- 37. Hồ sơ: ảnh đại diện vuông như chess.com; bậc thang AI bấm là đấu ---- */
+.profile-card .profile-avatar {
+  border-radius: var(--r-md);
+}
+.ladder-line li {
+  display: contents;
+}
+.ladder-go {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 44px;
+  padding: 0 var(--s-1);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-3);
+  font: inherit;
+  cursor: pointer;
+}
+.ladder-go b {
+  font-weight: 600;
+  color: var(--text-2);
+}
+.ladder-go.is-beaten b {
+  color: var(--text-1);
+}
+.ladder-go:hover {
+  background: var(--bg-2);
+}
+.ladder-go .icon {
+  color: var(--text-1);
+}
+
+/* ---- 38. Danh sách ván: độ chính xác thành một cột số ---- */
+.log-acc {
+  min-width: 3.2em;
+  text-align: right;
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+/* ---- 39. Cài đặt: tên tuỳ chọn đã đủ rõ, bỏ câu giải thích phụ ---- */
+.settings .pref-text > span {
+  display: none;
+}
+
+/* ---- 40. Dòng dẫn sang Huấn luyện viên dưới bảng xem lại: link chữ, không phải ô menu ---- */
+.rv-coach {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-1);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+}
+.rv-coach .icon {
+  display: none;
+}
+
+/* ---- 41. Sửa theo lượt rà thứ hai (19/11/2026) ---- */
+/* Ôn tập trên điện thoại: dòng "Đen đi · chủ đề · độ khó" nằm bên trái, không dạt sang phải */
+.puzzle-head .to-move {
+  margin-left: 0;
+}
+/* Thẻ đối thủ ở bảng chọn: con Mã đen trên nền ô tối như ảnh đại diện máy */
+.bot-face {
+  background: var(--coord-dark);
+  border-radius: var(--r-md);
+}
+/* Cột độ chính xác: không giữ chỗ khi ván chưa chấm; điện thoại vẫn hiện */
+.log-acc:empty {
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  .log-acc:not(:empty) {
+    display: inline;
+  }
+  /* Dòng danh sách trên điện thoại: câu trạng thái dài thì xuống dòng, không cắt "…" */
+  .quick-text {
+    flex-wrap: wrap;
+  }
+  .quick-text > span {
+    max-width: none;
+    white-space: normal;
+  }
+}
+/* Học: tên bài không to hơn tiêu đề nhóm */
+.lesson-text b {
+  font-size: var(--fs-md);
+}
+/* Thanh điều khiển ván: hai mũi tên cùng độ sáng với các nút khác */
+.gb-act.is-arrow {
+  color: var(--text-2);
+}
+/* Cài đặt: 15 ô bàn cờ xếp 3 hàng 5 ô, không thừa một ô lẻ */
+.settings .swatches {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}

@@ -445,8 +445,8 @@ function gameScreen(extraSide = ''): string {
           : 'Đối thủ'
         : isBot
           ? `Máy ${levelById(setup.level).name.toLowerCase()}`
-          : setup.mode === 'bot' && side === setup.side && auth.user
-            ? auth.user.name
+          : setup.mode === 'bot' && side === setup.side
+            ? (auth.user?.name ?? 'Bạn')
             : sideName(side),
       side,
       avatar: !isBot && setup.mode === 'bot' && side === setup.side ? auth.user?.avatar : null,
@@ -471,7 +471,8 @@ function gameScreen(extraSide = ''): string {
             : !result && game.turn === side
               ? 'đang đi'
               : undefined,
-      clockState: started && !result && game.turn === side ? 'running' : 'idle',
+      clockState:
+        started && !result && (assist.held ? side === setup.side : game.turn === side) ? 'running' : 'idle',
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
       diff: side === 'w' ? mat.diff : -mat.diff,
       tools,
@@ -588,10 +589,10 @@ function quickStart(): string {
   return `<div class="quick-start only-narrow">
     ${nút}
     <div class="gb-acts qs-acts">
-      ${tắt('data-qs-options', 'settings', 'Tuỳ chọn')}
-      ${online ? tắt('data-play-mode="machine"', 'engine', 'Với máy') : tắt('data-play-mode="online"', 'friends', 'Với người')}
-      ${tắt('href="#/on-tap"', 'cards', 'Bài tập')}
-      ${tắt('href="#/xem-lai"', 'review', 'Ván đã chơi')}
+      ${tắt('data-qs-options', 'nav-settings', 'Tuỳ chọn')}
+      ${online ? tắt('data-play-mode="machine"', 'f-engine', 'Với máy') : tắt('data-play-mode="online"', 'f-friends', 'Với người')}
+      ${tắt('href="#/on-tap"', 'nav-puzzle', 'Bài tập')}
+      ${tắt('href="#/xem-lai"', 'f-history', 'Ván đã chơi')}
     </div>
   </div>`;
 }
@@ -634,20 +635,16 @@ export function playBar(): string {
     <div class="gb-acts">
       ${
         bot
-          ? act('hint', 'hint', hintLoading ? 'Đang xem…' : hintLabel(hintLevel), {
+          ? act('hint', 'f-hint', hintLoading ? 'Đang xem…' : hintLabel(hintLevel), {
               disabled: hintLevel === 3 || hintLoading || !game.atLive,
             })
-          : act('flip', 'flip', 'Lật bàn')
+          : act('flip', 'f-flip', 'Lật bàn')
       }
-      ${act('undo', 'undo', 'Đi lại', { disabled: game.length === 0 || thinking })}
-      ${bot ? `<button class="gb-act" title="Trợ lý" aria-pressed="${prefs().assist}">${icon('coach', 22)}<span>Trợ lý</span></button>` : ''}
-      ${act('resign', 'resign', resignArmed ? 'Chắc chưa?' : 'Đầu hàng', { danger: resignArmed, disabled: game.length === 0 })}
-    </div>
-    <div class="gb-nav">
-      ${iconButton('first', 'Về đầu ván', { disabled: game.ply === 0 })}
-      ${iconButton('prev', 'Lùi một nước', { disabled: game.ply === 0 })}
-      ${iconButton('next', 'Tiến một nước', { disabled: game.atLive })}
-      ${iconButton('last', 'Tới nước mới nhất', { disabled: game.atLive })}
+      ${act('undo', 'f-undo', 'Đi lại', { disabled: game.length === 0 || thinking })}
+      ${bot ? `<button class="gb-act" title="Trợ lý" aria-pressed="${prefs().assist}">${icon('nav-coach', 22)}<span>Trợ lý</span></button>` : ''}
+      ${act('resign', 'f-flag', resignArmed ? 'Chắc chưa?' : 'Đầu hàng', { danger: resignArmed, disabled: game.length === 0 })}
+      <button class="gb-act is-arrow" title="Lùi một nước" aria-label="Lùi một nước"${game.ply === 0 ? ' disabled' : ''}>${icon('f-prev', 26)}</button>
+      <button class="gb-act is-arrow" title="Tiến một nước" aria-label="Tiến một nước"${game.atLive ? ' disabled' : ''}>${icon('f-next', 26)}</button>
     </div>
   </nav>`;
 }

@@ -166,7 +166,7 @@ for (const theme of ['dark', 'light']) {
       // Mẫu "số to + nhãn nhỏ" xếp ô chỉ được ở trang Thống kê
       if (route !== 'thong-ke' && route !== 'thiet-ke' && document.querySelector('.stat-tile')) out.push('ô số to (stat-tile) ngoài trang Thống kê');
       // Icon thanh điều hướng phải đặc
-      for (const svg of document.querySelectorAll('.nav-item svg, .site-head .top-link svg')) {
+      for (const svg of document.querySelectorAll('.nav-item svg, .site-head .top-link svg, .game-bar svg, .qs-acts svg')) {
         if (!vis(svg)) continue;
         const đặc = [...svg.querySelectorAll('*')].some((n) => getComputedStyle(n).fill !== 'none');
         if (!đặc) out.push('icon thanh điều hướng là nét mảnh');

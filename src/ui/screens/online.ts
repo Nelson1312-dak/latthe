@@ -401,11 +401,11 @@ export function onlineBar(): string {
     <div class="gb-acts">
       ${
         họMời
-          ? `<button class="gb-act">${icon('check', 22)}<span>Đồng ý hòa</span></button>` +
-            `<button class="gb-act">${icon('close', 22)}<span>Từ chối</span></button>`
-          : `<button class="gb-act"${s.drawOfferFrom ? ' disabled' : ''}>${icon('draw', 22)}<span>Đề nghị hòa</span></button>`
+          ? `<button class="gb-act">${icon('f-check', 22)}<span>Đồng ý hòa</span></button>` +
+            `<button class="gb-act">${icon('f-close', 22)}<span>Từ chối</span></button>`
+          : `<button class="gb-act"${s.drawOfferFrom ? ' disabled' : ''}>${icon('f-draw', 22)}<span>Đề nghị hòa</span></button>`
       }
-      <button class="gb-act">${icon('resign', 22)}<span>Đầu hàng</span></button>
+      <button class="gb-act">${icon('f-flag', 22)}<span>Đầu hàng</span></button>
     </div>
   </nav>`;
 }
@@ -979,6 +979,20 @@ export function hasLiveGame(): boolean {
  * (thời gian, tìm trận, mã mời) hoặc đang chờ ghép. Bàn cờ bên trái vẫn là
  * bàn cờ của tab Chơi, nên chuyển qua lại hai chế độ không bị nhảy trang.
  */
+/** Bấm một bậc trong Bậc thang AI (Hồ sơ): sang tab Chơi, chế độ Với người, đấu ngay bậc đó. */
+export function challengeFromProfile(botId: string, rerender: () => void): void {
+  if (đangVàoHàng) return;
+  đangVàoHàng = true;
+  live.error = null;
+  setPlayMode('online');
+  location.hash = '#/choi';
+  void challengeBot(botId, control).then(async () => {
+    await loadStatus();
+    đangVàoHàng = false;
+    rerender();
+  });
+}
+
 /** Việc chính của sảnh online lúc này, cho hàng chơi nhanh dưới bàn cờ (điện thoại). */
 export function onlineQuick(): { label: string; sum: string } | null {
   if (!auth.user) return null;

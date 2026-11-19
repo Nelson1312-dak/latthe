@@ -67,8 +67,7 @@ export function coachScreen(): string {
   if (!auth.user) {
     return `<div class="screen screen-narrow">${head()}
       <div class="coach-empty">
-        <span class="coach-empty-icon">${icon('coach', 32)}</span>
-        <p><b>Đăng nhập để có Huấn luyện viên riêng.</b> Đọc các ván của bạn, chỉ ra lỗi hay lặp lại và bài nên học.</p>
+        <p><b>Đăng nhập để có Huấn luyện viên riêng:</b> lỗi bạn hay lặp lại và bài nên học, từ chính các ván của bạn.</p>
         <button class="btn btn-primary" data-go="tai-khoan">${icon('user', 17)}<span>Đăng nhập</span></button>
       </div></div>`;
   }
@@ -84,7 +83,6 @@ export function coachScreen(): string {
   if (!d.facts) {
     return `<div class="screen screen-narrow">${head()}
       <div class="coach-empty">
-        <span class="coach-empty-icon">${icon('coach', 32)}</span>
         <p><b>Chơi thêm ${d.need} ván</b> để Huấn luyện viên có đủ dữ liệu.</p>
         <button class="btn btn-primary" data-go="choi">${icon('play', 17)}<span>Chơi một ván</span></button>
       </div>

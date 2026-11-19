@@ -55,7 +55,7 @@ export interface BotPersona {
 export const BOTS: BotPersona[] = [
   {
     id: 'rookie',
-    name: 'Rookie',
+    name: 'Tập sự',
     elo: 600,
     blurb: 'Mới tập chơi, hay quên giữ quân. Hiền khô.',
     search: { depth: 1, movetimeMs: 60, multipv: 5, weights: [1, 3, 4, 4, 4] },
@@ -77,7 +77,7 @@ export const BOTS: BotPersona[] = [
   },
   {
     id: 'steady',
-    name: 'Steady',
+    name: 'Vững vàng',
     elo: 900,
     blurb: 'Chơi chậm rãi, chắc tay, thích đổi quân cho gọn.',
     search: { depth: 2, movetimeMs: 80, multipv: 5, weights: [2, 3, 3, 2, 2] },
@@ -99,7 +99,7 @@ export const BOTS: BotPersona[] = [
   },
   {
     id: 'blitz',
-    name: 'Blitz',
+    name: 'Chớp nhoáng',
     elo: 1200,
     blurb: 'Ưa tấn công: thấy chiếu là chiếu, thấy ăn là ăn.',
     search: { depth: 4, movetimeMs: 120, multipv: 4, weights: [5, 3, 2, 1] },
@@ -122,7 +122,7 @@ export const BOTS: BotPersona[] = [
   },
   {
     id: 'solid',
-    name: 'Solid',
+    name: 'Chắc tay',
     elo: 1500,
     blurb: 'Chơi thế trận, ít khi sai lớn. Kiên nhẫn chờ bạn hở.',
     search: { uciElo: 1500, movetimeMs: 300, multipv: 1 },
@@ -144,7 +144,7 @@ export const BOTS: BotPersona[] = [
   },
   {
     id: 'sharp',
-    name: 'Sharp',
+    name: 'Sắc bén',
     elo: 1900,
     blurb: 'Tính sâu, ra đòn chiến thuật sắc. Thua là phải tâm phục.',
     search: { uciElo: 1900, movetimeMs: 500, multipv: 1 },
@@ -166,7 +166,7 @@ export const BOTS: BotPersona[] = [
   },
   {
     id: 'master',
-    name: 'Master',
+    name: 'Cao thủ',
     elo: 2300,
     blurb: 'Cao thủ trầm tính. Thắng được ông là lên trình thật.',
     search: { uciElo: 2300, movetimeMs: 800, multipv: 1 },

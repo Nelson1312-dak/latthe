@@ -1,5 +1,8 @@
 // Màn đăng nhập / tài khoản. Vào thẳng được qua #/tai-khoan.
-import { button, classBadge, dialog, esc, notice, rule } from '../components/index.ts';
+import { button, classBadge, dialog, esc, notice, rule, sheet } from '../components/index.ts';
+import { recentGames, type GameRow } from '../../app/games.ts';
+import { gameRow } from './home.ts';
+import { challengeFromProfile } from './online.ts';
 import {
   auth,
   deleteAccount,
@@ -33,13 +36,17 @@ let lỗiTên: string | null = null;
 let hỏiXoá = false;
 let lỗiXoá: string | null = null;
 
+/** 5 ván gần nhất cho bảng "Ván gần đây" (như trang hồ sơ chess.com, Lichess). */
+let vánGầnĐây: GameRow[] = [];
+
 export function mountAccount(rerender: () => void): void {
   if (!auth.user) return;
   // Mỗi lần mở Hồ sơ lấy số mới: vừa đánh xong một ván thì Elo đã khác
   if (daHoi && Date.now() - hỏiLúc < 10_000) return;
   hỏiLúc = Date.now();
   daHoi = true;
-  void Promise.all([progress(), loadProfileStats()]).then(([p, s]) => {
+  void Promise.all([progress(), loadProfileStats(), recentGames()]).then(([p, s, g]) => {
+    vánGầnĐây = g;
     tienDo = p;
     thốngKê = s?.stats ?? null;
     bậcThang = s?.ladder ?? [];
@@ -221,19 +228,25 @@ function profile(): string {
 
     ${
       bậcThang.length
-        ? `${rule('Bậc thang AI', `<span class="rule-note">đã hạ ${bậcThang.filter((b) => b.beaten).length}/${bậcThang.length}</span>`)}
+        ? `${rule('Bậc thang AI', `<span class="rule-note">đã hạ ${bậcThang.filter((b) => b.beaten).length}/${bậcThang.length} · bấm tên để đấu</span>`)}
            <ol class="ladder-line">${bậcThang
              .map(
                (b) =>
-                 `<li class="${b.beaten ? 'is-beaten' : ''}" title="${esc(b.blurb)}">${b.beaten ? icon('check', 14) : ''}<b>${esc(b.name)}</b> <span class="mono">${b.elo}</span></li>`,
+                 `<li><button class="ladder-go${b.beaten ? ' is-beaten' : ''}" data-ladder-bot="${esc(b.id)}" title="Đấu ngay · ${esc(b.blurb)}">` +
+                 `${b.beaten ? icon('check', 14) : ''}<b>${esc(b.name)}</b> <span class="mono">${b.elo}</span></button></li>`,
              )
-             .join('')}</ol>
-           <p class="muted">Chơi → Với người → Thử thách AI.</p>`
+             .join('')}</ol>`
+        : ''
+    }
+
+    ${
+      vánGầnĐây.length
+        ? `${rule('Ván gần đây', '<a class="rule-link" href="#/xem-lai">Xem tất cả</a>')}
+           ${sheet(`<div class="log">${vánGầnĐây.slice(0, 5).map(gameRow).join('')}</div>`)}`
         : ''
     }
 
     <div class="quick-list profile-links">
-      <button class="quick" data-go="xem-lai"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Ván đã chơi</b></span>${icon('next', 16)}</button>
       ${u.admin ? `<button class="quick" data-go="thong-ke"><span class="quick-icon">${icon('review', 20)}</span><span class="quick-text"><b>Thống kê trang</b></span>${icon('next', 16)}</button>` : ''}
       <button class="quick" data-go="on-tap"><span class="quick-icon">${icon('cards', 20)}</span><span class="quick-text"><b>Thẻ ôn tập</b>${tienDo ? `<span>${tienDo.the.due}/${tienDo.the.total} đến hạn</span>` : ''}</span>${icon('next', 16)}</button>
     </div>
@@ -263,6 +276,11 @@ function profile(): string {
 
 /** Nút trên màn Hồ sơ. Đăng xuất do main.ts lo (cần dọn cả các màn khác). */
 export function handleAccountClick(target: HTMLElement, rerender: () => void, afterDelete: () => void): boolean {
+  const bậc = target.closest<HTMLElement>('[data-ladder-bot]');
+  if (bậc) {
+    challengeFromProfile(bậc.dataset.ladderBot!, rerender);
+    return true;
+  }
   if (target.closest('[data-rename]')) {
     sửaTên = true;
     lỗiTên = null;

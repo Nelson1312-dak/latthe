@@ -57,7 +57,7 @@ function when(iso: string): string {
   return d === 1 ? 'hôm qua' : `${d} ngày`;
 }
 
-const gameRow = (g: GameRow) => {
+export const gameRow = (g: GameRow) => {
   const win = g.winner === 'draw' ? 'd' : g.winner === g.playerSide ? 'w' : 'l';
   const text = g.winner === 'draw' ? 'Hòa' : win === 'w' ? 'Thắng' : 'Thua';
   const who =
@@ -66,8 +66,8 @@ const gameRow = (g: GameRow) => {
     ${sideGlyph(g.playerSide)}
     <span class="log-name">${who}</span>
     <span class="log-result result-${win}">${text} · ${END_TEXT[g.reason as EndReason] ?? g.reason}</span>
-    <span class="log-acc mono">${g.moveCount} nước</span>
-    <span class="log-when">${when(g.createdAt)}</span>
+    ${g.accuracy != null ? `<span class="log-acc mono" title="Độ chính xác">${g.accuracy.toFixed(1)}</span>` : '<span class="log-acc"></span>'}
+    <span class="log-when">${g.moveCount} nước · ${when(g.createdAt)}</span>
   </a>`;
 };
 

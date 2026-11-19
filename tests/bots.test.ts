@@ -179,7 +179,7 @@ describe('thử thách AI và bậc thang', () => {
     expect(live.challengeBot(a, 'master', '10+0', T0)).toEqual({ ok: true });
     const st = live.roomOf(a.id)!.stateFor(a.id, T0)!;
     const đối = st.youAre === 'w' ? st.black : st.white;
-    expect(đối.name).toBe('Master');
+    expect(đối.name).toBe('Cao thủ');
     expect(live.challengeBot(a, 'master', '10+0', T0)).toEqual({ ok: false, why: 'already-playing' });
     expect(live.challengeBot(createLocalUser(db, 'B'), 'khong-co', '10+0', T0)).toEqual({ ok: false, why: 'no-such-bot' });
   });
