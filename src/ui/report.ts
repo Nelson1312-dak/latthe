@@ -374,7 +374,9 @@ function evalGraph(r: ReviewResult, ply: number, me: Side | null): string {
   const H = 72;
   const x = (i: number) => (i / n) * W;
   const y = (wc: number) => H / 2 - wc * (H / 2) * 0.92;
-  const pts = [`0,${H / 2}`, ...r.moves.map((m, i) => `${x(i + 1).toFixed(1)},${y(winningChances(m.scoreAfter)).toFixed(1)}`)];
+  // Sau nước chiếu hết engine trả "mate 0" (bên phải đi đã bị chiếu hết): bên vừa đi thắng
+  const wc = (m: ReviewedMove) => (m.scoreAfter.mate === 0 ? (m.side === 'w' ? 1 : -1) : winningChances(m.scoreAfter));
+  const pts = [`0,${H / 2}`, ...r.moves.map((m, i) => `${x(i + 1).toFixed(1)},${y(wc(m)).toFixed(1)}`)];
   const area = `M0,${H} L${pts.join(' L')} L${W},${H} Z`;
   // Cột bấm được: mỗi nước một dải dọc trong suốt
   const cols = r.moves
@@ -387,7 +389,7 @@ function evalGraph(r: ReviewResult, ply: number, me: Side | null): string {
   const dots = momentsOf(r, me)
     .map((m) => {
       const left = (x(m.ply) / W) * 100;
-      const top = (y(winningChances(m.scoreAfter)) / H) * 100;
+      const top = (y(wc(m)) / H) * 100;
       return (
         // Chấm chỉ để nhìn; bấm thì dải cột bên dưới nhận (chấm nhỏ hơn vùng chạm 44px)
         `<span class="eg-dot" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;--c:var(--cls-${m.cls})" ` +

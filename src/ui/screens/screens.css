@@ -820,14 +820,12 @@ button.log-row {
 /* ---------------- Ôn tập ---------------- */
 .task-done {
   font-size: var(--fs-lg);
-  padding-left: var(--s-3);
-  border-left: 2px solid var(--line-strong);
 }
 .task-done.is-right {
-  border-left-color: var(--ok);
+  color: var(--ok);
 }
 .task-done.is-wrong {
-  border-left-color: var(--danger);
+  color: var(--danger);
 }
 
 /* ---------------- Bài học ---------------- */
@@ -885,7 +883,7 @@ button.log-row {
 }
 .note-key {
   padding-left: var(--s-3);
-  border-left: 2px solid var(--accent);
+  border-left: 0;
   font-family: var(--font-serif);
   font-size: 15px;
   line-height: 23px;

@@ -1,5 +1,7 @@
 // Rà tự động theo danh sách cấm ở docs/DESIGN.md mục 2, cộng vài kiểm tra kỹ thuật.
 // Chạy: npm run check:design (cần `npm run dev` đang chạy).
+// `npm run deploy` cũng chạy file này (với bản đã build, không có API: CHECK_NO_API=1)
+// và KHÔNG deploy nếu còn lỗi. Quy trình rà đầy đủ: docs/DESIGN-REVIEW.md.
 import { chromium } from 'playwright';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -47,6 +49,19 @@ for (const f of [...sourceFiles('src'), ...sourceFiles('shared')]) {
   for (const b of text.match(/box-shadow:[^;]+/g) ?? []) {
     if (!/--shadow-float|0 8px 24px/.test(b)) fail(f, `bóng đổ ngoài quy định (“${b.slice(0, 40)}”)`);
   }
+  // Vạch màu bên trái (kiểu "callout"), dày từ 2px — cấm ở mọi chỗ (DESIGN.md mục 2)
+  for (const m of text.matchAll(/border-left:\s*([2-9]|\d{2,})px\s+solid\s+(?!transparent)[^;]+/g)) {
+    fail(f, `vạch màu bên trái (“${m[0].slice(0, 50)}”)`);
+  }
+}
+
+// Thanh điều hướng phải dùng icon đặc hình cờ (nav-*), không dùng icon nét mảnh
+{
+  const main = readFileSync('src/main.ts', 'utf8');
+  const nav = /const NAV[^=]*=\s*\[([\s\S]*?)\];/.exec(main)?.[1] ?? '';
+  for (const m of nav.matchAll(/icon:\s*'([\w-]+)'/g)) {
+    if (!m[1].startsWith('nav-')) fail('src/main.ts', `NAV dùng icon nét mảnh '${m[1]}' — dùng icon đặc nav-*`);
+  }
 }
 
 /* ---------- 2. Rà trang đã dựng ---------- */
@@ -54,7 +69,13 @@ const browser = await chromium.launch();
 for (const theme of ['dark', 'light']) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.addInitScript((t) => localStorage.setItem('theme', t), theme);
-  page.on('console', (m) => m.type() === 'error' && fail(`console/${theme}`, m.text()));
+  // Bản đã build chạy không có API (lúc deploy): lỗi gọi /api là đương nhiên, bỏ qua
+  const NO_API = process.env.CHECK_NO_API === '1';
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    if (NO_API && /Failed to load resource|\/api\/|status of 404|status of 502|HTTP 404/i.test(m.text())) return;
+    fail(`console/${theme}`, m.text());
+  });
   page.on('pageerror', (e) => fail(`console/${theme}`, e.message));
 
   for (const route of ROUTES) {
@@ -98,6 +119,61 @@ for (const theme of ['dark', 'light']) {
       return [...new Set(out)];
     });
     for (const l of low) fail(where, `tương phản thấp ${l}`);
+
+    // Những thứ từng làm giao diện "trông như AI làm" (đợt rà 19/11/2026), máy đo được:
+    const ai = await page.evaluate((route) => {
+      const out = [];
+      const vis = (el) => {
+        const st = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        return st.display !== 'none' && st.visibility !== 'hidden' && r.width > 0 && r.height > 0;
+      };
+      const tag = (el) =>
+        el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).join('.') : '');
+      // Màu nhấn chỉ cho nút chính và công tắc bật
+      const probe = document.createElement('i');
+      probe.style.color = 'var(--accent)';
+      document.body.append(probe);
+      const accent = getComputedStyle(probe).color;
+      probe.remove();
+      const ALLOW = '.btn-primary, .switch, .qs-play, [data-spec], .spec-section, .swatch-board, .board, .board-host, .evalbar';
+      for (const el of document.querySelectorAll('body *')) {
+        if (!vis(el) || el.closest(ALLOW)) continue;
+        const st = getComputedStyle(el);
+        const hit =
+          st.backgroundColor === accent ||
+          (parseFloat(st.borderTopWidth) > 0 && st.borderTopColor === accent) ||
+          (parseFloat(st.borderBottomWidth) > 0 && st.borderBottomColor === accent) ||
+          (parseFloat(st.borderLeftWidth) > 0 && st.borderLeftColor === accent) ||
+          (el.childElementCount === 0 && el.textContent.trim() && st.color === accent);
+        if (hit) out.push(`màu nhấn ngoài nút chính: ${tag(el)}`);
+      }
+      // Vạch màu bên trái
+      for (const el of document.querySelectorAll('body *')) {
+        if (!vis(el) || el.closest('.board, .board-host')) continue;
+        const st = getComputedStyle(el);
+        if (parseFloat(st.borderLeftWidth) >= 2 && !/rgba\(0, 0, 0, 0\)|transparent/.test(st.borderLeftColor) &&
+            parseFloat(st.borderRightWidth) < 1) {
+          out.push(`vạch màu bên trái: ${tag(el)}`);
+        }
+      }
+      // Chữ chức năng nhỏ hơn 11px (trừ bàn cờ, huy hiệu, thanh đánh giá)
+      for (const el of document.querySelectorAll('p, span, b, small, a, button, label, li')) {
+        if (!vis(el) || el.childElementCount || !el.textContent.trim()) continue;
+        if (el.closest('svg, .board, .badge, .evalbar, .spec-section')) continue;
+        if (parseFloat(getComputedStyle(el).fontSize) < 11) out.push(`chữ nhỏ hơn 11px: ${tag(el)} “${el.textContent.trim().slice(0, 20)}”`);
+      }
+      // Mẫu "số to + nhãn nhỏ" xếp ô chỉ được ở trang Thống kê
+      if (route !== 'thong-ke' && route !== 'thiet-ke' && document.querySelector('.stat-tile')) out.push('ô số to (stat-tile) ngoài trang Thống kê');
+      // Icon thanh điều hướng phải đặc
+      for (const svg of document.querySelectorAll('.nav-item svg, .top-nav .top-link svg')) {
+        if (!vis(svg)) continue;
+        const đặc = [...svg.querySelectorAll('*')].some((n) => getComputedStyle(n).fill !== 'none');
+        if (!đặc) out.push('icon thanh điều hướng là nét mảnh');
+      }
+      return [...new Set(out)];
+    }, route);
+    for (const a of ai) fail(where, a);
 
     // Vùng bấm nhỏ hơn 44px trên điện thoại
     await page.setViewportSize({ width: 390, height: 844 });

@@ -154,8 +154,10 @@
 
 /* Nút đang bật chỉ cần viền và màu chữ, không cần tô nền kêu như nút chính */
 .btn[aria-pressed='true'] {
-  border-color: var(--accent);
-  color: var(--accent-text);
+  border-color: transparent;
+  border-bottom-color: var(--text-1);
+  background: var(--bg-3);
+  color: var(--text-1);
 }
 .btn[aria-pressed='true'] .icon {
   color: inherit;
@@ -444,7 +446,7 @@
   gap: 5px;
   padding: 3px var(--s-2);
   border: 0;
-  border-left: 2px solid transparent;
+  border-left: 0;
   background: transparent;
   color: var(--text-1);
   font-size: var(--fs-sm);
@@ -455,8 +457,7 @@
   background: var(--bg-2);
 }
 .move.is-current {
-  background: var(--accent-dim);
-  border-left-color: var(--accent);
+  background: var(--bg-3);
   color: var(--text-1);
   font-weight: 600;
 }
@@ -537,8 +538,8 @@
 
 /* ---------------- Lời bình ---------------- */
 .note {
-  padding-left: var(--s-3);
-  border-left: 2px solid var(--accent);
+  padding-left: 0;
+  border-left: 0;
 }
 .note-move {
   display: flex;
