@@ -33,7 +33,7 @@ import { homeSide, mountHome, resetHome } from './ui/screens/home.ts';
 import { handlePlayClick, mountPlay, play, playBar, setBotLevel } from './ui/screens/play.ts';
 import { playBot } from './ui/screens/play-bot.ts';
 import { handleReviewClick, mountReview, review } from './ui/screens/review.ts';
-import { handleTrainClick, mountTrain, startDaily, startLesson, train } from './ui/screens/train.ts';
+import { handleTrainClick, mountTrain, startDaily, startLesson, startPuzzleId, train } from './ui/screens/train.ts';
 import { handleLearnClick, learn, mountLearn, resetLearn } from './ui/screens/learn.ts';
 import { handleOnlineClick, hasLiveGame, leaveOnline, markOnlineEndSeen, miniOnline, mountOnline, online, onlineBar } from './ui/screens/online.ts';
 import { playMode, setPlayMode } from './app/playmode.ts';
@@ -135,8 +135,9 @@ function siteFooter(): string {
     `<footer class="site-foot">` +
     // Link sang các trang đọc được (bài học, luật, khai cuộc): người mới cần, Google cũng lần theo
     `<nav class="foot-links" aria-label="Tìm hiểu thêm">` +
-    `<a href="/hoc/">Bài học cờ vua</a><a href="/luat-co-vua/">Luật cờ vua</a>` +
-    `<a href="/khai-cuoc/">Khai cuộc</a><a href="/cham-van-co-vua/">Chấm ván</a>` +
+    `<a href="/hoc/">Bài học cờ vua</a><a href="/bai-tap-co-vua/">Bài tập</a><a href="/luat-co-vua/">Luật cờ vua</a>` +
+    `<a href="/khai-cuoc/">Khai cuộc</a><a href="/bay-khai-cuoc/">Bẫy khai cuộc</a><a href="/tan-cuoc/">Tàn cuộc</a>` +
+    `<a href="/cham-van-co-vua/">Chấm ván</a>` +
     `<a href="https://github.com/Nelson1312-dak/latthe" target="_blank" rel="noopener">Mã nguồn</a>` +
     `<a href="/pieces/sets/LICENSES.txt" target="_blank" rel="noopener">Giấy phép</a>` +
     `<a href="/chinh-sach-rieng-tu/">Quyền riêng tư</a>` +
@@ -417,6 +418,16 @@ function render(): void {
     const bài = LESSONS.find((l) => l.id === routeQuery().get('bai'));
     if (bài) {
       startLesson(bài);
+      location.replace('#/on-tap');
+      return;
+    }
+  }
+
+  // Mở thẳng một bài tập từ trang bài tập công khai: #/on-tap?bai-tap=<mã>
+  if (routeName() === 'on-tap') {
+    const mã = routeQuery().get('bai-tap');
+    if (mã) {
+      startPuzzleId(mã);
       location.replace('#/on-tap');
       return;
     }

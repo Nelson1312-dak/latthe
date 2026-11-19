@@ -101,6 +101,17 @@ export function pickPuzzle(
   return null;
 }
 
+/** Một bài theo mã — trang bài tập công khai (latbai.vn/bai-tap-co-vua/) mở thẳng bài đó trong app. */
+export function puzzleById(db: Db, id: string): Puzzle | null {
+  if (!/^[A-Za-z0-9]{3,10}$/.test(id)) return null;
+  try {
+    const r = one<PuzzleRow>(db, 'SELECT id, fen, moves, rating, themes FROM puzzles WHERE id = ?', id);
+    return r ? toPuzzle(r) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Các chủ đề có trong kho, kèm số bài. Cũng nhớ lại một phút: gom nhóm trên
  * 2 triệu dòng mất gần 140 ms, mà danh sách này chỉ đổi khi nạp lại kho.

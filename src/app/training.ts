@@ -63,6 +63,9 @@ export const nextPuzzle = (theme?: string) =>
     { puzzle: null, kho: 0 },
   );
 
+export const puzzleById = (id: string) =>
+  get<{ puzzle: Puzzle | null; kho: number }>(`/api/puzzles/one?id=${encodeURIComponent(id)}`, { puzzle: null, kho: 0 });
+
 export const answerPuzzle = (id: string, rating: number, correct: boolean) =>
   post<{ rating: number; attempts: number }>('/api/puzzles/answer', { id, rating, correct }, { rating: 0, attempts: 0 });
 

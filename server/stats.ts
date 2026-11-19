@@ -19,6 +19,8 @@ export const CLIENT_EVENTS = [
   'mini_open', // mở bàn cờ nổi
   'pwa_install', // cài app lên máy
   'lesson_page', // mở trang bài học công khai /hoc/... (thường từ Google)
+  'guide_page', // trang đọc công khai: luật cờ, khai cuộc, bẫy, tàn cuộc, trang giới thiệu
+  'puzzle_page', // trang bài tập công khai /bai-tap-co-vua/...
 ] as const;
 
 /** Việc server tự đếm. */
@@ -52,6 +54,8 @@ export interface DayRow {
   mini_open: number;
   pwa_install: number;
   lesson_page: number;
+  guide_page: number;
+  puzzle_page: number;
   match_human: number;
   match_ai: number;
   signup: number;
@@ -86,6 +90,8 @@ const EMPTY = (day: string): DayRow => ({
   mini_open: 0,
   pwa_install: 0,
   lesson_page: 0,
+  guide_page: 0,
+  puzzle_page: 0,
   match_human: 0,
   match_ai: 0,
   signup: 0,

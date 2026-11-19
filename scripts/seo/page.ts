@@ -31,7 +31,8 @@ const brandSymbol = /<symbol id="brand-n"[\s\S]*?<\/symbol>/.exec(sprite)![0];
 const STYLE = `
   :root { color-scheme: dark; --bg: #302e2b; --card: #262421; --card2: #3c3a37; --text: #fff; --text2: #c9c8c6; --text3: #a7a5a3; --line: #3f3d39; --accent: #1f8f80; --accent-text: #56cdbb;
     --sq-light: #ebecd0; --sq-dark: #739552; --coord-light: #ebecd0; --coord-dark: #739552; --mark-move: rgb(255 255 51 / 0.42);
-    --mark-legal: rgb(0 0 0 / 0.2); --mark-check: #cf4034; --arrow-coach: #5fa36a; }
+    --mark-legal: rgb(0 0 0 / 0.2); --mark-check: #cf4034; --arrow-coach: #5fa36a;
+    --brush-g: #9fcf3f; --brush-r: #eb6150; --brush-b: #52b0dc; --brush-y: #ffaa00; }
   @media (prefers-color-scheme: light) { :root { color-scheme: light; --bg: #f3f1ec; --card: #fff; --card2: #ece9e2; --text: #1d1b18; --text2: #57524a; --text3: #7d776d; --line: #d9d4c9; --accent: #1a7a6c; --accent-text: #17695c; } }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text2); font: 17px/1.65 'IBM Plex Sans', system-ui, sans-serif; }
@@ -56,14 +57,22 @@ const STYLE = `
   .board-wrap.small { max-width: 280px; }
   .boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px 20px; }
   .boards figure { margin: 0; }
+  .boards.wide { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  main > figure { margin: 16px 0; }
+  main > figure figcaption { font-size: 15px; color: var(--text3); margin-top: 6px; max-width: 420px; }
+  .tips figure { margin: 16px 0 0; } .tips figcaption { font-size: 15px; color: var(--text3); margin-top: 6px; max-width: 420px; }
+  .tips { padding-left: 24px; } .tips h2 { font-size: 19px; margin: 28px 0 4px; } .tips p { margin: 0; }
   .boards figcaption, .board-wrap + .caption { font-size: 15px; color: var(--text3); margin-top: 6px; }
   .board { display: block; width: 100%; height: auto; }
-  .board .coord { font-family: system-ui, sans-serif; }
+  .board .coord { font-family: system-ui, sans-serif; font-size: 13px; }
   .tomove { font-weight: 600; color: var(--text); }
   .moves { font-size: 19px; color: var(--text); font-variant-numeric: tabular-nums; }
   .meta { color: var(--text3); font-size: 15px; margin: 0 0 12px; }
   details { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 12px; }
-  summary { cursor: pointer; font-weight: 600; color: var(--text); min-height: 44px; display: flex; align-items: center; }
+  summary { cursor: pointer; font-weight: 600; color: var(--text); min-height: 44px; display: flex; align-items: center; gap: 8px; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: '▸'; color: var(--text3); }
+  details[open] > summary::before { content: '▾'; }
   .cta { display: inline-flex; align-items: center; min-height: 52px; padding: 0 24px; border-radius: 6px; border-bottom: 3px solid rgb(0 0 0 / .3); background: var(--accent); color: #fff; font-weight: 700; font-size: 19px; text-decoration: none; margin: 8px 12px 8px 0; }
   .cta.alt { background: var(--card2); color: var(--text); }
   /* Danh sách: dòng phẳng ngăn bằng nét kẻ, tên bên trái, nước đi bên phải */
@@ -77,6 +86,12 @@ const STYLE = `
   th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
   th { color: var(--text); font-weight: 600; }
   .nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+  /* Bài tập: lưới bàn cờ, mỗi bài một chú thích, link mở trong app và lời giải gập lại */
+  .pzs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 28px 16px; }
+  .pz { margin: 0; } .pz.one { max-width: 420px; }
+  .pz figcaption { font-size: 15px; color: var(--text3); margin-top: 6px; }
+  .pz-go { margin: 0; } .pz-go a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+  .pz details { margin-top: 0; } .pz .moves { font-size: 17px; margin: 4px 0 12px; }
   .more { display: flex; flex-wrap: wrap; gap: 0 20px; padding: 0; list-style: none; }
   .more a { display: inline-flex; align-items: center; min-height: 44px; }
   .credit { max-width: 760px; margin: 0 auto; padding: 24px 16px 32px; font-size: 13px; color: var(--text3); border-top: 1px solid var(--line); }
@@ -121,10 +136,19 @@ export function faqLd(qa: [q: string, a: string][]): object {
 /** Các trang đọc khác, để người đọc (và Google) đi tiếp được. */
 const KHÁC: [string, string][] = [
   ['/hoc/', 'Bài học cờ vua'],
+  ['/bai-tap-co-vua/', 'Bài tập cờ vua'],
   ['/luat-co-vua/', 'Luật cờ vua'],
   ['/khai-cuoc/', 'Khai cuộc'],
+  ['/bay-khai-cuoc/', 'Bẫy khai cuộc'],
+  ['/tan-cuoc/', 'Tàn cuộc cơ bản'],
   ['/cham-van-co-vua/', 'Chấm ván cờ vua'],
 ];
+
+/**
+ * Ảnh chia sẻ riêng của trang có bàn cờ: /og/<đường-dẫn>.jpg, vẽ từ tiêu đề và bàn cờ
+ * đầu tiên của trang (scripts/build-og.ts). Trang không có bàn cờ dùng ảnh chung.
+ */
+export const ogImageOf = (path: string) => `/og/${path.split('/').filter(Boolean).join('-') || 'trang-chu'}.jpg`;
 
 export function page(o: {
   title: string;
@@ -138,8 +162,11 @@ export function page(o: {
   event?: string;
   type?: 'article' | 'website';
 }): string {
+  const og = o.withSprite ? SITE + ogImageOf(o.path) : `${SITE}/og.png`;
   const ld = o.ld?.length
-    ? `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': o.ld }).replace(/</g, '\\u003c')}</script>\n`
+    ? `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': o.ld })
+        .replaceAll(`"${SITE}/og.png"`, `"${og}"`)
+        .replace(/</g, '\\u003c')}</script>\n`
     : '';
   const khác = KHÁC.filter(([p]) => p !== o.path)
     .map(([p, t]) => `<li><a href="${p}">${t}</a></li>`)
@@ -157,7 +184,8 @@ export function page(o: {
 <meta property="og:locale" content="vi_VN">
 <meta property="og:title" content="${esc(o.title)}">
 <meta property="og:description" content="${esc(o.desc)}">
-<meta property="og:image" content="${SITE}/og.png">
+<meta property="og:image" content="${og}">
+${o.withSprite ? '<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n' : ''}<meta property="og:image:alt" content="${esc(o.title)}">
 <meta property="og:url" content="${SITE}${o.path}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#262421">

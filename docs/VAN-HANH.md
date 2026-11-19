@@ -94,26 +94,41 @@ này, nên file sinh ra được đưa vào git):
 npm run lessons
 ```
 
-Chạy lại khi thêm/sửa bài học, rồi deploy. Kho hơn một triệu bài nên mất vài phút.
+Chạy lại khi thêm/sửa bài học, rồi deploy. Thế cờ ví dụ đã chọn nằm trong
+`scripts/seo/lesson-examples.json`; chỉ bài học mới hoặc đổi chủ đề mới phải hỏi kho (vài phút).
 Nút "Luyện bài này ngay" mở `/#/hoc?bai=<id>` — app vào thẳng bài đó.
 
-## Trang đọc cho Google (luật cờ, khai cuộc, sitemap)
+## Trang đọc cho Google (luật cờ, khai cuộc, bài tập, ảnh chia sẻ, sitemap)
 
-Các trang tĩnh trong `public/` cho người tìm "luật cờ vua", "khai cuộc Ý"…:
+Các trang tĩnh trong `public/` cho người tìm "luật cờ vua", "khai cuộc Ý", "bài tập cờ vua"…:
 
 - `scripts/build-guides.ts` sinh `public/luat-co-vua/` và `public/khai-cuoc/` (20 khai cuộc,
   nội dung viết tay trong script, mã ECO lấy từ `public/data/openings.json`).
+- `scripts/build-topics.ts` sinh trang đích `choi-co-vua-voi-may/`, `choi-co-vua-online/`,
+  `meo-choi-co-vua/`, bẫy khai cuộc `bay-khai-cuoc/…` và tàn cuộc `tan-cuoc/…`. Mọi nước đi
+  được chess.js đi lại khi sinh trang; chép sai một nước là script dừng.
+- `scripts/build-puzzles.ts` (`npm run puzzle-pages`) sinh `public/bai-tap-co-vua/`: 17 chủ đề,
+  mỗi trang 9 bài (dễ, vừa, khó) lấy từ kho `data/chess.db` (chỉ đọc). Bài đã chọn lưu ở
+  `scripts/seo/puzzle-examples.json`; chủ đề mới thì quét kho một lượt (vài giây). Nút
+  "Giải trên bàn cờ" mở `/#/on-tap?bai-tap=<mã>` (API `/api/puzzles/one`).
+- `scripts/build-og.ts` (`npm run og`) vẽ ảnh chia sẻ 1200×630 cho mỗi trang có bàn cờ vào
+  `public/og/` (tiêu đề + bàn cờ đầu tiên của trang, dùng Playwright). Chỉ vẽ lại ảnh có nội
+  dung đổi (mã băm trong `scripts/seo/og-hash.json`); ảnh của trang đã xoá tự xoá theo.
 - `scripts/build-sitemap.mjs` quét mọi `public/**/index.html` thành `public/sitemap.xml`,
   ngày sửa theo lần commit cuối của từng trang.
 - Khung trang dùng chung (meta, Open Graph, dữ liệu có cấu trúc schema.org, chân trang)
   ở `scripts/seo/page.ts`.
 
 ```
-npm run seo
+npm run seo            # luật, khai cuộc, trang đích, bẫy, tàn cuộc + ảnh + sitemap
+npm run puzzle-pages   # trang bài tập (cần data/chess.db) + ảnh + sitemap
+npm run lessons        # trang bài học (cần data/chess.db) + ảnh + sitemap
 ```
 
-Thêm thư mục trang tĩnh mới thì nhớ thêm đường dẫn vào `scripts/deploy.mjs` (mục rewrites)
-và link tới nó từ chân trang app (`siteFooter` trong `src/main.ts`).
+Thêm thư mục trang tĩnh mới thì nhớ thêm đường dẫn vào `scripts/deploy.mjs` (`TRANG_TĨNH`,
+và `CÓ_TRANG_CON` nếu có trang con), link tới nó từ chân trang app (`siteFooter` trong
+`src/main.ts`) và từ "Đọc thêm" (`KHÁC` trong `scripts/seo/page.ts`). Lượt xem trang được đếm
+ẩn danh theo nhóm (`lesson_page`, `puzzle_page`, `guide_page`), xem ở màn Thống kê.
 
 ## Cài như app (PWA)
 

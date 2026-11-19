@@ -24,8 +24,10 @@
     "e2e": "node scripts/e2e.mjs",
     "loadtest": "node scripts/loadtest.mjs",
     "deploy": "npm run build && node scripts/deploy.mjs",
-    "seo": "node --experimental-strip-types --no-warnings scripts/build-guides.ts && node scripts/build-sitemap.mjs",
-    "lessons": "node --experimental-strip-types --no-warnings scripts/build-lessons.ts && node scripts/build-sitemap.mjs"
+    "seo": "node --experimental-strip-types --no-warnings scripts/build-guides.ts && node --experimental-strip-types --no-warnings scripts/build-topics.ts && npm run og",
+    "lessons": "node --experimental-strip-types --no-warnings scripts/build-lessons.ts && npm run og",
+    "puzzle-pages": "node --experimental-strip-types --no-warnings scripts/build-puzzles.ts && npm run og",
+    "og": "node --experimental-strip-types --no-warnings scripts/build-og.ts && node scripts/build-sitemap.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",

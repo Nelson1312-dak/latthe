@@ -241,7 +241,20 @@ if (process.env.CHECK_NO_API !== '1') {
 // Trang đọc tĩnh (bài học, luật cờ, khai cuộc — scripts/seo/page.ts): cùng luật với app
 for (const scheme of ['dark', 'light']) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
-  for (const path of ['luat-co-vua/', 'khai-cuoc/', 'khai-cuoc/khai-cuoc-y/', 'hoc/', 'hoc/don-doi/']) {
+  for (const path of [
+    'luat-co-vua/',
+    'khai-cuoc/',
+    'khai-cuoc/khai-cuoc-y/',
+    'hoc/',
+    'hoc/don-doi/',
+    'bai-tap-co-vua/',
+    'bai-tap-co-vua/chieu-het-2-nuoc/',
+    'bay-khai-cuoc/chieu-het-4-nuoc/',
+    'tan-cuoc/quy-tac-hinh-vuong/',
+    'choi-co-vua-voi-may/',
+    'choi-co-vua-online/',
+    'meo-choi-co-vua/',
+  ]) {
     const where = `${scheme} /${path}`;
     await page.goto(`${BASE}/${path}index.html`, { waitUntil: 'networkidle' });
     const r = await page.evaluate(async () => {

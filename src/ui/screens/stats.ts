@@ -22,6 +22,8 @@ interface DayRow {
   mini_open: number;
   pwa_install: number;
   lesson_page: number;
+  guide_page: number;
+  puzzle_page: number;
   match_human: number;
   match_ai: number;
   signup: number;
@@ -216,7 +218,11 @@ function featureBlock(last7: DayRow[]): string {
     <div class="stat-tiles">
       ${tile(sum(last7, 'assist_hold'), 'Trợ lý dừng máy', `${sum(last7, 'assist_guide')} lần mở hướng dẫn`)}
       ${tile(sum(last7, 'coach_open'), 'Mở Huấn luyện viên', 'lượt mở tab')}
-      ${tile(sum(last7, 'lesson_page'), 'Xem trang bài học', 'latbai.vn/hoc — thường từ Google')}
+      ${tile(
+        sum(last7, 'lesson_page') + sum(last7, 'puzzle_page') + sum(last7, 'guide_page'),
+        'Xem trang đọc',
+        `bài học ${sum(last7, 'lesson_page')} · bài tập ${sum(last7, 'puzzle_page')} · hướng dẫn ${sum(last7, 'guide_page')}`,
+      )}
       ${tile(sum(last7, 'mini_open'), 'Mở bàn cờ nổi', 'cửa sổ nhỏ trên máy tính')}
       ${tile(sum(last7, 'pwa_install'), 'Cài app lên máy', 'từ nút trong Cài đặt / trình duyệt')}
       ${tile(sum(last7, 'online_queue'), 'Bấm Tìm trận', `ghép người: ${sum(last7, 'match_human')} · AI: ${sum(last7, 'match_ai')}`)}

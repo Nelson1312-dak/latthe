@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chơi cờ vua online với người — ghép trận theo Elo, miễn phí · Lật Cờ</title>
+<meta name="description" content="Chơi cờ vua online với người miễn phí: ghép trận theo Elo trong vài giây, 4 thể thức 3+2, 5+0, 10+0, 15+10, mời bạn bè bằng mã, chấm từng nước sau ván. Không cần cài đặt.">
+<link rel="canonical" href="https://latbai.vn/choi-co-vua-online/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lật Cờ">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Chơi cờ vua online với người — ghép trận theo Elo, miễn phí · Lật Cờ">
+<meta property="og:description" content="Chơi cờ vua online với người miễn phí: ghép trận theo Elo trong vài giây, 4 thể thức 3+2, 5+0, 10+0, 15+10, mời bạn bè bằng mã, chấm từng nước sau ván. Không cần cài đặt.">
+<meta property="og:image" content="https://latbai.vn/og.png">
+<meta property="og:image:alt" content="Chơi cờ vua online với người — ghép trận theo Elo, miễn phí · Lật Cờ">
+<meta property="og:url" content="https://latbai.vn/choi-co-vua-online/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#262421">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/fonts/fonts.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","name":"Chơi cờ vua online với người","description":"Chơi cờ vua online với người miễn phí: ghép trận theo Elo trong vài giây, 4 thể thức 3+2, 5+0, 10+0, 15+10, mời bạn bè bằng mã, chấm từng nước sau ván. Không cần cài đặt.","inLanguage":"vi","url":"https://latbai.vn/choi-co-vua-online/"},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Chơi cờ vua online trên Lật Cờ có mất phí không?","acceptedAnswer":{"@type":"Answer","text":"Không. Ghép trận, mời bạn bè và chấm ván sau trận đều miễn phí."}},{"@type":"Question","name":"Có cần tài khoản không?","acceptedAnswer":{"@type":"Answer","text":"Chơi với người cần đăng nhập bằng Google để giữ Elo và chống bỏ trận. Chơi với máy thì không cần."}}]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Lật Cờ","item":"https://latbai.vn/"},{"@type":"ListItem","position":2,"name":"Chơi cờ vua online","item":"https://latbai.vn/choi-co-vua-online/"}]}]}</script>
+<style>
+  :root { color-scheme: dark; --bg: #302e2b; --card: #262421; --card2: #3c3a37; --text: #fff; --text2: #c9c8c6; --text3: #a7a5a3; --line: #3f3d39; --accent: #1f8f80; --accent-text: #56cdbb;
+    --sq-light: #ebecd0; --sq-dark: #739552; --coord-light: #ebecd0; --coord-dark: #739552; --mark-move: rgb(255 255 51 / 0.42);
+    --mark-legal: rgb(0 0 0 / 0.2); --mark-check: #cf4034; --arrow-coach: #5fa36a;
+    --brush-g: #9fcf3f; --brush-r: #eb6150; --brush-b: #52b0dc; --brush-y: #ffaa00; }
+  @media (prefers-color-scheme: light) { :root { color-scheme: light; --bg: #f3f1ec; --card: #fff; --card2: #ece9e2; --text: #1d1b18; --text2: #57524a; --text3: #7d776d; --line: #d9d4c9; --accent: #1a7a6c; --accent-text: #17695c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text2); font: 17px/1.65 'IBM Plex Sans', system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 72px; }
+  /* Màu nhấn chỉ cho nút chính, như trong app: link là chữ thường có gạch chân */
+  a { color: var(--text); text-decoration-color: var(--text3); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--text); }
+  .top { max-width: 760px; margin: 0 auto; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); }
+  .top .brand { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 700; font-size: 19px; text-decoration: none; }
+  .top .brand svg { width: 28px; height: 28px; }
+  .top .play { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 6px; border-bottom: 3px solid rgb(0 0 0 / .3); background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; }
+  h1, h2, h3 { color: var(--text); line-height: 1.25; }
+  h1 { font-size: 32px; margin: 4px 0 12px; }
+  h2 { font-size: 21px; margin: 36px 0 12px; }
+  h3 { font-size: 18px; margin: 24px 0 6px; }
+  b, strong { color: var(--text); }
+  .crumb { font-size: 15px; color: var(--text3); } .crumb a { color: var(--text2); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; min-height: 44px; }
+  .chapter { color: var(--text3); font-size: 15px; margin: 16px 0 0; }
+  .lead { font-size: 19px; color: var(--text); }
+  .key { color: var(--text); }
+  .board-wrap { max-width: 420px; }
+  .board-wrap.small { max-width: 280px; }
+  .boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px 20px; }
+  .boards figure { margin: 0; }
+  .boards.wide { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  main > figure { margin: 16px 0; }
+  main > figure figcaption { font-size: 15px; color: var(--text3); margin-top: 6px; max-width: 420px; }
+  .tips figure { margin: 16px 0 0; } .tips figcaption { font-size: 15px; color: var(--text3); margin-top: 6px; max-width: 420px; }
+  .tips { padding-left: 24px; } .tips h2 { font-size: 19px; margin: 28px 0 4px; } .tips p { margin: 0; }
+  .boards figcaption, .board-wrap + .caption { font-size: 15px; color: var(--text3); margin-top: 6px; }
+  .board { display: block; width: 100%; height: auto; }
+  .board .coord { font-family: system-ui, sans-serif; font-size: 13px; }
+  .tomove { font-weight: 600; color: var(--text); }
+  .moves { font-size: 19px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .meta { color: var(--text3); font-size: 15px; margin: 0 0 12px; }
+  details { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 12px; }
+  summary { cursor: pointer; font-weight: 600; color: var(--text); min-height: 44px; display: flex; align-items: center; gap: 8px; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: '▸'; color: var(--text3); }
+  details[open] > summary::before { content: '▾'; }
+  .cta { display: inline-flex; align-items: center; min-height: 52px; padding: 0 24px; border-radius: 6px; border-bottom: 3px solid rgb(0 0 0 / .3); background: var(--accent); color: #fff; font-weight: 700; font-size: 19px; text-decoration: none; margin: 8px 12px 8px 0; }
+  .cta.alt { background: var(--card2); color: var(--text); }
+  /* Danh sách: dòng phẳng ngăn bằng nét kẻ, tên bên trái, nước đi bên phải */
+  .list { padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  .list a { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; min-height: 48px; padding: 12px 0; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--text); }
+  .list a b { font-weight: 500; }
+  .list a:hover b { text-decoration: underline; text-decoration-color: var(--text3); }
+  .list a span { color: var(--text3); font-size: 15px; font-variant-numeric: tabular-nums; text-align: right; }
+  .toc { padding-left: 20px; } .toc a { display: inline-flex; align-items: center; min-height: 44px; }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--text); font-weight: 600; }
+  .nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+  /* Bài tập: lưới bàn cờ, mỗi bài một chú thích, link mở trong app và lời giải gập lại */
+  .pzs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 28px 16px; }
+  .pz { margin: 0; } .pz.one { max-width: 420px; }
+  .pz figcaption { font-size: 15px; color: var(--text3); margin-top: 6px; }
+  .pz-go { margin: 0; } .pz-go a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+  .pz details { margin-top: 0; } .pz .moves { font-size: 17px; margin: 4px 0 12px; }
+  .more { display: flex; flex-wrap: wrap; gap: 0 20px; padding: 0; list-style: none; }
+  .more a { display: inline-flex; align-items: center; min-height: 44px; }
+  .credit { max-width: 760px; margin: 0 auto; padding: 24px 16px 32px; font-size: 13px; color: var(--text3); border-top: 1px solid var(--line); }
+  .credit a { color: var(--text2); }
+</style>
+<script>try{fetch('/api/ping',{method:'POST',headers:{'content-type':'application/json','ngrok-skip-browser-warning':'1'},body:'{"e":"guide_page"}',keepalive:true}).catch(function(){})}catch(e){}</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="brand-n" viewBox="0 0 40 40"><g stroke-linecap="round" stroke-linejoin="round" transform="translate(6.000000, 6.000000)"
+       stroke="#000000">
+        <path d="M13.5757576,2.625 C22.4848485,3.5 27.5757576,9.625 27.1515152,28 L7.63636364,28 C7.63636364,20.125 16.1212121,22.3125 14.4242424,9.625"
+              id="Shape" stroke-width="1.5" fill="#FFFFFF"/>
+        <path d="M15.2727273,9.625 C15.5951515,12.17125 10.5636364,16.07375 8.48484848,17.5 C5.93939394,19.25 6.09212121,21.2975 4.24242424,21 C3.35830303,20.1775 5.43878788,18.34 4.24242424,18.375 C3.39393939,18.375 4.40363636,19.45125 3.39393939,20.125 C2.54545455,20.125 -0.00254545455,21 -1.90580876e-06,16.625 C-1.90580876e-06,14.875 5.09090909,6.125 5.09090909,6.125 C5.09090909,6.125 6.69454545,4.4625 6.78787879,3.0625 C6.16848485,2.19275 6.36363636,1.3125 6.36363636,0.4375 C7.21212121,-0.4375 8.90909091,2.625 8.90909091,2.625 L10.6060606,2.625 C10.6060606,2.625 11.2678788,0.882 12.7272727,0 C13.5757576,0 13.5757576,2.625 13.5757576,2.625"
+              id="Shape" stroke-width="1.5" fill="#FFFFFF"/>
+        <path d="M2.96969697,16.1875 C2.96969697,16.4291246 2.77975717,16.625 2.54545455,16.625 C2.31115192,16.625 2.12121212,16.4291246 2.12121212,16.1875 C2.12121212,15.9458754 2.31115192,15.75 2.54545455,15.75 C2.77975717,15.75 2.96969697,15.9458754 2.96969697,16.1875 Z"
+              id="Shape" stroke-width="1.5" fill="#000000"/>
+        <path d="M7.6363543,7.4375 C7.6363543,8.16235779 7.44641868,8.74997112 7.21212121,8.74997112 C6.97782375,8.74997112 6.78788812,8.16235779 6.78788812,7.4375 C6.78788812,6.71264221 6.97782375,6.12502888 7.21212121,6.12502888 C7.44641868,6.12502888 7.6363543,6.71264221 7.6363543,7.4375 L7.6363543,7.4375 Z"
+              id="Shape" stroke-width="1.499967" fill="#000000"
+              transform="translate(7.212121, 7.437500) rotate(30.000728) translate(-7.212121, -7.437500) "/>
+    </g></symbol></svg>
+<header class="top"><a class="brand" href="/"><svg viewBox="0 0 40 40" aria-hidden="true"><use href="#brand-n"/></svg>Lật Cờ</a><a class="play" href="/#/choi">Chơi</a></header>
+<main>
+
+<p class="crumb"><a href="/">Lật Cờ</a></p>
+<h1>Chơi cờ vua online với người</h1>
+<p class="lead">Bấm Tìm trận, Lật Cờ ghép bạn với người có Elo gần nhất. Chơi ngay trên trình duyệt, điện thoại hay máy tính đều được, không cần cài gì.</p>
+<p><a class="cta" href="/#/ban">Tìm trận</a></p>
+
+<h2>Bốn thể thức</h2>
+<table>
+  <tr><th>Thể thức</th><th>Mỗi bên</th><th>Cộng mỗi nước</th></tr>
+  <tr><td>Chớp (3+2)</td><td>3 phút</td><td>2 giây</td></tr>
+  <tr><td>Nhanh (5+0)</td><td>5 phút</td><td>không</td></tr>
+  <tr><td>Vừa (10+0)</td><td>10 phút</td><td>không</td></tr>
+  <tr><td>Thong thả (15+10)</td><td>15 phút</td><td>10 giây</td></tr>
+</table>
+<p>Mới chơi nên chọn 10+0 hoặc 15+10: đủ thời gian nghĩ, ít thua vì hết giờ.</p>
+
+<h2>Ghép trận thế nào</h2>
+<ul>
+  <li><b>Theo Elo</b>: lúc đầu chỉ ghép người gần sức bạn, chờ lâu thì nới dần khoảng cách.</li>
+  <li><b>Không phải chờ</b>: sau 5 giây chưa có ai, bạn đấu với một AI có Elo gần bạn. AI luôn ghi rõ là AI.</li>
+  <li><b>Mời bạn bè</b>: lấy mã 6 ký tự, gửi qua Zalo hay Messenger, bạn nhập mã là vào ván.</li>
+  <li><b>Sau ván</b>: mở chấm ván để xem nước nào hay, nước nào hỏng, và đáng lẽ nên đi gì.</li>
+</ul>
+
+<h2>Câu hỏi hay gặp</h2>
+<h3>Chơi cờ vua online trên Lật Cờ có mất phí không?</h3><p>Không. Ghép trận, mời bạn bè và chấm ván sau trận đều miễn phí.</p>
+<h3>Có cần tài khoản không?</h3><p>Chơi với người cần đăng nhập bằng Google để giữ Elo và chống bỏ trận. Chơi với máy thì không cần.</p>
+
+<p><a class="cta" href="/#/ban">Tìm trận</a><a class="cta alt" href="/choi-co-vua-voi-may/">Chơi với máy</a></p>
+<h2>Đọc thêm</h2>
+<ul class="more"><li><a href="/hoc/">Bài học cờ vua</a></li><li><a href="/bai-tap-co-vua/">Bài tập cờ vua</a></li><li><a href="/luat-co-vua/">Luật cờ vua</a></li><li><a href="/khai-cuoc/">Khai cuộc</a></li><li><a href="/bay-khai-cuoc/">Bẫy khai cuộc</a></li><li><a href="/tan-cuoc/">Tàn cuộc cơ bản</a></li><li><a href="/cham-van-co-vua/">Chấm ván cờ vua</a></li></ul>
+</main>
+<footer class="credit">logo từ bộ cburnett (CC BY-SA 3.0) · <a href="/pieces/sets/LICENSES.txt">giấy phép</a> · Lật Cờ là phần mềm tự do theo <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3</a>, <a href="https://github.com/Nelson1312-dak/latthe">mã nguồn</a> · <a href="/chinh-sach-rieng-tu/">quyền riêng tư</a></footer>
+</body>
+</html>

@@ -13,6 +13,7 @@ import {
   answerPuzzle,
   dueCards,
   nextPuzzle,
+  puzzleById,
   themeName,
   type Card,
   type Puzzle,
@@ -95,6 +96,17 @@ export function startPuzzle(p: Puzzle): void {
   loadedOnce = false;
 }
 
+/** Mã bài mở từ trang bài tập công khai (#/on-tap?bai-tap=<mã>); lấy về ở lần tải tới. */
+let handedId: string | null = null;
+
+export function startPuzzleId(id: string): void {
+  handedId = id;
+  handedPuzzle = null;
+  lesson = null;
+  theme = undefined;
+  loadedOnce = false;
+}
+
 /** Thoát chế độ bài học, quay về ôn tập bình thường. */
 function exitLesson(): void {
   lesson = null;
@@ -112,13 +124,13 @@ async function loadNext(rerender: () => void): Promise<void> {
 
   // Thẻ lỗi của mình luôn được ưu tiên — trừ khi đang học một bài cụ thể, hoặc
   // vừa bấm vào một bài cụ thể ở Sảnh
-  if (!lesson && !handedPuzzle && !queue.length && auth.user) {
+  if (!lesson && !handedPuzzle && !handedId && !queue.length && auth.user) {
     const r = await dueCards();
     queue = r.cards;
     cardCount = { total: r.total, due: r.due };
   }
 
-  const card = handedPuzzle ? undefined : queue.shift();
+  const card = handedPuzzle || handedId ? undefined : queue.shift();
   if (card) {
     const game = new Game(card.fen);
     task = {
@@ -135,7 +147,11 @@ async function loadNext(rerender: () => void): Promise<void> {
     return;
   }
 
-  const r = handedPuzzle ? { puzzle: handedPuzzle, kho: khoBai } : await nextPuzzle(theme);
+  const id = handedId;
+  handedId = null;
+  let r = handedPuzzle ? { puzzle: handedPuzzle, kho: khoBai } : id ? await puzzleById(id) : await nextPuzzle(theme);
+  // Mã sai hoặc kho đã đổi: bốc một bài khác thay vì báo hết bài
+  if (id && !r.puzzle) r = await nextPuzzle(theme);
   handedPuzzle = null;
   khoBai = r.kho;
   if (!r.puzzle) {

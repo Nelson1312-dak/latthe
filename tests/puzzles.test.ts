@@ -5,6 +5,7 @@ import {
   kFactor,
   newRating,
   pickPuzzle,
+  puzzleById,
   puzzleCount,
   puzzleStats,
   recentAttemptIds,
@@ -36,6 +37,16 @@ beforeEach(() => {
 });
 
 describe('lấy bài tập', () => {
+  it('lấy đúng một bài theo mã (trang bài tập công khai mở thẳng bài đó)', () => {
+    expect(puzzleById(db, 'abc12')).toBeNull(); // chưa nạp kho
+    withPuzzles(db, [{ id: 'abc12', rating: 900, themes: 'mateIn1 short' }]);
+    expect(puzzleById(db, 'abc12')).toMatchObject({ id: 'abc12', rating: 900, themes: ['mateIn1', 'short'] });
+    expect(puzzleById(db, 'khong')).toBeNull();
+    // Mã lạ (ký tự đặc biệt, quá dài) bị chặn trước khi chạm tới câu lệnh
+    expect(puzzleById(db, "a' OR 1=1 --")).toBeNull();
+    expect(puzzleById(db, 'x'.repeat(40))).toBeNull();
+  });
+
   it('chưa nạp kho thì không ngã, chỉ không có bài', () => {
     expect(puzzleCount(db)).toBe(0);
     expect(pickPuzzle(db, { rating: 1000 })).toBeNull();

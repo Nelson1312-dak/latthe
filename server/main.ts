@@ -16,7 +16,7 @@ import { advise, explain, ollamaAlive, queueDepth } from './advisor.ts';
 import { coachReport, communityReport } from './coach.ts';
 import { presenceBeat, presenceNow } from './presence.ts';
 import { saveInsight, startAnalyst } from './analyst.ts';
-import { pickPuzzle, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
+import { pickPuzzle, puzzleById, puzzleCount, puzzleStats, recentAttemptIds, recordAttempt, themeCounts } from './puzzles.ts';
 import { Live } from './live/index.ts';
 import { CONTROLS, DEFAULT_CONTROL, REFUSALS } from '../shared/protocol.ts';
 import { answerCard } from './reviews.ts';
@@ -536,6 +536,12 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
       return json(res, 200, { puzzle: null, kho: puzzleCount(db) });
     }
     return json(res, 200, { puzzle, rating, kho: puzzleCount(db) });
+  }
+
+  if (path === '/api/puzzles/one' && method === 'GET') {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const puzzle = puzzleById(db, url.searchParams.get('id') ?? '');
+    return json(res, puzzle ? 200 : 404, { puzzle, kho: puzzleCount(db) });
   }
 
   if (path === '/api/puzzles/answer' && method === 'POST') {
