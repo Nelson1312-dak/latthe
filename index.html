@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Lật Cờ — Chơi cờ vua, chấm ván miễn phí</title>
+    <title>Cờ vua online miễn phí — chơi với máy, với người, chấm từng nước · Lật Cờ</title>
     <meta
       name="description"
-      content="Chơi cờ vua với máy, với người hoặc với AI. Hết ván là engine chấm từng nước ngay, chỉ ra nước hay, nước dở (?!, ?, ??) — miễn phí, không cần đăng nhập."
+      content="Chơi cờ vua online miễn phí bằng tiếng Việt: đấu với máy 8 cấp, với người có Elo, giải bài tập, học chiến thuật. Hết ván engine chấm từng nước ngay, chỉ ra nước hay, nước dở — không cần đăng nhập."
     />
     <link rel="canonical" href="https://latbai.vn/" />
     <meta name="theme-color" content="#262421" />
@@ -32,17 +32,51 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://latbai.vn/#site",
+          "name": "Lật Cờ",
+          "url": "https://latbai.vn/",
+          "inLanguage": "vi"
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Lật Cờ",
+          "url": "https://latbai.vn/",
+          "applicationCategory": "GameApplication",
+          "operatingSystem": "Web, Android, iOS",
+          "inLanguage": "vi",
+          "isAccessibleForFree": true,
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "VND"
+          },
+          "description": "Chơi cờ vua online miễn phí với máy (8 cấp), với người có Elo, giải bài tập và học chiến thuật. Hết ván, engine Stockfish chấm từng nước ngay trong trình duyệt."
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <!-- Hiện trong lúc app đang tải, và cho máy tìm kiếm đọc được trang này nói về gì -->
     <div id="app">
       <main style="max-width: 640px; margin: 48px auto; padding: 0 16px; font-family: system-ui, sans-serif; color: #c9c8c6">
-        <h1 style="color: #fff">Lật Cờ — chơi cờ vua, chấm ván miễn phí</h1>
+        <h1 style="color: #fff">Lật Cờ — chơi cờ vua online miễn phí</h1>
         <p>
           Chơi với máy (8 cấp), đấu online với người có Elo, hoặc với AI khi chưa có ai chờ. Hết ván, engine chấm từng
           nước ngay trong trình duyệt: độ chính xác, nước hay, nước dở, và nước nên đi.
         </p>
-        <p><a href="/cham-van-co-vua/" style="color: #56cdbb">Chấm ván cờ vua miễn phí hoạt động thế nào</a></p>
+        <ul style="line-height: 2">
+          <li><a href="/hoc/" style="color: #56cdbb">Bài học cờ vua</a>: đòn đôi, ghim quân, chiếu hết, tàn cuộc</li>
+          <li><a href="/luat-co-vua/" style="color: #56cdbb">Luật cờ vua</a> cho người mới</li>
+          <li><a href="/khai-cuoc/" style="color: #56cdbb">Khai cuộc</a>: Ý, Tây Ban Nha, Sicilia, Gambit Hậu…</li>
+          <li><a href="/cham-van-co-vua/" style="color: #56cdbb">Chấm ván cờ vua</a> miễn phí hoạt động thế nào</li>
+        </ul>
       </main>
     </div>
     <script type="module" src="/src/main.ts"></script>

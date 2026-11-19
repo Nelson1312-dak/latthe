@@ -55,6 +55,14 @@ export function levelById(id: number): Level {
   return LEVELS.find((l) => l.id === id) ?? LEVELS[3];
 }
 
+/** Elo ước chừng của cấp 1–3 (không đặt Elo cho engine, nên chỉ để hiện cạnh tên). */
+const ELO_ƯỚC: Record<number, number> = { 1: 400, 2: 700, 3: 1000 };
+
+/** Elo hiện cạnh tên máy: cấp có Elo thật thì số đó, cấp thấp thì "~N". */
+export function levelRating(id: number): number | string {
+  return levelById(id).elo ?? `~${ELO_ƯỚC[id] ?? 1000}`;
+}
+
 /**
  * Chọn một dòng trong số các dòng engine đưa ra, theo trọng số của cấp độ.
  * `random` tách ra làm tham số để test được mà không phụ thuộc may rủi.

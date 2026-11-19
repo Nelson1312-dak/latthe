@@ -23,7 +23,9 @@
     "backup": "node scripts/backup.mjs",
     "e2e": "node scripts/e2e.mjs",
     "loadtest": "node scripts/loadtest.mjs",
-    "deploy": "npm run build && node scripts/deploy.mjs"
+    "deploy": "npm run build && node scripts/deploy.mjs",
+    "seo": "node --experimental-strip-types --no-warnings scripts/build-guides.ts && node scripts/build-sitemap.mjs",
+    "lessons": "node --experimental-strip-types --no-warnings scripts/build-lessons.ts && node scripts/build-sitemap.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",

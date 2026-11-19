@@ -941,3 +941,25 @@ a {
 .settings .swatches {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
+
+/* ---- 42. Máy tính: cột phải màn Chơi/Sảnh dài hơn chỗ thì cuộn trong khung như
+   chess.com. Vạch ngăn mục chạy hết bề ngang ở đầu mỗi mục, không kẻ thêm dưới
+   tiêu đề mục (trước đây vạch dưới "Hôm nay" dài hơn các vạch dòng bên dưới). ---- */
+@media (min-width: 1101px) {
+  .screen:has(> .game) .game-side > .rule:not(:first-child) {
+    border-top: 1px solid var(--line);
+  }
+  .screen:has(> .game) .game-side > .rule + * {
+    border-top: 0;
+  }
+}
+
+/* ---- 43. Chân trang thẳng mép với cột nội dung của màn (máy tính) ---- */
+.app > main > .site-foot {
+  width: 100%;
+  max-width: 1500px;
+  margin-inline: auto;
+}
+.app > main:has(> .screen-narrow) > .site-foot {
+  max-width: 1100px;
+}

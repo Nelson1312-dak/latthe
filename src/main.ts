@@ -133,13 +133,16 @@ const bộQuân = () => PIECE_SETS.find((s) => s.id === prefs().pieces) ?? PIECE
 function siteFooter(): string {
   return (
     `<footer class="site-foot">` +
-    `<span>${APP_NAME} — phần mềm tự do theo ` +
-    `<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3</a>.</span> ` +
-    `<span>Engine <a href="https://stockfishchess.org/" target="_blank" rel="noopener">Stockfish</a>, ` +
-    `bộ quân ${bộQuân().name} của ${bộQuân().author} (${bộQuân().license}), ` +
-    `<a href="/pieces/sets/LICENSES.txt" target="_blank" rel="noopener">giấy phép</a>.</span> ` +
-    `<a href="https://github.com/Nelson1312-dak/latthe" target="_blank" rel="noopener">Mã nguồn</a> ` +
+    // Link sang các trang đọc được (bài học, luật, khai cuộc): người mới cần, Google cũng lần theo
+    `<nav class="foot-links" aria-label="Tìm hiểu thêm">` +
+    `<a href="/hoc/">Bài học cờ vua</a><a href="/luat-co-vua/">Luật cờ vua</a>` +
+    `<a href="/khai-cuoc/">Khai cuộc</a><a href="/cham-van-co-vua/">Chấm ván</a>` +
+    `<a href="https://github.com/Nelson1312-dak/latthe" target="_blank" rel="noopener">Mã nguồn</a>` +
+    `<a href="/pieces/sets/LICENSES.txt" target="_blank" rel="noopener">Giấy phép</a>` +
     `<a href="/chinh-sach-rieng-tu/">Quyền riêng tư</a>` +
+    `</nav>` +
+    `<p class="foot-note">${APP_NAME} là phần mềm tự do theo GPL-3. Engine Stockfish, ` +
+    `bộ quân ${bộQuân().name} của ${bộQuân().author} (${bộQuân().license}).</p>` +
     `</footer>`
   );
 }
@@ -341,6 +344,9 @@ function setMiniCovered(v: boolean): void {
 /** Lúc vừa bỏ tấm che: cú click đi kèm cú nhấn đó không được tính là bấm vào bàn cờ. */
 let miniUncoveredAt = 0;
 
+/** Tiêu đề trang chủ viết sẵn trong index.html. */
+const TIÊU_ĐỀ_GỐC = document.title || APP_NAME;
+
 /** Bàn cờ nổi chỉ có một màn: bàn cờ chơi với máy. */
 function renderMini(): void {
   document.title = APP_NAME;
@@ -422,7 +428,8 @@ function render(): void {
   if (mànTrước !== null && PLAY_ROUTES.includes(mànTrước) && !PLAY_ROUTES.includes(r)) leaveOnline();
   mànTrước = r;
   const screen = SCREENS[r];
-  document.title = r ? `${screen.title} · ${APP_NAME}` : APP_NAME;
+  // Trang chủ giữ nguyên tiêu đề trong index.html (tiêu đề cho Google, có từ khoá)
+  document.title = r ? `${screen.title} · ${APP_NAME}` : TIÊU_ĐỀ_GỐC;
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
   const away = miniOpen() && PLAY_ROUTES.includes(r);

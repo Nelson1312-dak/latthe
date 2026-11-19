@@ -12,6 +12,7 @@ import { reviewGame, ReviewCancelled, type ReviewResult } from '../../analysis/r
 import { cachedAnalyser, REVIEW_PV } from '../../analysis/precompute.ts';
 import { loadOpenings } from '../../analysis/openings.ts';
 import { auth } from '../../app/session.ts';
+import { levelRating } from '../../engine/levels.ts';
 import { routeQuery } from '../../app/route.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
 import { fetchGame, saveReview } from '../../app/reviews.ts';
@@ -42,6 +43,8 @@ interface State {
   games: GameRow[];
   /** Tên hai bên ghi sẵn (ván được chia sẻ): dùng thay cho tên người đang xem. */
   names: { w: string; b: string } | null;
+  /** Elo cạnh tên từng bên, lúc ván diễn ra (bên nào không có thì để trống). */
+  ratings: Partial<Record<Side, number | string>>;
   /** Đang xem ván người khác chia sẻ qua link. */
   shared: boolean;
 }
@@ -61,6 +64,7 @@ const state: State = {
   error: null,
   games: [],
   names: null,
+  ratings: {},
   shared: false,
 };
 
@@ -181,6 +185,7 @@ function resultScreen(r: ReviewResult): string {
       bot: !state.names && Boolean(me && side !== me && state.opponent?.startsWith('Máy')),
       side,
       you: !state.shared && side === me,
+      rating: state.ratings[side],
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
       diff: side === 'w' ? mat.diff : -mat.diff,
     });
@@ -303,6 +308,7 @@ export function mountReview(rerender: () => void): void {
 export function openGame(id: number, rerender: () => void, ply?: number): void {
   state.phase = 'loading';
   state.names = null;
+  state.ratings = {};
   state.shared = false;
   state.gameId = id;
   state.title = '';
@@ -322,6 +328,15 @@ export function openGame(id: number, rerender: () => void, ply?: number): void {
     state.orientation = g.playerSide;
     state.opponent =
       g.mode === 'bot' ? `Máy cấp ${g.level ?? '?'}` : g.mode === 'online' ? (g.opponentName ?? null) : null;
+    // Elo lúc vào ván: mình theo Elo trước ván, đối thủ theo Elo lưu kèm ván (máy: theo cấp)
+    if (g.mode !== 'human') {
+      const đối: Side = g.playerSide === 'w' ? 'b' : 'w';
+      const r: Partial<Record<Side, number | string>> = {};
+      if (g.ratingBefore != null) r[g.playerSide] = g.ratingBefore;
+      if (g.mode === 'bot' && g.level) r[đối] = levelRating(g.level);
+      else if (g.opponentRating != null) r[đối] = g.opponentRating;
+      state.ratings = r;
+    }
     state.title =
       g.mode === 'human' ? 'Hai người một máy' : `Với ${state.opponent ?? 'người chơi khác'}`;
     state.result = resultFor({ winner: g.winner, reason: g.reason as EndReason }, state.playerSide);
@@ -407,6 +422,7 @@ export function openReviewResult(o: {
   shared?: boolean;
 }): void {
   state.names = o.names ?? null;
+  state.ratings = {};
   state.shared = o.shared ?? false;
   state.phase = 'done';
   state.gameId = o.gameId;

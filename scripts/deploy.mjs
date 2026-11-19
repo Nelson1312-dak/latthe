@@ -37,7 +37,7 @@ const cấu = { ...NỀN };
 // Trang tĩnh viết tay (không phải app): Vercel không tự trả index.html cho
 // đường dẫn thư mục, nên chỉ đường cho nó. Google đòi đúng địa chỉ này cho
 // trang chính sách quyền riêng tư.
-const TRANG_TĨNH = ['/chinh-sach-rieng-tu', '/cham-van-co-vua'];
+const TRANG_TĨNH = ['/chinh-sach-rieng-tu', '/cham-van-co-vua', '/luat-co-vua', '/khai-cuoc'];
 cấu.rewrites = [
   ...TRANG_TĨNH.flatMap((t) => [
     { source: t, destination: `${t}/index.html` },
@@ -50,6 +50,9 @@ cấu.rewrites = [
   { source: '/hoc/', destination: '/hoc/index.html' },
   { source: '/hoc/:slug', destination: '/hoc/:slug/index.html' },
   { source: '/hoc/:slug/', destination: '/hoc/:slug/index.html' },
+  // Trang khai cuộc (scripts/build-guides.ts sinh ra trong public/khai-cuoc/)
+  { source: '/khai-cuoc/:slug', destination: '/khai-cuoc/:slug/index.html' },
+  { source: '/khai-cuoc/:slug/', destination: '/khai-cuoc/:slug/index.html' },
 ];
 
 if (lên) {

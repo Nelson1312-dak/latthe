@@ -10,7 +10,7 @@ import { material } from '../../../shared/fen.ts';
 import { formatScore, type Score } from '../../../shared/winrate.ts';
 import { playSound } from '../../app/sound.ts';
 import { engine } from '../../engine/engine.ts';
-import { LEVELS, levelById, thinkDelayMs } from '../../engine/levels.ts';
+import { LEVELS, levelById, levelRating, thinkDelayMs } from '../../engine/levels.ts';
 import { splitUci } from '../../engine/uci.ts';
 import { loadOpenings, openingAt } from '../../analysis/openings.ts';
 import { saveFinishedGame } from '../../app/games.ts';
@@ -456,7 +456,7 @@ function gameScreen(extraSide = ''): string {
           ? auth.user?.gameRating
           : undefined
         : isBot
-          ? (levelById(setup.level).elo ?? `~${BOT_RATING[setup.level] ?? 1000}`)
+          ? levelRating(setup.level)
           : setup.mode === 'bot' && side === setup.side
             ? auth.user?.gameRating
             : undefined,
@@ -555,9 +555,6 @@ function gameScreen(extraSide = ''): string {
     ${result && !IS_MINI ? resultModal(result) : ''}
   </div>`;
 }
-
-/** Elo ước chừng của cấp 1–3 (không đặt Elo cho engine, nên chỉ để hiện cạnh tên). */
-const BOT_RATING: Record<number, number> = { 1: 400, 2: 700, 3: 1000 };
 
 const PICK_NAME: Record<Pick, string> = { w: 'cầm Trắng', b: 'cầm Đen', r: 'bên ngẫu nhiên' };
 

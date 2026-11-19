@@ -260,9 +260,10 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
       created_at: string;
       opponent_name: string | null;
       opponent_rating: number | null;
+      rating_before: number | null;
     }>(
       db,
-      `SELECT id, pgn, mode, level, player_side, winner, reason, created_at, opponent_name, opponent_rating
+      `SELECT id, pgn, mode, level, player_side, winner, reason, created_at, opponent_name, opponent_rating, rating_before
          FROM games WHERE id = ? AND user_id = ?`,
       gameId,
       user.id,
@@ -283,6 +284,7 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
           createdAt: game.created_at,
           opponentName: game.opponent_name,
           opponentRating: game.opponent_rating,
+          ratingBefore: game.rating_before,
         },
         review: getReview(db, gameId),
       });

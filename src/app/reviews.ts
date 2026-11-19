@@ -15,6 +15,8 @@ export interface GameDetail {
   /** Chỉ ván online mới có. */
   opponentName?: string | null;
   opponentRating?: number | null;
+  /** Elo của mình lúc vào ván (ván online). */
+  ratingBefore?: number | null;
 }
 
 export async function fetchGame(id: number): Promise<{ game: GameDetail; review: ReviewResult | null } | null> {

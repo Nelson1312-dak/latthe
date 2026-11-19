@@ -238,6 +238,39 @@ if (process.env.CHECK_NO_API !== '1') {
   }
   await ctx.close();
 }
+// Trang đọc tĩnh (bài học, luật cờ, khai cuộc — scripts/seo/page.ts): cùng luật với app
+for (const scheme of ['dark', 'light']) {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
+  for (const path of ['luat-co-vua/', 'khai-cuoc/', 'khai-cuoc/khai-cuoc-y/', 'hoc/', 'hoc/don-doi/']) {
+    const where = `${scheme} /${path}`;
+    await page.goto(`${BASE}/${path}index.html`, { waitUntil: 'networkidle' });
+    const r = await page.evaluate(async () => {
+      await document.fonts.ready;
+      const accent = getComputedStyle(document.querySelector('.cta') ?? document.body).backgroundColor;
+      return {
+        font: document.fonts.check('16px "IBM Plex Sans"') && [...document.fonts].some((f) => f.status === 'loaded'),
+        tràn: document.documentElement.scrollWidth - innerWidth,
+        // Màu nhấn chỉ cho nút chính: chữ/link mang màu nhấn là sai
+        nhấn: [...document.querySelectorAll('a, b, span, p, li')]
+          .filter((e) => !e.closest('.cta, .play') && getComputedStyle(e).color === accent)
+          .map((e) => e.textContent.trim().slice(0, 30)),
+        nhỏ: [...document.querySelectorAll('a, button, summary')]
+          .filter((e) => {
+            const b = e.getBoundingClientRect();
+            return b.height > 0 && b.height < 44 && !e.closest('p, td, figcaption, .credit');
+          })
+          .map((e) => `${e.textContent.trim().slice(0, 30)} ${Math.round(e.getBoundingClientRect().height)}px`),
+        thẻ: [...document.querySelectorAll('main li a, main p')].filter((e) => getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)' && !e.closest('.cta')).length,
+      };
+    });
+    if (!r.font) fail(where, 'chưa tải font IBM Plex Sans');
+    if (r.tràn > 1) fail(where, `tràn ngang ${r.tràn}px ở cỡ điện thoại`);
+    for (const t of new Set(r.nhấn)) fail(where, `chữ mang màu nhấn ngoài nút chính (“${t}”)`);
+    for (const t of new Set(r.nhỏ)) fail(where, `vùng bấm nhỏ: ${t}`);
+    if (r.thẻ) fail(where, `${r.thẻ} dòng/đoạn có nền riêng (kiểu thẻ)`);
+  }
+  await page.close();
+}
 await browser.close();
 
 if (problems.length) {

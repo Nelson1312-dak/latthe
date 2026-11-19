@@ -91,11 +91,29 @@ Sinh từ `src/training/lessons.ts` + kho bài tập `data/chess.db` (chỉ có 
 này, nên file sinh ra được đưa vào git):
 
 ```
-node --experimental-strip-types --no-warnings scripts/build-lessons.ts
+npm run lessons
 ```
 
-Chạy lại khi thêm/sửa bài học, rồi deploy. Script cũng viết lại `public/sitemap.xml`.
+Chạy lại khi thêm/sửa bài học, rồi deploy. Kho hơn một triệu bài nên mất vài phút.
 Nút "Luyện bài này ngay" mở `/#/hoc?bai=<id>` — app vào thẳng bài đó.
+
+## Trang đọc cho Google (luật cờ, khai cuộc, sitemap)
+
+Các trang tĩnh trong `public/` cho người tìm "luật cờ vua", "khai cuộc Ý"…:
+
+- `scripts/build-guides.ts` sinh `public/luat-co-vua/` và `public/khai-cuoc/` (20 khai cuộc,
+  nội dung viết tay trong script, mã ECO lấy từ `public/data/openings.json`).
+- `scripts/build-sitemap.mjs` quét mọi `public/**/index.html` thành `public/sitemap.xml`,
+  ngày sửa theo lần commit cuối của từng trang.
+- Khung trang dùng chung (meta, Open Graph, dữ liệu có cấu trúc schema.org, chân trang)
+  ở `scripts/seo/page.ts`.
+
+```
+npm run seo
+```
+
+Thêm thư mục trang tĩnh mới thì nhớ thêm đường dẫn vào `scripts/deploy.mjs` (mục rewrites)
+và link tới nó từ chân trang app (`siteFooter` trong `src/main.ts`).
 
 ## Cài như app (PWA)
 

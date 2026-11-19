@@ -480,6 +480,17 @@
   line-height: var(--lh-xs);
   color: var(--text-3);
 }
+.site-foot {
+  flex-direction: column;
+}
+.foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-4);
+}
+.foot-note {
+  margin: 0;
+}
 .site-foot a {
   color: var(--text-2);
 }
@@ -490,8 +501,7 @@
   .site-foot {
     padding: var(--s-3);
   }
-  /* Link trong chân trang vẫn phải đủ to để chạm bằng ngón tay */
-  .site-foot a {
+  .foot-links a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
