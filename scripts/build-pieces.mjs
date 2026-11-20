@@ -100,6 +100,19 @@ const preview = (symbols) =>
 const wrap = (symbols) =>
   `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="position:absolute;width:0;height:0;overflow:hidden">${symbols}</svg>\n`;
 
+/**
+ * Vua và Hậu Đen bộ merida: dải bóng trắng của bản gốc phủ gần kín thân quân (gradient
+ * trắng chỉ nhạt dần từ x=21 tới x=77 trong khung 50), nên Vua Đen trông như quân trắng.
+ * Giảm dải bóng còn 18% độ đậm (cùng tông với Xe, Tượng đen): vẫn thấy các vạch trên thân, nhưng nhìn là biết quân đen.
+ * Chạy lại nhiều lần vẫn ra một kết quả.
+ */
+export function fixMerida(svg) {
+  return svg.replace(
+    /(<linearGradient id="b[kq]-a"[^>]*>)<stop offset="0" stop-color="#fff"(?: stop-opacity="[^"]*")?\/>/g,
+    '$1<stop offset="0" stop-color="#fff" stop-opacity=".18"/>',
+  );
+}
+
 const src = process.argv[2];
 mkdirSync(OUT, { recursive: true });
 const cb = cburnettSymbols();
@@ -108,10 +121,17 @@ writeFileSync(join(OUT, 'cburnett.svg'), wrap(cb + brand));
 writeFileSync(join(OUT, 'cburnett.preview.svg'), preview(cb));
 if (src) {
   for (const set of PIECE_SETS) {
-    const symbols = CODES.map((c) => toSymbol(readFileSync(join(src, set.id, `${c}.svg`), 'utf8'), c)).join('');
+    let symbols = CODES.map((c) => toSymbol(readFileSync(join(src, set.id, `${c}.svg`), 'utf8'), c)).join('');
+    if (set.id === 'merida') symbols = fixMerida(symbols);
     writeFileSync(join(OUT, `${set.id}.svg`), wrap(symbols + brand));
     writeFileSync(join(OUT, `${set.id}.preview.svg`), preview(symbols));
     console.log(set.id);
+  }
+} else {
+  // Không có thư mục nguồn: chỉ sửa lại bộ merida đang có
+  for (const f of ['merida.svg', 'merida.preview.svg']) {
+    const p = join(OUT, f);
+    writeFileSync(p, fixMerida(readFileSync(p, 'utf8')));
   }
 }
 writeFileSync(
@@ -123,7 +143,8 @@ writeFileSync(
     'Đã sửa so với bản gốc: gom 12 file SVG của mỗi bộ vào một file sprite (public/pieces/sets/<bộ>.svg),',
     'mỗi quân bọc trong <symbol>, đổi tên id bên trong (thêm tiền tố như "wk-") để không trùng nhau,',
     'bỏ thuộc tính width/height/style của thẻ <svg> gốc; ảnh <bộ>.preview.svg ghép Mã trắng và Vua đen.',
-    'Hình vẽ của quân giữ nguyên. Công cụ dựng: scripts/build-pieces.mjs.',
+    'Hình vẽ của quân giữ nguyên, trừ một chỗ ở bộ merida: dải bóng trắng trên Vua và Hậu Đen giảm còn 18% độ đậm',
+    'để quân đen không trông như quân trắng. Công cụ dựng: scripts/build-pieces.mjs.',
     '',
     '- cburnett — Colin M.L. Burnett (Wikimedia Commons), sửa bởi shaack/cm-chessboard — CC BY-SA 3.0',
     '  https://creativecommons.org/licenses/by-sa/3.0/ (chi tiết: ../LICENSE.txt)',

@@ -15,6 +15,8 @@ import { chromium } from 'playwright';
 const HASHES = 'scripts/seo/og-hash.json';
 const hashes: Record<string, string> = existsSync(HASHES) ? JSON.parse(readFileSync(HASHES, 'utf8')) : {};
 const sprite = readFileSync('public/pieces/sets/merida.svg', 'utf8');
+// Bộ quân đổi (ví dụ sửa màu một quân) thì vẽ lại mọi ảnh
+const bộQuân = createHash('sha1').update(sprite).digest('hex').slice(0, 8);
 // fonts.css trỏ /fonts/… (gốc trang web); vẽ từ file trên đĩa thì đổi sang đường dẫn file
 const fonts = readFileSync('public/fonts/fonts.css', 'utf8').replaceAll("url('/fonts/", `url('${pathToFileURL(resolve('public/fonts')).href}/`);
 
@@ -66,7 +68,7 @@ for (const f of pages()) {
   const kicker = crumbs.length > 1 ? text(crumbs.at(-1)!) : '';
   // "Bài tập cờ vua" + "Bài tập đòn đôi": bỏ chữ lặp ở tiêu đề
   if (kicker.startsWith('Bài tập') && title.startsWith('Bài tập ')) title = title.slice(8, 9).toUpperCase() + title.slice(9);
-  const hash = createHash('sha1').update(`v5|${kicker}|${title}|${board}`).digest('hex').slice(0, 16);
+  const hash = createHash('sha1').update(`v6|${bộQuân}|${kicker}|${title}|${board}`).digest('hex').slice(0, 16);
   if (hashes[out] === hash && existsSync(out)) continue;
   jobs.push({ file: f, out, kicker, title, board, hash });
 }

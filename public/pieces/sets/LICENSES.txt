@@ -4,7 +4,8 @@ Các bộ quân lấy từ kho mã nguồn Lichess (https://github.com/lichess-o
 Đã sửa so với bản gốc: gom 12 file SVG của mỗi bộ vào một file sprite (public/pieces/sets/<bộ>.svg),
 mỗi quân bọc trong <symbol>, đổi tên id bên trong (thêm tiền tố như "wk-") để không trùng nhau,
 bỏ thuộc tính width/height/style của thẻ <svg> gốc; ảnh <bộ>.preview.svg ghép Mã trắng và Vua đen.
-Hình vẽ của quân giữ nguyên. Công cụ dựng: scripts/build-pieces.mjs.
+Hình vẽ của quân giữ nguyên, trừ một chỗ ở bộ merida: dải bóng trắng trên Vua và Hậu Đen giảm còn 18% độ đậm
+để quân đen không trông như quân trắng. Công cụ dựng: scripts/build-pieces.mjs.
 
 - cburnett — Colin M.L. Burnett (Wikimedia Commons), sửa bởi shaack/cm-chessboard — CC BY-SA 3.0
   https://creativecommons.org/licenses/by-sa/3.0/ (chi tiết: ../LICENSE.txt)
