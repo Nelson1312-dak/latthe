@@ -389,16 +389,28 @@ function onMiniClosed(): void {
  * nằm khuất phía dưới. Chỉ cuộn trong chính sổ nước — không dùng scrollIntoView, vì nó
  * cuộn luôn cả khung app bên ngoài làm trang trượt lên.
  */
-function hiệnNướcĐangXem(root: ParentNode): void {
+function hiệnNướcĐangXem(root: ParentNode, nướcTrước: string | null): void {
   for (const list of root.querySelectorAll<HTMLElement>('.move-list')) {
     const nước = list.querySelector<HTMLElement>('.move.is-current');
-    if (!nước || list.scrollHeight <= list.clientHeight) continue;
+    if (!nước) continue;
     const hàng = (nước.closest('.move-row') as HTMLElement | null) ?? nước;
-    // Toạ độ trong nội dung của sổ (không phụ thuộc phần tử nào đang làm gốc offsetTop)
-    const trên = hàng.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
-    const dưới = trên + hàng.offsetHeight;
-    if (trên < list.scrollTop) list.scrollTop = trên;
-    else if (dưới > list.scrollTop + list.clientHeight) list.scrollTop = dưới - list.clientHeight;
+    if (list.scrollHeight > list.clientHeight) {
+      // Sổ tự cuộn riêng (lúc đang đánh). Toạ độ trong nội dung của sổ.
+      const trên = hàng.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+      const dưới = trên + hàng.offsetHeight;
+      if (trên < list.scrollTop) list.scrollTop = trên;
+      else if (dưới > list.scrollTop + list.clientHeight) list.scrollTop = dưới - list.clientHeight;
+      continue;
+    }
+    // Sổ hiện đủ dài, cả cột phải cuộn (hết ván, xem lại). Chỉ theo nước khi người
+    // chơi đang tua (nước đổi) — lúc vừa hết ván thì để cột ở trên cùng cho thấy kết quả.
+    const cột = list.closest<HTMLElement>('.game-side');
+    if (!cột || cột.scrollHeight <= cột.clientHeight || nướcTrước === null || nướcTrước === nước.dataset.ply) continue;
+    const thanh = cột.querySelector<HTMLElement>('.move-bar')?.offsetHeight ?? 0;
+    const c = cột.getBoundingClientRect();
+    const h = hàng.getBoundingClientRect();
+    if (h.top < c.top) cột.scrollTop -= c.top - h.top;
+    else if (h.bottom > c.bottom - thanh) cột.scrollTop += h.bottom - (c.bottom - thanh);
   }
 }
 
@@ -464,6 +476,7 @@ function render(): void {
   const away = miniOpen() && PLAY_ROUTES.includes(r);
   // Vẽ lại cùng một màn (đi một nước, bấm ◁ ▷): giữ chỗ đang cuộn của cột phải
   const cuộnCũ = app.dataset.route === r ? (app.querySelector<HTMLElement>('.game-side')?.scrollTop ?? 0) : 0;
+  const nướcCũ = app.dataset.route === r ? (app.querySelector<HTMLElement>('.move-list .move.is-current')?.dataset.ply ?? null) : null;
   app.innerHTML =
     siteHeader(r) +
     `<main>${away ? miniAway() : screen.render()}${siteFooter()}</main>` +
@@ -482,7 +495,7 @@ function render(): void {
   app.dataset.route = r;
   const cột = app.querySelector<HTMLElement>('.game-side');
   if (cột && cuộnCũ) cột.scrollTop = cuộnCũ;
-  hiệnNướcĐangXem(app);
+  hiệnNướcĐangXem(app, nướcCũ);
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
   if (r === 'tai-khoan') mountAccount(render);

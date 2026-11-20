@@ -649,11 +649,24 @@ a {
   }
   .game-side > .sheet:has(> .move-bar) > .move-bar {
     margin-top: auto;
-    /* Cột phải dài hơn màn hình (hết ván) thì cột tự cuộn: nút tua vẫn dính ở đáy */
+    /* Cột phải dài hơn màn hình (hết ván, xem lại) thì cột tự cuộn: nút tua dính ở đáy */
     position: sticky;
-    bottom: calc(-1 * var(--s-4));
+    bottom: 0;
     z-index: 1;
     background: var(--bg-1);
+  }
+  /* Hết ván và màn Xem lại: cột có phần chấm ván ở trên. Sổ nước hiện đủ dài và cả
+     cột cuộn chung một thanh (như chess.com, Lichess) — không co sổ về 120px tự cuộn
+     riêng, nằm khuất dưới thanh tua. Lề dưới do chính thanh tua giữ, nên lúc thanh
+     dính đáy và lúc cuộn hết trông như nhau. */
+  .game-side > .sheet:has(> .move-bar):is(:has(> .result-card), :has(> .rv)) > .move-list {
+    flex: 1 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+  .screen:has(> .game) .game-side:has(> .sheet > .result-card, > .sheet > .rv) {
+    padding-bottom: 0;
+    scroll-padding-bottom: 80px;
   }
   /* Nút việc trong ván: icon cạnh chữ, cao 40px, không phải ô vuông icon-trên-chữ */
   .game-actions .act {
