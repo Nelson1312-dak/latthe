@@ -230,14 +230,20 @@
   /* Đánh cờ thì vừa đúng một màn hình: không cuộn trang, không chân trang.
      Cột phải tự cuộn bên trong nếu nội dung dài (sổ nước đi, phần chấm ván).
      Trang cuộn được thì bàn cờ trôi lên trôi xuống trong lúc đánh. */
+  /* clip chứ không chỉ hidden: khung overflow:hidden vẫn bị JS cuộn được (focus một
+     nút, scrollIntoView, Ctrl+F…). Khi đó cả khung trượt lên, thanh bên trái cụt giữa
+     chừng và dưới bàn cờ thành một khoảng trống. clip thì không gì cuộn được.
+     Trình duyệt chưa hiểu clip vẫn dùng hidden như cũ. */
   .app:has(.screen > .game) {
     height: 100vh;
     min-height: 0;
     overflow: hidden;
+    overflow: clip;
   }
   .app:has(.screen > .game) > main {
     min-height: 0;
     overflow: hidden;
+    overflow: clip;
   }
   .app:has(.screen > .game) .site-foot {
     display: none;

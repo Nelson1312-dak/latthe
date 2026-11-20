@@ -384,6 +384,24 @@ function onMiniClosed(): void {
   render();
 }
 
+/**
+ * Sổ nước đi tự cuộn tới nước đang xem (như chess.com, Lichess): ván dài thì nước mới
+ * nằm khuất phía dưới. Chỉ cuộn trong chính sổ nước — không dùng scrollIntoView, vì nó
+ * cuộn luôn cả khung app bên ngoài làm trang trượt lên.
+ */
+function hiệnNướcĐangXem(root: ParentNode): void {
+  for (const list of root.querySelectorAll<HTMLElement>('.move-list')) {
+    const nước = list.querySelector<HTMLElement>('.move.is-current');
+    if (!nước || list.scrollHeight <= list.clientHeight) continue;
+    const hàng = (nước.closest('.move-row') as HTMLElement | null) ?? nước;
+    // Toạ độ trong nội dung của sổ (không phụ thuộc phần tử nào đang làm gốc offsetTop)
+    const trên = hàng.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+    const dưới = trên + hàng.offsetHeight;
+    if (trên < list.scrollTop) list.scrollTop = trên;
+    else if (dưới > list.scrollTop + list.clientHeight) list.scrollTop = dưới - list.clientHeight;
+  }
+}
+
 function render(): void {
   if (IS_MINI) {
     renderMini();
@@ -444,6 +462,8 @@ function render(): void {
   const app = document.querySelector<HTMLDivElement>('#app')!;
   app.className = 'app';
   const away = miniOpen() && PLAY_ROUTES.includes(r);
+  // Vẽ lại cùng một màn (đi một nước, bấm ◁ ▷): giữ chỗ đang cuộn của cột phải
+  const cuộnCũ = app.dataset.route === r ? (app.querySelector<HTMLElement>('.game-side')?.scrollTop ?? 0) : 0;
   app.innerHTML =
     siteHeader(r) +
     `<main>${away ? miniAway() : screen.render()}${siteFooter()}</main>` +
@@ -459,6 +479,10 @@ function render(): void {
       if (playMode() === 'online') mountOnline(render);
     }
   }
+  app.dataset.route = r;
+  const cột = app.querySelector<HTMLElement>('.game-side');
+  if (cột && cuộnCũ) cột.scrollTop = cuộnCũ;
+  hiệnNướcĐangXem(app);
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
   if (r === 'tai-khoan') mountAccount(render);

@@ -625,14 +625,21 @@ a {
     display: flex;
     flex-direction: column;
   }
+  /* Khối không co nhỏ hơn nội dung (flex-shrink 0): trước đây nó co theo cột rồi cắt
+     cụt phần dưới (hết ván: kết quả + độ chính xác + khoảnh khắc + sổ nước dài hơn màn
+     hình). Bấm ◁ ▷ thì trình duyệt cuộn cả khung app để đưa nút vào tầm mắt, trang
+     trượt lên để lại khoảng trống dưới bàn cờ. Giờ chỉ sổ nước đi co giãn (cơ sở 0,
+     tối thiểu 120px); nội dung dài hơn màn hình thì cả cột phải tự cuộn. */
   .screen:has(> .game) .game-side > .sheet:has(> .move-bar) {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
+    /* Khối đã cao đúng nội dung nên không cần cắt; để hidden thì nó thành khung cuộn
+       riêng và nút tua (sticky) bám vào nó thay vì vào cột phải */
+    overflow: visible;
   }
   .game-side > .sheet:has(> .move-bar) > .move-list {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-height: 120px;
     max-height: none;
     overflow-y: auto;
@@ -642,6 +649,11 @@ a {
   }
   .game-side > .sheet:has(> .move-bar) > .move-bar {
     margin-top: auto;
+    /* Cột phải dài hơn màn hình (hết ván) thì cột tự cuộn: nút tua vẫn dính ở đáy */
+    position: sticky;
+    bottom: calc(-1 * var(--s-4));
+    z-index: 1;
+    background: var(--bg-1);
   }
   /* Nút việc trong ván: icon cạnh chữ, cao 40px, không phải ô vuông icon-trên-chữ */
   .game-actions .act {
