@@ -10,6 +10,7 @@ import { CLASS_LABEL, CLASS_SYMBOL } from '../../board/Board.ts';
 import { formatScore, type MoveClass, type Score } from '../../../shared/winrate.ts';
 import type { PieceCode } from '../../../shared/fen.ts';
 
+/** Thoát ký tự HTML cho chuỗi đến từ người dùng (tên người chơi, tên đối thủ…). */
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 /** Quân cờ nhỏ lấy từ sprite, dùng trong ký hiệu nước đi và danh sách quân đã ăn. */

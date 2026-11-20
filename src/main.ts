@@ -509,6 +509,9 @@ function initTheme(): void {
 document.addEventListener('click', (e) => {
   const el = e.target as HTMLElement;
 
+  // Bấm vào ô link chia sẻ thì chọn hết (không dùng onclick viết trong HTML: CSP chặn)
+  if (el instanceof HTMLInputElement && el.matches('[data-select-all]')) el.select();
+
   // Hộp mời đăng nhập: chơi luôn không lưu, hoặc đóng
   const g = currentGate();
   if (g && el.closest('[data-gate-guest]')) {

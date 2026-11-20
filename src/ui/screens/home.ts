@@ -4,7 +4,7 @@
 // — việc hôm nay và sổ ván đã chơi — gắn xuống dưới cột phải. Trước đây Sảnh là
 // một trang chữ riêng: muốn đánh phải bấm thêm một nhịp nữa mới thấy bàn cờ.
 
-import { classBadge, notice, rule, sheet, sideGlyph, levelRow } from '../components/index.ts';
+import { classBadge, esc, notice, rule, sheet, sideGlyph, levelRow } from '../components/index.ts';
 import { currentDaily, loadDaily } from '../../app/daily.ts';
 import { icon, type IconName } from '../icons.ts';
 import { auth } from '../../app/session.ts';
@@ -64,7 +64,7 @@ export const gameRow = (g: GameRow) => {
     g.mode === 'bot' ? `Máy cấp ${g.level ?? '?'}` : g.mode === 'online' ? (g.opponentName ?? 'Đối thủ') : 'Hai người';
   return `<a class="log-row" href="#/xem-lai?game=${g.id}">
     ${sideGlyph(g.playerSide)}
-    <span class="log-name">${who}</span>
+    <span class="log-name">${esc(who)}</span>
     <span class="log-result result-${win}">${text} · ${END_TEXT[g.reason as EndReason] ?? g.reason}</span>
     ${g.accuracy != null ? `<span class="log-acc mono" title="Độ chính xác">${g.accuracy.toFixed(1)}</span>` : '<span class="log-acc"></span>'}
     <span class="log-when">${g.moveCount} nước · ${when(g.createdAt)}</span>

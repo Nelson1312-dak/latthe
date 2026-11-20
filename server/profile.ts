@@ -1,7 +1,7 @@
 // Hồ sơ người chơi: màn chào mừng, tên gọi, tuỳ chọn đi theo tài khoản,
 // thống kê, và tự xoá tài khoản.
 
-import { all, one, type Db, type User } from './db.ts';
+import { all, cleanName, one, type Db, type User } from './db.ts';
 import { BOTS } from './live/bots.ts';
 
 /** Trình độ tự nhận ở màn chào mừng → điểm khởi đầu và cấp máy gợi ý. */
@@ -23,11 +23,8 @@ export function parseProfilePatch(body: Record<string, unknown>): ProfilePatch |
   const out: ProfilePatch = {};
   if (body.name !== undefined) {
     if (typeof body.name !== 'string') return 'Tên không hợp lệ';
-    // Bỏ ký tự điều khiển, gộp khoảng trắng
-    const name = body.name
-      .replace(/[\u0000-\u001f\u007f]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    // Bỏ ký tự điều khiển và ký tự có nghĩa trong HTML (< > " & `), gộp khoảng trắng
+    const name = cleanName(body.name, 1000);
     if (name.length < 2) return 'Tên cần ít nhất 2 ký tự';
     if (name.length > 30) return 'Tên dài tối đa 30 ký tự';
     out.name = name;

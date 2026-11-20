@@ -196,7 +196,7 @@ ${o.withSprite ? '<meta property="og:image:width" content="1200">\n<meta propert
 ${ld}<style>${STYLE}</style>
 ${
   o.event
-    ? `<script>try{fetch('/api/ping',{method:'POST',headers:{'content-type':'application/json','ngrok-skip-browser-warning':'1'},body:'{"e":"${o.event}"}',keepalive:true}).catch(function(){})}catch(e){}</script>\n`
+    ? `<script src="/ping.js" data-e="${o.event}"></script>\n`
     : ''
 }</head>
 <body>

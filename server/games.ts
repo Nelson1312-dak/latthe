@@ -1,6 +1,6 @@
 // Lưu và dọn ván đã chơi.
 
-import { all, type Db } from './db.ts';
+import { all, cleanName, type Db } from './db.ts';
 
 /** Giữ bao nhiêu ván gần nhất cho mỗi người. */
 export const KEEP_GAMES = 20;
@@ -72,7 +72,8 @@ export function parseNewGame(body: Record<string, unknown>): NewGame | null {
     playerSide,
     pgn,
     level: Number.isInteger(body.level) ? (body.level as number) : null,
-    reason: typeof body.reason === 'string' ? body.reason.slice(0, 40) : 'unknown',
+    // Lý do kết thúc là mã ngắn (checkmate, resign…): chỉ nhận chữ, số, gạch nối
+    reason: typeof body.reason === 'string' && /^[a-z0-9-]{1,40}$/i.test(body.reason) ? body.reason : 'unknown',
   };
 }
 
@@ -98,7 +99,7 @@ export function insertGame(db: Db, userId: number, g: NewGame, now = new Date())
       g.reason,
       countMoves(g.pgn),
       now.toISOString(),
-      g.opponentName ?? null,
+      g.opponentName ? cleanName(g.opponentName, 60) || null : null,
       g.opponentRating ?? null,
       g.ratingBefore ?? null,
       g.ratingAfter ?? null,

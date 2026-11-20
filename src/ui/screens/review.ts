@@ -17,7 +17,7 @@ import { routeQuery } from '../../app/route.ts';
 import { recentGames, type GameRow } from '../../app/games.ts';
 import { fetchGame, saveReview } from '../../app/reviews.ts';
 import { boardMarks, momentsOf, reviewPanel } from '../report.ts';
-import { button, iconButton, moveList, notice, playerStrip, sheet, sideGlyph, toolbar } from '../components/index.ts';
+import { button, esc, iconButton, moveList, notice, playerStrip, sheet, sideGlyph, toolbar } from '../components/index.ts';
 
 type Phase = 'pick' | 'loading' | 'analysing' | 'done' | 'error';
 
@@ -102,7 +102,7 @@ export function review(): string {
 
 function shell(body: string): string {
   return `<div class="screen screen-narrow">
-    <div class="screen-head"><h1>${state.title || 'Ván đã chơi'}</h1><span class="head-meta">${state.result}</span></div>
+    <div class="screen-head"><h1>${esc(state.title || 'Ván đã chơi')}</h1><span class="head-meta">${state.result}</span></div>
     ${body}
   </div>`;
 }
@@ -192,7 +192,7 @@ function resultScreen(r: ReviewResult): string {
 
   return `<div class="screen">
     <div class="screen-head play-head">
-      <h1>${state.title}</h1>
+      <h1>${esc(state.title)}</h1>
       <span class="head-meta">${state.result}</span>
       ${toolbar([
         ...(state.shared ? [] : [iconButton('review', 'Ván đã chơi')]),

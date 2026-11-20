@@ -130,6 +130,24 @@ và `CÓ_TRANG_CON` nếu có trang con), link tới nó từ chân trang app (`
 `src/main.ts`) và từ "Đọc thêm" (`KHÁC` trong `scripts/seo/page.ts`). Lượt xem trang được đếm
 ẩn danh theo nhóm (`lesson_page`, `puzzle_page`, `guide_page`), xem ở màn Thống kê.
 
+## Bảo mật và quyền riêng tư
+
+- **Header bảo mật** cho mọi đường dẫn trên latbai.vn nằm ở `scripts/security-headers.mjs`
+  (deploy ghi vào `vercel.json`): CSP chỉ cho chạy script của chính trang, thư viện đăng nhập
+  Google và WebAssembly của engine; chặn nhúng trang vào iframe; không gửi đường dẫn đầy đủ
+  khi bấm link ra ngoài. Vì CSP, **không viết script thẳng trong HTML hay `onclick="…"`**:
+  trang đọc đếm lượt bằng `/ping.js`, bấm chọn ô link dùng `data-select-all`.
+- `npm run check:csp` (cần `vite preview` và server thử, xem đầu file `scripts/check-csp.mjs`)
+  mở các màn chính với đúng CSP đó, kể cả một ván với máy, và thử chèn một thẻ có `onerror`
+  để chắc CSP chặn được. `npm run deploy` tự chạy bước này; CSP lỗi thì không deploy.
+- **Tên người chơi** (tên Google, tên tự đặt, tên trong ván chia sẻ, tên đối thủ) đi qua
+  `cleanName` (`server/db.ts`): bỏ `< > " & \``. Giao diện vẫn thoát ký tự khi chèn tên vào
+  HTML (`esc` trong `src/ui/components`). Dữ liệu cũ đã làm sạch bằng migration 015.
+- Ollama, server (8787) và trang kiểm tra ngrok (4040) chỉ nghe trên 127.0.0.1; ngrok chỉ
+  trỏ tới 8787. Giới hạn theo địa chỉ (đếm lượt, chia sẻ, mã mời) có thể bị lách khi gọi thẳng
+  tunnel, nên tạo link chia sẻ có thêm trần chung 300 link mỗi giờ.
+- Đổi cách dùng dữ liệu người dùng thì sửa luôn `public/chinh-sach-rieng-tu/index.html`.
+
 ## Cài như app (PWA)
 
 `public/manifest.webmanifest`, icon trong `public/icons/` (sinh bằng

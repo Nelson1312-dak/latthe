@@ -93,8 +93,30 @@ export interface User {
 }
 
 /** Tìm theo 'sub' của Google, chưa có thì tạo. Đổi tên/ảnh bên Google thì cập nhật theo. */
-export function upsertGoogleUser(db: Db, sub: string, name: string, picture?: string): User {
+/**
+ * Làm sạch một tên do người dùng (hoặc tài khoản Google) đặt, trước khi lưu.
+ *
+ * Tên được đưa cho người khác xem (đối thủ online, người mở link ván chia sẻ), và
+ * giao diện dựng HTML bằng chuỗi. Nên bỏ hẳn các ký tự có nghĩa trong HTML
+ * (< > " & `) ngay từ cửa vào: kể cả có chỗ hiển thị quên thoát ký tự, tên cũng
+ * không thể thành thẻ hay thuộc tính. Bỏ cả ký tự điều khiển, gộp khoảng trắng.
+ */
+export function cleanName(v: unknown, max = 40): string {
+  return typeof v === 'string'
+    ? v
+        .replace(/[\u0000-\u001f\u007f]/g, ' ')
+        .replace(/[<>"&`]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, max)
+    : '';
+}
+
+export function upsertGoogleUser(db: Db, sub: string, rawName: string, picture?: string): User {
   const now = new Date().toISOString();
+  const name = cleanName(rawName) || 'Người chơi';
+  // Ảnh đại diện chỉ nhận đường https (Google luôn gửi https)
+  if (picture && !/^https:\/\/[^\s"'<>]+$/.test(picture)) picture = undefined;
   const found = one<User>(db, 'SELECT * FROM users WHERE google_sub = ?', sub);
   if (found) {
     // Tên Google chỉ cập nhật khi người chơi chưa tự đặt tên gọi riêng
@@ -116,8 +138,9 @@ export function upsertGoogleUser(db: Db, sub: string, name: string, picture?: st
 }
 
 /** Tài khoản chỉ dùng khi phát triển và chạy test (không có google_sub). */
-export function createLocalUser(db: Db, name: string): User {
+export function createLocalUser(db: Db, rawName: string): User {
   const now = new Date().toISOString();
+  const name = cleanName(rawName) || 'Người chơi thử';
   const info = db
     .prepare('INSERT INTO users (google_sub, display_name, created_at, last_seen_at) VALUES (NULL, ?, ?, ?)')
     .run(name, now, now);

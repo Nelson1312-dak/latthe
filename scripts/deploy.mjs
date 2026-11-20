@@ -15,6 +15,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { securityHeaders } from './security-headers.mjs';
 
 const NỀN = {
   $schema: 'https://openapi.vercel.sh/vercel.json',
@@ -82,6 +83,9 @@ if (lên) {
   console.log('Không có PUBLIC_UPSTREAM: chỉ đưa bản tĩnh lên (không có /api).');
 }
 
+// Header bảo mật (CSP, chặn nhúng iframe...) cho mọi đường dẫn — scripts/security-headers.mjs
+cấu.headers = [{ source: '/(.*)', headers: securityHeaders(lên) }];
+
 /**
  * Cổng thiết kế: không deploy khi giao diện còn lỗi theo danh sách cấm (docs/DESIGN.md
  * mục 2) mà máy đo được. Chạy trên đúng bản vừa build, qua `vite preview` (không có
@@ -115,12 +119,15 @@ async function cổngThiếtKế() {
     const env = { ...process.env, BASE: base, CHECK_NO_API: '1' };
     const rà = spawnSync('node', ['scripts/check-design.mjs'], { env, stdio: 'inherit', shell: true });
     spawnSync('node', ['scripts/visual-diff.mjs'], { env, stdio: 'inherit', shell: true });
-    ok = rà.status === 0;
+    // CSP (scripts/security-headers.mjs) sai thì trang trắng hoặc mất engine: thử trước
+    console.log('Thử header bảo mật (CSP) trên bản vừa build…');
+    const csp = spawnSync('node', ['scripts/check-csp.mjs', base], { env, stdio: 'inherit', shell: true });
+    ok = rà.status === 0 && csp.status === 0;
   } finally {
     dừng();
   }
   if (!ok) {
-    console.error('✗ Dừng deploy: giao diện còn lỗi ở trên. Sửa rồi deploy lại.');
+    console.error('✗ Dừng deploy: giao diện hoặc CSP còn lỗi ở trên. Sửa rồi deploy lại.');
     process.exit(1);
   }
 }

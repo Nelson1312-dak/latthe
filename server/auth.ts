@@ -193,7 +193,14 @@ export function readCookie(header: string | undefined, name: string): string | u
   for (const part of header.split(';')) {
     const i = part.indexOf('=');
     if (i < 0) continue;
-    if (part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+    if (part.slice(0, i).trim() === name) {
+      // Cookie hỏng (ví dụ "%E0") không được làm ngã cả request: coi như không có
+      try {
+        return decodeURIComponent(part.slice(i + 1).trim());
+      } catch {
+        return undefined;
+      }
+    }
   }
   return undefined;
 }

@@ -272,7 +272,7 @@ function shareBox(s: ShareState): string {
   return `<div class="share-box">
     <p class="rv-note">Link ván này — ai mở cũng xem được bàn cờ và bảng chấm</p>
     <div class="share-link">
-      <input class="field mono" readonly value="${s.url}" aria-label="Link chia sẻ" onclick="this.select()">
+      <input class="field mono" readonly value="${s.url}" aria-label="Link chia sẻ" data-select-all>
       <button class="btn btn-primary" data-share-copy>${icon(s.copied ? 'check' : 'copy', 17)}<span>${s.copied ? 'Đã chép' : 'Chép link'}</span></button>
     </div>
     <button class="link-btn" data-share-image>${icon('review', 16)}<span>Tải ảnh tóm tắt để đăng Facebook, Zalo</span></button>

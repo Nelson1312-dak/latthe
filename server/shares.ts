@@ -5,7 +5,7 @@
 // phải khớp số nước, tên người chơi cắt ngắn và bỏ ký tự lạ.
 
 import { randomBytes } from 'node:crypto';
-import { one, type Db } from './db.ts';
+import { cleanName, one, type Db } from './db.ts';
 import { Game, START_FEN } from '../shared/chess.ts';
 
 export interface ShareMeta {
@@ -31,14 +31,8 @@ export interface Share {
 const MAX_PGN = 20_000;
 const MAX_REVIEW = 400_000;
 
-const clean = (v: unknown, max: number) =>
-  typeof v === 'string'
-    ? v
-        .replace(/[\u0000-\u001f\u007f<>]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, max)
-    : '';
+// Tên hai bên và nhãn do trình duyệt gửi lên, ai mở link cũng thấy: bỏ ký tự có nghĩa trong HTML
+const clean = cleanName;
 
 /** Kiểm dữ liệu gửi lên. Trả về chuỗi lỗi nếu không hợp lệ. */
 export function parseShare(body: Record<string, unknown>): { pgn: string; review: string; meta: ShareMeta } | string {

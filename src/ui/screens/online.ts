@@ -34,7 +34,7 @@ import {
 } from '../components/index.ts';
 import { auth } from '../../app/session.ts';
 import { icon } from '../icons.ts';
-import { levelRow } from '../components/index.ts';
+import { esc, levelRow } from '../components/index.ts';
 import { setPlayMode } from '../../app/playmode.ts';
 import { ping } from '../../app/ping.ts';
 import { copyShareLink, createShareLink, downloadShareImage, shareStateFor, type ShareMeta } from '../../app/share.ts';
@@ -280,7 +280,7 @@ function dòngVán(g: GameRow): string {
   const đổi = g.ratingAfter !== null && g.ratingBefore !== null ? g.ratingAfter - g.ratingBefore : null;
   return `<a class="log-row" href="#/xem-lai?game=${g.id}">
     ${sideGlyph(g.playerSide)}
-    <span class="log-name">${g.opponentName ?? 'Đối thủ'}</span>
+    <span class="log-name">${esc(g.opponentName ?? 'Đối thủ')}</span>
     <span class="log-result result-${thắng}">${chữ}</span>
     ${đổi === null ? '' : `<span class="log-delta mono">${đổi > 0 ? `+${đổi}` : đổi}</span>`}
     <span class="log-when">${khiNào(g.createdAt)}</span>
@@ -378,7 +378,7 @@ function endModal(): string {
   return endDialog({
     title: o.winner === 'draw' ? 'Hòa' : o.winner === tôi ? 'Bạn thắng' : 'Bạn thua',
     tone: o.winner === 'draw' ? 'draw' : o.winner === tôi ? 'win' : 'loss',
-    why: `${lýDo} · ${họ.name}${họ.bot ? ' (AI)' : ''}`,
+    why: `${lýDo} · ${esc(họ.name)}${họ.bot ? ' (AI)' : ''}`,
     body:
       `<p class="end-elo">Elo <b class="mono">${mới}</b> <span class="${đổi > 0 ? 'is-up' : đổi < 0 ? 'is-down' : ''}">${đổi > 0 ? `+${đổi}` : đổi}</span></p>` +
       sum.html,
@@ -454,7 +454,7 @@ function vánCờ(): string {
   const aiBáo = đối.bot
     ? `<div class="ai-alert" role="status">
         <p class="ai-alert-head">${icon('engine', 18)}<b>Bạn đang đấu với AI</b></p>
-        <p>${đối.name} · Elo ${đối.rating} — ${đối.bot.blurb}</p>
+        <p>${esc(đối.name)} · Elo ${đối.rating} — ${đối.bot.blurb}</p>
         <p class="ai-alert-note">Không có ai chờ nên AI vào thay. Vẫn tính Elo.</p>
       </div>`
     : '';
@@ -468,7 +468,7 @@ function vánCờ(): string {
   return `<div class="screen">
     <div class="screen-head">
       <h1>Chơi với người</h1>
-      <span class="head-meta">${s.control.label} · ${s.white.name}${s.white.bot ? ' (AI)' : ''} – ${s.black.name}${s.black.bot ? ' (AI)' : ''}</span>
+      <span class="head-meta">${s.control.label} · ${esc(s.white.name)}${s.white.bot ? ' (AI)' : ''} – ${esc(s.black.name)}${s.black.bot ? ' (AI)' : ''}</span>
       ${
         xong
           ? '' // Hai nút đã nằm trong ô kết quả, không bày lại ở đây
@@ -1183,7 +1183,7 @@ export function miniOnline(covered: boolean): string {
   const tênHọ = ng(họ);
   const trên = xong
     ? `<span class="mini-title"><b>${s.over!.winner === 'draw' ? 'Hòa' : s.over!.winner === tôi ? 'Bạn thắng' : 'Bạn thua'}</b> · ${outcomeText({ winner: s.over!.winner, reason: s.over!.reason }).split(' · ')[1] ?? ''}</span>`
-    : `<span class="mini-title"><b>${tênHọ.name}</b>${tênHọ.bot ? ' (AI)' : ''} <span class="mono">${tênHọ.rating}</span>${
+    : `<span class="mini-title"><b>${esc(tênHọ.name)}</b>${tênHọ.bot ? ' (AI)' : ''} <span class="mono">${tênHọ.rating}</span>${
         tênHọ.connected ? '' : ' · mất kết nối'
       }</span><span class="mini-gap"></span>${đồngHồ(họ)}`;
 

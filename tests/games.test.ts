@@ -47,9 +47,10 @@ describe('parseNewGame', () => {
     expect(parseNewGame(sample({ level: undefined }))?.level).toBeNull();
   });
 
-  it('cắt ngắn lý do kết thúc để không ai nhét cả quyển sách vào', () => {
-    const long = 'x'.repeat(500);
-    expect(parseNewGame(sample({ reason: long }))?.reason).toHaveLength(40);
+  it('lý do kết thúc chỉ nhận mã ngắn: dài quá hay có ký tự lạ thì thành unknown', () => {
+    expect(parseNewGame(sample({ reason: 'x'.repeat(500) }))?.reason).toBe('unknown');
+    expect(parseNewGame(sample({ reason: '<b>' }))?.reason).toBe('unknown');
+    expect(parseNewGame(sample({ reason: 'fifty-move' }))?.reason).toBe('fifty-move');
   });
 });
 

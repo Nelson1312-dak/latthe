@@ -33,7 +33,7 @@
 <main>
   <a class="home" href="/">← Về Lật Cờ</a>
   <h1>Chính sách quyền riêng tư</h1>
-  <p class="meta">Áp dụng cho trang <b>latbai.vn</b> (Lật Cờ). Cập nhật ngày 18/11/2026 (thêm Huấn luyện viên đọc lịch sử ván, máy chủ tự chấm ván).</p>
+  <p class="meta">Áp dụng cho trang <b>latbai.vn</b> (Lật Cờ). Cập nhật ngày 20/11/2026 (ghi rõ việc lưu những ngày bạn mở app, thư viện đăng nhập của Google, những gì còn lại sau khi xoá tài khoản).</p>
 
   <p class="box">Ngắn gọn: Lật Cờ <b>không lưu email</b>, không bán hay chia sẻ dữ liệu cho ai,
   không chạy quảng cáo, không gắn công cụ theo dõi — chỉ đếm số lượt theo ngày, không biết ai là ai. Chơi với máy và giải bài tập không cần
@@ -59,6 +59,7 @@
     <tr><td>Lần giải bài tập, tiến độ bài học, điểm Elo, trình độ bạn tự chọn lúc đăng nhập lần đầu</td><td>Chọn bài và máy vừa sức, ghép trận với người cùng trình độ</td></tr>
     <tr><td>Cài đặt hiển thị (màu bàn cờ, sáng/tối, âm thanh, toạ độ…)</td><td>Đăng nhập ở máy khác vẫn y như cũ</td></tr>
     <tr><td>Phiên đăng nhập (một cookie)</td><td>Giữ bạn đăng nhập trong 30 ngày</td></tr>
+    <tr><td>Ngày tạo tài khoản, lần cuối bạn mở app và những ngày bạn có mở app</td><td>Đếm số người dùng hoạt động theo ngày, tuần, tháng (người làm app chỉ xem con số tổng)</td></tr>
   </table>
   <p>Cookie phiên là loại <code>HttpOnly</code>, máy chủ chỉ lưu <b>bản băm</b> của nó chứ không lưu mã gốc.
   App không dùng cookie quảng cáo hay cookie của bên thứ ba.</p>
@@ -67,7 +68,7 @@
   <h2>2b. Đếm lượt ẩn danh và ván chia sẻ</h2>
   <ul>
     <li><b>Đếm lượt:</b> để biết trang có ai dùng không, app đếm <b>số lượt theo ngày</b> — vào trang, bắt đầu
-      ván, chơi xong ván, mở bảng chấm, tìm trận. Chỉ là con số, không kèm IP, không cookie, không định danh ai,
+      ván, chơi xong ván, mở bảng chấm, tìm trận, xem trang bài học, bài tập, hướng dẫn. Chỉ là con số, không kèm IP, không cookie, không định danh ai,
       không biết lượt nào là của bạn. Không dùng công cụ thống kê hay quảng cáo của bên thứ ba.</li>
     <li><b>Đang mở trang:</b> khi trang đang mở, trình duyệt gửi một mã ngẫu nhiên (tạo mới mỗi lần mở trang,
       không cookie, không gắn tài khoản) cùng tên mục đang xem, khoảng 45 giây một lần — để biết lúc này có bao
@@ -91,13 +92,20 @@
     <li>Đường truyền đi qua hai nhà cung cấp hạ tầng: <b>Vercel</b> (lưu trữ trang web) và <b>ngrok</b>
       (đường hầm tới máy chủ). Như mọi dịch vụ mạng, họ có thể ghi nhật ký kỹ thuật như địa chỉ IP
       theo chính sách của họ. App không gửi thêm dữ liệu nào cho họ.</li>
+    <li>Nút <b>Đăng nhập bằng Google</b> cần một thư viện của Google, tải từ máy chủ Google, nên chỉ tải khi trang đang có nút
+      đăng nhập (màn Đăng nhập, hộp mời đăng nhập). Lúc đó Google nhận được yêu cầu từ trình duyệt của bạn theo
+      chính sách của Google. Mọi màn khác không tải gì từ Google hay bên thứ ba nào; phông chữ và engine cờ đều ở
+      chính latbai.vn.</li>
     <li>Không bán, không cho thuê, không chia sẻ dữ liệu với bên nào khác. Không dùng dữ liệu để quảng cáo.</li>
   </ul>
 
   <h2>4. Xoá dữ liệu</h2>
-  <p>Bạn tự xoá được: vào <b>Hồ sơ → Xoá tài khoản</b>. Hồ sơ, toàn bộ ván cờ, kết quả chấm và tóm tắt lỗi, thẻ ôn tập, tiến độ và
-  cài đặt bị xoá khỏi cơ sở dữ liệu ngay lập tức, và tự biến mất khỏi bản sao lưu sau 14 ngày.
-  Gặp trục trặc thì mở một yêu cầu tại
+  <p>Bạn tự xoá được: vào <b>Hồ sơ → Xoá tài khoản</b>. Hồ sơ, toàn bộ ván cờ, kết quả chấm và tóm tắt lỗi, thẻ ôn tập, tiến độ, ngày hoạt động và
+  cài đặt bị xoá khỏi cơ sở dữ liệu ngay lập tức, và tự biến mất khỏi bản sao lưu sau 14 ngày.</p>
+  <p>Hai thứ không nằm trong tài khoản của bạn nên không bị xoá theo: ván online trong lịch sử của
+  <b>người đã đấu với bạn</b> (vẫn ghi tên hiển thị của bạn lúc đấu, như mọi trang cờ), và các
+  <b>link ván chia sẻ</b> bạn đã tạo (không gắn tài khoản nào). Muốn gỡ một link chia sẻ,
+  hoặc gặp trục trặc, thì mở một yêu cầu (kèm link cần gỡ) tại
   <a href="https://github.com/Nelson1312-dak/latthe/issues" rel="noopener">trang dự án trên GitHub</a>.</p>
   <p>Bạn cũng có thể gỡ quyền của Lật Cờ bất cứ lúc nào tại
   <a href="https://myaccount.google.com/connections" rel="noopener">trang kết nối của tài khoản Google</a>.</p>

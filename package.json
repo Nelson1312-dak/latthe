@@ -12,6 +12,7 @@
     "fixtures": "node --experimental-strip-types --no-warnings scripts/gen-fixtures.ts",
     "shots": "node scripts/shots.mjs",
     "check:design": "node scripts/check-design.mjs",
+    "check:csp": "node scripts/check-csp.mjs",
     "postinstall": "node scripts/copy-assets.mjs",
     "vite": "vite",
     "server": "node --env-file-if-exists=.env.chess --experimental-strip-types --no-warnings server/main.ts",

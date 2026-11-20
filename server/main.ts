@@ -8,7 +8,7 @@ import { createShare, getShare, parseShare } from './shares.ts';
 import { dailyCount, dailyMe, dailyPuzzle, recordDaily, today } from './daily.ts';
 import { botLadder, eloHistory } from './profile.ts';
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { openDb, createLocalUser, all, one, type Db, type User } from './db.ts';
 import { KEEP_GAMES, insertGame, listGames, parseNewGame } from './games.ts';
 import { countCards, dueCards, getReview, makeCards, parseReview, saveReview } from './reviews.ts';
@@ -90,6 +90,7 @@ const json = (res: ServerResponse, status: number, body: unknown, headers: Recor
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
     ...headers,
   });
   res.end(text);
@@ -136,6 +137,18 @@ function quáGiới(req: IncomingMessage, loại: string, max: number, windowMs:
   }
   h.n++;
   return h.n > max;
+}
+
+/** Đếm chung cho cả trang (không theo địa chỉ): trần cuối cùng khi giới hạn theo địa chỉ bị lách. */
+const đếmChung = new Map<string, { n: number; hết: number }>();
+function quáGiớiChung(loại: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  const h = đếmChung.get(loại);
+  if (!h || h.hết <= now) {
+    đếmChung.set(loại, { n: 1, hết: now + windowMs });
+    return false;
+  }
+  return ++h.n > max;
 }
 
 const publicUser = (u: User) => ({
@@ -411,6 +424,8 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
     if (!user) return json(res, 401, { error: 'Chưa đăng nhập' });
     const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
     const mã = typeof body.code === 'string' ? body.code : '';
+    // Chặn dò mã mời: mã 6 ký tự ngẫu nhiên đã khó đoán, giới hạn thêm số lần thử
+    if (quáGiới(req, 'join', 30, 600_000)) return json(res, 429, { error: 'Thử mã nhiều quá, đợi ít phút rồi thử lại.' });
     const kq = live.acceptInvite(user, mã);
     if (!kq.ok) {
       const nói: Record<string, string> = {
@@ -677,6 +692,9 @@ async function api(req: IncomingMessage, res: ServerResponse, path: string): Pro
 
   if (path === '/api/share' && method === 'POST') {
     if (quáGiới(req, 'share', 20, 3600_000)) return json(res, 429, { error: 'Chia sẻ nhiều quá, thử lại sau ít phút.' });
+    // Trần chung cho cả trang: giới hạn theo địa chỉ có thể bị lách (gọi thẳng tunnel kèm
+    // x-forwarded-for giả), nên chặn thêm tổng số link mới mỗi giờ để không ai lấp đầy ổ đĩa.
+    if (quáGiớiChung('share', 300, 3600_000)) return json(res, 429, { error: 'Máy chủ đang bận, thử lại sau ít phút.' });
     const body = await readJson(req, 500_000).catch(() => null);
     if (!body) return json(res, 400, { error: 'Nội dung không hợp lệ' });
     const s = parseShare(body);
@@ -772,7 +790,8 @@ function serveStatic(req: IncomingMessage, res: ServerResponse, urlPath: string)
   // normalize + kiểm tra tiền tố: chặn ../ leo ra ngoài dist
   const rel = normalize(decodeURIComponent(urlPath)).replace(/^([/\\])+/, '');
   let file = join(DIST, rel);
-  if (!file.startsWith(DIST)) {
+  // Kèm dấu phân cách: "dist-khac" cũng bắt đầu bằng "dist" nhưng nằm ngoài
+  if (file !== DIST && !file.startsWith(DIST + sep)) {
     res.writeHead(403).end();
     return;
   }
@@ -782,6 +801,9 @@ function serveStatic(req: IncomingMessage, res: ServerResponse, urlPath: string)
     'content-type': TYPES[ext] ?? 'application/octet-stream',
     // index.html phải luôn tươi, phần còn lại có vân tay trong tên nên cache thoải mái.
     'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'strict-origin-when-cross-origin',
   });
   createReadStream(file).pipe(res);
 }
