@@ -137,4 +137,6 @@ await cổngThiếtKế();
 writeFileSync('vercel.json', JSON.stringify(cấu, null, 2) + '\n');
 
 const r = spawnSync('npx', ['vercel', 'deploy', '--prod', '--yes'], { stdio: 'inherit', shell: true });
+// Deploy xong: báo Bing các trang mới/vừa sửa (scripts/indexnow.mjs; lỗi cũng không làm hỏng deploy)
+if (r.status === 0) spawnSync('node', ['scripts/indexnow.mjs'], { stdio: 'inherit', shell: true });
 process.exit(r.status ?? 1);

@@ -125,6 +125,12 @@ npm run puzzle-pages   # trang bài tập (cần data/chess.db) + ảnh + sitema
 npm run lessons        # trang bài học (cần data/chess.db) + ảnh + sitemap
 ```
 
+- `scripts/indexnow.mjs` (`npm run deploy` tự gọi sau khi deploy xong): báo Bing (IndexNow) các
+  trang trong sitemap có ngày sửa mới hơn lần gửi trước. Khoá là file `public/<32 ký tự hex>.txt`;
+  đổi khoá thì xoá file cũ, tạo file mới cùng nội dung là khoá. `npm run indexnow -- --all` gửi lại hết.
+- Việc quảng bá cần tài khoản của chủ trang (Search Console, Bing, đăng nhóm) và bài đăng soạn sẵn:
+  [QUANG-BA.md](QUANG-BA.md).
+
 Thêm thư mục trang tĩnh mới thì nhớ thêm đường dẫn vào `scripts/deploy.mjs` (`TRANG_TĨNH`,
 và `CÓ_TRANG_CON` nếu có trang con), link tới nó từ chân trang app (`siteFooter` trong
 `src/main.ts`) và từ "Đọc thêm" (`KHÁC` trong `scripts/seo/page.ts`). Lượt xem trang được đếm

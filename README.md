@@ -1,12 +1,14 @@
-# Lật Cờ
+# Lật Cờ — cờ vua online miễn phí, tiếng Việt
 
-Web game cờ vua để học: chơi với máy, xem lại từng nước có Huấn luyện viên giải thích, và ôn tập bằng chính lỗi của mình. Xem [docs/PLAN.md](docs/PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
+**Chơi ngay: [latbai.vn](https://latbai.vn)** — không cần cài, không quảng cáo, chạy được trên điện thoại.
 
-Đang ở cuối **giai đoạn 5**: đấu với máy 8 cấp độ, xem lại ván có engine chấm từng nước, và **Huấn luyện viên** giải thích bằng tiếng Việt. Màn Ôn tập và Ván với bạn vẫn là bản dựng tĩnh.
+- [Chơi cờ vua với máy](https://latbai.vn/choi-co-vua-voi-may/): 8 cấp độ, từ máy hay để hở quân cho người mới tới khoảng 2500 Elo; có gợi ý ba nấc và đi lại.
+- [Chơi cờ vua online với người](https://latbai.vn/choi-co-vua-online/): ghép trận theo Elo, 4 thể thức, mời bạn bè bằng mã.
+- Chấm ván ngay trong trình duyệt bằng Stockfish: độ chính xác, nước hay, nước hỏng, nước nên đi ([cách chấm](https://latbai.vn/cham-van-co-vua/)).
+- [Bài tập cờ vua có lời giải](https://latbai.vn/bai-tap-co-vua/) (hơn một triệu thế cờ), [bài học chiến thuật](https://latbai.vn/hoc/), [luật cờ vua](https://latbai.vn/luat-co-vua/), [khai cuộc](https://latbai.vn/khai-cuoc/), [bẫy khai cuộc](https://latbai.vn/bay-khai-cuoc/), [tàn cuộc cơ bản](https://latbai.vn/tan-cuoc/).
+- Huấn luyện viên đọc các ván của bạn và chỉ ra lỗi hay lặp lại. Nguyên tắc: **engine và luật cờ quyết định đúng sai, mô hình ngôn ngữ chỉ diễn đạt lại**; lời nào nhắc nước đi, ô cờ hay con số không có trong dữ kiện đều bị chặn (`npm run eval:advisor` để tự đo).
 
-Huấn luyện viên hoạt động theo nguyên tắc: **engine và luật cờ quyết định đúng sai, mô hình ngôn ngữ chỉ diễn đạt lại**. Lời nào nhắc nước đi, ô cờ, tên quân hay con số không có trong dữ kiện đều bị chặn và thay bằng câu mẫu. Chạy `npm run eval:advisor` để tự đo.
-
-Bản trên web: **https://latbai.vn** (project Vercel `latthe`). Đó là trang tĩnh, không có server, nên phần đăng nhập hiện "Ngoại tuyến" — muốn dùng thật thì chạy trên máy.
+Phần mềm tự do theo GPL-3. Thiết kế và kế hoạch: [docs/PLAN.md](docs/PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md); vận hành bản trên web: [docs/VAN-HANH.md](docs/VAN-HANH.md).
 
 ## Chạy
 

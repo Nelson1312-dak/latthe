@@ -28,6 +28,7 @@
     "seo": "node --experimental-strip-types --no-warnings scripts/build-guides.ts && node --experimental-strip-types --no-warnings scripts/build-topics.ts && npm run og",
     "lessons": "node --experimental-strip-types --no-warnings scripts/build-lessons.ts && npm run og",
     "puzzle-pages": "node --experimental-strip-types --no-warnings scripts/build-puzzles.ts && npm run og",
+    "indexnow": "node scripts/indexnow.mjs",
     "og": "node --experimental-strip-types --no-warnings scripts/build-og.ts && node scripts/build-sitemap.mjs"
   },
   "dependencies": {
