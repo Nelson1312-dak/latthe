@@ -802,7 +802,7 @@ function serveStatic(req: IncomingMessage, res: ServerResponse, urlPath: string)
     // index.html phải luôn tươi, phần còn lại có vân tay trong tên nên cache thoải mái.
     'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
     'x-content-type-options': 'nosniff',
-    'x-frame-options': 'DENY',
+    'x-frame-options': 'SAMEORIGIN',
     'referrer-policy': 'strict-origin-when-cross-origin',
   });
   createReadStream(file).pipe(res);

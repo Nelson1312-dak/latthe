@@ -61,6 +61,24 @@ if (await nút.count()) {
   console.log(`ván với máy: ${đãĐi} nước trên bảng nước đi`);
 }
 
+// Bàn cờ nổi: cửa sổ nhỏ nhúng chính trang vào một khung (src/app/mini.ts). Chrome không
+// chạy được Picture-in-Picture khi không có màn hình, nên dựng đúng khung đó ngay trong trang.
+await đi('/#/choi', 300);
+const khungChạy = await page.evaluate(async () => {
+  const f = document.createElement('iframe');
+  f.src = '/?mini=1#/choi';
+  f.style.cssText = 'width:320px;height:392px';
+  document.body.append(f);
+  await new Promise((r) => setTimeout(r, 4000));
+  try {
+    return Boolean(f.contentDocument?.querySelector('.app-mini #board, .app-mini .board-host'));
+  } catch {
+    return false;
+  }
+});
+if (!khungChạy) vi_phạm.push('bàn cờ nổi: khung nhúng chính trang không hiện bàn cờ');
+else console.log('bàn cờ nổi: khung nhúng hiện bàn cờ ✓');
+
 // Trang đọc tĩnh (đếm lượt bằng /ping.js)
 for (const p of ['/bai-tap-co-vua/index.html', '/tan-cuoc/quy-tac-hinh-vuong/index.html', '/chinh-sach-rieng-tu/index.html', '/cham-van-co-vua/index.html']) {
   await đi(p, 500);

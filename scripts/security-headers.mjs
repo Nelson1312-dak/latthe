@@ -18,13 +18,15 @@ export function contentSecurityPolicy(upstream = '') {
     "img-src 'self' data: blob: https://*.googleusercontent.com",
     "font-src 'self'",
     `connect-src 'self'${upstream ? ` ${upstream}` : ''} https://accounts.google.com/gsi/`,
-    'frame-src https://accounts.google.com/gsi/',
+    // 'self': bàn cờ nổi (src/app/mini.ts) là cửa sổ nhỏ nhúng chính latbai.vn vào một khung
+    "frame-src 'self' https://accounts.google.com/gsi/",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    // Chỉ chính latbai.vn được nhúng trang này (bàn cờ nổi); trang khác thì không
+    "frame-ancestors 'self'",
   ].join('; ');
 }
 
@@ -32,8 +34,8 @@ export function contentSecurityPolicy(upstream = '') {
 export function securityHeaders(upstream = '') {
   return [
     { key: 'Content-Security-Policy', value: contentSecurityPolicy(upstream) },
-    // Trình duyệt cũ chưa hiểu frame-ancestors: chặn nhúng trang vào iframe của trang khác
-    { key: 'X-Frame-Options', value: 'DENY' },
+    // Trình duyệt cũ chưa hiểu frame-ancestors: chặn trang khác nhúng latbai.vn vào iframe
+    { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     // Bấm link ra ngoài chỉ để lộ tên miền, không lộ đường dẫn (ví dụ mã ván chia sẻ)
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

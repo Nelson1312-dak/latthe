@@ -89,7 +89,9 @@ describe('CSP', () => {
     const csp = contentSecurityPolicy('https://vi-du.ngrok-free.dev');
     const script = csp.split('; ').find((d) => d.startsWith('script-src'))!;
     expect(script).not.toMatch(/unsafe-inline|'unsafe-eval'/);
-    expect(csp).toContain("frame-ancestors 'none'");
+    // Chỉ chính trang được nhúng (bàn cờ nổi), trang khác thì không
+    expect(csp).toContain("frame-ancestors 'self'");
+    expect(csp).toMatch(/frame-src 'self'/);
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain('connect-src \'self\' https://vi-du.ngrok-free.dev');
   });
