@@ -810,6 +810,22 @@ a {
   width: 32px;
   height: 32px;
 }
+/* Giao diện tối: Vua nằm trên một ô sáng của bàn cờ (màu chủ đề bàn đang dùng), như
+   quân đặt trên bàn. Để trơn trên nền tối thì Vua đen chỉ còn mấy sọc xám, trông như
+   Vua rỗng. Dùng --coord-light (luôn là màu trơn), KHÔNG dùng --sq-light: bàn có vân
+   đặt nó là url(#tex-light) và trình duyệt sẽ đi tải trang như một tấm ảnh.
+   Giao diện sáng không cần (nền đã sáng, ô sáng thành vệt mờ). Ô chọn bên cầm quân ở
+   màn Chơi không dùng: ô vuông sáng trong nhóm lựa chọn trông như ô tích. */
+:root:not([data-theme='light']) :is(.pz-king, .side-mark .side-piece) {
+  box-sizing: border-box;
+  padding: 2px;
+  border-radius: 4px;
+  background: var(--coord-light);
+}
+:root:not([data-theme='light']) .side-mark .side-piece {
+  padding: 1px;
+  border-radius: 3px;
+}
 .pz-meta {
   font-size: var(--fs-sm);
   color: var(--text-2);
@@ -944,6 +960,17 @@ a {
 @media (max-width: 767px) {
   .log-acc:not(:empty) {
     display: inline;
+  }
+  /* Dòng ván trên điện thoại: dòng 2 là ngày (trái) và độ chính xác (phải, dưới kết
+     quả). Trước đây độ chính xác rơi vào cột 18px của con Vua, đè lên chữ "4 nước". */
+  .log-row .log-acc:not(:empty) {
+    grid-row: 2;
+    grid-column: 3;
+    min-width: 0;
+  }
+  .log-row:has(.log-acc:not(:empty)) .log-when {
+    grid-row: 2;
+    grid-column: 2;
   }
   /* Dòng danh sách trên điện thoại: câu trạng thái dài thì xuống dòng, không cắt "…" */
   .quick-text {

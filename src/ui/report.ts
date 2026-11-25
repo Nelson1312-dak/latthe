@@ -8,7 +8,7 @@
 // 1. Độ chính xác: của bạn (to) và của đối thủ (nhỏ).
 // 2. Nhịp ván: mỗi ô một nước của bạn, tô theo xếp loại — thấy ngay ván đổ ở đâu.
 // 3. Khoảnh khắc đáng xem (tối đa 5) và thẻ nước đang xem: vì sao hỏng, nên đi gì,
-//    thế cờ đổi ra sao. Nút ‹ › nhảy qua từng khoảnh khắc; bàn cờ đi theo.
+//    thế cờ đổi ra sao. Nút "Tiếp" nhảy tới khoảnh khắc sau; bàn cờ đi theo.
 // Lời giải thích lấy từ engine và bộ nhận diện mô-típ, không gọi AI — AI chỉ làm
 // Huấn luyện viên nhìn cả lịch sử ván (Hồ sơ).
 
@@ -207,10 +207,13 @@ export function reviewPanel(r: ReviewResult, v: PanelView): string {
 
   const moments = momentsOf(r, me);
   const idx = moments.findIndex((m) => m.ply === v.ply);
-  const prev = [...moments].reverse().find((m) => m.ply < v.ply);
+  // Một nút chữ "Tiếp" (như "Next" ở Game Review của chess.com), không phải cặp ‹ ›:
+  // ngay dưới đã có thanh ◁ ▷ của sổ nước, hai bộ mũi tên giống nhau đứng gần nhau
+  // thì không biết bộ nào làm gì. Muốn quay lại khoảnh khắc trước thì bấm ô của nó.
   const next = moments.find((m) => m.ply > v.ply);
-  const nav = (m: ReviewedMove | undefined, name: 'prev' | 'next', title: string) =>
-    `<button class="btn btn-icon" title="${title}" aria-label="${title}"${m ? ` data-report-ply="${m.ply}"` : ' disabled'}>${icon(name, 17)}</button>`;
+  const tiếp = next
+    ? `<button class="btn btn-secondary rv-next" data-report-ply="${next.ply}" title="Khoảnh khắc sau">Tiếp</button>`
+    : '';
 
   const current = v.ply > 0 ? (r.moves[v.ply - 1] ?? null) : null;
 
@@ -232,7 +235,7 @@ export function reviewPanel(r: ReviewResult, v: PanelView): string {
               : `${moments.length} khoảnh khắc đáng xem`
             : 'Không có nước hỏng đáng kể'
         }</span>
-        ${moments.length ? nav(prev, 'prev', 'Khoảnh khắc trước') + nav(next, 'next', 'Khoảnh khắc sau') : ''}
+        ${tiếp}
       </div>
       ${
         moments.length

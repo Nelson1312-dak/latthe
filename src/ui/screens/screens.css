@@ -1226,8 +1226,13 @@ button.log-row {
 .result-actions .btn-full {
   grid-column: 1 / -1;
 }
+/* Hai nút cùng cỡ (như Rematch / New game của chess.com): màu nói nút nào chính,
+   không phải chiều cao. Nút chính mặc định cao 48px chữ 19px, cạnh nút phụ 40px trông lệch. */
 .result-actions .btn {
   justify-content: center;
+  height: 44px;
+  padding: 0 var(--s-3);
+  font-size: 16px;
 }
 
 /* ---- Hộp Cài đặt ---- */
@@ -1746,14 +1751,26 @@ button.top-link {
   display: flex;
   align-items: center;
   gap: var(--s-1);
+  /* Giữ chỗ cho nút "Tiếp": hết khoảnh khắc nút biến mất mà dòng không co lại,
+     nên cả cột không giật lên đúng chỗ đang đọc */
+  min-height: 44px;
 }
 .rv-focus-head .rv-kicker {
   flex: 1;
 }
-.rv-focus-head .btn-icon {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
+/* Điện thoại: cao 44px như mọi nút (DESIGN.md §7); máy tính gọn hơn, 36px */
+.rv-focus-head .rv-next {
+  padding: 0 var(--s-3);
+  font-size: var(--fs-sm);
+}
+@media (min-width: 768px) {
+  .rv-focus-head {
+    min-height: 36px;
+  }
+  .rv-focus-head .rv-next {
+    height: 36px;
+    min-height: 36px;
+  }
 }
 .rv-chips {
   display: flex;

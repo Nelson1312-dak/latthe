@@ -477,6 +477,8 @@ function render(): void {
   // Vẽ lại cùng một màn (đi một nước, bấm ◁ ▷): giữ chỗ đang cuộn của cột phải
   const cuộnCũ = app.dataset.route === r ? (app.querySelector<HTMLElement>('.game-side')?.scrollTop ?? 0) : 0;
   const nướcCũ = app.dataset.route === r ? (app.querySelector<HTMLElement>('.move-list .move.is-current')?.dataset.ply ?? null) : null;
+  // Bấm "Tiếp" (khoảnh khắc sau) bằng bàn phím: vẽ lại thay nút mới, giữ tiêu điểm ở đó
+  const đangỞTiếp = document.activeElement?.classList.contains('rv-next') ?? false;
   app.innerHTML =
     siteHeader(r) +
     `<main>${away ? miniAway() : screen.render()}${siteFooter()}</main>` +
@@ -496,6 +498,10 @@ function render(): void {
   const cột = app.querySelector<HTMLElement>('.game-side');
   if (cột && cuộnCũ) cột.scrollTop = cuộnCũ;
   hiệnNướcĐangXem(app, nướcCũ);
+  if (đangỞTiếp) {
+    // Hết khoảnh khắc thì nút "Tiếp" không còn: về ô của khoảnh khắc đang xem
+    app.querySelector<HTMLElement>('.rv-next, .rv-chip.is-current')?.focus({ preventScroll: true });
+  }
   if (r === 'xem-lai') mountReview(render);
   if (r === 'on-tap') mountTrain(render);
   if (r === 'tai-khoan') mountAccount(render);

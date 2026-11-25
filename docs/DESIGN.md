@@ -98,7 +98,9 @@ Thay vào đó:
 - **Icon tự vẽ** 26 cái trên lưới 24px, nét 1,5px, đầu nét vuông, cùng một bộ.
 - **Dùng từ vựng hình của cờ**: nước đi viết bằng hình quân (`Nf3` → hình Mã + `f3`), bên cầm
   quân hiện bằng một con Vua nhỏ chứ không phải ảnh đại diện chung chung hay ô vuông tô màu
-  (dễ bị nhầm thành ô tích chọn).
+  (dễ bị nhầm thành ô tích chọn). Giao diện tối thì Vua (ở danh sách ván và dòng "Đen đi" của
+  bài tập) nằm trên một ô sáng màu bàn cờ để Vua đen không thành hình rỗng; nhóm chọn Trắng/Đen
+  thì để Vua trơn.
 - **Việc phụ gom thành nhóm nút dính liền** (`toolbar()`), không phải một hàng nút rời rạc
   cùng cỡ.
 - **Dữ liệu thật** ở mọi chỗ, kể cả trang mẫu: thế cờ thật, ván thật, tên khai cuộc thật.
@@ -463,8 +465,8 @@ Bảng xem lại (`src/ui/report.ts`), từ trên xuống — ít chữ, một c
 - **Độ chính xác**: số của mình to, của đối thủ nhỏ bên phải. Không thanh, không %.
 - **Nhịp ván**: dải ô, mỗi ô một nước của mình, tô theo xếp loại; nước càng hỏng
   ô càng cao. Bấm ô → bàn cờ nhảy tới nước đó.
-- **Khoảnh khắc** (tối đa 5 nước hỏng nặng nhất) dạng thẻ nhỏ, nút ‹ › nhảy qua
-  từng cái, và **thẻ nước đang xem**: xếp loại, vì sao (bộ nhận diện mô-típ: để hở
+- **Khoảnh khắc** (tối đa 5 nước hỏng nặng nhất) dạng thẻ nhỏ, nút chữ "Tiếp" nhảy
+  tới cái sau (không dùng cặp ‹ ›: trùng dáng với thanh ◁ ▷ của sổ nước ngay dưới), và **thẻ nước đang xem**: xếp loại, vì sao (bộ nhận diện mô-típ: để hở
   quân, đòn đôi…), "Nên đi … — chiếu hết sau N nước / thế cờ …", thế cờ của bạn đổi
   ra sao **bằng lời** (thắng rõ → ngang ngửa), không in điểm engine (−19.0 khi cầm
   Đen là điểm theo Trắng, người mới đọc ngược).
