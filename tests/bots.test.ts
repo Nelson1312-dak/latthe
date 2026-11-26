@@ -46,10 +46,22 @@ describe('chooseMove', () => {
     expect(chooseMove(BOTS.find((b) => b.id === 'master')!, [cands[0]])).toBe('e2e4');
   });
 
-  it('bot yếu đôi khi đi lệch theo trọng số', () => {
+  it('bot yếu đôi khi đi lệch, nhưng nước thiệt quá ngưỡng chỉ khi sơ suất', () => {
     const nhim = BOTS[0];
+    const seq = (...v: number[]) => () => v.shift() ?? 0;
     expect(chooseMove(nhim, cands, fixed(0))).toBe('e2e4');
-    expect(chooseMove(nhim, cands, fixed(0.99))).toBe('a2a3');
+    expect(chooseMove(nhim, cands, fixed(0.99))).toBe('d1h5'); // thiệt 30: được phép
+    expect(chooseMove(nhim, cands, seq(0.99, 0.999))).not.toBe('a2a3'); // thiệt 340 > 300
+    expect(chooseMove(nhim, cands, seq(0, 0.999))).toBe('a2a3'); // rút trúng sơ suất
+  });
+
+  it('bot nào cũng ăn quân cho không', () => {
+    const quà: Candidate[] = [
+      { uci: 'f3e5', cp: 350, forcing: true },
+      { uci: 'a2a3', cp: 20, forcing: false },
+      { uci: 'h2h3', cp: 10, forcing: false },
+    ];
+    for (const b of BOTS) for (let i = 0; i < 50; i++) expect(chooseMove(b, quà, fixed(0.1 + i / 60))).toBe('f3e5');
   });
 
   it('không bao giờ bỏ qua chiếu hết một nước', () => {
@@ -67,7 +79,7 @@ describe('chooseMove', () => {
     let seed = 7;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     for (let i = 0; i < n; i++) if (chooseMove(mai, cands.slice(0, 2), rnd) === 'd1h5') chiếu++;
-    // Trọng số gốc 5:3 => ~37%; nhân đôi nước chiếu => 6/11 ~ 55%
+    // Thiệt 30cp => ~34%; được cộng 30cp vì là nước chiếu => ngang nước tốt nhất, ~50%
     expect(chiếu / n).toBeGreaterThan(0.45);
   });
 });

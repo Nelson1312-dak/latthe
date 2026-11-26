@@ -119,12 +119,22 @@ Google yêu cầu origin cố định: `http://localhost:5173` khi phát triển
 
 - Web Worker chạy Stockfish; `uci.ts` xếp hàng lệnh, mỗi lần một lệnh `go`, lệnh mới thì `stop` lệnh cũ.
 - `analyse(fen, { movetimeMs | depth, multipv })` → `{ lines: [{ pv, cp?, mate? }], depth }`, điểm quy về góc nhìn bên Trắng.
-- Cấp độ: `UCI_Elo` của Stockfish thấp nhất 1320, quá mạnh với người mới, nên:
+- Cấp độ (`src/engine/levels.ts`): cấp nào engine cũng tính thật với MultiPV, độ sâu tăng theo
+  cấp, rồi chọn nước theo **mức thiệt so với nước tốt nhất** (trọng số e^(−thiệt/độ lỏng tay),
+  bỏ nước thiệt quá ngưỡng, thỉnh thoảng một nước "sơ suất" có giới hạn). Cấp 8 là Stockfish
+  không giới hạn, nghĩ 2,5 giây. Không dùng `UCI_LimitStrength` nữa (11/2026): chế độ đó tính
+  1–2 nước rồi chọn ngẫu nhiên, nên lúc đi như thần lúc để hở quân vô lý.
 
-| Cấp | Cách làm |
-|---|---|
-| 1–3 | MultiPV 5, thời gian ngắn, **cố ý chọn nước kém** theo xác suất (cấp 1 hay để hở quân, cấp 3 hiếm khi) |
-| 4–8 | `UCI_LimitStrength` với Elo 1350 / 1550 / 1800 / 2100 / 2500 |
+| Cấp | Độ sâu | MultiPV | Độ lỏng tay | Ngưỡng thiệt | Sơ suất |
+|---|---|---|---|---|---|
+| 1 | 5 | 6 | 90 | 250 | 12% tới 500 |
+| 2 | 7 | 5 | 65 | 180 | 8% tới 400 |
+| 3 | 9 | 5 | 45 | 130 | 5% tới 300 |
+| 4 | 11 | 4 | 32 | 90 | 3% tới 220 |
+| 5 | 13 | 4 | 22 | 60 | 1,5% tới 180 |
+| 6 | 15 | 3 | 14 | 40 | 0,8% tới 140 |
+| 7 | hết 1,6 s | 3 | 7 | 25 | không |
+| 8 | hết 2,5 s | 1 | đi nước tốt nhất | | |
 
 ### 4.4 Chấm nước đi
 

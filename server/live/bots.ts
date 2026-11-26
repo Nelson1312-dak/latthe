@@ -11,6 +11,8 @@
 // File này chỉ có dữ liệu và hàm thuần — chọn bot, chọn nước, thời gian nghĩ,
 // chọn câu thoại — để test không cần chạy engine.
 
+import { pickByLoss, type LossStyle } from '../../src/engine/levels.ts';
+
 /** Chờ chừng này không ghép được người thì cho bot vào. */
 export const BOT_AFTER_MS = 5_000;
 
@@ -35,8 +37,13 @@ export interface BotPersona {
   elo: number;
   /** Một dòng giới thiệu, hiện trong thông báo "bạn đang đấu với AI". */
   blurb: string;
-  /** Cách tìm nước: yếu thì nghĩ nông rồi cố ý chọn lệch; mạnh thì dùng giới hạn Elo của Stockfish. */
-  search: { depth?: number; uciElo?: number; movetimeMs: number; multipv: number; weights?: number[] };
+  /**
+   * Cách tìm nước: engine tính tới `depth` (hoặc hết `movetimeMs`), xem `multipv`
+   * nước tốt nhất rồi chọn theo mức thiệt, như máy ở màn Chơi (src/engine/levels.ts).
+   */
+  search: { depth?: number; movetimeMs: number; multipv: number };
+  /** Kiểu tay: lỏng tới đâu, sơ suất bao nhiêu. */
+  style: LossStyle;
   /** Thích ăn quân và chiếu: trong các nước gần tốt nhất, ưu tiên nước ăn/chiếu. */
   aggressive?: boolean;
   /** Chịu thua khi đã hết cửa (thay vì đánh tới khi bị chiếu hết). */
@@ -47,10 +54,10 @@ export interface BotPersona {
 }
 
 /**
- * Sáu bot, từ người mới tập tới cao thủ. Elo dưới 1320 là mức thấp nhất
- * Stockfish tự giới hạn được, nên bot yếu dùng cách khác: nghĩ nông (depth
- * 1–4) rồi bốc nước theo trọng số — ra những lỗi giống người thật (để hở quân,
- * bỏ lỡ nước ăn) chứ không phải đi bừa.
+ * Sáu bot, từ người mới tập tới cao thủ. Bot nào cũng để engine tính thật rồi
+ * chọn theo mức thiệt: bot yếu lỏng tay và hay sơ suất hơn, nhưng thấy quân
+ * cho không thì ăn, thấy chiếu hết thì chiếu. (Trước 11/2026 bot yếu nhìn 1–4
+ * nước rồi bốc bừa, bot mạnh dùng UCI_LimitStrength: cả hai đi hỏng vô lý.)
  */
 export const BOTS: BotPersona[] = [
   {
@@ -58,7 +65,8 @@ export const BOTS: BotPersona[] = [
     name: 'Tập sự',
     elo: 600,
     blurb: 'Mới tập chơi, hay quên giữ quân. Hiền khô.',
-    search: { depth: 1, movetimeMs: 60, multipv: 5, weights: [1, 3, 4, 4, 4] },
+    search: { depth: 4, movetimeMs: 400, multipv: 6 },
+    style: { spreadCp: 110, maxLossCp: 300, slipChance: 0.15, slipLossCp: 600 },
     resigns: false,
     tempo: 0.8,
     lines: {
@@ -80,7 +88,8 @@ export const BOTS: BotPersona[] = [
     name: 'Vững vàng',
     elo: 900,
     blurb: 'Chơi chậm rãi, chắc tay, thích đổi quân cho gọn.',
-    search: { depth: 2, movetimeMs: 80, multipv: 5, weights: [2, 3, 3, 2, 2] },
+    search: { depth: 6, movetimeMs: 500, multipv: 5 },
+    style: { spreadCp: 75, maxLossCp: 200, slipChance: 0.1, slipLossCp: 450 },
     resigns: false,
     tempo: 1.1,
     lines: {
@@ -102,7 +111,8 @@ export const BOTS: BotPersona[] = [
     name: 'Chớp nhoáng',
     elo: 1200,
     blurb: 'Ưa tấn công: thấy chiếu là chiếu, thấy ăn là ăn.',
-    search: { depth: 4, movetimeMs: 120, multipv: 4, weights: [5, 3, 2, 1] },
+    search: { depth: 9, movetimeMs: 700, multipv: 5 },
+    style: { spreadCp: 45, maxLossCp: 130, slipChance: 0.05, slipLossCp: 300 },
     aggressive: true,
     resigns: true,
     tempo: 0.7,
@@ -125,7 +135,8 @@ export const BOTS: BotPersona[] = [
     name: 'Chắc tay',
     elo: 1500,
     blurb: 'Chơi thế trận, ít khi sai lớn. Kiên nhẫn chờ bạn hở.',
-    search: { uciElo: 1500, movetimeMs: 300, multipv: 1 },
+    search: { depth: 12, movetimeMs: 1000, multipv: 4 },
+    style: { spreadCp: 27, maxLossCp: 75, slipChance: 0.02, slipLossCp: 200 },
     resigns: true,
     tempo: 1.2,
     lines: {
@@ -147,7 +158,8 @@ export const BOTS: BotPersona[] = [
     name: 'Sắc bén',
     elo: 1900,
     blurb: 'Tính sâu, ra đòn chiến thuật sắc. Thua là phải tâm phục.',
-    search: { uciElo: 1900, movetimeMs: 500, multipv: 1 },
+    search: { depth: 16, movetimeMs: 1500, multipv: 3 },
+    style: { spreadCp: 11, maxLossCp: 35, slipChance: 0.005, slipLossCp: 120 },
     resigns: true,
     tempo: 1,
     lines: {
@@ -169,7 +181,8 @@ export const BOTS: BotPersona[] = [
     name: 'Cao thủ',
     elo: 2300,
     blurb: 'Cao thủ trầm tính. Thắng được ông là lên trình thật.',
-    search: { uciElo: 2300, movetimeMs: 800, multipv: 1 },
+    search: { movetimeMs: 2000, multipv: 2 },
+    style: { spreadCp: 5, maxLossCp: 20, slipChance: 0, slipLossCp: 0 },
     resigns: true,
     tempo: 1.3,
     lines: {
@@ -211,30 +224,17 @@ export interface Candidate {
 /**
  * Chọn một nước trong các nước engine đưa ra, theo tính cách bot.
  *
- * - Bot mạnh (multipv 1): đi nước engine chọn.
- * - Bot yếu: bốc theo trọng số — đôi khi không phải nước tốt nhất.
- * - Bot ưa tấn công: nước ăn/chiếu nào không kém nước tốt nhất quá 60cp thì
- *   được nhân đôi cơ hội.
+ * - Chọn theo mức thiệt so với nước tốt nhất (pickByLoss): bot càng yếu càng
+ *   lỏng tay, thỉnh thoảng sơ suất nhưng có giới hạn.
+ * - Bot ưa tấn công: nước ăn/chiếu được cộng 30cp khi chọn, nên hay chọn nước
+ *   ăn/chiếu gần tốt nhất hơn.
  * - Không bao giờ bỏ qua chiếu hết có sẵn (bot yếu cũng biết chiếu hết một nước).
  */
 export function chooseMove(bot: BotPersona, cands: Candidate[], random: () => number = Math.random): string | null {
   if (!cands.length) return null;
   if (cands[0].cp >= 100_000 - 2) return cands[0].uci; // chiếu hết ngay
-  const w = bot.search.weights ?? [1];
-  const best = cands[0].cp;
-  const trọng = cands.map((c, i) => {
-    let t = w[i] ?? 0;
-    if (bot.aggressive && c.forcing && best - c.cp <= 60) t *= 2;
-    return t;
-  });
-  const tổng = trọng.reduce((a, b) => a + b, 0);
-  if (tổng <= 0) return cands[0].uci;
-  let r = random() * tổng;
-  for (let i = 0; i < cands.length; i++) {
-    r -= trọng[i];
-    if (r < 0) return cands[i].uci;
-  }
-  return cands[cands.length - 1].uci;
+  const values = cands.map((c) => c.cp + (bot.aggressive && c.forcing ? 30 : 0));
+  return cands[pickByLoss(bot.style, values, random)].uci;
 }
 
 /**

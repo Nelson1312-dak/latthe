@@ -16,8 +16,6 @@ export interface SearchOpts {
   movetimeMs: number;
   depth?: number;
   multipv: number;
-  /** Giới hạn sức theo Elo (Stockfish nhận 1320–3190). Bỏ trống là đánh hết sức. */
-  uciElo?: number;
 }
 
 interface Job {
@@ -34,7 +32,6 @@ class BotEngine {
   private lines = new Map<number, { uci: string; cp: number }>();
   private onBest: (() => void) | null = null;
   private onReady: (() => void) | null = null;
-  private lastElo = -1;
   private lastMultipv = -1;
 
   /** Tìm các nước tốt cho bên đang đi. Điểm theo góc nhìn bên đang đi. */
@@ -52,7 +49,6 @@ class BotEngine {
     // Server tắt thì tắt luôn engine, không để tiến trình con chạy ngầm
     process.once('exit', () => p.kill());
     this.buf = '';
-    this.lastElo = -1;
     this.lastMultipv = -1;
     p.stdout.setEncoding('utf8');
     p.stdout.on('data', (d: string) => this.read(d));
@@ -106,12 +102,6 @@ class BotEngine {
     let out: Candidate[] = [];
     try {
       await this.start();
-      const elo = job.opts.uciElo ?? 0;
-      if (elo !== this.lastElo) {
-        this.send(`setoption name UCI_LimitStrength value ${elo ? 'true' : 'false'}`);
-        if (elo) this.send(`setoption name UCI_Elo value ${Math.max(1320, elo)}`);
-        this.lastElo = elo;
-      }
       if (job.opts.multipv !== this.lastMultipv) {
         this.send(`setoption name MultiPV value ${job.opts.multipv}`);
         this.lastMultipv = job.opts.multipv;
@@ -127,7 +117,8 @@ class BotEngine {
         }, job.opts.movetimeMs + 3_000);
         hạn.unref();
         this.send(`position fen ${job.fen}`);
-        this.send(job.opts.depth ? `go depth ${job.opts.depth}` : `go movetime ${job.opts.movetimeMs}`);
+        // Có độ sâu thì vẫn giữ mốc thời gian: hết giờ trước khi đủ sâu thì dừng
+        this.send(job.opts.depth ? `go depth ${job.opts.depth} movetime ${job.opts.movetimeMs}` : `go movetime ${job.opts.movetimeMs}`);
       });
       out = [...this.lines.entries()]
         .sort((a, b) => a[0] - b[0])

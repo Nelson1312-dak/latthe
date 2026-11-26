@@ -48,7 +48,7 @@ Dán link vào là Facebook, Zalo tự hiện ảnh thế cờ của trang đó.
 
 > Mình làm một trang chơi cờ vua bằng tiếng Việt, miễn phí, không quảng cáo: latbai.vn
 >
-> Chơi với máy 8 cấp (cấp 1 hay để hở quân, hợp người mới; cấp 8 khoảng 2500 Elo), chơi với
+> Chơi với máy 8 cấp (cấp 1 hợp người mới; cấp 8 là Stockfish mạnh hết sức), chơi với
 > người theo Elo, và hết ván thì máy chấm từng nước: nước nào hỏng, đáng lẽ nên đi gì. Có hơn
 > một triệu bài tập theo chủ đề.
 >

@@ -555,7 +555,8 @@ export class Live {
     const think = thinkMs(bot, { ply, remainingMs: remaining(room.clock, side, now), incrementMs: room.control.incrementMs });
     // Nghĩ và "ngẫm" cùng lúc: engine xong sớm thì vẫn chờ cho đủ thời gian nghĩ của người
     const [cands] = await Promise.all([
-      botEngine().search(fen, bot.search),
+      // Engine không nghĩ lâu hơn thời gian "ngẫm" của bot (tối thiểu 0,3 giây), để cờ chớp không bị hết giờ
+      botEngine().search(fen, { ...bot.search, movetimeMs: Math.min(bot.search.movetimeMs, Math.max(300, think)) }),
       new Promise((r) => setTimeout(r, think)),
     ]);
     // Trong lúc nghĩ, ván có thể đã xong (người đầu hàng, hết giờ)

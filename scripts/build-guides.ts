@@ -244,7 +244,7 @@ function rulesPage(): string {
 <p>Ví dụ <b>Nf3</b> là Mã đi tới f3, <b>e4</b> là Tốt đi tới e4, <b>Bxc6</b> là Tượng ăn quân ở c6. Thêm <b>+</b> là chiếu, <b>#</b> là chiếu hết, <b>O-O</b> và <b>O-O-O</b> là nhập thành gần và xa.</p>
 
 <h2>Chơi thử ngay</h2>
-<p>Cách nhanh nhất để nhớ luật là chơi. Máy cấp 1 trên Lật Cờ đi rất hiền và hay để hở quân; app chỉ cho bạn đi nước hợp lệ nên không sợ đi sai luật.</p>
+<p>Cách nhanh nhất để nhớ luật là chơi. Máy cấp 1 trên Lật Cờ đi hiền và đôi khi để hở quân; app chỉ cho bạn đi nước hợp lệ nên không sợ đi sai luật.</p>
 <p><a class="cta" href="/#/choi">Chơi với máy</a><a class="cta alt" href="/hoc/">Học chiến thuật</a></p>`;
 
   return page({

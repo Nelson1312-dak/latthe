@@ -2,7 +2,7 @@
 
 **Chơi ngay: [latbai.vn](https://latbai.vn)** — không cần cài, không quảng cáo, chạy được trên điện thoại.
 
-- [Chơi cờ vua với máy](https://latbai.vn/choi-co-vua-voi-may/): 8 cấp độ, từ máy hay để hở quân cho người mới tới khoảng 2500 Elo; có gợi ý ba nấc và đi lại.
+- [Chơi cờ vua với máy](https://latbai.vn/choi-co-vua-voi-may/): 8 cấp độ, từ máy đôi khi để hở quân cho người mới tới Stockfish mạnh hết sức; có gợi ý ba nấc và đi lại.
 - [Chơi cờ vua online với người](https://latbai.vn/choi-co-vua-online/): ghép trận theo Elo, 4 thể thức, mời bạn bè bằng mã.
 - Chấm ván ngay trong trình duyệt bằng Stockfish: độ chính xác, nước hay, nước hỏng, nước nên đi ([cách chấm](https://latbai.vn/cham-van-co-vua/)).
 - [Bài tập cờ vua có lời giải](https://latbai.vn/bai-tap-co-vua/) (hơn một triệu thế cờ), [bài học chiến thuật](https://latbai.vn/hoc/), [luật cờ vua](https://latbai.vn/luat-co-vua/), [khai cuộc](https://latbai.vn/khai-cuoc/), [bẫy khai cuộc](https://latbai.vn/bay-khai-cuoc/), [tàn cuộc cơ bản](https://latbai.vn/tan-cuoc/).

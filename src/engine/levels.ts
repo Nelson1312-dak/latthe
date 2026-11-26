@@ -1,15 +1,42 @@
 // Tám cấp độ máy.
 //
-// Vì sao không chỉ dùng UCI_Elo: mức thấp nhất Stockfish nhận là 1320, vẫn quá
-// mạnh với người mới chơi. Nên ba cấp đầu để engine nghĩ nông rồi CỐ Ý chọn một
-// nước không phải nước tốt nhất — cách này cho ra những sai lầm giống người thật
-// (để hở quân, bỏ lỡ nước ăn) thay vì đi nước ngẫu nhiên vô nghĩa.
+// Cách cũ (đến 11/2026) cho máy nhìn nông rồi bốc bừa một nước không phải tốt
+// nhất, cấp cao thì dùng UCI_LimitStrength của Stockfish. Cả hai đều cho ra máy
+// "ngu một cách vô lý": cấp 1 bỏ qua cả nước bắt Hậu, còn chế độ giới hạn Elo
+// của Stockfish tính đúng 1–2 nước rồi chọn ngẫu nhiên, nên lúc đi như thần lúc
+// để hở quân không lý do.
+//
+// Cách mới: cấp nào cũng để engine tính thật (độ sâu tăng theo cấp), xem vài
+// nước tốt nhất kèm điểm, rồi chọn theo MỨC THIỆT so với nước tốt nhất:
+//   - nước càng thiệt nhiều càng ít được chọn (độ "lỏng tay" giảm dần theo cấp);
+//   - không bao giờ chọn nước thiệt quá ngưỡng của cấp, trừ một xác suất nhỏ
+//     "sơ suất" — giống người thật thỉnh thoảng đi hỏng chứ không đi bừa;
+//   - đã thấy chiếu hết hay ăn được quân lớn thì gần như luôn đi.
+// Cấp 8 không giới hạn gì: Stockfish đầy sức, nghĩ lâu nhất.
 
-export interface Level {
+import type { Score } from '../../shared/winrate.ts';
+
+/** Kiểu "tay" khi chọn nước: dùng chung cho máy ở màn Chơi và bot online. */
+export interface LossStyle {
+  /**
+   * Độ "lỏng tay" (centipawn): nước thiệt X so với nước tốt nhất được chọn với
+   * trọng số e^(−X / spreadCp). 0 là luôn đi nước tốt nhất.
+   */
+  spreadCp: number;
+  /** Ngưỡng thiệt tối đa thường ngày. */
+  maxLossCp: number;
+  /** Xác suất một nước "sơ suất", được thiệt tới `slipLossCp`. */
+  slipChance: number;
+  slipLossCp: number;
+}
+
+export interface Level extends LossStyle {
   id: number;
   name: string;
   /** Mô tả ngắn hiện trong phần chọn cấp. */
   hint: string;
+  /** Elo ước chừng, hiện cạnh tên máy. Chỉ để tham khảo. */
+  rating: number;
   /** Thời gian nghĩ tối đa mỗi nước. */
   moveTimeMs: number;
   /**
@@ -21,26 +48,21 @@ export interface Level {
    * nhân thêm hệ số ngẫu nhiên 0,7–1,5 — tức máy cấp 1 nghĩ khoảng 0,9–2 giây.
    */
   minThinkMs: number;
+  /** Độ sâu tối đa; không đặt thì nghĩ hết thời gian. */
   depth?: number;
-  /** Có dùng cơ chế giới hạn sức của Stockfish không. */
-  elo?: number;
-  /**
-   * Xác suất KHÔNG chọn nước tốt nhất, với số dòng engine phải tính.
-   * weights[i] là trọng số chọn dòng thứ i (0 là nước tốt nhất).
-   */
-  multipv?: number;
-  weights?: number[];
+  /** Số nước tốt nhất engine phải tính để có cái mà chọn. */
+  multipv: number;
 }
 
 export const LEVELS: Level[] = [
-  { id: 1, name: 'Cấp 1', hint: 'Mới tập, hay để hở quân', moveTimeMs: 40, minThinkMs: 1300, depth: 1, multipv: 5, weights: [1, 3, 4, 4, 4] },
-  { id: 2, name: 'Cấp 2', hint: 'Biết luật, chưa nhìn xa', moveTimeMs: 60, minThinkMs: 1350, depth: 2, multipv: 5, weights: [2, 3, 3, 2, 2] },
-  { id: 3, name: 'Cấp 3', hint: 'Thỉnh thoảng đi hỏng', moveTimeMs: 100, minThinkMs: 1400, depth: 4, multipv: 4, weights: [5, 3, 2, 1] },
-  { id: 4, name: 'Cấp 4', hint: 'Khoảng 1350 Elo', moveTimeMs: 200, minThinkMs: 1500, elo: 1350 },
-  { id: 5, name: 'Cấp 5', hint: 'Khoảng 1550 Elo', moveTimeMs: 300, minThinkMs: 1600, elo: 1550 },
-  { id: 6, name: 'Cấp 6', hint: 'Khoảng 1800 Elo', moveTimeMs: 400, minThinkMs: 1700, elo: 1800 },
-  { id: 7, name: 'Cấp 7', hint: 'Khoảng 2100 Elo', moveTimeMs: 600, minThinkMs: 1800, elo: 2100 },
-  { id: 8, name: 'Cấp 8', hint: 'Mạnh hết mức cho phép', moveTimeMs: 1000, minThinkMs: 1900, elo: 2500 },
+  { id: 1, name: 'Cấp 1', hint: 'Mới tập, đôi khi để hở quân', rating: 800, moveTimeMs: 400, minThinkMs: 1300, depth: 5, multipv: 6, spreadCp: 90, maxLossCp: 250, slipChance: 0.12, slipLossCp: 500 },
+  { id: 2, name: 'Cấp 2', hint: 'Biết bắt quân, chưa nhìn xa', rating: 1000, moveTimeMs: 500, minThinkMs: 1350, depth: 7, multipv: 5, spreadCp: 65, maxLossCp: 180, slipChance: 0.08, slipLossCp: 400 },
+  { id: 3, name: 'Cấp 3', hint: 'Thỉnh thoảng đi hỏng', rating: 1200, moveTimeMs: 700, minThinkMs: 1400, depth: 9, multipv: 5, spreadCp: 45, maxLossCp: 130, slipChance: 0.05, slipLossCp: 300 },
+  { id: 4, name: 'Cấp 4', hint: 'Khoảng 1400 Elo', rating: 1400, moveTimeMs: 900, minThinkMs: 1500, depth: 11, multipv: 4, spreadCp: 32, maxLossCp: 90, slipChance: 0.03, slipLossCp: 220 },
+  { id: 5, name: 'Cấp 5', hint: 'Khoảng 1600 Elo', rating: 1600, moveTimeMs: 1100, minThinkMs: 1600, depth: 13, multipv: 4, spreadCp: 22, maxLossCp: 60, slipChance: 0.015, slipLossCp: 180 },
+  { id: 6, name: 'Cấp 6', hint: 'Khoảng 1800 Elo', rating: 1800, moveTimeMs: 1300, minThinkMs: 1700, depth: 15, multipv: 3, spreadCp: 14, maxLossCp: 40, slipChance: 0.008, slipLossCp: 140 },
+  { id: 7, name: 'Cấp 7', hint: 'Khoảng 2100 Elo', rating: 2100, moveTimeMs: 1600, minThinkMs: 1800, multipv: 3, spreadCp: 7, maxLossCp: 25, slipChance: 0, slipLossCp: 0 },
+  { id: 8, name: 'Cấp 8', hint: 'Mạnh nhất, không nương tay', rating: 2800, moveTimeMs: 2500, minThinkMs: 1900, multipv: 1, spreadCp: 0, maxLossCp: 0, slipChance: 0, slipLossCp: 0 },
 ];
 
 /**
@@ -55,26 +77,43 @@ export function levelById(id: number): Level {
   return LEVELS.find((l) => l.id === id) ?? LEVELS[3];
 }
 
-/** Elo ước chừng của cấp 1–3 (không đặt Elo cho engine, nên chỉ để hiện cạnh tên). */
-const ELO_ƯỚC: Record<number, number> = { 1: 400, 2: 700, 3: 1000 };
-
-/** Elo hiện cạnh tên máy: cấp có Elo thật thì số đó, cấp thấp thì "~N". */
+/** Elo hiện cạnh tên máy. Cấp 1–3 không đo được chắc chắn nên để "~N". */
 export function levelRating(id: number): number | string {
-  return levelById(id).elo ?? `~${ELO_ƯỚC[id] ?? 1000}`;
+  const l = levelById(id);
+  return l.id <= 3 ? `~${l.rating}` : l.rating;
+}
+
+/** Một nước engine đưa ra, điểm theo góc nhìn BÊN ĐANG ĐI. */
+export interface Candidate {
+  uci: string;
+  score: Score;
+}
+
+/** Quy điểm về một số để so: chiếu hết càng sớm càng cao, bị chiếu hết càng sớm càng thấp. */
+export function scoreValue(s: Score): number {
+  if (s.mate !== undefined) return s.mate > 0 ? 100_000 - s.mate * 100 : -100_000 - s.mate * 100;
+  return s.cp;
 }
 
 /**
- * Chọn một dòng trong số các dòng engine đưa ra, theo trọng số của cấp độ.
- * `random` tách ra làm tham số để test được mà không phụ thuộc may rủi.
+ * Chọn một chỉ số trong `values` (điểm mỗi nước, góc nhìn bên đang đi, số càng
+ * lớn càng tốt) theo kiểu tay `style`. `random` tách ra làm tham số để test được.
  */
-export function pickLine(level: Level, lineCount: number, random: () => number = Math.random): number {
-  if (!level.weights || lineCount <= 1) return 0;
-  const weights = level.weights.slice(0, lineCount);
+export function pickByLoss(style: LossStyle, values: number[], random: () => number = Math.random): number {
+  if (values.length <= 1 || style.spreadCp <= 0) return values.indexOf(Math.max(...values));
+  const best = Math.max(...values);
+  const cap = random() < style.slipChance ? style.slipLossCp : style.maxLossCp;
+  const weights = values.map((v) => (best - v > cap ? 0 : Math.exp(-(best - v) / style.spreadCp)));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = random() * total;
   for (let i = 0; i < weights.length; i++) {
     r -= weights[i];
-    if (r < 0) return i;
+    if (r < 0 && weights[i] > 0) return i;
   }
-  return 0;
+  return values.indexOf(best);
+}
+
+/** Chọn một nước trong các nước engine đưa ra, theo cấp. Trả về chỉ số trong `lines`. */
+export function chooseLine(level: Level, lines: Candidate[], random: () => number = Math.random): number {
+  return pickByLoss(level, lines.map((l) => scoreValue(l.score)), random);
 }

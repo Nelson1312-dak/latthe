@@ -110,11 +110,11 @@ function botPage(): string {
     ['Chơi trên điện thoại được không?', 'Được. Trang chạy trên trình duyệt điện thoại, và có thể thêm vào màn hình chính để mở như một ứng dụng.'],
   ];
   const desc =
-    'Chơi cờ vua với máy miễn phí, không cần đăng ký: 8 cấp độ từ người mới tập tới khoảng 2500 Elo, có gợi ý, đi lại và chấm từng nước sau ván. Chơi ngay trên điện thoại hoặc máy tính.';
+    'Chơi cờ vua với máy miễn phí, không cần đăng ký: 8 cấp độ từ người mới tập tới Stockfish mạnh hết sức, có gợi ý, đi lại và chấm từng nước sau ván. Chơi ngay trên điện thoại hoặc máy tính.';
   const body = `
 ${crumb()}
 <h1>Chơi cờ vua với máy</h1>
-<p class="lead">Mở là chơi, không cần tài khoản. Chọn một trong 8 cấp độ, từ máy hay để hở quân cho người mới tới máy khoảng 2500 Elo.</p>
+<p class="lead">Mở là chơi, không cần tài khoản. Chọn một trong 8 cấp độ, từ máy đôi khi để hở quân cho người mới tới Stockfish mạnh hết sức.</p>
 <p><a class="cta" href="/#/choi">Chơi với máy ngay</a></p>
 
 <h2>Tám cấp độ máy</h2>

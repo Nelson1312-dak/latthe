@@ -2,7 +2,7 @@
 // điểm số thì cả thanh đánh giá lẫn phần chấm nước đều sai mà không báo lỗi.
 import { describe, expect, it } from 'vitest';
 import { parseBestMove, parseInfo, splitUci, toWhitePov } from '../src/engine/uci.ts';
-import { LEVELS, levelById, pickLine } from '../src/engine/levels.ts';
+import { LEVELS, chooseLine, levelById, levelRating, scoreValue, type Candidate } from '../src/engine/levels.ts';
 
 describe('parseInfo', () => {
   it('đọc dòng info đầy đủ', () => {
@@ -82,19 +82,20 @@ describe('cấp độ máy', () => {
   it('có đủ 8 cấp, mạnh dần', () => {
     expect(LEVELS).toHaveLength(8);
     for (let i = 1; i < LEVELS.length; i++) {
-      expect(LEVELS[i].moveTimeMs).toBeGreaterThanOrEqual(LEVELS[i - 1].moveTimeMs);
+      const [a, b] = [LEVELS[i - 1], LEVELS[i]];
+      expect(b.moveTimeMs).toBeGreaterThanOrEqual(a.moveTimeMs);
+      expect(b.rating).toBeGreaterThan(a.rating);
+      expect(b.spreadCp).toBeLessThanOrEqual(a.spreadCp);
+      expect(b.maxLossCp).toBeLessThanOrEqual(a.maxLossCp);
+      expect(b.slipChance).toBeLessThanOrEqual(a.slipChance);
     }
   });
 
-  it('ba cấp đầu cố ý đi kém, các cấp sau dùng giới hạn Elo', () => {
-    for (const l of LEVELS.slice(0, 3)) {
-      expect(l.weights).toBeDefined();
-      expect(l.elo).toBeUndefined();
-    }
-    for (const l of LEVELS.slice(3)) {
-      expect(l.elo).toBeGreaterThanOrEqual(1320); // mức thấp nhất Stockfish nhận
-      expect(l.weights).toBeUndefined();
-    }
+  it('cấp 8 là Stockfish đầy sức: một dòng, không chọn lệch', () => {
+    const l = levelById(8);
+    expect(l.multipv).toBe(1);
+    expect(l.spreadCp).toBe(0);
+    expect(l.depth).toBeUndefined();
   });
 
   it('id lạ thì rơi về cấp mặc định', () => {
@@ -102,27 +103,69 @@ describe('cấp độ máy', () => {
     expect(levelById(1).id).toBe(1);
   });
 
-  it('cấp không có trọng số thì luôn lấy nước tốt nhất', () => {
-    expect(pickLine(levelById(8), 5, () => 0.99)).toBe(0);
+  it('Elo hiện cạnh tên: cấp thấp để ước chừng', () => {
+    expect(levelRating(1)).toBe('~800');
+    expect(levelRating(6)).toBe(1800);
+  });
+});
+
+describe('máy chọn nước', () => {
+  const cp = (uci: string, v: number): Candidate => ({ uci, score: { cp: v } });
+  const mate = (uci: string, m: number): Candidate => ({ uci, score: { mate: m } });
+
+  it('chiếu hết sớm hơn là tốt hơn, bị chiếu hết sớm hơn là tệ hơn', () => {
+    expect(scoreValue({ mate: 1 })).toBeGreaterThan(scoreValue({ mate: 3 }));
+    expect(scoreValue({ mate: 3 })).toBeGreaterThan(scoreValue({ cp: 2000 }));
+    expect(scoreValue({ mate: -1 })).toBeLessThan(scoreValue({ mate: -3 }));
+    expect(scoreValue({ mate: -3 })).toBeLessThan(scoreValue({ cp: -2000 }));
   });
 
-  it('cấp 1 thường bỏ qua nước tốt nhất', () => {
-    const l = levelById(1); // trọng số [1,3,4,4,4], tổng 16
-    expect(pickLine(l, 5, () => 0)).toBe(0); // đầu dải vẫn là nước tốt nhất
-    expect(pickLine(l, 5, () => 0.5)).toBeGreaterThan(0);
-    expect(pickLine(l, 5, () => 0.99)).toBe(4);
+  it('cấp 8 luôn đi nước tốt nhất', () => {
+    expect(chooseLine(levelById(8), [cp('a', 50), cp('b', 49)], () => 0.99)).toBe(0);
   });
 
-  it('engine chỉ đưa ra một nước thì phải chọn nước đó', () => {
-    expect(pickLine(levelById(1), 1, () => 0.99)).toBe(0);
+  it('chỉ có một nước thì phải đi nước đó', () => {
+    expect(chooseLine(levelById(1), [cp('a', -300)], () => 0.99)).toBe(0);
   });
 
-  it('chọn đúng theo trọng số về lâu dài', () => {
+  it('cấp 1 không bỏ qua nước bắt Hậu (lỗi cũ: bỏ lỡ 12/12 lần)', () => {
+    const lines = [cp('Nxf7', 900), cp('a', 40), cp('b', 30), cp('c', 0), cp('d', -50)];
+    for (let i = 0; i < 100; i++) expect(chooseLine(levelById(1), lines, () => i / 100)).toBe(0);
+  });
+
+  it('thấy chiếu hết thì đi, dù ở cấp 1', () => {
+    const lines = [mate('Qh7', 1), cp('a', 600), cp('b', 500)];
+    for (let i = 0; i < 100; i++) expect(chooseLine(levelById(1), lines, () => i / 100)).toBe(0);
+  });
+
+  it('không bao giờ đi nước để bị chiếu hết khi còn nước khác', () => {
+    const lines = [cp('a', 0), cp('b', -20), mate('c', -1)];
+    for (let i = 0; i < 100; i++) expect(chooseLine(levelById(1), lines, () => i / 100)).not.toBe(2);
+  });
+
+  it('các nước gần bằng nhau thì cấp thấp đổi nước, cấp cao gần như luôn đi nước tốt nhất', () => {
+    const lines = [cp('a', 30), cp('b', 15), cp('c', 0), cp('d', -10)];
+    const bestRate = (id: number) => {
+      let n = 0;
+      for (let i = 0; i < 1000; i++) {
+        let k = 0;
+        const r = () => [((i * 7919) % 1000) / 1000, (i % 1000) / 1000][k++ % 2];
+        if (chooseLine(levelById(id), lines, r) === 0) n++;
+      }
+      return n / 1000;
+    };
+    expect(bestRate(1)).toBeLessThan(0.4);
+    expect(bestRate(7)).toBeGreaterThan(0.7);
+    expect(bestRate(7)).toBeGreaterThan(bestRate(4));
+    expect(bestRate(4)).toBeGreaterThan(bestRate(1));
+  });
+
+  it('sơ suất chỉ xảy ra khi rút trúng, và vẫn có giới hạn', () => {
     const l = levelById(1);
-    let best = 0;
-    for (let i = 0; i < 1000; i++) if (pickLine(l, 5, () => i / 1000) === 0) best++;
-    // trọng số nước tốt nhất là 1/16 ≈ 6%
-    expect(best).toBeGreaterThan(40);
-    expect(best).toBeLessThan(90);
+    const lines = [cp('a', 0), cp('b', -400), cp('c', -800)];
+    // Không sơ suất (lần rút đầu ≥ slipChance): nước thiệt 400 vượt ngưỡng 250
+    expect(chooseLine(l, lines, (() => { let k = 0; return () => [0.99, 0.99][k++]; })())).toBe(0);
+    // Sơ suất: nước thiệt 400 được phép, thiệt 800 thì không
+    expect(chooseLine(l, lines, (() => { let k = 0; return () => [0, 0.99][k++]; })())).toBe(1);
   });
 });

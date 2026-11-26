@@ -4,7 +4,7 @@
 // Dùng bản lite-single (một luồng) nên không cần header COOP/COEP.
 
 import { parseBestMove, parseInfo, toWhitePov, type InfoLine } from './uci.ts';
-import { levelById, pickLine, type Level } from './levels.ts';
+import { chooseLine, levelById, type Level } from './levels.ts';
 import type { Score } from '../../shared/winrate.ts';
 
 const ENGINE_URL = '/engine/stockfish-19-lite-single.js';
@@ -31,7 +31,7 @@ export class Engine {
   private pending: Resolver | null = null;
   /** Lệnh đang chạy; dùng để bỏ qua kết quả của lệnh đã bị huỷ. */
   private runId = 0;
-  private lastOptions = { multipv: 0, elo: 0 };
+  private lastOptions = { multipv: 0 };
 
   /** Engine đã tải xong chưa (để giao diện biết mà báo). */
   get loaded(): boolean {
@@ -69,6 +69,8 @@ export class Engine {
         }
       };
       worker.postMessage('uci');
+      // Bảng băm mặc định 16 MB hơi chật khi máy nghĩ 2–3 giây; 64 MB vẫn nhẹ với điện thoại
+      worker.postMessage('setoption name Hash value 64');
     });
     return this.ready;
   }
@@ -110,7 +112,7 @@ export class Engine {
     });
   }
 
-  private async run(fen: string, opts: { movetimeMs?: number; depth?: number; multipv?: number; elo?: number }): Promise<InfoLine[]> {
+  private async run(fen: string, opts: { movetimeMs?: number; depth?: number; multipv?: number }): Promise<InfoLine[]> {
     await this.start();
     await this.stopCurrent();
     const id = ++this.runId;
@@ -120,18 +122,18 @@ export class Engine {
       this.send(`setoption name MultiPV value ${multipv}`);
       this.lastOptions.multipv = multipv;
     }
-    const elo = opts.elo ?? 0;
-    if (elo !== this.lastOptions.elo) {
-      this.send(`setoption name UCI_LimitStrength value ${elo ? 'true' : 'false'}`);
-      if (elo) this.send(`setoption name UCI_Elo value ${elo}`);
-      this.lastOptions.elo = elo;
-    }
 
     this.lines.clear();
     const result = await new Promise<InfoLine[]>((resolve) => {
       this.pending = resolve;
       this.send(`position fen ${fen}`);
-      const limit = opts.depth ? `depth ${opts.depth}` : `movetime ${opts.movetimeMs ?? 300}`;
+      // Có cả hai thì engine dừng ở mốc nào tới trước (máy yếu thì hết giờ trước khi đủ sâu)
+      const limit =
+        opts.depth && opts.movetimeMs
+          ? `depth ${opts.depth} movetime ${opts.movetimeMs}`
+          : opts.depth
+            ? `depth ${opts.depth}`
+            : `movetime ${opts.movetimeMs ?? 300}`;
       this.send(`go ${limit}`);
     });
     // Lệnh đã bị thay bằng lệnh mới thì kết quả này không còn dùng được
@@ -155,10 +157,14 @@ export class Engine {
       movetimeMs: level.moveTimeMs,
       depth: level.depth,
       multipv: level.multipv,
-      elo: level.elo,
     });
-    if (!lines.length) return null;
-    return lines[pickLine(level, lines.length, random)].pv[0] ?? null;
+    // Dừng giữa chừng thì các dòng có thể ở độ sâu khác nhau và trùng nước: giữ lần đầu
+    const seen = new Set<string>();
+    const candidates = lines
+      .filter((l) => l.pv[0] && !seen.has(l.pv[0]) && seen.add(l.pv[0]))
+      .map((l) => ({ uci: l.pv[0], score: l.score }));
+    if (!candidates.length) return null;
+    return candidates[chooseLine(level, candidates, random)].uci;
   }
 
   /** Huỷ việc đang tính (người chơi bấm ván mới, lùi nước...). */
