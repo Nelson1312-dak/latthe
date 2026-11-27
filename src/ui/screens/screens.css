@@ -2639,56 +2639,11 @@ a.quick {
   color: var(--text-1);
 }
 
-/* ================= Trợ lý trong ván với máy ================= */
-.assist {
-  display: grid;
-  gap: var(--s-2);
-  padding: var(--s-3);
-  border: 1px solid var(--line);
-  border-left: 0;
-  border-radius: var(--r-md);
-  background: var(--bg-2);
-}
-.assist.is-guide {
-  border-left-color: var(--accent);
-}
-.assist-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-1) var(--s-2);
-  margin: 0;
-  color: var(--text-1);
-}
-.assist-head > .icon:first-child {
-  color: var(--accent-text);
-}
-.assist-head > span:not(.badge) {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-.assist-step {
-  flex: 1;
-}
-.assist-head .btn-icon {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-}
-.assist-text {
-  margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.55;
-  color: var(--text-1);
-}
-.assist-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-}
+/* ================= Trợ lý trong ván với máy: một dòng chấm nước vừa đi ================= */
 .assist-line {
   display: flex;
-  align-items: center;
+  /* Dòng dài xuống hai hàng thì nhãn vẫn ngang hàng đầu */
+  align-items: flex-start;
   gap: var(--s-2);
   margin: 0;
   font-size: var(--fs-sm);
@@ -2699,7 +2654,11 @@ a.quick {
   color: var(--accent-text);
 }
 .assist-line b {
+  font-weight: 500;
   color: var(--text-1);
+}
+.assist-line > .badge {
+  flex: none;
 }
 /* Công tắc Trợ lý trong bảng chọn đối thủ */
 .setup .assist-toggle {
@@ -2709,11 +2668,6 @@ a.quick {
   display: inline-flex;
   align-items: center;
   gap: var(--s-1);
-}
-.assist-actions .btn {
-  min-height: 40px;
-  padding: 0 var(--s-3);
-  font-size: var(--fs-sm);
 }
 
 /* ================= Thống kê trực tiếp (chủ trang) ================= */

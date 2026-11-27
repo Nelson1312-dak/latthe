@@ -527,19 +527,18 @@ làm gì với từng bài học cần nhất.
 Bật/tắt ở bảng chọn đối thủ (mặc định bật) và nút Trợ lý trên thanh công cụ trong ván;
 đồng bộ theo tài khoản. Không có ở ván online (là gian lận) và ở bàn cờ nổi (không đủ chỗ).
 
-- Mỗi nước của người chơi được chấm trong lúc máy nghĩ (`src/analysis/assist.ts`), dùng kết
-  quả chấm ngầm nên thường xong trước khi máy định đáp (~1,4 giây kể cả lúc máy "ngẫm").
-- Sai / Sai nghiêm trọng / Bỏ lỡ: máy **không đáp**, dừng lại. Thanh tên máy ghi "đang đợi
-  bạn", quân vừa đi mang nhãn ??, cột phải hiện "Có nước tốt hơn" + vì sao. Ba lựa chọn:
-  Xem hướng dẫn · Tự đi lại · Bỏ qua.
-- Hướng dẫn trên bàn cờ (thế cờ TRƯỚC nước hỏng), từng bước ‹ ›:
-  1. Vấn đề — mũi tên đỏ nước vừa đi, tô đỏ ô có vấn đề (quân bị hở, ô đòn đôi...), thế cờ đổi ra sao.
-  2. Nước tốt hơn — mũi tên xanh, "chiếu hết sau N nước" / "thế cờ đang hơn".
-  3. Rồi sao — 4 nước tiếp theo engine thấy, đánh số trên mũi tên (xanh: mình, đỏ: đối thủ).
-  Lúc này có thêm "Đi nước gợi ý" (rút nước hỏng, đi nước tốt hơn, máy đáp tiếp).
-- Thiếu chính xác: không dừng, chỉ một dòng nhỏ "?! Mã f3: Thiếu chính xác · hay hơn là …".
-- Đã thua rõ thì đi hỏng thêm ít khi làm thế cờ tệ hơn đáng kể nên Trợ lý ít dừng — cùng
-  cách chấm với bảng xem lại (Lichess).
+- Trợ lý chỉ **chấm**, không bao giờ chặn ván: máy luôn đáp bình thường. (Trước 11/2026 nước
+  hỏng làm máy dừng lại bắt chọn Xem hướng dẫn / Tự đi lại / Bỏ qua — người chơi chê là
+  "không cho đi tiếp".)
+- Mỗi nước của người chơi được chấm trong lúc máy nghĩ (`src/analysis/assist.ts`), bằng engine
+  chấm ngầm riêng, không tranh với engine của máy.
+- Sổ nước đi mang nhãn xếp loại (??, ?, ?!, !…) cạnh từng nước của người chơi, giống bảng xem lại.
+  Lùi về nước nào thì nhãn hiện trên quân của nước đó trên bàn cờ.
+- Nước đang xem (hoặc nước của mình ngay trước nó) bị chấm Thiếu chính xác / Sai / Sai nghiêm
+  trọng / Bỏ lỡ: một dòng **thế chỗ tên khai cuộc** (không thêm dòng, sổ nước đi không nhảy),
+  ghi nước bằng hình quân như sổ nước đi: "?? ♙g4 sai nghiêm trọng · hay hơn: ♘f3". Nước ổn
+  thì không nói gì, không có dòng "đang xem…". Muốn đi lại thì dùng nút Đi lại như thường.
+- Hết ván thì bảng xem lại thay cho nhãn của Trợ lý.
 
 ### 4.7 Âm thanh
 

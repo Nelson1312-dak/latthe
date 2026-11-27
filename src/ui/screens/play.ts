@@ -26,12 +26,11 @@ import type { ReviewResult } from '../../analysis/review.ts';
 import { saveReview } from '../../app/reviews.ts';
 import { boardMarks, createReporter, endClickable, endDialog, endSummary, reviewPanel, reviewProgress } from '../report.ts';
 import { dropBackground, preAnalyse } from '../../analysis/precompute.ts';
-import { bestGain, HOLD_ON, judgeMove, lineText, type AssistVerdict } from '../../analysis/assist.ts';
-import { sanVi } from '../../analysis/words.ts';
+import { HOLD_ON, judgeMove, type AssistVerdict } from '../../analysis/assist.ts';
+import type { MoveClass } from '../../../shared/winrate.ts';
 import { IS_MINI } from '../../app/mini.ts';
 import { setPref } from '../../app/prefs.ts';
 import { CLASS_LABEL } from '../../board/Board.ts';
-import type { Arrow, Circle } from '../../board/Board.ts';
 import { invalidateCoach } from '../../app/coach.ts';
 import { buildFacts } from '../../../shared/advisor/facts.ts';
 import { detectMotifs } from '../../../shared/advisor/motifs.ts';
@@ -39,6 +38,7 @@ import { hintSteps } from '../../../shared/advisor/templates.ts';
 import {
   button,
   classBadge,
+  figurine,
   hintLabel,
   dialog,
   evalBar,
@@ -103,24 +103,29 @@ let copied = false;
 const reporter = createReporter();
 
 /**
- * Trợ lý (chỉ chơi với máy): chấm nước bạn vừa đi trong lúc máy nghĩ. Đi hỏng
- * (sai, sai nghiêm trọng, bỏ lỡ) thì máy KHÔNG đáp mà dừng lại chờ: "Có nước tốt
- * hơn". Bấm xem thì Trợ lý hướng dẫn trên bàn cờ theo từng bước.
+ * Trợ lý chỉ CHẤM nước của người chơi (như bảng xem lại, nhưng ngay trong ván):
+ * máy vẫn đáp bình thường, không bao giờ dừng chờ. Trước 11/2026 nước hỏng làm
+ * máy dừng lại bắt chọn "Xem hướng dẫn / Tự đi lại / Bỏ qua" — bị chê là chặn ván.
  */
 interface AssistState {
-  /** Đang chấm nước thứ mấy, và lời hứa kết quả (máy đợi nó trước khi đáp). */
+  /** Nước đang chấm dở (ply) và lời hứa kết quả. */
   ply: number;
   pending: Promise<AssistVerdict | null> | null;
+  /** Kết quả chấm gần nhất (hiện một dòng trên sổ nước đi). */
   verdict: AssistVerdict | null;
-  /** Máy đang dừng chờ người chơi chọn. */
-  held: boolean;
-  /** Đang xem bước hướng dẫn thứ mấy (null là chưa mở hướng dẫn). */
-  step: number | null;
+  /** Mọi nước đã chấm trong ván, theo ply: nhãn ??/?/?! trong sổ nước đi và trên bàn cờ. */
+  grades: Map<number, AssistVerdict>;
 }
-let assist: AssistState = { ply: 0, pending: null, verdict: null, held: false, step: null };
+let assist: AssistState = { ply: 0, pending: null, verdict: null, grades: new Map() };
 const assistOn = () => setup.mode === 'bot' && prefs().assist && !IS_MINI;
 function resetAssist(): void {
-  assist = { ply: 0, pending: null, verdict: null, held: false, step: null };
+  assist = { ply: 0, pending: null, verdict: null, grades: new Map() };
+}
+/** Sau khi lùi nước: bỏ điểm của các nước đã bị rút. */
+function pruneAssist(): void {
+  for (const ply of [...assist.grades.keys()]) if (ply > game.length) assist.grades.delete(ply);
+  const last = [...assist.grades.values()].pop() ?? null;
+  assist = { ...assist, ply: 0, pending: null, verdict: last };
 }
 
 /** Bắt đầu chấm nước người chơi vừa đi (chạy song song với máy nghĩ). */
@@ -130,96 +135,27 @@ function startJudge(rerender: () => void): void {
   const ply = game.length;
   const fenBefore = ply >= 2 ? game.history[ply - 2].fen : START_FEN;
   const p = judgeMove(fenBefore, last.uci, ply).catch(() => null);
-  assist = { ply, pending: p, verdict: null, held: false, step: null };
+  assist = { ...assist, ply, pending: p };
   void p.then((v) => {
-    if (assist.ply !== ply) return;
+    if (assist.ply !== ply || !v) return;
     assist.verdict = v;
+    assist.grades.set(ply, v);
     rerender();
   });
 }
 
-/** Các bước hướng dẫn cho nước vừa hỏng: vấn đề → nước tốt hơn → rồi sao. */
-function guideSteps(v: AssistVerdict): { title: string; text: string; arrows: Arrow[]; circles: Circle[] }[] {
-  const from = v.uci.slice(0, 2) as Square;
-  const to = v.uci.slice(2, 4) as Square;
-  const steps: { title: string; text: string; arrows: Arrow[]; circles: Circle[] }[] = [
-    {
-      title: 'Vấn đề',
-      text:
-        `Bạn đi ${sanVi(v.san)}. ${v.why}` + (v.before !== v.after ? ` Thế cờ của bạn: ${v.before} → ${v.after}.` : ''),
-      arrows: [{ from, to, brush: 'r' as const }],
-      circles: v.motif?.square ? [{ square: v.motif.square, brush: 'r' as const }] : [],
-    },
-  ];
-  if (v.best) {
-    steps.push({
-      title: 'Nước tốt hơn',
-      text: `Nên đi ${sanVi(v.best.san)} — ${bestGain(v)}.`,
-      arrows: [{ from: v.best.uci.slice(0, 2) as Square, to: v.best.uci.slice(2, 4) as Square, brush: 'g' as const }],
-      circles: [],
-    });
-    if (v.line.length > 1) {
-      steps.push({
-        title: 'Rồi sao',
-        text: `Sau ${sanVi(v.best.san)}: ${lineText(v)}.`,
-        arrows: v.line.map((x, i) => ({
-          from: x.uci.slice(0, 2) as Square,
-          to: x.uci.slice(2, 4) as Square,
-          brush: (x.side === v.side ? 'g' : 'r') as 'g' | 'r',
-          label: String(i + 1),
-        })),
-        circles: [],
-      });
-    }
-  }
-  return steps;
-}
-
 /** Khối Trợ lý ở đầu cột phải, trong ván với máy. */
 function assistCard(): string {
-  if (!assistOn() || !started || outcome()) return '';
-  const v = assist.verdict;
-  const đổi = `<span class="assist-actions">` +
-    `${button({ label: 'Đi nước gợi ý', kind: 'primary' })}${button({ label: 'Tự đi lại' })}${button({ label: 'Bỏ qua', kind: 'text' })}</span>`;
-  if (assist.held && v) {
-    if (assist.step === null) {
-      return `<div class="assist is-held" role="status">
-        <p class="assist-head">${icon('coach', 18)}<b>Có nước tốt hơn</b>${classBadge(v.cls)}<span>${CLASS_LABEL[v.cls]}</span></p>
-        <p class="assist-text">${v.why}</p>
-        <span class="assist-actions">${button({ label: 'Xem hướng dẫn', kind: 'primary', icon: 'coach' })}${button({ label: 'Tự đi lại' })}${button({ label: 'Bỏ qua', kind: 'text' })}</span>
-      </div>`;
-    }
-    const steps = guideSteps(v);
-    const i = Math.min(assist.step, steps.length - 1);
-    const s = steps[i];
-    return `<div class="assist is-guide" role="status">
-      <p class="assist-head">${icon('coach', 18)}<b>Trợ lý</b><span class="assist-step">Bước ${i + 1}/${steps.length} · ${s.title}</span>
-        ${iconButton('prev', 'Bước trước', { disabled: i === 0 })}${iconButton('next', 'Bước sau', { disabled: i >= steps.length - 1 })}</p>
-      <p class="assist-text">${s.text}</p>
-      ${đổi}
-    </div>`;
-  }
-  // Không dừng: chỉ báo nhẹ nước vừa rồi
-  if (assist.pending && !v && assist.ply === game.length) {
-    return `<p class="assist-line">${icon('coach', 16)}<span>Trợ lý đang xem…</span></p>`;
-  }
-  if (v && v.ply <= game.length) {
-    const tốt = !HOLD_ON.includes(v.cls) && v.cls !== 'inaccuracy';
-    return `<p class="assist-line">${classBadge(v.cls)}<span>${sanVi(v.san)} — <b>${CLASS_LABEL[v.cls].toLowerCase()}</b>${
-      !tốt && v.best ? ` · hay hơn là ${sanVi(v.best.san)}` : ''
-    }</span></p>`;
-  }
-  return '';
+  if (!assistOn() || !started || outcome() || !game.ply) return '';
+  // Lời chấm đi theo nước ĐANG XEM: nước đó của máy thì lấy nước của người chơi ngay trước
+  const v = assist.grades.get(game.ply) ?? assist.grades.get(game.ply - 1);
+  // Chỉ lên tiếng khi đi hỏng; nước ổn thì chỗ này để tên khai cuộc như thường
+  if (!v || !ASSIST_SPEAKS.includes(v.cls)) return '';
+  return `<p class="assist-line" role="status">${classBadge(v.cls, 'md')}<span>${figurine(v.san, v.side)} <b>${CLASS_LABEL[v.cls].toLowerCase()}</b>${
+    v.best ? ` · hay hơn: ${figurine(v.best.san, v.side)}` : ''
+  }</span></p>`;
 }
-
-/** Bàn cờ lúc đang xem hướng dẫn: thế cờ TRƯỚC nước hỏng, mũi tên và khoanh ô của bước đó. */
-function guideBoard(): { fen: string; arrows: Arrow[]; circles: Circle[] } | null {
-  const v = assist.verdict;
-  if (!assist.held || assist.step === null || !v) return null;
-  const steps = guideSteps(v);
-  const s = steps[Math.min(assist.step, steps.length - 1)];
-  return { fen: v.fenBefore, arrows: s.arrows, circles: s.circles };
-}
+const ASSIST_SPEAKS: MoveClass[] = [...HOLD_ON, 'inaccuracy'];
 
 /** Id của ván trên server (khi đã đăng nhập), để lưu luôn kết quả chấm. */
 let savedGameId: number | null = null;
@@ -263,9 +199,7 @@ const PROMOTION_PIECES = [
 
 const sideName = (s: Side) => (s === 'w' ? 'Trắng' : 'Đen');
 const botSide = (): Side => (setup.side === 'w' ? 'b' : 'w');
-// Trợ lý đang dừng máy lại (người chơi vừa đi hỏng) thì chưa tới lượt máy: không thì
-// mỗi lần vẽ lại màn hình, mountPlay lại gọi máy nghĩ — lặp mãi.
-const isBotTurn = () => setup.mode === 'bot' && game.turn === botSide() && !ended && game.atLive && !assist.held;
+const isBotTurn = () => setup.mode === 'bot' && game.turn === botSide() && !ended && game.atLive;
 
 /** Hộp thoại hết ván: đã đóng chưa, bắt đầu hiện lúc nào (để hiệu ứng chạy đúng một lần). */
 let endClosed = false;
@@ -371,7 +305,7 @@ function setupPanel(): string {
         <div class="side-row" role="group" aria-label="Bên cầm quân">${sides}</div>
       </div>
       <button class="pref-row assist-toggle" data-pref="assist" role="switch" aria-checked="${prefs().assist}">
-        <span class="pref-text"><b>Trợ lý</b><span>Dừng lại chỉ khi bạn đi hỏng</span></span>
+        <span class="pref-text"><b>Trợ lý</b><span>Chấm từng nước bạn đi</span></span>
         <span class="switch${prefs().assist ? ' is-on' : ''}" aria-hidden="true"><i></i></span>
       </button>
       ${button({ label: 'Chơi', kind: 'primary', icon: 'play', full: true })}
@@ -466,13 +400,11 @@ function gameScreen(extraSide = ''): string {
         ? undefined
         : thinking && isBot
           ? 'đang nghĩ…'
-          : assist.held && side === botSide()
-            ? 'đang đợi bạn'
-            : !result && game.turn === side
-              ? 'đang đi'
-              : undefined,
+          : !result && game.turn === side
+            ? 'đang đi'
+            : undefined,
       clockState:
-        started && !result && (assist.held ? side === setup.side : game.turn === side) ? 'running' : 'idle',
+        started && !result && game.turn === side ? 'running' : 'idle',
       took: side === 'w' ? mat.whiteTook : mat.blackTook,
       diff: side === 'w' ? mat.diff : -mat.diff,
       tools,
@@ -523,11 +455,14 @@ function gameScreen(extraSide = ''): string {
             ? sheet(setupPanel())
             : sheet(
                 ...(result ? [endClosed ? resultCard(result) : '', reviewBlock()] : []),
-                assistCard(),
-                khaiCuoc(),
+                // Dòng Trợ lý (khi đi hỏng) thế chỗ tên khai cuộc, để sổ nước đi không nhảy
+                assistCard() || khaiCuoc(),
                 game.length
                   ? moveList(
-                      game.history.map((m, i) => ({ san: m.san, cls: reviewed()?.moves[i]?.cls })),
+                      game.history.map((m, i) => ({
+                        san: m.san,
+                        cls: reviewed()?.moves[i]?.cls ?? (assistOn() ? assist.grades.get(i + 1)?.cls : undefined),
+                      })),
                       game.ply,
                     )
                   : '<p class="muted moves-empty">Chưa có nước nào.</p>',
@@ -737,7 +672,7 @@ function khaiCuoc(): string {
 
 /** Người chơi có được phép đi lúc này không. */
 function canPlay(): boolean {
-  if (!started || !game.atLive || ended || thinking || assist.held) return false;
+  if (!started || !game.atLive || ended || thinking) return false;
   if (setup.mode === 'human') return true;
   return game.turn === setup.side;
 }
@@ -753,11 +688,6 @@ function drawBoard(): void {
   const stepped = last && game.ply === animatedPly + 1 && orientation === animatedOrientation;
   animatedPly = game.ply;
   animatedOrientation = orientation;
-  const hd = guideBoard();
-  if (hd) {
-    view?.render({ fen: hd.fen, orientation, arrows: hd.arrows, circles: hd.circles, label: 'Bàn cờ, Trợ lý đang hướng dẫn' });
-    return;
-  }
   view?.render(
     {
       fen: game.fen,
@@ -770,9 +700,9 @@ function drawBoard(): void {
       // Ván đã chấm: nước đang xem mang nhãn xếp loại (?!, ?, ??...), nước hỏng
       // thì có mũi tên chỉ nước tốt hơn
       ...markForPly(),
-      // Trợ lý đang dừng máy: nhãn ?? ngay trên quân vừa đi hỏng
-      ...(assist.held && assist.verdict && game.atLive
-        ? { badge: { square: assist.verdict.uci.slice(2, 4) as Square, cls: assist.verdict.cls } }
+      // Trợ lý đã chấm nước đang xem (chưa có bảng xem lại): nhãn ngay trên quân vừa đi
+      ...(!reviewed() && assistOn() && assist.grades.get(game.ply)
+        ? { badge: { square: assist.grades.get(game.ply)!.uci.slice(2, 4) as Square, cls: assist.grades.get(game.ply)!.cls } }
         : {}),
       label: `Bàn cờ, lượt ${sideName(game.turn)}`,
     },
@@ -890,19 +820,6 @@ async function botMove(rerender: () => void): Promise<void> {
     // Người chơi có thể đã bấm ván mới / lùi nước trong lúc máy nghĩ
     if (game.fen !== fenAtStart || ended) return;
     if (!uci) return;
-    // Trợ lý: đợi chấm xong nước của người chơi (thường đã xong). Đi hỏng thì
-    // không đáp, dừng lại cho người chơi xem hướng dẫn / đi lại.
-    if (assistOn() && assist.pending && assist.ply === game.length) {
-      const v = await Promise.race([assist.pending, new Promise<null>((r) => setTimeout(() => r(null), 4000))]);
-      if (game.fen !== fenAtStart || ended) return;
-      if (v && HOLD_ON.includes(v.cls)) {
-        assist.verdict = v;
-        assist.held = true;
-        premove = null;
-        ping('assist_hold');
-        return;
-      }
-    }
     const { from, to, promotion } = splitUci(uci);
     if (game.move(from as Square, to as Square, promotion)) {
       const result = game.outcome();
@@ -1106,46 +1023,7 @@ export function handlePlayClick(target: HTMLElement, rerender: () => void): bool
     // Trợ lý
     'Trợ lý': () => {
       setPref('assist', !prefs().assist);
-      if (!prefs().assist && assist.held) {
-        resetAssist();
-        void botMove(rerender);
-      } else if (!prefs().assist) resetAssist();
-    },
-    'Xem hướng dẫn': () => {
-      assist.step = 0;
-      ping('assist_guide');
-    },
-    'Bước trước': () => {
-      if (assist.step !== null) assist.step = Math.max(0, assist.step - 1);
-    },
-    'Bước sau': () => {
-      if (assist.step !== null) assist.step++;
-    },
-    'Bỏ qua': () => {
-      if (!assist.held) return;
-      assist.held = false;
-      assist.pending = null; // người chơi chấp nhận nước này: máy đáp luôn, không đợi kết quả chấm nữa
-      assist.step = null;
-      void botMove(rerender);
-    },
-    'Tự đi lại': () => {
-      if (!assist.held) return;
-      resetAssist();
-      game.undo();
-      hints = null;
-      hintLevel = 0;
-    },
-    'Đi nước gợi ý': () => {
-      const v = assist.verdict;
-      if (!assist.held || !v?.best) return;
-      resetAssist();
-      game.undo();
-      const u = v.best.uci;
-      if (game.move(u.slice(0, 2) as Square, u.slice(2, 4) as Square, u[4])) {
-        hints = null;
-        hintLevel = 0;
-        afterMove(rerender);
-      }
+      if (!prefs().assist) resetAssist();
     },
     'Về đầu ván': () => game.first(),
     'Lùi một nước': () => game.prev(),
@@ -1176,7 +1054,6 @@ function runAct(id: string, rerender: () => void): void {
   } else if (id === 'undo') {
     // Đấu với máy thì lùi hai nước, để lượt vẫn thuộc về người chơi
     void engine().cancel();
-    resetAssist();
     thinking = false;
     premove = null;
     resigned = null;
@@ -1186,6 +1063,7 @@ function runAct(id: string, rerender: () => void): void {
     game.last();
     game.undo();
     if (setup.mode === 'bot' && game.length && game.turn !== setup.side) game.undo();
+    pruneAssist();
     ended = false;
     endClosed = false;
     endShownAt = null;

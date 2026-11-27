@@ -132,9 +132,6 @@
 .coach-banner:hover .quick-text b {
   color: var(--accent-text);
 }
-.assist {
-  border-left: 1px solid var(--line);
-}
 .ai-alert {
   border-left: 0;
 }
